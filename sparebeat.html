@@ -46,23 +46,43 @@
       font-weight:700;
     }
 
-    /* 列幅 */
     .col-title{ width:34%; }
     .col-diff{ width:16%; text-align:center; }
     .col-comment{ width:50%; }
 
+    .song-link{
+      text-decoration:none;
+      color:#ff2a6d;
+      font-weight:bold;
+    }
+
+    .song-link:hover{
+      text-decoration:underline;
+    }
+
     .nav{
       display:flex;
-      gap:16px;
+      gap:20px;
       justify-content:center;
       flex-wrap:wrap;
-      margin:26px 0 0 0;
+      margin:40px 0 0 0;
     }
 
     .nav a{
-      color:#0066cc;
-      text-decoration:underline;
+      display:inline-block;
+      padding:14px 28px;
+      border:2px solid #ff2a6d;
+      color:#111;
+      text-decoration:none;
+      border-radius:10px;
+      transition:0.2s;
       font-size:18px;
+      font-weight:bold;
+    }
+
+    .nav a:hover{
+      background:#ff2a6d;
+      color:#fff;
     }
 
     @media(max-width:768px){
@@ -90,9 +110,11 @@
       </thead>
       <tbody>
         <tr>
-          <td> <a href="Sparebeat/bitadekinaiyo.html">
-  ビタができないよ
-</a></td>
+          <td>
+            <a href="sparebeat/bitadekinaiyo.html" class="song-link">
+              ビタができないよ
+            </a>
+          </td>
           <td class="col-diff">easy3</td>
           <td>ハナハナ白RBプレミアムのアレンジです</td>
         </tr>
