@@ -18,13 +18,30 @@
       margin:30px 0;
     }
 
-    #sparebeat{
+    .app-wrap{
       width:100%;
       max-width:960px;
       margin:0 auto;
-      display:block;
-      border:0;
+    }
+
+    /* 比率箱 */
+    #app-wrapper{
+      position:relative;
+      width:100%;
+      padding-top:66.66%; /* 通常: 960x640 */
+      overflow:hidden;
+      background:#000;
+    }
+
+    /* iframeは 960x(640 or 1280) をスケールして見せる */
+    #sparebeat{
+      position:absolute;
+      top:0;
+      left:0;
+      width:960px;
       height:640px;
+      border:0;
+      transform-origin:0 0;
     }
 
     .back{
@@ -48,37 +65,72 @@
 </head>
 
 <body>
-
   <h1>Try to Fly to Again / 煉獄小僧</h1>
 
-  <iframe
-    id="sparebeat"
-    src="https://sparebeat.com/embed/"
-    frameborder="0"
-    allow="autoplay; fullscreen"
-  ></iframe>
+  <div class="app-wrap">
+    <div id="app-wrapper">
+      <iframe id="sparebeat" src="https://sparebeat.com/embed/" frameborder="0"></iframe>
+    </div>
+  </div>
 
   <script src="https://sparebeat.com/embed/client.js"></script>
-
   <script>
-    Sparebeat.load(
-      "../assets/tryfly.json",
-      "../assets/tryfly.mp3"
-    );
+    // assets を「絶対URL」にする（相対の解釈ズレ対策）
+    var mapUrl   = new URL("../assets/tryfly.json", location.href).href;
+    var musicUrl = new URL("../assets/tryfly.mp3",  location.href).href;
 
-    function fitSparebeat(){
-      var iframe = document.getElementById("sparebeat");
-      iframe.height = (window.innerWidth < 990) ? 1280 : 640;
+    Sparebeat.load(mapUrl, musicUrl);
+
+    function applyScale(){
+      var w = document.getElementById("app-wrapper").clientWidth;
+      var scale = w / 960;
+      if (scale > 1.0) scale = 1.0;
+      document.getElementById("sparebeat").style.transform = "scale(" + scale + ")";
     }
 
-    window.addEventListener("load", fitSparebeat);
-    window.addEventListener("resize", fitSparebeat);
-    window.addEventListener("orientationchange", fitSparebeat);
+    function setTouchPanelMode(isOpen){
+      if (isOpen){
+        document.getElementById("app-wrapper").style.paddingTop = "133.33%"; // 960x1280
+        document.getElementById("sparebeat").style.height = "1280px";
+      }else{
+        document.getElementById("app-wrapper").style.paddingTop = "66.66%"; // 960x640
+        document.getElementById("sparebeat").style.height = "640px";
+      }
+      applyScale();
+    }
+
+    window.addEventListener("load", function(){
+      applyScale();
+      if (window.innerWidth < 990){
+        setTouchPanelMode(true);
+      }
+    });
+
+    window.addEventListener("resize", function(){
+      if (window.innerWidth < 990){
+        setTouchPanelMode(true);
+      }else{
+        setTouchPanelMode(false);
+      }
+    });
+
+    window.addEventListener("message", function(event){
+      var message;
+      try{
+        message = JSON.parse(String(event.data));
+      }catch(e){
+        return;
+      }
+
+      if (message && message.id === "sparebeat") {
+        if (message.type === "touch-panel-open")  setTouchPanelMode(true);
+        if (message.type === "touch-panel-close") setTouchPanelMode(false);
+      }
+    });
   </script>
 
   <div class="back">
     <a href="../sparebeat.html">一覧へ戻る</a>
   </div>
-
 </body>
 </html>
