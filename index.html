@@ -1,106 +1,108 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>グレイト・プレ・善太のハナハナサイト</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>グレイト・プレ・善太のハナハナサイト</title>
 
-<style>
-body{
-  margin:0;
-  font-family:sans-serif;
-  background:#000;
-  color:#fff;
-}
+  <style>
+    body{
+      margin:0;
+      font-family:sans-serif;
+      background:#000;
+      color:#fff;
+    }
 
-header{
-  padding:0;
-}
+    header{
+      padding:0;
+    }
 
-header img{
-  width:100%;
-  height:400px;
-  object-fit:cover;
-  display:block;
-}
+    header img{
+      width:100%;
+      height:400px;
+      object-fit:cover;
+      display:block;
+    }
 
-.container{
-  display:flex;
-  max-width:1200px;
-  margin:40px auto;
-  padding:0 20px;
-  gap:30px;
-  align-items:flex-start;
-}
+    .container{
+      display:flex;
+      max-width:1200px;
+      margin:40px auto;
+      padding:0 20px;
+      gap:30px;
+      align-items:flex-start;
+    }
 
-.left{
-  width:35%;
-}
+    .left{
+      width:35%;
+    }
 
-.right{
-  width:65%;
-}
+    .right{
+      width:65%;
+    }
 
-.menu{
-  display:flex;
-  flex-direction:column;
-  gap:20px;
-}
+    .menu{
+      display:flex;
+      flex-direction:column;
+      gap:20px;
+    }
 
-.menu a{
-  display:block;
-  padding:22px;
-  background:#111;
-  border:2px solid #ff2a6d;
-  text-decoration:none;
-  color:#fff;
-  font-size:20px;
-  font-weight:bold;
-  border-radius:14px;
-  transition:0.2s;
-}
+    .menu a{
+      display:block;
+      padding:22px;
+      background:#111;
+      border:2px solid #ff2a6d;
+      text-decoration:none;
+      color:#fff;
+      font-size:20px;
+      font-weight:bold;
+      border-radius:14px;
+      transition:0.2s;
+    }
 
-.menu a:hover{
-  background:#ff2a6d;
-  color:#000;
-}
+    .menu a:hover{
+      background:#ff2a6d;
+      color:#000;
+    }
 
-@media(max-width:768px){
-  .container{
-    flex-direction:column;
-  }
-  .left, .right{
-    width:100%;
-  }
-}
-</style>
+    @media(max-width:768px){
+      .container{
+        flex-direction:column;
+      }
+      .left,
+      .right{
+        width:100%;
+      }
+    }
+  </style>
 </head>
 
 <body>
 
-<header>
-  <img src="header.jpg" alt="header">
-</header>
+  <header>
+    <img src="header.jpg" alt="header">
+  </header>
 
-<div class="container">
-  <div class="left">
-    <div class="menu">
-      <a href="profile.html">プロフィール</a>
-      <a href="howto.html">ハナハナの打ち方紹介</a>
-      <a href="sparebeat.html">スペアビート</a>
+  <div class="container">
+    <div class="left">
+      <div class="menu">
+        <a href="profile.html">プロフィール</a>
+        <a href="howto.html">ハナハナの打ち方紹介</a>
+        <a href="sparebeat.html">スペアビート</a>
+      </div>
+    </div>
+
+    <div class="right">
+      <a class="twitter-timeline"
+         data-height="600"
+         data-theme="dark"
+         href="https://twitter.com/GreatPresenter?ref_src=twsrc%5Etfw">
+         Tweets by GreatPresenter
+      </a>
     </div>
   </div>
 
-  <div class="right">
-    <a class="twitter-timeline"
-       data-height="600"
-       data-theme="dark"
-       href="https://x.com/GreatPresenter">
-    </a>
-  </div>
-</div>
-
-<script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+  <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 
 </body>
 </html>
