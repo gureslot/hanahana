@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ビタができないよ | Sparebeat</title>
+
+<style>
+body{
+  margin:0;
+  background:#000;
+  color:#fff;
+  font-family:sans-serif;
+  text-align:center;
+}
+h1{
+  margin:30px 0;
+}
+#sparebeat{
+  width:100%;
+  max-width:960px;
+  margin:0 auto;
+  display:block;
+  border:0;
+  height:640px;
+}
+.back{
+  margin:30px 0;
+}
+.back a{
+  display:inline-block;
+  padding:15px 30px;
+  border:2px solid #ff2a6d;
+  color:#fff;
+  text-decoration:none;
+  border-radius:10px;
+}
+.back a:hover{
+  background:#ff2a6d;
+  color:#000;
+}
+</style>
+</head>
+
+<body>
+
+<h1>ビタができないよ</h1>
+
+<iframe id="sparebeat" src="https://sparebeat.com/embed/" frameborder="0"></iframe>
+<script src="https://sparebeat.com/embed/client.js"></script>
+
+<script>
+Sparebeat.load("../assets/bitadekinaiyo.json","../assets/bitadekinaiyo.mp3");
+
+window.addEventListener("load",function(){
+  document.getElementById("sparebeat").height =
+    window.innerWidth < 990 ? 1280 : 640;
+});
+</script>
+
+<div class="back">
+  <a href="../sparebeat.html">一覧へ戻る</a>
+</div>
+
+</body>
+</html>
