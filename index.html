@@ -13,66 +13,17 @@ body{
   color:#fff;
 }
 
+header{
+  padding:20px 20px 0 20px;   /* 上と左右に余白 */
+}
+
 header img{
   width:100%;
-  height:400px;
-  object-fit:cover;
+  max-width:1200px;           /* PCで広がりすぎ防止 */
+  height:auto;                /* 比率を崩さない */
   display:block;
-}
-
-.container{
-  display:flex;
-  max-width:1200px;
-  margin:40px auto;
-  padding:0 20px;
-  gap:30px;
-  align-items:flex-start;
-}
-
-.left{
-  width:35%;
-}
-
-.right{
-  width:65%;
-  min-height:640px;
-}
-
-.menu{
-  display:flex;
-  flex-direction:column;
-  gap:20px;
-}
-
-.menu a{
-  display:block;
-  padding:22px;
-  background:#111;
-  border:2px solid #ff2a6d;
-  text-decoration:none;
-  color:#fff;
-  font-size:20px;
-  font-weight:bold;
-  border-radius:14px;
-  transition:0.2s;
-}
-
-.menu a:hover{
-  background:#ff2a6d;
-  color:#000;
-}
-
-/* スマホ */
-@media(max-width:768px){
-  header img{
-    height:220px;
-  }
-  .container{
-    flex-direction:column;
-  }
-  .left,.right{
-    width:100%;
-  }
+  margin:0 auto;              /* 中央寄せ */
+  border-radius:12px;         /* 少し柔らかく */
 }
 </style>
 </head>
@@ -111,6 +62,5 @@ header img{
 </div>
 
 <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
-<a href="https://twitter.com/x?ref_src=twsrc%5Etfw" class="twitter-follow-button" data-show-count="false">Follow @x</a><script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 </body>
 </html>
