@@ -1,131 +1,120 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ビタができないよ | Sparebeat</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ビタができないよ | Sparebeat</title>
 
-<style>
-body{
-  margin:0;
-  background:#000;
-  color:#fff;
-  font-family:sans-serif;
-  text-align:center;
-}
+  <style>
+    body{
+      margin:0;
+      background:#000;
+      color:#fff;
+      font-family:sans-serif;
+      text-align:center;
+    }
 
-h1{
-  margin:30px 0;
-}
+    h1{
+      margin:30px 0;
+    }
 
-/* 比率固定コンテナ（960×640基準） */
-#app-wrapper{
-  width:100%;
-  max-width:960px;
-  margin:0 auto;
-  position:relative;
-  padding-top:66.66%; /* 640 / 960 */
-  overflow:hidden;
-}
+    /* ここがポイント：比率箱で高さを確保して、iframeは中でscaleする */
+    .app-wrap{
+      width:100%;
+      max-width:960px;
+      margin:0 auto;
+    }
 
-/* iframe本体 */
-#sparebeat{
-  position:absolute;
-  left:0;
-  top:0;
-  width:960px;
-  height:640px;
-  border:0;
-  transform-origin:0 0;
-}
+    #app-wrapper{
+      position:relative;
+      width:100%;
+      padding-top:66.66%; /* 960x640 の比率 */
+      overflow:hidden;
+      background:#000;
+    }
 
-.back{
-  margin:30px 0;
-}
+    #sparebeat{
+      position:absolute;
+      top:0;
+      left:0;
+      width:960px;
+      height:640px;
+      border:0;
+      transform-origin:0 0;
+    }
 
-.back a{
-  display:inline-block;
-  padding:15px 30px;
-  border:2px solid #ff2a6d;
-  color:#fff;
-  text-decoration:none;
-  border-radius:10px;
-}
+    .back{
+      margin:30px 0;
+    }
 
-.back a:hover{
-  background:#ff2a6d;
-  color:#000;
-}
-</style>
+    .back a{
+      display:inline-block;
+      padding:15px 30px;
+      border:2px solid #ff2a6d;
+      color:#fff;
+      text-decoration:none;
+      border-radius:10px;
+    }
+
+    .back a:hover{
+      background:#ff2a6d;
+      color:#000;
+    }
+  </style>
 </head>
 
 <body>
+  <h1>ビタができないよ</h1>
 
-<h1>ビタができないよ</h1>
+  <div class="app-wrap">
+    <div id="app-wrapper">
+      <iframe id="sparebeat" src="https://sparebeat.com/embed/" frameborder="0"></iframe>
+    </div>
+  </div>
 
-<div id="app-wrapper">
-  <iframe
-    id="sparebeat"
-    src="https://sparebeat.com/embed/"
-    frameborder="0">
-  </iframe>
-</div>
+  <script src="https://sparebeat.com/embed/client.js"></script>
+  <script>
+    // 譜面/曲の読み込み
+    Sparebeat.load("../assets/bitadekinaiyo.json","../assets/bitadekinaiyo.mp3");
 
-<script src="https://sparebeat.com/embed/client.js"></script>
-
-<script>
-Sparebeat.load(
-  "../assets/bitadekinaiyo.json",
-  "../assets/bitadekinaiyo.mp3"
-);
-
-function applyScale(){
-  var wrapper = document.getElementById("app-wrapper");
-  var iframe  = document.getElementById("sparebeat");
-
-  var scale = wrapper.clientWidth / 960;
-  if (scale > 1) scale = 1;
-
-  iframe.style.transform = "scale(" + scale + ")";
-}
-
-applyScale();
-window.addEventListener("resize", applyScale);
-
-/* タッチパネル開閉対応 */
-window.addEventListener("message", function(event){
-
-  var message;
-
-  try{
-    message = JSON.parse(event.data.toString());
-  }catch(e){
-    return;
-  }
-
-  if(message.id === "sparebeat"){
-
-    var wrapper = document.getElementById("app-wrapper");
-    var iframe  = document.getElementById("sparebeat");
-
-    if(message.type === "touch-panel-open"){
-      wrapper.style.paddingTop = "133.33%"; /* 1280 / 960 */
-      iframe.style.height = "1280px";
-      applyScale();
+    // 幅に合わせて 960px を縮小表示（本家と同じ考え方）
+    function applyScale(){
+      var w = document.getElementById("app-wrapper").clientWidth;
+      var scale = w / 960;
+      if (scale > 1.0) scale = 1.0;
+      document.getElementById("sparebeat").style.transform = "scale(" + scale + ")";
     }
 
-    if(message.type === "touch-panel-close"){
-      wrapper.style.paddingTop = "66.66%"; /* 640 / 960 */
-      iframe.style.height = "640px";
-      applyScale();
-    }
-  }
-});
-</script>
+    window.addEventListener("load", applyScale);
+    window.addEventListener("resize", applyScale);
 
-<div class="back">
-  <a href="../sparebeat.html">一覧へ戻る</a>
-</div>
+    // スマホのタッチパネル開閉が来たら、比率箱の高さを切り替える（本家準拠）
+    window.addEventListener("message", function(event){
+      var message;
+      try{
+        message = JSON.parse(String(event.data));
+      }catch(e){
+        return;
+      }
 
+      if (message && message.id === "sparebeat") {
+        if (message.type === "touch-panel-open") {
+          document.getElementById("app-wrapper").style.paddingTop = "133.33%"; // 960x1280
+          document.getElementById("sparebeat").style.height = "1280px";
+          applyScale();
+        }
+
+        if (message.type === "touch-panel-close") {
+          document.getElementById("app-wrapper").style.paddingTop = "66.66%"; // 960x640
+          document.getElementById("sparebeat").style.height = "640px";
+          applyScale();
+        }
+      }
+    });
+  </script>
+
+  <div class="back">
+    <a href="../sparebeat.html">一覧へ戻る</a>
+  </div>
 </body>
 </html>
