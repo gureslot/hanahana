@@ -18,21 +18,22 @@
       margin:30px 0;
     }
 
-    /* ここがポイント：比率箱で高さを確保して、iframeは中でscaleする */
     .app-wrap{
       width:100%;
       max-width:960px;
       margin:0 auto;
     }
 
+    /* 比率箱 */
     #app-wrapper{
       position:relative;
       width:100%;
-      padding-top:66.66%; /* 960x640 の比率 */
+      padding-top:66.66%; /* 通常: 960x640 */
       overflow:hidden;
       background:#000;
     }
 
+    /* iframeは 960x(640 or 1280) をスケールして見せる */
     #sparebeat{
       position:absolute;
       top:0;
@@ -74,10 +75,13 @@
 
   <script src="https://sparebeat.com/embed/client.js"></script>
   <script>
-    // 譜面/曲の読み込み
-    Sparebeat.load("../assets/bitadekinaiyo.json","../assets/bitadekinaiyo.mp3");
+    // あなたのサイト上の assets を「絶対URL」にする
+    var mapUrl   = new URL("../assets/bitadekinaiyo.json", location.href).href;
+    var musicUrl = new URL("../assets/bitadekinaiyo.mp3",  location.href).href;
 
-    // 幅に合わせて 960px を縮小表示（本家と同じ考え方）
+    // 読み込み
+    Sparebeat.load(mapUrl, musicUrl);
+
     function applyScale(){
       var w = document.getElementById("app-wrapper").clientWidth;
       var scale = w / 960;
@@ -85,10 +89,34 @@
       document.getElementById("sparebeat").style.transform = "scale(" + scale + ")";
     }
 
-    window.addEventListener("load", applyScale);
-    window.addEventListener("resize", applyScale);
+    // スマホ幅では最初からタッチパネル込み(1280)で表示しておく
+    function setTouchPanelMode(isOpen){
+      if (isOpen){
+        document.getElementById("app-wrapper").style.paddingTop = "133.33%"; // 960x1280
+        document.getElementById("sparebeat").style.height = "1280px";
+      }else{
+        document.getElementById("app-wrapper").style.paddingTop = "66.66%"; // 960x640
+        document.getElementById("sparebeat").style.height = "640px";
+      }
+      applyScale();
+    }
 
-    // スマホのタッチパネル開閉が来たら、比率箱の高さを切り替える（本家準拠）
+    window.addEventListener("load", function(){
+      applyScale();
+      // ここを閾値に：本家コードの 990 を踏襲
+      if (window.innerWidth < 990){
+        setTouchPanelMode(true);
+      }
+    });
+
+    window.addEventListener("resize", function(){
+      applyScale();
+      if (window.innerWidth < 990){
+        setTouchPanelMode(true);
+      }
+    });
+
+    // 本家と同じ通知が来たら追従（来ない環境でも上の強制openで押せるようにする）
     window.addEventListener("message", function(event){
       var message;
       try{
@@ -98,17 +126,8 @@
       }
 
       if (message && message.id === "sparebeat") {
-        if (message.type === "touch-panel-open") {
-          document.getElementById("app-wrapper").style.paddingTop = "133.33%"; // 960x1280
-          document.getElementById("sparebeat").style.height = "1280px";
-          applyScale();
-        }
-
-        if (message.type === "touch-panel-close") {
-          document.getElementById("app-wrapper").style.paddingTop = "66.66%"; // 960x640
-          document.getElementById("sparebeat").style.height = "640px";
-          applyScale();
-        }
+        if (message.type === "touch-panel-open")  setTouchPanelMode(true);
+        if (message.type === "touch-panel-close") setTouchPanelMode(false);
       }
     });
   </script>
