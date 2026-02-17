@@ -14,16 +14,74 @@ body{
 }
 
 header{
-  padding:20px 20px 0 20px;   /* 上と左右に余白 */
+  padding:20px 20px 0 20px;
 }
 
 header img{
   width:100%;
-  max-width:1200px;           /* PCで広がりすぎ防止 */
-  height:auto;                /* 比率を崩さない */
+  max-width:1200px;
+  height:auto;
   display:block;
-  margin:0 auto;              /* 中央寄せ */
-  border-radius:12px;         /* 少し柔らかく */
+  margin:0 auto;
+  border-radius:12px;
+}
+
+.container{
+  display:flex;
+  max-width:1200px;
+  margin:40px auto;
+  padding:0 20px;
+  gap:30px;
+  align-items:flex-start;
+}
+
+.left{
+  width:35%;
+}
+
+.right{
+  width:65%;
+  background:#0b0b0b;
+  border:1px solid #222;
+  border-radius:14px;
+  padding:20px;
+}
+
+.menu{
+  display:flex;
+  flex-direction:column;
+  gap:20px;
+}
+
+.menu a{
+  display:block;
+  padding:25px;
+  background:#111;
+  border:2px solid #ff2a6d;
+  text-decoration:none;
+  color:#fff;
+  font-size:20px;
+  font-weight:bold;
+  border-radius:14px;
+  transition:0.2s;
+}
+
+.menu a:hover{
+  background:#ff2a6d;
+  color:#000;
+}
+
+.twitter-tweet{
+  margin:0 0 30px 0;
+}
+
+@media(max-width:768px){
+  .container{
+    flex-direction:column;
+  }
+  .left,.right{
+    width:100%;
+  }
 }
 </style>
 </head>
@@ -46,13 +104,35 @@ header img{
 
   <div class="right">
 
+    <!-- 上に表示させるポスト -->
+    <blockquote class="twitter-tweet">
+      <p lang="ja" dir="ltr">
+        Super D&#39;station39飯塚店<br>
+        高咲たぬち来店<br>
+        3の日<br><br>
+        Lニューキングハナハナ<br>
+        +10700枚<br><br>
+        2連続リプ音遅れで大連続確定は痺れました。<br><br>
+        …と午前中にポスト用のメモしてたらそれどころではありませんでした。<br>
+        (リプ重は今日だけで3回引きました)<br><br>
+        ハナハナ初万枚！🌺🙌<br><br>
+        周りもめっちゃ強かったですね👀 
+        <a href="https://t.co/SBqjqVQ9CT">pic.twitter.com/SBqjqVQ9CT</a>
+      </p>
+      &mdash; グレイト・プレ・善太🌺👆💫 (@GreatPresenter)
+      <a href="https://twitter.com/GreatPresenter/status/2022319162853572754?ref_src=twsrc%5Etfw">
+        February 13, 2026
+      </a>
+    </blockquote>
+
+    <!-- その下に表示されるポスト -->
     <blockquote class="twitter-tweet">
       <p lang="ja" dir="ltr">
         ドラゴンvsホウオウ 
         <a href="https://t.co/ILMe7CnjXI">pic.twitter.com/ILMe7CnjXI</a>
       </p>
       &mdash; グレイト・プレ・善太🌺👆💫 (@GreatPresenter)
-      <a href="https://twitter.com/GreatPresenter/status/2023421549878071433">
+      <a href="https://twitter.com/GreatPresenter/status/2023421549878071433?ref_src=twsrc%5Etfw">
         February 16, 2026
       </a>
     </blockquote>
@@ -62,5 +142,6 @@ header img{
 </div>
 
 <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
 </body>
 </html>
