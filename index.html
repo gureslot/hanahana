@@ -1,94 +1,116 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>グレイト・プレ・善太のハナハナサイト</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>グレイト・プレ・善太のハナハナサイト</title>
 
-  <style>
-    body{
-      margin:0;
-      font-family:sans-serif;
-      background:#000;
-      color:#fff;
-    }
+<style>
+body{
+  margin:0;
+  font-family:sans-serif;
+  background:#000;
+  color:#fff;
+}
 
-    header{ padding:0; }
-    header img{
-      width:100%;
-      height:auto;      /* はみ出し防止 */
-      display:block;
-    }
+header img{
+  width:100%;
+  height:400px;
+  object-fit:cover;
+  display:block;
+}
 
-    .container{
-      display:flex;
-      max-width:1200px;
-      margin:40px auto;
-      padding:0 20px;
-      gap:30px;
-      align-items:flex-start;
-    }
+.container{
+  display:flex;
+  max-width:1200px;
+  margin:40px auto;
+  padding:0 20px;
+  gap:30px;
+  align-items:flex-start;
+}
 
-    .left{ width:35%; }
-    .right{ width:65%; }
+.left{
+  width:35%;
+}
 
-    .menu{
-      display:flex;
-      flex-direction:column;
-      gap:20px;
-    }
+.right{
+  width:65%;
+  min-height:640px;
+}
 
-    .menu a{
-      display:block;
-      padding:22px;
-      background:#111;
-      border:2px solid #ff2a6d;
-      text-decoration:none;
-      color:#fff;
-      font-size:20px;
-      font-weight:bold;
-      border-radius:14px;
-      transition:0.2s;
-    }
+.menu{
+  display:flex;
+  flex-direction:column;
+  gap:20px;
+}
 
-    .menu a:hover{
-      background:#ff2a6d;
-      color:#000;
-    }
+.menu a{
+  display:block;
+  padding:22px;
+  background:#111;
+  border:2px solid #ff2a6d;
+  text-decoration:none;
+  color:#fff;
+  font-size:20px;
+  font-weight:bold;
+  border-radius:14px;
+  transition:0.2s;
+}
 
-    @media(max-width:768px){
-      .container{ flex-direction:column; }
-      .left, .right{ width:100%; }
-    }
-  </style>
+.menu a:hover{
+  background:#ff2a6d;
+  color:#000;
+}
+
+/* スマホ */
+@media(max-width:768px){
+  header img{
+    height:220px;
+  }
+  .container{
+    flex-direction:column;
+  }
+  .left,.right{
+    width:100%;
+  }
+}
+</style>
 </head>
 
 <body>
 
-  <header>
-    <img src="header.jpg" alt="header">
-  </header>
+<header>
+  <img src="header.jpg" alt="header">
+</header>
 
-  <div class="container">
-    <div class="left">
-      <div class="menu">
-        <a href="profile.html">プロフィール</a>
-        <a href="howto.html">ハナハナの打ち方紹介</a>
-        <a href="sparebeat.html">スペアビート</a>
-      </div>
-    </div>
+<div class="container">
 
-    <div class="right">
-      <a class="twitter-timeline"
-         data-height="600"
-         data-theme="dark"
-         data-chrome="noheader nofooter noborders transparent"
-         href="https://twitter.com/GreatPresenter?ref_src=twsrc%5Etfw">
-      </a>
+  <div class="left">
+    <div class="menu">
+      <a href="profile.html">プロフィール</a>
+      <a href="howto.html">ハナハナの打ち方紹介</a>
+      <a href="sparebeat.html">スペアビート</a>
     </div>
   </div>
 
-  <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+  <div class="right">
+
+    <blockquote class="twitter-tweet">
+      <p lang="ja" dir="ltr">
+        ドラゴンvsホウオウ 
+        <a href="https://t.co/ILMe7CnjXI">pic.twitter.com/ILMe7CnjXI</a>
+      </p>
+      &mdash; グレイト・プレ・善太🌺👆💫 (@GreatPresenter)
+      <a href="https://twitter.com/GreatPresenter/status/2023421549878071433">
+        February 16, 2026
+      </a>
+    </blockquote>
+
+  </div>
+
+</div>
+
+<script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 
 </body>
 </html>
