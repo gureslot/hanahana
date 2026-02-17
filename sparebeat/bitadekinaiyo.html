@@ -13,20 +13,36 @@ body{
   font-family:sans-serif;
   text-align:center;
 }
+
 h1{
   margin:30px 0;
 }
-#sparebeat{
+
+/* 比率固定コンテナ（960×640基準） */
+#app-wrapper{
   width:100%;
   max-width:960px;
   margin:0 auto;
-  display:block;
-  border:0;
-  height:640px;
+  position:relative;
+  padding-top:66.66%; /* 640 / 960 */
+  overflow:hidden;
 }
+
+/* iframe本体 */
+#sparebeat{
+  position:absolute;
+  left:0;
+  top:0;
+  width:960px;
+  height:640px;
+  border:0;
+  transform-origin:0 0;
+}
+
 .back{
   margin:30px 0;
 }
+
 .back a{
   display:inline-block;
   padding:15px 30px;
@@ -35,6 +51,7 @@ h1{
   text-decoration:none;
   border-radius:10px;
 }
+
 .back a:hover{
   background:#ff2a6d;
   color:#000;
@@ -46,15 +63,63 @@ h1{
 
 <h1>ビタができないよ</h1>
 
-<iframe id="sparebeat" src="https://sparebeat.com/embed/" frameborder="0"></iframe>
+<div id="app-wrapper">
+  <iframe
+    id="sparebeat"
+    src="https://sparebeat.com/embed/"
+    frameborder="0">
+  </iframe>
+</div>
+
 <script src="https://sparebeat.com/embed/client.js"></script>
 
 <script>
-Sparebeat.load("../assets/bitadekinaiyo.json","../assets/bitadekinaiyo.mp3");
+Sparebeat.load(
+  "../assets/bitadekinaiyo.json",
+  "../assets/bitadekinaiyo.mp3"
+);
 
-window.addEventListener("load",function(){
-  document.getElementById("sparebeat").height =
-    window.innerWidth < 990 ? 1280 : 640;
+function applyScale(){
+  var wrapper = document.getElementById("app-wrapper");
+  var iframe  = document.getElementById("sparebeat");
+
+  var scale = wrapper.clientWidth / 960;
+  if (scale > 1) scale = 1;
+
+  iframe.style.transform = "scale(" + scale + ")";
+}
+
+applyScale();
+window.addEventListener("resize", applyScale);
+
+/* タッチパネル開閉対応 */
+window.addEventListener("message", function(event){
+
+  var message;
+
+  try{
+    message = JSON.parse(event.data.toString());
+  }catch(e){
+    return;
+  }
+
+  if(message.id === "sparebeat"){
+
+    var wrapper = document.getElementById("app-wrapper");
+    var iframe  = document.getElementById("sparebeat");
+
+    if(message.type === "touch-panel-open"){
+      wrapper.style.paddingTop = "133.33%"; /* 1280 / 960 */
+      iframe.style.height = "1280px";
+      applyScale();
+    }
+
+    if(message.type === "touch-panel-close"){
+      wrapper.style.paddingTop = "66.66%"; /* 640 / 960 */
+      iframe.style.height = "640px";
+      applyScale();
+    }
+  }
 });
 </script>
 
