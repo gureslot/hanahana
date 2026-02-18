@@ -7,29 +7,36 @@
 
 <style>
 body{
-    margin:0;
-    background:#ffffff;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    height:100vh;
+  margin:0;
+  background:#fff;
+  height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
 }
 
 .reel-wrapper{
-    display:flex;
-    gap:2px;
+  display:flex;
+  gap:2px;
 }
 
 .reel{
-    position:relative;
-    overflow:hidden;
-    touch-action:none;
+  height:693px; /* 21 * 33 */
+  overflow:hidden;
+  touch-action:none;
+  user-select:none;
+  -webkit-user-drag:none;
 }
 
-.reel img{
-    display:block;
-    user-select:none;
-    -webkit-user-drag:none;
+.track{
+  will-change:transform;
+}
+
+.track img{
+  display:block;
+  user-select:none;
+  -webkit-user-drag:none;
+  pointer-events:none;
 }
 </style>
 </head>
@@ -37,36 +44,83 @@ body{
 <body>
 
 <div class="reel-wrapper">
-    <div class="reel"><img src="../assets/reel_1_strip_21x33.png"></div>
-    <div class="reel"><img src="../assets/reel_2_strip_21x33.png"></div>
-    <div class="reel"><img src="../assets/reel_3_strip_21x33.png"></div>
+  <div class="reel" data-src="../assets/reel_1_strip_21x33.png"></div>
+  <div class="reel" data-src="../assets/reel_2_strip_21x33.png"></div>
+  <div class="reel" data-src="../assets/reel_3_strip_21x33.png"></div>
 </div>
 
 <script>
-const CELL_HEIGHT = 33;
+const CELL_H = 33;
 const CELLS = 21;
+const STRIP_H = CELL_H * CELLS; // 693
+
+function mod(n, m){
+  return ((n % m) + m) % m;
+}
 
 document.querySelectorAll('.reel').forEach(reel=>{
-    const img = reel.querySelector('img');
-    let startY = 0;
-    let currentIndex = 0;
 
-    reel.addEventListener('pointerdown', e=>{
-        startY = e.clientY;
-        reel.setPointerCapture(e.pointerId);
-    });
+  const src = reel.dataset.src;
 
-    reel.addEventListener('pointerup', e=>{
-        let diff = e.clientY - startY;
-        let steps = Math.round(diff / CELL_HEIGHT);
+  // 2枚並べる（ループ用）
+  const track = document.createElement('div');
+  track.className = 'track';
 
-        currentIndex -= steps;
+  const imgA = new Image();
+  const imgB = new Image();
 
-        while(currentIndex < 0) currentIndex += CELLS;
-        while(currentIndex >= CELLS) currentIndex -= CELLS;
+  imgA.src = src;
+  imgB.src = src;
 
-        img.style.transform = `translateY(${-currentIndex * CELL_HEIGHT}px)`;
-    });
+  track.appendChild(imgA);
+  track.appendChild(imgB);
+  reel.appendChild(track);
+
+  let dragging = false;
+  let startY = 0;
+  let baseOffset = 0;   // 0..692 の範囲で管理
+  let liveOffset = 0;
+
+  function apply(offset){
+    track.style.transform = `translateY(${-offset}px)`;
+  }
+
+  reel.addEventListener('pointerdown', e=>{
+    dragging = true;
+    startY = e.clientY;
+    liveOffset = baseOffset;
+    reel.setPointerCapture(e.pointerId);
+  });
+
+  reel.addEventListener('pointermove', e=>{
+    if(!dragging) return;
+
+    const dy = e.clientY - startY;
+
+    // 指を上に動かす( dyマイナス ) → リールは上へ回す
+    const raw = baseOffset + (-dy);
+
+    liveOffset = mod(raw, STRIP_H);
+    apply(liveOffset);
+  });
+
+  function endDrag(){
+    if(!dragging) return;
+
+    dragging = false;
+
+    // 1コマ単位にスナップ
+    const snapped = Math.round(liveOffset / CELL_H) * CELL_H;
+
+    baseOffset = mod(snapped, STRIP_H);
+    apply(baseOffset);
+  }
+
+  reel.addEventListener('pointerup', endDrag);
+  reel.addEventListener('pointercancel', endDrag);
+
+  // 初期表示
+  apply(0);
 });
 </script>
 
