@@ -3,16 +3,28 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>リール操作テスト</title>
+<title>リール配列確認</title>
 
 <style>
 body{
   margin:0;
   background:#fff;
-  height:100vh;
+  font-family:sans-serif;
   display:flex;
-  justify-content:center;
+  flex-direction:column;
   align-items:center;
+  padding:40px 20px;
+}
+
+h1{
+  margin:0 0 10px 0;
+  font-size:24px;
+}
+
+.desc{
+  margin:0 0 30px 0;
+  color:#555;
+  font-size:14px;
 }
 
 .reel-wrapper{
@@ -38,15 +50,36 @@ body{
   -webkit-user-drag:none;
   pointer-events:none;
 }
+
+.back-link{
+  margin-top:30px;
+  font-size:14px;
+}
+
+.back-link a{
+  text-decoration:none;
+  color:#0077cc;
+}
+
+.back-link a:hover{
+  text-decoration:underline;
+}
 </style>
 </head>
 
 <body>
 
+<h1>リール配列確認</h1>
+<p class="desc">ドラッグすると図柄を動かせます。</p>
+
 <div class="reel-wrapper">
   <div class="reel" data-src="../assets/reel_1_strip_21x33.png"></div>
   <div class="reel" data-src="../assets/reel_2_strip_21x33.png"></div>
   <div class="reel" data-src="../assets/reel_3_strip_21x33.png"></div>
+</div>
+
+<div class="back-link">
+  <a href="../uchikata.html">ハナハナ打ち方紹介</a>
 </div>
 
 <script>
@@ -97,7 +130,6 @@ document.querySelectorAll('.reel').forEach(reel=>{
 
     const dy = e.clientY - startY;
 
-    // 指を上に動かす( dyマイナス ) → リールは上へ回す
     const raw = baseOffset + (-dy);
 
     liveOffset = mod(raw, STRIP_H);
@@ -109,7 +141,6 @@ document.querySelectorAll('.reel').forEach(reel=>{
 
     dragging = false;
 
-    // 1コマ単位にスナップ
     const snapped = Math.round(liveOffset / CELL_H) * CELL_H;
 
     baseOffset = mod(snapped, STRIP_H);
@@ -119,7 +150,6 @@ document.querySelectorAll('.reel').forEach(reel=>{
   reel.addEventListener('pointerup', endDrag);
   reel.addEventListener('pointercancel', endDrag);
 
-  // 初期表示
   apply(0);
 });
 </script>
