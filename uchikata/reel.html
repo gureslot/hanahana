@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>リール操作テスト</title>
+
+<style>
+body{
+    margin:0;
+    background:#ffffff;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+}
+
+.reel-wrapper{
+    display:flex;
+    gap:2px;
+}
+
+.reel{
+    position:relative;
+    overflow:hidden;
+    touch-action:none;
+}
+
+.reel img{
+    display:block;
+    user-select:none;
+    -webkit-user-drag:none;
+}
+</style>
+</head>
+
+<body>
+
+<div class="reel-wrapper">
+    <div class="reel"><img src="assets/reel_1_strip_21x33.png"></div>
+    <div class="reel"><img src="assets/reel_2_strip_21x33.png"></div>
+    <div class="reel"><img src="assets/reel_3_strip_21x33.png"></div>
+</div>
+
+<script>
+const CELL_HEIGHT = 33;
+const CELLS = 21;
+
+document.querySelectorAll('.reel').forEach(reel=>{
+    const img = reel.querySelector('img');
+    let startY = 0;
+    let currentIndex = 0;
+
+    reel.addEventListener('pointerdown', e=>{
+        startY = e.clientY;
+        reel.setPointerCapture(e.pointerId);
+    });
+
+    reel.addEventListener('pointerup', e=>{
+        let diff = e.clientY - startY;
+        let steps = Math.round(diff / CELL_HEIGHT);
+
+        currentIndex -= steps;
+
+        while(currentIndex < 0) currentIndex += CELLS;
+        while(currentIndex >= CELLS) currentIndex -= CELLS;
+
+        img.style.transform = `translateY(${-currentIndex * CELL_HEIGHT}px)`;
+    });
+});
+</script>
+
+</body>
+</html>
