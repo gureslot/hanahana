@@ -8,28 +8,34 @@
 <style>
 body{
   margin:0;
-  background:#fff;
   font-family:sans-serif;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  padding:40px 20px;
+  background:#fff;
+  color:#111;
+}
+
+.wrap{
+  max-width:1100px;
+  margin:40px auto;
+  padding:0 20px;
+  text-align:center;
 }
 
 h1{
+  font-size:40px;
   margin:0 0 10px 0;
-  font-size:24px;
+  letter-spacing:1px;
 }
 
 .desc{
   margin:0 0 30px 0;
+  font-size:16px;
   color:#555;
-  font-size:14px;
 }
 
 .reel-wrapper{
   display:flex;
   gap:2px;
+  justify-content:center;
 }
 
 .reel{
@@ -51,41 +57,62 @@ h1{
   pointer-events:none;
 }
 
-.back-link{
-  margin-top:30px;
-  font-size:14px;
+.nav{
+  display:flex;
+  gap:20px;
+  justify-content:center;
+  flex-wrap:wrap;
+  margin:40px 0 0 0;
 }
 
-.back-link a{
+.nav a{
+  display:inline-block;
+  padding:14px 28px;
+  border:2px solid #ff2a6d;
+  color:#111;
   text-decoration:none;
-  color:#0077cc;
+  border-radius:10px;
+  transition:0.2s;
+  font-size:18px;
+  font-weight:bold;
 }
 
-.back-link a:hover{
-  text-decoration:underline;
+.nav a:hover{
+  background:#ff2a6d;
+  color:#fff;
+}
+
+@media(max-width:768px){
+  h1{ font-size:30px; }
 }
 </style>
 </head>
 
 <body>
 
-<h1>リール配列確認</h1>
-<p class="desc">ドラッグすると図柄を動かせます。</p>
+<div class="wrap">
 
-<div class="reel-wrapper">
-  <div class="reel" data-src="../assets/reel_1_strip_21x33.png"></div>
-  <div class="reel" data-src="../assets/reel_2_strip_21x33.png"></div>
-  <div class="reel" data-src="../assets/reel_3_strip_21x33.png"></div>
-</div>
+  <h1>リール配列確認</h1>
+  <p class="desc">ドラッグすると図柄を動かせます。</p>
 
-<div class="back-link">
-  <a href="../uchikata.html">ハナハナ打ち方紹介</a>
+  <div class="reel-wrapper">
+    <div class="reel" data-src="../assets/reel_1_strip_21x33.png"></div>
+    <div class="reel" data-src="../assets/reel_2_strip_21x33.png"></div>
+    <div class="reel" data-src="../assets/reel_3_strip_21x33.png"></div>
+  </div>
+
+  <div class="nav">
+    <a href="../index.html">index</a>
+    <a href="../profile.html">プロフィール</a>
+    <a href="../uchikata.html">ハナハナ打ち方紹介</a>
+  </div>
+
 </div>
 
 <script>
 const CELL_H = 33;
 const CELLS = 21;
-const STRIP_H = CELL_H * CELLS; // 693
+const STRIP_H = CELL_H * CELLS;
 
 function mod(n, m){
   return ((n % m) + m) % m;
@@ -95,7 +122,6 @@ document.querySelectorAll('.reel').forEach(reel=>{
 
   const src = reel.dataset.src;
 
-  // 2枚並べる（ループ用）
   const track = document.createElement('div');
   track.className = 'track';
 
@@ -111,7 +137,7 @@ document.querySelectorAll('.reel').forEach(reel=>{
 
   let dragging = false;
   let startY = 0;
-  let baseOffset = 0;   // 0..692 の範囲で管理
+  let baseOffset = 0;
   let liveOffset = 0;
 
   function apply(offset){
@@ -129,7 +155,6 @@ document.querySelectorAll('.reel').forEach(reel=>{
     if(!dragging) return;
 
     const dy = e.clientY - startY;
-
     const raw = baseOffset + (-dy);
 
     liveOffset = mod(raw, STRIP_H);
@@ -142,7 +167,6 @@ document.querySelectorAll('.reel').forEach(reel=>{
     dragging = false;
 
     const snapped = Math.round(liveOffset / CELL_H) * CELL_H;
-
     baseOffset = mod(snapped, STRIP_H);
     apply(baseOffset);
   }
