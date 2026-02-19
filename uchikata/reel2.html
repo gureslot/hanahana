@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>リール配列確認ロングver.</title>
+
+<style>
+body{
+  margin:0;
+  font-family:sans-serif;
+  background:#fff;
+  color:#111;
+}
+
+.wrap{
+  max-width:1100px;
+  margin:40px auto;
+  padding:0 20px;
+  text-align:center;
+}
+
+h1{
+  font-size:40px;
+  margin:0 0 10px 0;
+  letter-spacing:1px;
+}
+
+.desc{
+  margin:0 0 30px 0;
+  font-size:16px;
+  color:#555;
+}
+
+.reel-wrapper{
+  display:flex;
+  gap:1px;
+  justify-content:center;
+}
+
+.reel{
+  height:1386px; /* 33px × 42コマ */
+  width:90px;    /* ←ここを変更して幅を調整 */
+  overflow:hidden;
+  touch-action:none;
+  user-select:none;
+  -webkit-user-drag:none;
+}
+
+.track{
+  will-change:transform;
+}
+
+.track img{
+  width:100%;
+  height:auto;
+  display:block;
+  user-select:none;
+  -webkit-user-drag:none;
+  pointer-events:none;
+}
+
+.nav{
+  display:flex;
+  gap:20px;
+  justify-content:center;
+  flex-wrap:wrap;
+  margin:40px 0 0 0;
+}
+
+.nav a{
+  display:inline-block;
+  padding:14px 28px;
+  border:2px solid #ff2a6d;
+  color:#111;
+  text-decoration:none;
+  border-radius:10px;
+  transition:0.2s;
+  font-size:18px;
+  font-weight:bold;
+}
+
+.nav a:hover{
+  background:#ff2a6d;
+  color:#fff;
+}
+
+.copyright{
+  margin:40px 0 20px 0;
+  font-size:13px;
+  color:#777;
+}
+
+@media(max-width:768px){
+  h1{
+    font-size:30px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="wrap">
+
+  <h1>リール配列確認ロングver.</h1>
+  <p class="desc">ドラッグすると図柄を動かせます。</p>
+
+  <div class="reel-wrapper">
+    <div class="reel" data-src="../assets/reel_1_strip_21x33.png"></div>
+    <div class="reel" data-src="../assets/reel_2_strip_21x33.png"></div>
+    <div class="reel" data-src="../assets/reel_3_strip_21x33.png"></div>
+  </div>
+
+  <div class="nav">
+    <a href="../index.html">index</a>
+    <a href="../uchikata.html">ハナハナ打ち方紹介</a>
+  </div>
+
+  <div class="copyright">
+    ©PIONEER CO.,LTD.
+  </div>
+
+</div>
+
+<script>
+const CELL_H = 33;
+const CELLS = 42;
+const STRIP_H = CELL_H * CELLS;
+
+function mod(n, m){
+  return ((n % m) + m) % m;
+}
+
+document.querySelectorAll('.reel').forEach(reel=>{
+
+  const src = reel.dataset.src;
+
+  const track = document.createElement('div');
+  track.className = 'track';
+
+  const imgA = new Image();
+  const imgB = new Image();
+
+  imgA.src = src;
+  imgB.src = src;
+
+  track.appendChild(imgA);
+  track.appendChild(imgB);
+  reel.appendChild(track);
+
+  let dragging = false;
+  let startY = 0;
+  let baseOffset = 0;
+  let liveOffset = 0;
+
+  function apply(offset){
+    track.style.transform = `translateY(${-offset}px)`;
+  }
+
+  reel.addEventListener('pointerdown', e=>{
+    dragging = true;
+    startY = e.clientY;
+    liveOffset = baseOffset;
+    reel.setPointerCapture(e.pointerId);
+  });
+
+  reel.addEventListener('pointermove', e=>{
+    if(!dragging) return;
+
+    const dy = e.clientY - startY;
+    const raw = baseOffset + (-dy);
+
+    liveOffset = mod(raw, STRIP_H);
+    apply(liveOffset);
+  });
+
+  function endDrag(){
+    if(!dragging) return;
+
+    dragging = false;
+
+    const snapped = Math.round(liveOffset / CELL_H) * CELL_H;
+    baseOffset = mod(snapped, STRIP_H);
+    apply(baseOffset);
+  }
+
+  reel.addEventListener('pointerup', endDrag);
+  reel.addEventListener('pointercancel', endDrag);
+
+  apply(0);
+});
+</script>
+
+</body>
+</html>
