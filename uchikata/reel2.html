@@ -151,8 +151,9 @@ document.querySelectorAll('.reel').forEach(reel=>{
     track.style.transform = `translateY(${-offset}px)`;
   }
 
+  // 安全側（丸め誤差で欠けないように余分に1枚多く持つ）
   function buildCopies(){
-    const copies = Math.ceil((viewH + stripH) / stripH);
+    const copies = Math.ceil(viewH / stripH) + 2; // 42コマなら基本4枚になる
     track.innerHTML = '';
     for(let i=0; i<copies; i++){
       const img = new Image();
@@ -162,11 +163,12 @@ document.querySelectorAll('.reel').forEach(reel=>{
   }
 
   function measureAndInit(img){
-    stripH = img.getBoundingClientRect().height;
-    cellH  = stripH / CELLS;
-    viewH  = cellH * VIEW_CELLS;
+    stripH = img.getBoundingClientRect().height; // 実表示の21コマ高さ
+    cellH  = stripH / CELLS;                    // 実表示の1コマ高さ
+    viewH  = cellH * VIEW_CELLS;                // 実表示の42コマ高さ
 
-    reel.style.height = `${viewH}px`;
+    // 1px短くなるのを防ぐ
+    reel.style.height = `${Math.ceil(viewH)}px`;
 
     buildCopies();
 
@@ -223,9 +225,6 @@ document.querySelectorAll('.reel').forEach(reel=>{
 
   window.addEventListener('resize', ()=>{
     if(!ready) return;
-
-    const firstImg = track.querySelector('img');
-    if(!firstImg) return;
 
     const tmp = new Image();
     tmp.src = src;
