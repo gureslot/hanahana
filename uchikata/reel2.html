@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
@@ -37,11 +36,11 @@ h1{
   display:flex;
   gap:2px;
   justify-content:center;
+  align-items:flex-start;
 }
 
 .reel{
-  height:1386px;              /* 33px * 42コマ */
-  width:clamp(90px, 9vw, 120px); /* ここを詰めたり広げたりして調整 */
+  width:clamp(90px, 9vw, 120px);
   overflow:hidden;
   touch-action:none;
   user-select:none;
@@ -96,7 +95,6 @@ h1{
   h1{ font-size:30px; }
 }
 </style>
-
 </head>
 
 <body>
@@ -124,15 +122,8 @@ h1{
 </div>
 
 <script>
-const CELL_H = 33;
-const CELLS = 21;         // 元画像のコマ数（帯のコマ数）
-const VIEW_CELLS = 42;    // 表示したいコマ数（ここを変える）
-const STRIP_H = CELL_H * CELLS;
-const VIEW_H  = CELL_H * VIEW_CELLS;
-
-// 表示窓(VIEW_H)に対して、下が空かないように必要枚数を自動計算
-// 必要高さ = VIEW_H + STRIP_H なので、42コマなら3枚になる
-const COPIES = Math.ceil((VIEW_H + STRIP_H) / STRIP_H);
+const CELLS = 21;
+const VIEW_CELLS = 42;
 
 function mod(n, m){
   return ((n % m) + m) % m;
@@ -144,13 +135,6 @@ document.querySelectorAll('.reel').forEach(reel=>{
 
   const track = document.createElement('div');
   track.className = 'track';
-
-  for(let i=0; i<COPIES; i++){
-    const img = new Image();
-    img.src = src;
-    track.appendChild(img);
-  }
-
   reel.appendChild(track);
 
   let dragging = false;
@@ -158,11 +142,54 @@ document.querySelectorAll('.reel').forEach(reel=>{
   let baseOffset = 0;
   let liveOffset = 0;
 
+  let stripH = 0;
+  let cellH = 0;
+  let viewH = 0;
+  let ready = false;
+
   function apply(offset){
     track.style.transform = `translateY(${-offset}px)`;
   }
 
+  function buildCopies(){
+    const copies = Math.ceil((viewH + stripH) / stripH);
+    track.innerHTML = '';
+    for(let i=0; i<copies; i++){
+      const img = new Image();
+      img.src = src;
+      track.appendChild(img);
+    }
+  }
+
+  function measureAndInit(img){
+    stripH = img.getBoundingClientRect().height;
+    cellH  = stripH / CELLS;
+    viewH  = cellH * VIEW_CELLS;
+
+    reel.style.height = `${viewH}px`;
+
+    buildCopies();
+
+    baseOffset = 0;
+    liveOffset = 0;
+    apply(0);
+
+    ready = true;
+  }
+
+  const probe = new Image();
+  probe.src = src;
+  probe.onload = ()=>{
+    track.innerHTML = '';
+    track.appendChild(probe);
+
+    requestAnimationFrame(()=>{
+      measureAndInit(probe);
+    });
+  };
+
   reel.addEventListener('pointerdown', e=>{
+    if(!ready) return;
     dragging = true;
     startY = e.clientY;
     liveOffset = baseOffset;
@@ -170,29 +197,54 @@ document.querySelectorAll('.reel').forEach(reel=>{
   });
 
   reel.addEventListener('pointermove', e=>{
+    if(!ready) return;
     if(!dragging) return;
 
     const dy = e.clientY - startY;
     const raw = baseOffset + (-dy);
 
-    liveOffset = mod(raw, STRIP_H);
+    liveOffset = mod(raw, stripH);
     apply(liveOffset);
   });
 
   function endDrag(){
+    if(!ready) return;
     if(!dragging) return;
 
     dragging = false;
 
-    const snapped = Math.round(liveOffset / CELL_H) * CELL_H;
-    baseOffset = mod(snapped, STRIP_H);
+    const snapped = Math.round(liveOffset / cellH) * cellH;
+    baseOffset = mod(snapped, stripH);
     apply(baseOffset);
   }
 
   reel.addEventListener('pointerup', endDrag);
   reel.addEventListener('pointercancel', endDrag);
 
-  apply(0);
+  window.addEventListener('resize', ()=>{
+    if(!ready) return;
+
+    const firstImg = track.querySelector('img');
+    if(!firstImg) return;
+
+    const tmp = new Image();
+    tmp.src = src;
+    tmp.onload = ()=>{
+      track.innerHTML = '';
+      track.appendChild(tmp);
+
+      requestAnimationFrame(()=>{
+        const keepIndex = Math.round(baseOffset / cellH);
+
+        measureAndInit(tmp);
+
+        baseOffset = mod(keepIndex * cellH, stripH);
+        liveOffset = baseOffset;
+        apply(baseOffset);
+      });
+    };
+  });
+
 });
 </script>
 
