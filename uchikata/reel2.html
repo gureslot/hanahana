@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
@@ -34,14 +35,13 @@ h1{
 
 .reel-wrapper{
   display:flex;
-  gap:1px;
+  gap:2px;
   justify-content:center;
-  align-items:flex-start; /* 横ラインのズレを減らす */
 }
 
 .reel{
-  height:1386px; /* 33px × 42コマ */
-  width:90px;    /* ←ここを変更して幅を調整 */
+  height:1386px;              /* 33px * 42コマ */
+  width:clamp(90px, 9vw, 120px); /* ここを詰めたり広げたりして調整 */
   overflow:hidden;
   touch-action:none;
   user-select:none;
@@ -53,9 +53,9 @@ h1{
 }
 
 .track img{
+  display:block;
   width:100%;
   height:auto;
-  display:block;
   user-select:none;
   -webkit-user-drag:none;
   pointer-events:none;
@@ -93,11 +93,10 @@ h1{
 }
 
 @media(max-width:768px){
-  h1{
-    font-size:30px;
-  }
+  h1{ font-size:30px; }
 }
 </style>
+
 </head>
 
 <body>
@@ -126,10 +125,14 @@ h1{
 
 <script>
 const CELL_H = 33;
+const CELLS = 21;         // 元画像のコマ数（帯のコマ数）
+const VIEW_CELLS = 42;    // 表示したいコマ数（ここを変える）
+const STRIP_H = CELL_H * CELLS;
+const VIEW_H  = CELL_H * VIEW_CELLS;
 
-/* いまの画像が 21コマ前提 */
-const IMG_CELLS = 21;
-const IMG_H = CELL_H * IMG_CELLS;
+// 表示窓(VIEW_H)に対して、下が空かないように必要枚数を自動計算
+// 必要高さ = VIEW_H + STRIP_H なので、42コマなら3枚になる
+const COPIES = Math.ceil((VIEW_H + STRIP_H) / STRIP_H);
 
 function mod(n, m){
   return ((n % m) + m) % m;
@@ -142,23 +145,17 @@ document.querySelectorAll('.reel').forEach(reel=>{
   const track = document.createElement('div');
   track.className = 'track';
 
-  /* 画像を3本つなぐ */
-  const imgA = new Image();
-  const imgB = new Image();
-  const imgC = new Image();
+  for(let i=0; i<COPIES; i++){
+    const img = new Image();
+    img.src = src;
+    track.appendChild(img);
+  }
 
-  imgA.src = src;
-  imgB.src = src;
-  imgC.src = src;
-
-  track.appendChild(imgA);
-  track.appendChild(imgB);
-  track.appendChild(imgC);
   reel.appendChild(track);
 
   let dragging = false;
   let startY = 0;
-  let baseOffset = 0;  /* 0〜IMG_H の範囲で管理 */
+  let baseOffset = 0;
   let liveOffset = 0;
 
   function apply(offset){
@@ -178,8 +175,7 @@ document.querySelectorAll('.reel').forEach(reel=>{
     const dy = e.clientY - startY;
     const raw = baseOffset + (-dy);
 
-    /* ループ周期は画像1本分 */
-    liveOffset = mod(raw, IMG_H);
+    liveOffset = mod(raw, STRIP_H);
     apply(liveOffset);
   });
 
@@ -188,9 +184,8 @@ document.querySelectorAll('.reel').forEach(reel=>{
 
     dragging = false;
 
-    /* スナップは33px単位 */
     const snapped = Math.round(liveOffset / CELL_H) * CELL_H;
-    baseOffset = mod(snapped, IMG_H);
+    baseOffset = mod(snapped, STRIP_H);
     apply(baseOffset);
   }
 
