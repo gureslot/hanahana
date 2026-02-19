@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>リール配列確認ロングver.</title>
+<title>リール配列確認</title>
 
 <style>
 body{
@@ -36,6 +36,7 @@ h1{
   display:flex;
   gap:1px;
   justify-content:center;
+  align-items:flex-start; /* 横ラインのズレを減らす */
 }
 
 .reel{
@@ -103,7 +104,7 @@ h1{
 
 <div class="wrap">
 
-  <h1>リール配列確認ロングver.</h1>
+  <h1>リール配列確認</h1>
   <p class="desc">ドラッグすると図柄を動かせます。</p>
 
   <div class="reel-wrapper">
@@ -125,8 +126,10 @@ h1{
 
 <script>
 const CELL_H = 33;
-const CELLS = 42;
-const STRIP_H = CELL_H * CELLS;
+
+/* いまの画像が 21コマ前提 */
+const IMG_CELLS = 21;
+const IMG_H = CELL_H * IMG_CELLS;
 
 function mod(n, m){
   return ((n % m) + m) % m;
@@ -139,19 +142,23 @@ document.querySelectorAll('.reel').forEach(reel=>{
   const track = document.createElement('div');
   track.className = 'track';
 
+  /* 画像を3本つなぐ */
   const imgA = new Image();
   const imgB = new Image();
+  const imgC = new Image();
 
   imgA.src = src;
   imgB.src = src;
+  imgC.src = src;
 
   track.appendChild(imgA);
   track.appendChild(imgB);
+  track.appendChild(imgC);
   reel.appendChild(track);
 
   let dragging = false;
   let startY = 0;
-  let baseOffset = 0;
+  let baseOffset = 0;  /* 0〜IMG_H の範囲で管理 */
   let liveOffset = 0;
 
   function apply(offset){
@@ -171,7 +178,8 @@ document.querySelectorAll('.reel').forEach(reel=>{
     const dy = e.clientY - startY;
     const raw = baseOffset + (-dy);
 
-    liveOffset = mod(raw, STRIP_H);
+    /* ループ周期は画像1本分 */
+    liveOffset = mod(raw, IMG_H);
     apply(liveOffset);
   });
 
@@ -180,8 +188,9 @@ document.querySelectorAll('.reel').forEach(reel=>{
 
     dragging = false;
 
+    /* スナップは33px単位 */
     const snapped = Math.round(liveOffset / CELL_H) * CELL_H;
-    baseOffset = mod(snapped, STRIP_H);
+    baseOffset = mod(snapped, IMG_H);
     apply(baseOffset);
   }
 
