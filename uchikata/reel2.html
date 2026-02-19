@@ -1,191 +1,197 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>リール配列確認</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>リール配列確認</title>
 
-<style>
-body{
-  margin:0;
-  font-family:sans-serif;
-  background:#fff;
-  color:#111;
-}
+  <style>
+    body{
+      margin:0;
+      font-family:sans-serif;
+      background:#fff;
+      color:#111;
+    }
 
-.wrap{
-  max-width:1100px;
-  margin:40px auto;
-  padding:0 20px;
-  text-align:center;
-}
+    .wrap{
+      max-width:1100px;
+      margin:40px auto;
+      padding:0 20px;
+      text-align:center;
+    }
 
-h1{
-  font-size:40px;
-  margin:0 0 10px 0;
-  letter-spacing:1px;
-}
+    h1{
+      font-size:40px;
+      margin:0 0 10px 0;
+      letter-spacing:1px;
+    }
 
-.desc{
-  margin:0 0 30px 0;
-  font-size:16px;
-  color:#555;
-}
+    .desc{
+      margin:0 0 30px 0;
+      font-size:16px;
+      color:#555;
+    }
 
-.reel-wrapper{
-  display:flex;
-  gap:2px;
-  justify-content:center;
-}
+    .reel-wrapper{
+      display:flex;
+      gap:2px;
+      justify-content:center;
+    }
 
-.reel{
-  height:1386px; /* 33px × 42コマ */
-  overflow:hidden;
-  touch-action:none;
-  user-select:none;
-  -webkit-user-drag:none;
-}
+    .reel{
+      height:1386px;
+      overflow:hidden;
+      touch-action:none;
+      user-select:none;
+      -webkit-user-drag:none;
+    }
 
-.track{
-  will-change:transform;
-}
+    .track{
+      will-change:transform;
+    }
 
-.track img{
-  display:block;
-  user-select:none;
-  -webkit-user-drag:none;
-  pointer-events:none;
-}
+    .track img{
+      display:block;
+      user-select:none;
+      -webkit-user-drag:none;
+      pointer-events:none;
+    }
 
-.nav{
-  display:flex;
-  gap:20px;
-  justify-content:center;
-  flex-wrap:wrap;
-  margin:40px 0 0 0;
-}
+    .nav{
+      display:flex;
+      gap:20px;
+      justify-content:center;
+      flex-wrap:wrap;
+      margin:40px 0 0 0;
+    }
 
-.nav a{
-  display:inline-block;
-  padding:14px 28px;
-  border:2px solid #ff2a6d;
-  color:#111;
-  text-decoration:none;
-  border-radius:10px;
-  transition:0.2s;
-  font-size:18px;
-  font-weight:bold;
-}
+    .nav a{
+      display:inline-block;
+      padding:14px 28px;
+      border:2px solid #ff2a6d;
+      color:#111;
+      text-decoration:none;
+      border-radius:10px;
+      transition:0.2s;
+      font-size:18px;
+      font-weight:bold;
+    }
 
-.nav a:hover{
-  background:#ff2a6d;
-  color:#fff;
-}
+    .nav a:hover{
+      background:#ff2a6d;
+      color:#fff;
+    }
 
-.copyright{
-  margin:40px 0 20px 0;
-  font-size:13px;
-  color:#777;
-}
+    .copyright{
+      margin:40px 0 20px 0;
+      font-size:13px;
+      color:#777;
+    }
 
-@media(max-width:768px){
-  h1{ font-size:30px; }
-}
-</style>
+    @media(max-width:768px){
+      h1{
+        font-size:30px;
+      }
+    }
+  </style>
 </head>
 
 <body>
 
-<div class="wrap">
+  <div class="wrap">
 
-  <h1>リール配列確認</h1>
-  <p class="desc">ドラッグすると図柄を動かせます。</p>
+    <h1>リール配列確認</h1>
+    <p class="desc">ドラッグすると図柄を動かせます。</p>
 
-  <div class="reel-wrapper">
-    <div class="reel" data-src="../assets/reel_1_strip_21x33.png"></div>
-    <div class="reel" data-src="../assets/reel_2_strip_21x33.png"></div>
-    <div class="reel" data-src="../assets/reel_3_strip_21x33.png"></div>
+    <div class="reel-wrapper">
+      <div class="reel" data-src="../assets/reel_1_strip_21x33.png"></div>
+      <div class="reel" data-src="../assets/reel_2_strip_21x33.png"></div>
+      <div class="reel" data-src="../assets/reel_3_strip_21x33.png"></div>
+    </div>
+
+    <div class="nav">
+      <a href="../index.html">index</a>
+      <a href="../uchikata.html">ハナハナ打ち方紹介</a>
+    </div>
+
+    <div class="copyright">
+      ©PIONEER CO.,LTD.
+    </div>
+
   </div>
 
-  <div class="nav">
-    <a href="../index.html">index</a>
-    <a href="../uchikata.html">ハナハナ打ち方紹介</a>
-  </div>
+  <script>
+    const CELL_H = 33;
+    const CELLS = 21;
+    const STRIP_H = CELL_H * CELLS;
 
-  <div class="copyright">
-    ©PIONEER CO.,LTD.
-  </div>
+    function mod(n, m){
+      return ((n % m) + m) % m;
+    }
 
-</div>
+    document.querySelectorAll('.reel').forEach(reel=>{
 
-<script>
-const CELL_H = 33;
-const CELLS = 21;
-const STRIP_H = CELL_H * CELLS; // 1枚分（693px）
+      const src = reel.dataset.src;
 
-function mod(n, m){
-  return ((n % m) + m) % m;
-}
+      const track = document.createElement('div');
+      track.className = 'track';
 
-document.querySelectorAll('.reel').forEach(reel=>{
+      const imgA = new Image();
+      const imgB = new Image();
+      const imgC = new Image();
 
-  const src = reel.dataset.src;
+      imgA.src = src;
+      imgB.src = src;
+      imgC.src = src;
 
-  const track = document.createElement('div');
-  track.className = 'track';
+      track.appendChild(imgA);
+      track.appendChild(imgB);
+      track.appendChild(imgC);
 
-  const imgA = new Image();
-  const imgB = new Image();
+      reel.appendChild(track);
 
-  imgA.src = src;
-  imgB.src = src;
+      let dragging = false;
+      let startY = 0;
+      let baseOffset = 0;
+      let liveOffset = 0;
 
-  track.appendChild(imgA);
-  track.appendChild(imgB);
-  reel.appendChild(track);
+      function apply(offset){
+        track.style.transform = `translateY(${-offset}px)`;
+      }
 
-  let dragging = false;
-  let startY = 0;
-  let baseOffset = 0;
-  let liveOffset = 0;
+      reel.addEventListener('pointerdown', e=>{
+        dragging = true;
+        startY = e.clientY;
+        liveOffset = baseOffset;
+        reel.setPointerCapture(e.pointerId);
+      });
 
-  function apply(offset){
-    track.style.transform = `translateY(${-offset}px)`;
-  }
+      reel.addEventListener('pointermove', e=>{
+        if(!dragging) return;
 
-  reel.addEventListener('pointerdown', e=>{
-    dragging = true;
-    startY = e.clientY;
-    liveOffset = baseOffset;
-    reel.setPointerCapture(e.pointerId);
-  });
+        const dy = e.clientY - startY;
+        const raw = baseOffset + (-dy);
 
-  reel.addEventListener('pointermove', e=>{
-    if(!dragging) return;
+        liveOffset = mod(raw, STRIP_H);
+        apply(liveOffset);
+      });
 
-    const dy = e.clientY - startY;
-    const raw = baseOffset + (-dy);
+      function endDrag(){
+        if(!dragging) return;
 
-    liveOffset = mod(raw, STRIP_H);
-    apply(liveOffset);
-  });
+        dragging = false;
 
-  function endDrag(){
-    if(!dragging) return;
+        const snapped = Math.round(liveOffset / CELL_H) * CELL_H;
+        baseOffset = mod(snapped, STRIP_H);
+        apply(baseOffset);
+      }
 
-    dragging = false;
+      reel.addEventListener('pointerup', endDrag);
+      reel.addEventListener('pointercancel', endDrag);
 
-    const snapped = Math.round(liveOffset / CELL_H) * CELL_H;
-    baseOffset = mod(snapped, STRIP_H);
-    apply(baseOffset);
-  }
-
-  reel.addEventListener('pointerup', endDrag);
-  reel.addEventListener('pointercancel', endDrag);
-
-  apply(0);
-});
-</script>
+      apply(0);
+    });
+  </script>
 
 </body>
 </html>
