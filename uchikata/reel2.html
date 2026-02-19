@@ -36,11 +36,10 @@ h1{
   display:flex;
   gap:2px;
   justify-content:center;
-  align-items:flex-start;
 }
 
 .reel{
-  width:clamp(90px, 9vw, 120px);
+  height:1386px; /* 33px × 42コマ */
   overflow:hidden;
   touch-action:none;
   user-select:none;
@@ -53,8 +52,6 @@ h1{
 
 .track img{
   display:block;
-  width:100%;
-  height:auto;
   user-select:none;
   -webkit-user-drag:none;
   pointer-events:none;
@@ -122,8 +119,9 @@ h1{
 </div>
 
 <script>
+const CELL_H = 33;
 const CELLS = 21;
-const VIEW_CELLS = 42;
+const STRIP_H = CELL_H * CELLS; // 1枚分（693px）
 
 function mod(n, m){
   return ((n % m) + m) % m;
@@ -135,6 +133,15 @@ document.querySelectorAll('.reel').forEach(reel=>{
 
   const track = document.createElement('div');
   track.className = 'track';
+
+  const imgA = new Image();
+  const imgB = new Image();
+
+  imgA.src = src;
+  imgB.src = src;
+
+  track.appendChild(imgA);
+  track.appendChild(imgB);
   reel.appendChild(track);
 
   let dragging = false;
@@ -142,56 +149,11 @@ document.querySelectorAll('.reel').forEach(reel=>{
   let baseOffset = 0;
   let liveOffset = 0;
 
-  let stripH = 0;
-  let cellH = 0;
-  let viewH = 0;
-  let ready = false;
-
   function apply(offset){
     track.style.transform = `translateY(${-offset}px)`;
   }
 
-  // 安全側（丸め誤差で欠けないように余分に1枚多く持つ）
-  function buildCopies(){
-    const copies = Math.ceil(viewH / stripH) + 2; // 42コマなら基本4枚になる
-    track.innerHTML = '';
-    for(let i=0; i<copies; i++){
-      const img = new Image();
-      img.src = src;
-      track.appendChild(img);
-    }
-  }
-
-  function measureAndInit(img){
-    stripH = img.getBoundingClientRect().height; // 実表示の21コマ高さ
-    cellH  = stripH / CELLS;                    // 実表示の1コマ高さ
-    viewH  = cellH * VIEW_CELLS;                // 実表示の42コマ高さ
-
-    // 1px短くなるのを防ぐ
-    reel.style.height = `${Math.ceil(viewH)}px`;
-
-    buildCopies();
-
-    baseOffset = 0;
-    liveOffset = 0;
-    apply(0);
-
-    ready = true;
-  }
-
-  const probe = new Image();
-  probe.src = src;
-  probe.onload = ()=>{
-    track.innerHTML = '';
-    track.appendChild(probe);
-
-    requestAnimationFrame(()=>{
-      measureAndInit(probe);
-    });
-  };
-
   reel.addEventListener('pointerdown', e=>{
-    if(!ready) return;
     dragging = true;
     startY = e.clientY;
     liveOffset = baseOffset;
@@ -199,51 +161,29 @@ document.querySelectorAll('.reel').forEach(reel=>{
   });
 
   reel.addEventListener('pointermove', e=>{
-    if(!ready) return;
     if(!dragging) return;
 
     const dy = e.clientY - startY;
     const raw = baseOffset + (-dy);
 
-    liveOffset = mod(raw, stripH);
+    liveOffset = mod(raw, STRIP_H);
     apply(liveOffset);
   });
 
   function endDrag(){
-    if(!ready) return;
     if(!dragging) return;
 
     dragging = false;
 
-    const snapped = Math.round(liveOffset / cellH) * cellH;
-    baseOffset = mod(snapped, stripH);
+    const snapped = Math.round(liveOffset / CELL_H) * CELL_H;
+    baseOffset = mod(snapped, STRIP_H);
     apply(baseOffset);
   }
 
   reel.addEventListener('pointerup', endDrag);
   reel.addEventListener('pointercancel', endDrag);
 
-  window.addEventListener('resize', ()=>{
-    if(!ready) return;
-
-    const tmp = new Image();
-    tmp.src = src;
-    tmp.onload = ()=>{
-      track.innerHTML = '';
-      track.appendChild(tmp);
-
-      requestAnimationFrame(()=>{
-        const keepIndex = Math.round(baseOffset / cellH);
-
-        measureAndInit(tmp);
-
-        baseOffset = mod(keepIndex * cellH, stripH);
-        liveOffset = baseOffset;
-        apply(baseOffset);
-      });
-    };
-  });
-
+  apply(0);
 });
 </script>
 
