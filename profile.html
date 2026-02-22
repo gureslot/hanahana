@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>プロフィール | グレイト・プレ・善太のハナハナサイト</title>
+
+  <style>
+    body{
+      margin:0;
+      font-family:sans-serif;
+      background:#fff;
+      color:#111;
+    }
+
+    .wrap{
+      max-width:1100px;
+      margin:40px auto;
+      padding:0 20px;
+    }
+
+    h1{
+      text-align:center;
+      font-size:40px;
+      margin:0 0 10px 0;
+      letter-spacing:1px;
+    }
+
+    .name-sub{
+      text-align:center;
+      font-size:18px;
+      color:#555;
+      margin:0 0 30px 0;
+    }
+
+    .card{
+      max-width:700px;
+      margin:0 auto;
+      border:2px solid #ff2a6d;
+      border-radius:12px;
+      padding:26px 24px;
+      background:#fff7fb;
+    }
+
+    .label{
+      font-weight:700;
+      margin:0 0 8px 0;
+      font-size:16px;
+      letter-spacing:0.5px;
+    }
+
+    .one-line{
+      margin:0 0 18px 0;
+      font-size:18px;
+      line-height:1.8;
+    }
+
+    .sns{
+      margin:0;
+      font-size:18px;
+      line-height:1.8;
+      word-break:break-word;
+      overflow-wrap:anywhere;
+    }
+
+    .sns a{
+      color:#ff2a6d;
+      font-weight:700;
+      text-decoration:none;
+    }
+
+    .sns a:hover{
+      text-decoration:underline;
+    }
+
+    .nav{
+      display:flex;
+      gap:20px;
+      justify-content:center;
+      flex-wrap:wrap;
+      margin:40px 0 0 0;
+    }
+
+    .nav a{
+      display:inline-block;
+      padding:14px 28px;
+      border:2px solid #ff2a6d;
+      color:#111;
+      text-decoration:none;
+      border-radius:10px;
+      transition:0.2s;
+      font-size:18px;
+      font-weight:700;
+    }
+
+    .nav a:hover{
+      background:#ff2a6d;
+      color:#fff;
+    }
+
+    @media(max-width:768px){
+      h1{ font-size:30px; }
+      .card{ padding:22px 18px; }
+      .one-line, .sns{ font-size:16px; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <h1>プロフィール</h1>
+    <p class="name-sub">グレイト・プレ・善太</p>
+
+    <div class="card">
+      <p class="label">好きなもの</p>
+      <p class="one-line">ハナハナ・AI創作・シュールなもの</p>
+
+      <p class="label">SNS</p>
+      <p class="sns">
+        <a href="https://lit.link/GreatPresenter" target="_blank" rel="noopener noreferrer">
+          https://lit.link/GreatPresenter
+        </a>
+      </p>
+    </div>
+
+    <div class="nav">
+      <a href="index.html">index</a>
+    </div>
+  </div>
+</body>
+</html>
