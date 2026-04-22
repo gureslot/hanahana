@@ -39,6 +39,11 @@ td.gray{
   background:#808080;
 }
 
+/* 実リンクが入っているセルだけ赤 */
+td.active{
+  background:#ff0000;
+}
+
 a{
   display:block;
   padding:2px 6px;
@@ -68,9 +73,8 @@ a:hover{
   top:50%;
   left:50%;
   transform:translate(-50%,-50%);
-  width:90vw;
-  max-width:400px;
-  aspect-ratio:9/16;
+  width:min(90vw, 400px);
+  aspect-ratio:9 / 16;
   background:#000;
 }
 
@@ -84,11 +88,18 @@ a:hover{
 /* 閉じるボタン */
 #close{
   position:absolute;
-  top:-40px;
-  right:0;
+  top:8px;
+  right:8px;
+  width:36px;
+  height:36px;
+  line-height:36px;
+  text-align:center;
   font-size:28px;
   color:#fff;
+  background:rgba(0,0,0,0.5);
+  border-radius:50%;
   cursor:pointer;
+  z-index:10000;
 }
 </style>
 
@@ -588,15 +599,20 @@ a:hover{
     <iframe id="player" allow="autoplay; encrypted-media" allowfullscreen></iframe>
   </div>
 </div>
-
 <script>
-document.querySelectorAll("a").forEach(link=>{
-  link.addEventListener("click",function(e){
-    e.preventDefault();
+document.querySelectorAll("td a").forEach(link=>{
+  const url = link.getAttribute("href");
 
-    const url = this.getAttribute("href");
+  // リンクありセルを赤にする
+  if(url && url !== "#"){
+    link.parentElement.classList.add("active");
+  }
+
+  // クリックでモーダル表示
+  link.addEventListener("click",function(e){
     if(!url || url === "#") return;
 
+    e.preventDefault();
     document.getElementById("player").src = url;
     document.getElementById("modal").style.display = "block";
   });
@@ -609,6 +625,7 @@ function closeModal(){
 
 document.getElementById("close").onclick = closeModal;
 
+// 外側クリックで閉じる
 document.getElementById("modal").addEventListener("click",function(e){
   if(e.target === this){
     closeModal();
