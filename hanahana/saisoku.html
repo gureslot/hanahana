@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>最速コレクション</title>
+
 <style>
 body{
   margin:0;
@@ -11,19 +12,21 @@ body{
   color:#fff;
   font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif;
 }
+
+/* テーブル */
 .wrapper{
   padding:20px 12px;
   overflow-x:auto;
 }
+
 table{
   border-collapse:collapse;
   margin:0 auto;
   background:#0a0a0a;
 }
+
 td{
-  min-width:auto;
   width:1%;
-  height:auto;
   padding:0;
   border:1px solid #4a4a4a;
   text-align:center;
@@ -42,10 +45,53 @@ a{
   color:#fff;
   text-decoration:none;
 }
+
 a:hover{
   background:#1f1f1f;
 }
+
+/* モーダル（全体） */
+#modal{
+  display:none;
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:rgba(0,0,0,0.9);
+  z-index:9999;
+}
+
+/* プレイヤー枠（縦動画用） */
+#modalContent{
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  width:90vw;
+  max-width:400px;
+  aspect-ratio:9/16;
+  background:#000;
+}
+
+/* iframe */
+#modal iframe{
+  width:100%;
+  height:100%;
+  border:none;
+}
+
+/* 閉じるボタン */
+#close{
+  position:absolute;
+  top:-40px;
+  right:0;
+  font-size:28px;
+  color:#fff;
+  cursor:pointer;
+}
 </style>
+
 </head>
 <body>
 <div class="wrapper">
@@ -81,7 +127,7 @@ a:hover{
 <td><a href="#">4-5-2</a></td>
 <td class="gray">4-6-2</a></td>
 <td><a href="#">4-7-2</a></td>
-<td><a href="https://youtube.com/shorts/DnussgilkS0?si=vwTPpKfx7ynmFWb6">4-8-2</a></td>
+<td><a href="https://www.youtube.com/embed/DnussgilkS0">4-8-2</a></td>
 <td><a href="#">4-9-2</a></td>
 <td class="gray">4-10-2</a></td>
 <td class="gray">4-11-2</a></td>
@@ -535,5 +581,32 @@ a:hover{
 </tr>
 </table>
 </div>
+  <!-- ここに追加 -->
+<div id="modal">
+  <div id="modalContent">
+    <span id="close">×</span>
+    <iframe id="player"></iframe>
+  </div>
+</div>
+
+<script>
+document.querySelectorAll("a").forEach(link=>{
+  link.addEventListener("click",function(e){
+    e.preventDefault();
+
+    const url = this.getAttribute("href");
+    if(!url || url === "#") return;
+
+    document.getElementById("player").src = url;
+    document.getElementById("modal").style.display = "block";
+  });
+});
+
+document.getElementById("close").onclick = function(){
+  document.getElementById("modal").style.display = "none";
+  document.getElementById("player").src = "";
+};
+</script>
+<!-- ここまで -->
 </body>
 </html>
