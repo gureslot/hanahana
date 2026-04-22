@@ -585,7 +585,7 @@ a:hover{
 <div id="modal">
   <div id="modalContent">
     <span id="close">×</span>
-    <iframe id="player"></iframe>
+    <iframe id="player" allow="autoplay; encrypted-media" allowfullscreen></iframe>
   </div>
 </div>
 
@@ -602,10 +602,18 @@ document.querySelectorAll("a").forEach(link=>{
   });
 });
 
-document.getElementById("close").onclick = function(){
+function closeModal(){
   document.getElementById("modal").style.display = "none";
   document.getElementById("player").src = "";
-};
+}
+
+document.getElementById("close").onclick = closeModal;
+
+document.getElementById("modal").addEventListener("click",function(e){
+  if(e.target === this){
+    closeModal();
+  }
+});
 </script>
 <!-- ここまで -->
 </body>
