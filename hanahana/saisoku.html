@@ -620,7 +620,6 @@ td.active a:hover{
   </div>
 </div>
 
-<!-- 画像プレビュー用 -->
 <div id="preview">
   <img id="previewImg" src="">
 </div>
@@ -637,12 +636,10 @@ document.querySelectorAll("td a").forEach(link=>{
   const url = link.getAttribute("href");
   const img = link.getAttribute("data-img");
 
-  // リンクありセルを赤にする
   if(url && url !== "#"){
     link.parentElement.classList.add("active");
   }
 
-  // クリックで動画再生
   link.addEventListener("click",function(e){
     if(!url || url === "#") return;
 
@@ -651,7 +648,6 @@ document.querySelectorAll("td a").forEach(link=>{
     modal.style.display = "block";
   });
 
-  // 画像プレビュー
   if(img){
     link.addEventListener("mouseenter",function(){
       previewImg.src = img;
@@ -659,8 +655,33 @@ document.querySelectorAll("td a").forEach(link=>{
     });
 
     link.addEventListener("mousemove",function(e){
-      preview.style.left = (e.clientX + 15) + "px";
-      preview.style.top = (e.clientY + 15) + "px";
+      const offset = 15;
+      const previewWidth = preview.offsetWidth;
+      const previewHeight = preview.offsetHeight;
+      const windowWidth = window.innerWidth;
+      const windowHeight = window.innerHeight;
+
+      let left = e.clientX + offset;
+      let top = e.clientY + offset;
+
+      if(left + previewWidth > windowWidth){
+        left = e.clientX - previewWidth - offset;
+      }
+
+      if(top + previewHeight > windowHeight){
+        top = e.clientY - previewHeight - offset;
+      }
+
+      if(left < 0){
+        left = 0;
+      }
+
+      if(top < 0){
+        top = 0;
+      }
+
+      preview.style.left = left + "px";
+      preview.style.top = top + "px";
     });
 
     link.addEventListener("mouseleave",function(){
@@ -677,16 +698,11 @@ function closeModal(){
 
 close.onclick = closeModal;
 
-// 外側クリックで閉じる
 modal.addEventListener("click",function(e){
   if(e.target === modal){
     closeModal();
   }
 });
 </script>
-<!-- ここまで -->
-  <div id="preview">
-  <img id="previewImg" src="" alt="">
-</div>
 </body>
 </html>
