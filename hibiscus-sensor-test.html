@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ハイビスカスランプ 点滅認識テスト</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Zen+Antique&family=Share+Tech+Mono&display=swap');
+
+  :root {
+    --red: #ff2d55;
+    --orange: #ff9500;
+    --blue: #0af;
+    --green: #4cd964;
+    --dark: #0a0a0f;
+    --panel: #12121a;
+    --border: #2a2a3a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--dark);
+    color: #eee;
+    font-family: 'Share Tech Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  header {
+    text-align: center;
+    padding: 16px 8px 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  header h1 {
+    font-family: 'Zen Antique', serif;
+    font-size: 1.1rem;
+    color: var(--red);
+    letter-spacing: 0.1em;
+  }
+
+  header p {
+    font-size: 0.65rem;
+    color: #666;
+    margin-top: 4px;
+  }
+
+  /* カメラ */
+  #camera-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+    margin: 12px auto 0;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    background: #000;
+    aspect-ratio: 4/3;
+  }
+
+  #video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  #canvas-hidden { display: none; }
+
+  /* 検出オーバーレイ */
+  #overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  #detection-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: rgba(0,0,0,0.75);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 0.7rem;
+    line-height: 1.6;
+  }
+
+  .badge-row { display: flex; align-items: center; gap: 6px; }
+  .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #444;
+    flex-shrink: 0;
+    transition: background 0.1s;
+  }
+  .dot.active-red { background: var(--red); box-shadow: 0 0 6px var(--red); }
+  .dot.active-blue { background: var(--blue); box-shadow: 0 0 6px var(--blue); }
+  .dot.active-green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+
+  /* コントロール */
+  #controls {
+    display: flex;
+    gap: 8px;
+    padding: 10px 12px;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+  button {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--panel);
+    color: #eee;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  button:active { transform: scale(0.97); }
+  button.primary { border-color: var(--red); color: var(--red); }
+  button.danger { border-color: #ff3b30; color: #ff3b30; }
+
+  /* メーター群 */
+  #meters {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 0 12px;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+  .meter-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+  }
+
+  .meter-label {
+    font-size: 0.6rem;
+    color: #666;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .meter-value {
+    font-size: 1.4rem;
+    font-weight: bold;
+    line-height: 1;
+  }
+
+  .meter-bar {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin-top: 6px;
+    overflow: hidden;
+  }
+
+  .meter-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.1s;
+  }
+
+  /* グラフ */
+  #graph-section {
+    padding: 0 12px;
+    max-width: 480px;
+    margin: 8px auto 0;
+  }
+
+  .graph-label {
+    font-size: 0.6rem;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 4px;
+  }
+
+  canvas.graph {
+    width: 100%;
+    height: 80px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    display: block;
+    margin-bottom: 8px;
+  }
+
+  /* 判定結果 */
+  #result-section {
+    padding: 0 12px 20px;
+    max-width: 480px;
+    margin: 4px auto 0;
+  }
+
+  #result-box {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+  }
+
+  #result-title {
+    font-size: 0.6rem;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+  }
+
+  #result-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .result-item {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .result-item:last-child { border-bottom: none; }
+
+  .result-key { color: #888; }
+  .result-val { color: #eee; }
+  .result-val.hit { color: var(--green); }
+  .result-val.warn { color: var(--orange); }
+
+  /* ログ */
+  #log-section {
+    padding: 0 12px 80px;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+  #log-box {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    height: 120px;
+    overflow-y: auto;
+    font-size: 0.65rem;
+    color: #666;
+    line-height: 1.8;
+  }
+
+  .log-entry { color: #aaa; }
+  .log-entry.detect { color: var(--green); }
+  .log-entry.warn { color: var(--orange); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🌺 ハイビスカスランプ 点滅認識テスト</h1>
+  <p>実機にかざして精度を確認するためのデバッグツール</p>
+</header>
+
+<div id="camera-wrap">
+  <video id="video" autoplay playsinline muted></video>
+  <canvas id="canvas-hidden"></canvas>
+  <div id="overlay">
+    <div id="detection-badge">
+      <div class="badge-row"><div class="dot" id="dot-blink"></div><span id="label-blink">点滅: 待機中</span></div>
+      <div class="badge-row"><div class="dot" id="dot-blue"></div><span id="label-blue">青色: -</span></div>
+      <div class="badge-row"><div class="dot" id="dot-stamen"></div><span id="label-stamen">めしべ領域: -</span></div>
+    </div>
+  </div>
+</div>
+
+<div id="controls">
+  <button class="primary" id="btn-start">▶ カメラ開始</button>
+  <button id="btn-region">領域指定</button>
+  <button class="danger" id="btn-clear">ログ消去</button>
+</div>
+
+<div id="meters">
+  <div class="meter-card">
+    <div class="meter-label">輝度 (現在)</div>
+    <div class="meter-value" id="val-brightness" style="color:var(--orange)">---</div>
+    <div class="meter-bar"><div class="meter-fill" id="bar-brightness" style="width:0%;background:var(--orange)"></div></div>
+  </div>
+  <div class="meter-card">
+    <div class="meter-label">点滅速度 (Hz)</div>
+    <div class="meter-value" id="val-freq" style="color:var(--red)">---</div>
+    <div class="meter-bar"><div class="meter-fill" id="bar-freq" style="width:0%;background:var(--red)"></div></div>
+  </div>
+  <div class="meter-card">
+    <div class="meter-label">青色成分 (%)</div>
+    <div class="meter-value" id="val-blue" style="color:var(--blue)">---</div>
+    <div class="meter-bar"><div class="meter-fill" id="bar-blue" style="width:0%;background:var(--blue)"></div></div>
+  </div>
+  <div class="meter-card">
+    <div class="meter-label">変化量</div>
+    <div class="meter-value" id="val-delta" style="color:var(--green)">---</div>
+    <div class="meter-bar"><div class="meter-fill" id="bar-delta" style="width:0%;background:var(--green)"></div></div>
+  </div>
+</div>
+
+<div id="graph-section">
+  <div class="graph-label">輝度 時系列 (直近4秒)</div>
+  <canvas class="graph" id="graph-brightness"></canvas>
+  <div class="graph-label">RGB チャンネル別</div>
+  <canvas class="graph" id="graph-rgb"></canvas>
+</div>
+
+<div id="result-section">
+  <div id="result-box">
+    <div id="result-title">▌ 現在の判定結果</div>
+    <div id="result-list">
+      <div class="result-item"><span class="result-key">点滅検出</span><span class="result-val" id="r-blink">待機中</span></div>
+      <div class="result-item"><span class="result-key">点滅速度</span><span class="result-val" id="r-speed">-</span></div>
+      <div class="result-item"><span class="result-key">青色混入</span><span class="result-val" id="r-blue">-</span></div>
+      <div class="result-item"><span class="result-key">低輝度点滅</span><span class="result-val" id="r-low">-</span></div>
+      <div class="result-item"><span class="result-key">パターン推定</span><span class="result-val" id="r-pattern">-</span></div>
+    </div>
+  </div>
+</div>
+
+<div id="log-section">
+  <div class="graph-label">検出ログ</div>
+  <div id="log-box"></div>
+</div>
+
+<script>
+const BUFFER_SIZE = 240; // 4秒 @ 60fps想定、実際は可変
+const SAMPLE_INTERVAL = 50; // ms (20fps)
+
+let stream = null;
+let intervalId = null;
+let running = false;
+
+const video = document.getElementById('video');
+const canvasHidden = document.getElementById('canvas-hidden');
+const ctx = canvasHidden.getContext('2d', { willReadFrequently: true });
+
+// データバッファ
+let brightnessBuffer = [];
+let rBuffer = [], gBuffer = [], bBuffer = [];
+let timestamps = [];
+
+// グラフ
+const gBrightness = document.getElementById('graph-brightness');
+const gRgb = document.getElementById('graph-rgb');
+const ctxB = gBrightness.getContext('2d');
+const ctxR = gRgb.getContext('2d');
+
+function initGraphs() {
+  [gBrightness, gRgb].forEach(c => {
+    c.width = c.offsetWidth * window.devicePixelRatio;
+    c.height = c.offsetHeight * window.devicePixelRatio;
+  });
+}
+
+// カメラ起動
+document.getElementById('btn-start').addEventListener('click', async () => {
+  if (running) {
+    stopCamera();
+    return;
+  }
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } }
+    });
+    video.srcObject = stream;
+    await video.play();
+    canvasHidden.width = 320;
+    canvasHidden.height = 240;
+    initGraphs();
+    running = true;
+    document.getElementById('btn-start').textContent = '⏹ 停止';
+    document.getElementById('btn-start').style.borderColor = '#ff3b30';
+    document.getElementById('btn-start').style.color = '#ff3b30';
+    intervalId = setInterval(analyze, SAMPLE_INTERVAL);
+    addLog('カメラ開始', 'detect');
+  } catch(e) {
+    addLog('カメラエラー: ' + e.message, 'warn');
+  }
+});
+
+function stopCamera() {
+  clearInterval(intervalId);
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  running = false;
+  document.getElementById('btn-start').textContent = '▶ カメラ開始';
+  document.getElementById('btn-start').style.borderColor = '';
+  document.getElementById('btn-start').style.color = '';
+  addLog('カメラ停止');
+}
+
+document.getElementById('btn-clear').addEventListener('click', () => {
+  document.getElementById('log-box').innerHTML = '';
+  brightnessBuffer = [];
+  rBuffer = []; gBuffer = []; bBuffer = [];
+  timestamps = [];
+});
+
+// メイン分析
+function analyze() {
+  if (!video.videoWidth) return;
+  ctx.drawImage(video, 0, 0, 320, 240);
+  const imageData = ctx.getImageData(0, 0, 320, 240).data;
+
+  let rSum = 0, gSum = 0, bSum = 0, count = 0;
+  const step = 4; // サンプリング間隔（全ピクセルは重い）
+  for (let i = 0; i < imageData.length; i += 4 * step) {
+    rSum += imageData[i];
+    gSum += imageData[i+1];
+    bSum += imageData[i+2];
+    count++;
+  }
+
+  const r = rSum / count;
+  const g = gSum / count;
+  const b = bSum / count;
+  const brightness = (r + g + b) / 3;
+  const now = Date.now();
+
+  // バッファ更新
+  brightnessBuffer.push(brightness);
+  rBuffer.push(r);
+  gBuffer.push(g);
+  bBuffer.push(b);
+  timestamps.push(now);
+
+  if (brightnessBuffer.length > BUFFER_SIZE) {
+    brightnessBuffer.shift(); rBuffer.shift(); gBuffer.shift(); bBuffer.shift(); timestamps.shift();
+  }
+
+  // --- 各種計算 ---
+  const delta = brightnessBuffer.length > 1
+    ? Math.abs(brightness - brightnessBuffer[brightnessBuffer.length - 2])
+    : 0;
+
+  // 青色成分比率
+  const blueRatio = brightness > 5 ? (b / (r + g + b + 0.001)) * 100 : 0;
+
+  // 点滅周波数推定（ゼロクロス法）
+  const freq = estimateFrequency(brightnessBuffer, timestamps);
+
+  // 低輝度判定
+  const avgBrightness = brightnessBuffer.reduce((a,b)=>a+b,0) / brightnessBuffer.length;
+  const maxBrightness = Math.max(...brightnessBuffer);
+  const isLowLuminance = avgBrightness < 40 && maxBrightness > 15;
+
+  // 点滅判定
+  const variance = calcVariance(brightnessBuffer);
+  const isBlinking = variance > 80;
+
+  // UI更新
+  updateMeters(brightness, freq, blueRatio, delta);
+  updateBadges(isBlinking, blueRatio > 35, false);
+  updateResults(isBlinking, freq, blueRatio, isLowLuminance, avgBrightness, variance);
+  drawGraphs();
+}
+
+function estimateFrequency(buf, times) {
+  if (buf.length < 10) return 0;
+  const avg = buf.reduce((a,b)=>a+b,0)/buf.length;
+  let crossings = 0;
+  let lastSign = buf[0] > avg ? 1 : -1;
+  for (let i = 1; i < buf.length; i++) {
+    const sign = buf[i] > avg ? 1 : -1;
+    if (sign !== lastSign) { crossings++; lastSign = sign; }
+  }
+  const duration = (times[times.length-1] - times[0]) / 1000;
+  if (duration < 0.1) return 0;
+  return ((crossings / 2) / duration).toFixed(2);
+}
+
+function calcVariance(buf) {
+  if (buf.length < 2) return 0;
+  const avg = buf.reduce((a,b)=>a+b,0)/buf.length;
+  return buf.reduce((a,b)=>a+(b-avg)**2,0)/buf.length;
+}
+
+function updateMeters(brightness, freq, blueRatio, delta) {
+  document.getElementById('val-brightness').textContent = Math.round(brightness);
+  document.getElementById('bar-brightness').style.width = (brightness/255*100)+'%';
+  document.getElementById('val-freq').textContent = freq + ' Hz';
+  document.getElementById('bar-freq').style.width = Math.min(freq/5*100,100)+'%';
+  document.getElementById('val-blue').textContent = Math.round(blueRatio) + '%';
+  document.getElementById('bar-blue').style.width = Math.min(blueRatio,100)+'%';
+  document.getElementById('val-delta').textContent = Math.round(delta);
+  document.getElementById('bar-delta').style.width = Math.min(delta/50*100,100)+'%';
+}
+
+function updateBadges(blink, blue, stamen) {
+  const dotBlink = document.getElementById('dot-blink');
+  const dotBlue = document.getElementById('dot-blue');
+  dotBlink.className = 'dot' + (blink ? ' active-red' : '');
+  document.getElementById('label-blink').textContent = '点滅: ' + (blink ? '検出中' : '未検出');
+  dotBlue.className = 'dot' + (blue ? ' active-blue' : '');
+  document.getElementById('label-blue').textContent = '青色: ' + (blue ? 'あり' : 'なし');
+}
+
+function updateResults(isBlinking, freq, blueRatio, isLow, avgB, variance) {
+  const rBlink = document.getElementById('r-blink');
+  rBlink.textContent = isBlinking ? '✓ 検出' : '× 未検出';
+  rBlink.className = 'result-val ' + (isBlinking ? 'hit' : '');
+
+  const f = parseFloat(freq);
+  let speedLabel = '-';
+  let speedClass = '';
+  if (isBlinking && f > 0) {
+    if (f >= 3) { speedLabel = '高速 (' + f + 'Hz)'; speedClass = 'warn'; }
+    else if (f >= 1) { speedLabel = '通常 (' + f + 'Hz)'; speedClass = 'hit'; }
+    else { speedLabel = '低速 (' + f + 'Hz)'; speedClass = 'hit'; }
+  }
+  document.getElementById('r-speed').textContent = speedLabel;
+  document.getElementById('r-speed').className = 'result-val ' + speedClass;
+
+  const rBlue = document.getElementById('r-blue');
+  rBlue.textContent = blueRatio > 35 ? '✓ あり (' + Math.round(blueRatio) + '%)' : 'なし (' + Math.round(blueRatio) + '%)';
+  rBlue.className = 'result-val ' + (blueRatio > 35 ? 'hit' : '');
+
+  const rLow = document.getElementById('r-low');
+  rLow.textContent = isLow ? '✓ 低輝度点滅' : 'なし';
+  rLow.className = 'result-val ' + (isLow ? 'hit' : '');
+
+  // パターン推定
+  let pattern = '判定中...';
+  if (isBlinking) {
+    if (blueRatio > 35) pattern = '🔵 青混じり点滅';
+    else if (isLow) pattern = '🌫️ 低輝度点滅';
+    else if (f >= 3) pattern = '⚡ 高速点滅';
+    else if (f < 0.5) pattern = '🌙 超低速点滅';
+    else pattern = '🌺 通常点滅';
+    addLogThrottle('検出: ' + pattern, 'detect');
+  } else {
+    pattern = '点灯中 or 消灯中';
+  }
+  document.getElementById('r-pattern').textContent = pattern;
+}
+
+function drawGraphs() {
+  // 輝度グラフ
+  const w = gBrightness.width, h = gBrightness.height;
+  ctxB.clearRect(0, 0, w, h);
+  ctxB.fillStyle = '#12121a';
+  ctxB.fillRect(0, 0, w, h);
+
+  if (brightnessBuffer.length < 2) return;
+
+  // グリッド
+  ctxB.strokeStyle = '#2a2a3a';
+  ctxB.lineWidth = 1;
+  [64, 128, 192].forEach(y => {
+    const py = h - (y/255)*h;
+    ctxB.beginPath(); ctxB.moveTo(0,py); ctxB.lineTo(w,py); ctxB.stroke();
+  });
+
+  // 輝度線
+  ctxB.strokeStyle = '#ff9500';
+  ctxB.lineWidth = 2;
+  ctxB.beginPath();
+  brightnessBuffer.forEach((v, i) => {
+    const x = (i / (BUFFER_SIZE-1)) * w;
+    const y = h - (v/255)*h;
+    i === 0 ? ctxB.moveTo(x,y) : ctxB.lineTo(x,y);
+  });
+  ctxB.stroke();
+
+  // RGBグラフ
+  const wr = gRgb.width, hr = gRgb.height;
+  ctxR.clearRect(0, 0, wr, hr);
+  ctxR.fillStyle = '#12121a';
+  ctxR.fillRect(0, 0, wr, hr);
+
+  const drawLine = (buf, color) => {
+    ctxR.strokeStyle = color;
+    ctxR.lineWidth = 1.5;
+    ctxR.beginPath();
+    buf.forEach((v, i) => {
+      const x = (i/(BUFFER_SIZE-1))*wr;
+      const y = hr - (v/255)*hr;
+      i === 0 ? ctxR.moveTo(x,y) : ctxR.lineTo(x,y);
+    });
+    ctxR.stroke();
+  };
+
+  drawLine(rBuffer, 'rgba(255,45,85,0.8)');
+  drawLine(gBuffer, 'rgba(76,217,100,0.8)');
+  drawLine(bBuffer, 'rgba(0,170,255,0.8)');
+}
+
+// ログ
+let lastLogTime = 0;
+let lastLogMsg = '';
+function addLogThrottle(msg, type) {
+  const now = Date.now();
+  if (msg === lastLogMsg && now - lastLogTime < 3000) return;
+  lastLogMsg = msg;
+  lastLogTime = now;
+  addLog(msg, type);
+}
+
+function addLog(msg, type='') {
+  const box = document.getElementById('log-box');
+  const time = new Date().toLocaleTimeString('ja-JP', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const div = document.createElement('div');
+  div.className = 'log-entry ' + type;
+  div.textContent = time + ' ' + msg;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+// グラフリサイズ
+window.addEventListener('resize', initGraphs);
+</script>
+</body>
+</html>
