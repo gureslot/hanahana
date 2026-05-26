@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>ハイビスカスランプ 認識テスト v2</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Zen+Antique&family=Share+Tech+Mono&display=swap');
+  :root {
+    --red: #ff2d55; --orange: #ff9500; --yellow: #ffd60a;
+    --green: #32d74b; --blue: #0af; --dark: #0a0a0f;
+    --panel: #13131e; --border: #2a2a3a;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--dark); color:#eee; font-family:'Share Tech Mono',monospace; min-height:100vh; }
+
+  header { text-align:center; padding:12px 8px 6px; border-bottom:1px solid var(--border); }
+  header h1 { font-family:'Zen Antique',serif; font-size:1rem; color:var(--red); letter-spacing:.1em; }
+  header p { font-size:.6rem; color:#555; margin-top:2px; }
+
+  /* 左右選択 */
+  #side-select {
+    display:flex; gap:8px; padding:10px 12px;
+    max-width:480px; margin:0 auto;
+  }
+  .side-btn {
+    flex:1; padding:12px 0; border:2px solid var(--border);
+    border-radius:8px; background:var(--panel); color:#888;
+    font-family:'Share Tech Mono',monospace; font-size:.85rem;
+    cursor:pointer; transition:all .2s; text-align:center;
+  }
+  .side-btn.active { border-color:var(--red); color:var(--red); background:#1a0a0f; }
+
+  /* カメラ */
+  #camera-wrap {
+    position:relative; width:100%; max-width:480px;
+    margin:0 auto; background:#000; aspect-ratio:3/4; overflow:hidden;
+  }
+  #video { width:100%; height:100%; object-fit:cover; display:block; }
+  #canvas-hidden { display:none; }
+
+  /* 領域オーバーレイ */
+  #region-overlay {
+    position:absolute; inset:0; pointer-events:none;
+  }
+  .region-box {
+    position:absolute; border:2px solid rgba(255,255,255,0.4);
+    border-radius:4px; display:flex; align-items:center;
+    justify-content:center; font-size:.55rem; color:rgba(255,255,255,0.6);
+    transition: border-color .2s, background .2s;
+  }
+  .region-box.active-region {
+    border-color:rgba(255,255,100,0.9);
+    background:rgba(255,255,100,0.08);
+  }
+
+  /* コントロール */
+  #controls { display:flex; gap:8px; padding:8px 12px; max-width:480px; margin:0 auto; }
+  button.ctrl {
+    flex:1; padding:10px; border:1px solid var(--border);
+    border-radius:6px; background:var(--panel); color:#eee;
+    font-family:'Share Tech Mono',monospace; font-size:.7rem; cursor:pointer;
+  }
+  button.ctrl.primary { border-color:var(--red); color:var(--red); }
+  button.ctrl.danger { border-color:#ff3b30; color:#ff3b30; }
+
+  /* 判定結果メイン */
+  #result-main {
+    max-width:480px; margin:6px auto 0; padding:0 12px;
+  }
+  #result-big {
+    background:var(--panel); border:1px solid var(--border);
+    border-radius:10px; padding:14px; text-align:center;
+    min-height:80px; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:4px;
+  }
+  #result-pattern { font-size:1.3rem; color:#eee; font-family:'Zen Antique',serif; }
+  #result-sub { font-size:.65rem; color:#666; }
+  #result-confidence { font-size:.7rem; }
+
+  /* 領域別メーター */
+  #region-meters {
+    display:grid; grid-template-columns:1fr 1fr 1fr;
+    gap:6px; padding:8px 12px; max-width:480px; margin:0 auto;
+  }
+  .rmeter {
+    background:var(--panel); border:1px solid var(--border);
+    border-radius:6px; padding:8px 6px; text-align:center;
+  }
+  .rmeter-label { font-size:.55rem; color:#666; margin-bottom:4px; }
+  .rmeter-val { font-size:1rem; font-weight:bold; }
+  .rmeter-bar { height:3px; background:var(--border); border-radius:2px; margin-top:4px; overflow:hidden; }
+  .rmeter-fill { height:100%; border-radius:2px; transition:width .1s; }
+
+  /* グラフ */
+  #graph-section { padding:0 12px; max-width:480px; margin:6px auto 0; }
+  .graph-label { font-size:.55rem; color:#555; text-transform:uppercase; letter-spacing:.08em; margin-bottom:3px; }
+  canvas.graph { width:100%; height:70px; background:var(--panel); border:1px solid var(--border); border-radius:6px; display:block; margin-bottom:6px; }
+
+  /* 詳細 */
+  #detail-section { padding:0 12px; max-width:480px; margin:4px auto 0; }
+  #detail-box { background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:10px; }
+  .detail-row { display:flex; justify-content:space-between; font-size:.65rem; padding:3px 0; border-bottom:1px solid var(--border); }
+  .detail-row:last-child { border-bottom:none; }
+  .dk { color:#666; } .dv { color:#eee; }
+  .dv.hit { color:var(--green); } .dv.warn { color:var(--orange); } .dv.special { color:var(--yellow); }
+
+  /* ログ */
+  #log-section { padding:0 12px 80px; max-width:480px; margin:6px auto 0; }
+  #log-box { background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:8px; height:100px; overflow-y:auto; font-size:.6rem; color:#555; line-height:1.8; }
+  .log-detect { color:var(--green); } .log-warn { color:var(--orange); } .log-special { color:var(--yellow); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🌺 ハイビスカスランプ 認識テスト v2</h1>
+  <p>左右選択 → カメラ開始 → ランプにかざす</p>
+</header>
+
+<!-- 左右選択 -->
+<div id="side-select">
+  <div class="side-btn active" id="btn-left" onclick="setSide('left')">◀ 左ランプ<br><span style="font-size:.6rem;color:#555">めしべ:右上</span></div>
+  <div class="side-btn" id="btn-right" onclick="setSide('right')">右ランプ ▶<br><span style="font-size:.6rem;color:#555">めしべ:左上</span></div>
+</div>
+
+<!-- カメラ -->
+<div id="camera-wrap">
+  <video id="video" autoplay playsinline muted></video>
+  <canvas id="canvas-hidden"></canvas>
+  <div id="region-overlay">
+    <!-- 領域ボックスはJSで動的生成 -->
+  </div>
+</div>
+
+<!-- コントロール -->
+<div id="controls">
+  <button class="ctrl primary" id="btn-camera" onclick="toggleCamera()">▶ カメラ開始</button>
+  <button class="ctrl danger" onclick="clearLog()">ログ消去</button>
+</div>
+
+<!-- メイン判定 -->
+<div id="result-main">
+  <div id="result-big">
+    <div id="result-pattern">待機中...</div>
+    <div id="result-sub">カメラを開始してランプにかざしてください</div>
+    <div id="result-confidence"></div>
+  </div>
+</div>
+
+<!-- 領域別メーター -->
+<div id="region-meters">
+  <div class="rmeter">
+    <div class="rmeter-label">🌸 花びら</div>
+    <div class="rmeter-val" id="rm-petal" style="color:var(--red)">-</div>
+    <div class="rmeter-bar"><div class="rmeter-fill" id="rb-petal" style="width:0%;background:var(--red)"></div></div>
+  </div>
+  <div class="rmeter">
+    <div class="rmeter-label">🍃 葉っぱ</div>
+    <div class="rmeter-val" id="rm-leaf" style="color:var(--green)">-</div>
+    <div class="rmeter-bar"><div class="rmeter-fill" id="rb-leaf" style="width:0%;background:var(--green)"></div></div>
+  </div>
+  <div class="rmeter">
+    <div class="rmeter-label">✨ めしべ</div>
+    <div class="rmeter-val" id="rm-stamen" style="color:var(--yellow)">-</div>
+    <div class="rmeter-bar"><div class="rmeter-fill" id="rb-stamen" style="width:0%;background:var(--yellow)"></div></div>
+  </div>
+</div>
+
+<!-- グラフ -->
+<div id="graph-section">
+  <div class="graph-label">輝度時系列（花:赤 葉:緑 めしべ:黄）</div>
+  <canvas class="graph" id="graph-main"></canvas>
+  <div class="graph-label">Hz / 変化量</div>
+  <canvas class="graph" id="graph-freq"></canvas>
+</div>
+
+<!-- 詳細 -->
+<div id="detail-section">
+  <div id="detail-box">
+    <div class="detail-row"><span class="dk">点滅検出</span><span class="dv" id="d-blink">-</span></div>
+    <div class="detail-row"><span class="dk">点滅速度</span><span class="dv" id="d-freq">-</span></div>
+    <div class="detail-row"><span class="dk">花びら輝度</span><span class="dv" id="d-petal">-</span></div>
+    <div class="detail-row"><span class="dk">葉っぱ輝度</span><span class="dv" id="d-leaf">-</span></div>
+    <div class="detail-row"><span class="dk">めしべ輝度</span><span class="dv" id="d-stamen">-</span></div>
+    <div class="detail-row"><span class="dk">青成分</span><span class="dv" id="d-blue">-</span></div>
+    <div class="detail-row"><span class="dk">低輝度判定</span><span class="dv" id="d-low">-</span></div>
+  </div>
+</div>
+
+<!-- ログ -->
+<div id="log-section">
+  <div class="graph-label">検出ログ</div>
+  <div id="log-box"></div>
+</div>
+
+<script>
+// ===== 設定 =====
+const SAMPLE_MS = 50;
+const BUF_SIZE = 300; // 15秒 @ 20fps
+
+let side = 'left'; // 'left' or 'right'
+let stream = null, intervalId = null, running = false;
+
+const video = document.getElementById('video');
+const cvHidden = document.getElementById('canvas-hidden');
+const ctx = cvHidden.getContext('2d', { willReadFrequently: true });
+
+// バッファ
+let bufPetal = [], bufLeaf = [], bufStamen = [], bufAll = [], bufTime = [];
+let freqHistory = [], deltaHistory = [];
+
+// ===== 左右設定 =====
+// 左ランプ: めしべ=右上, 葉=左下+右下, 花=中央
+// 右ランプ: めしべ=左上, 葉=左下+右下, 花=中央（鏡像）
+function getRegions(side) {
+  // 全て 0〜1 の比率で定義 (x, y, w, h)
+  if (side === 'left') {
+    return {
+      stamen: { x: 0.55, y: 0.05, w: 0.40, h: 0.25, label: 'めしべ' },
+      petal:  { x: 0.10, y: 0.15, w: 0.75, h: 0.55, label: '花びら' },
+      leaf1:  { x: 0.02, y: 0.60, w: 0.28, h: 0.30, label: '葉（左）' },
+      leaf2:  { x: 0.68, y: 0.55, w: 0.28, h: 0.30, label: '葉（右）' },
+    };
+  } else {
+    return {
+      stamen: { x: 0.05, y: 0.05, w: 0.40, h: 0.25, label: 'めしべ' },
+      petal:  { x: 0.15, y: 0.15, w: 0.75, h: 0.55, label: '花びら' },
+      leaf1:  { x: 0.02, y: 0.60, w: 0.28, h: 0.30, label: '葉（左）' },
+      leaf2:  { x: 0.68, y: 0.55, w: 0.28, h: 0.30, label: '葉（右）' },
+    };
+  }
+}
+
+function setSide(s) {
+  side = s;
+  document.getElementById('btn-left').className = 'side-btn' + (s==='left'?' active':'');
+  document.getElementById('btn-right').className = 'side-btn' + (s==='right'?' active':'');
+  drawRegionBoxes();
+}
+
+function drawRegionBoxes() {
+  const overlay = document.getElementById('region-overlay');
+  overlay.innerHTML = '';
+  const wrap = document.getElementById('camera-wrap');
+  const W = wrap.offsetWidth, H = wrap.offsetHeight;
+  const regions = getRegions(side);
+  const colors = { stamen:'#ffd60a', petal:'#ff2d55', leaf1:'#32d74b', leaf2:'#32d74b' };
+  Object.entries(regions).forEach(([key, r]) => {
+    const div = document.createElement('div');
+    div.className = 'region-box';
+    div.id = 'rbox-' + key;
+    div.style.left = (r.x*100)+'%';
+    div.style.top = (r.y*100)+'%';
+    div.style.width = (r.w*100)+'%';
+    div.style.height = (r.h*100)+'%';
+    div.style.borderColor = colors[key]+'88';
+    div.style.color = colors[key];
+    div.textContent = r.label;
+    overlay.appendChild(div);
+  });
+}
+
+// ===== 領域ピクセル平均 =====
+function sampleRegion(imageData, W, H, rx, ry, rw, rh) {
+  const x0 = Math.floor(rx*W), y0 = Math.floor(ry*H);
+  const x1 = Math.min(Math.floor((rx+rw)*W), W);
+  const y1 = Math.min(Math.floor((ry+rh)*H), H);
+  let rSum=0,gSum=0,bSum=0,count=0;
+  const step = 3;
+  for (let y=y0; y<y1; y+=step) {
+    for (let x=x0; x<x1; x+=step) {
+      const i = (y*W+x)*4;
+      rSum += imageData.data[i];
+      gSum += imageData.data[i+1];
+      bSum += imageData.data[i+2];
+      count++;
+    }
+  }
+  if (!count) return {r:0,g:0,b:0,brightness:0};
+  const r=rSum/count, g=gSum/count, b=bSum/count;
+  return { r, g, b, brightness:(r+g+b)/3 };
+}
+
+// ===== カメラ =====
+async function toggleCamera() {
+  if (running) { stopCamera(); return; }
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video:{ facingMode:'environment', width:{ideal:640}, height:{ideal:480} }
+    });
+    video.srcObject = stream;
+    await video.play();
+    cvHidden.width = 320; cvHidden.height = 240;
+    initGraphs();
+    drawRegionBoxes();
+    running = true;
+    document.getElementById('btn-camera').textContent = '⏹ 停止';
+    intervalId = setInterval(analyze, SAMPLE_MS);
+    addLog('カメラ開始', 'detect');
+  } catch(e) {
+    addLog('カメラエラー: '+e.message, 'warn');
+  }
+}
+
+function stopCamera() {
+  clearInterval(intervalId);
+  if (stream) stream.getTracks().forEach(t=>t.stop());
+  running = false;
+  document.getElementById('btn-camera').textContent = '▶ カメラ開始';
+  addLog('停止');
+}
+
+// ===== 分析メイン =====
+function analyze() {
+  if (!video.videoWidth) return;
+  ctx.drawImage(video, 0, 0, 320, 240);
+  const imageData = ctx.getImageData(0, 0, 320, 240);
+  const W=320, H=240;
+  const regions = getRegions(side);
+
+  const petal  = sampleRegion(imageData, W, H, regions.petal.x,  regions.petal.y,  regions.petal.w,  regions.petal.h);
+  const leaf1  = sampleRegion(imageData, W, H, regions.leaf1.x,  regions.leaf1.y,  regions.leaf1.w,  regions.leaf1.h);
+  const leaf2  = sampleRegion(imageData, W, H, regions.leaf2.x,  regions.leaf2.y,  regions.leaf2.w,  regions.leaf2.h);
+  const stamen = sampleRegion(imageData, W, H, regions.stamen.x, regions.stamen.y, regions.stamen.w, regions.stamen.h);
+
+  const leafAvg = (leaf1.brightness + leaf2.brightness) / 2;
+  const leafG   = (leaf1.g + leaf2.g) / 2;
+  const allBrightness = (petal.brightness + leafAvg + stamen.brightness) / 3;
+  const now = Date.now();
+
+  // バッファ更新
+  bufPetal.push(petal.brightness);
+  bufLeaf.push(leafAvg);
+  bufStamen.push(stamen.brightness);
+  bufAll.push(allBrightness);
+  bufTime.push(now);
+  [bufPetal,bufLeaf,bufStamen,bufAll,bufTime].forEach(b=>{ if(b.length>BUF_SIZE) b.shift(); });
+
+  // --- 計算 ---
+  const freq    = estimateHz(bufAll, bufTime);
+  const variance= calcVariance(bufAll);
+  const delta   = bufAll.length>1 ? Math.abs(allBrightness - bufAll[bufAll.length-2]) : 0;
+  const avgAll  = avg(bufAll);
+  const maxAll  = Math.max(...bufAll);
+
+  // 青成分
+  const blueRatio = allBrightness > 5 ? (petal.b / (petal.r + petal.g + petal.b + 0.001)) * 100 : 0;
+
+  // 点滅判定（分散ベース）
+  const isBlinking = variance > 30;
+
+  // 低輝度判定
+  const isLowLuminance = avgAll < 35 && maxAll > 10 && isBlinking;
+
+  // 点灯判定（変化なし・高輝度）
+  const isStatic = variance < 10 && avgAll > 60;
+
+  // 部位別点灯判定
+  const petalOn   = petal.brightness > 40;
+  const leafOn    = leafAvg > 25;
+  const stamenOn  = stamen.brightness > 30;
+  const stamenYellow = stamen.r > 80 && stamen.g > 80 && stamen.b < 60; // 黄色判定
+  const leafGreen = leafG > 40 && leafG > leaf1.r * 1.3; // 緑判定
+  const blueLeaf  = (leaf1.b > leaf1.r * 1.2) || (leaf2.b > leaf2.r * 1.2); // 青葉判定
+
+  freqHistory.push(parseFloat(freq));
+  deltaHistory.push(delta);
+  if (freqHistory.length > 20) { freqHistory.shift(); deltaHistory.shift(); }
+
+  // --- パターン判定 ---
+  let pattern = '判定中...';
+  let patternClass = '';
+
+  if (isBlinking) {
+    if (isLowLuminance) {
+      // 低輝度点滅
+      if (!leafOn && !stamenOn && petalOn) pattern = '🌸 低輝度・花びらのみ点滅';
+      else if (!petalOn && !leafOn && stamenOn) pattern = '✨ 低輝度・めしべのみ点滅（超低速候補）';
+      else if (!petalOn && leafOn && !stamenOn) pattern = '🍃 低輝度・葉っぱのみ点滅（超低速候補）';
+      else pattern = '🌑 低輝度点滅（全体）';
+      patternClass = 'warn';
+    } else if (blueLeaf) {
+      pattern = '🔵 青葉っぱ点滅';
+      patternClass = 'special';
+    } else if (petalOn && !leafGreen && stamenOn) {
+      // 全体点滅系
+      const f = parseFloat(freq);
+      if (f >= 4) pattern = '⚡ 高速点滅';
+      else if (f < 0.3) pattern = '🌙 超低速点滅';
+      else pattern = '🌺 通常点滅（全体）';
+      patternClass = 'hit';
+    } else if (!leafGreen && !stamenYellow && petalOn) {
+      pattern = '🌸 花びらのみ点滅';
+      patternClass = 'hit';
+    } else if (leafGreen && !petalOn && !stamenYellow) {
+      pattern = '🍃 葉っぱのみ点滅';
+      patternClass = 'hit';
+    } else if (stamenYellow && !petalOn && !leafGreen) {
+      pattern = '✨ めしべのみ点滅';
+      patternClass = 'special';
+    } else {
+      pattern = '🌺 点滅検出中';
+      patternClass = 'hit';
+    }
+  } else if (isStatic) {
+    if (petalOn && leafOn && stamenOn) pattern = '💡 全体点灯（消灯待ち）';
+    else if (stamenYellow && !leafGreen) pattern = '💡 めしべ点灯';
+    else if (leafGreen && !petalOn) pattern = '💡 葉っぱ点灯';
+    else pattern = '💡 点灯中';
+    patternClass = 'warn';
+  } else {
+    pattern = '消灯中 / 待機';
+    patternClass = '';
+  }
+
+  // UI更新
+  updateMeters(petal.brightness, leafAvg, stamen.brightness);
+  updateDetail(isBlinking, freq, petal.brightness, leafAvg, stamen.brightness, blueRatio, isLowLuminance);
+  updateResult(pattern, patternClass, freq, variance);
+  drawGraphs();
+
+  if (isBlinking || isStatic) addLogThrottle(pattern, patternClass==='special'?'special':'detect');
+}
+
+function avg(arr) { return arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0; }
+
+function calcVariance(arr) {
+  if (arr.length<2) return 0;
+  const m = avg(arr);
+  return arr.reduce((a,b)=>a+(b-m)**2,0)/arr.length;
+}
+
+function estimateHz(buf, times) {
+  if (buf.length<10) return 0;
+  const m = avg(buf);
+  let crossings=0, lastSign=buf[0]>m?1:-1;
+  for (let i=1;i<buf.length;i++) {
+    const s=buf[i]>m?1:-1;
+    if (s!==lastSign){ crossings++; lastSign=s; }
+  }
+  const dur=(times[times.length-1]-times[0])/1000;
+  if (dur<0.5) return 0;
+  return ((crossings/2)/dur).toFixed(2);
+}
+
+function updateMeters(p, l, s) {
+  document.getElementById('rm-petal').textContent = Math.round(p);
+  document.getElementById('rb-petal').style.width = (p/255*100)+'%';
+  document.getElementById('rm-leaf').textContent = Math.round(l);
+  document.getElementById('rb-leaf').style.width = (l/255*100)+'%';
+  document.getElementById('rm-stamen').textContent = Math.round(s);
+  document.getElementById('rb-stamen').style.width = (s/255*100)+'%';
+}
+
+function updateDetail(blink, freq, p, l, s, blue, low) {
+  const set = (id, val, cls='') => {
+    const el=document.getElementById(id);
+    el.textContent=val; el.className='dv '+(cls);
+  };
+  set('d-blink', blink?'✓ 検出':'× 未検出', blink?'hit':'');
+  set('d-freq', freq+' Hz', parseFloat(freq)>0?'hit':'');
+  set('d-petal', Math.round(p)+' / 255');
+  set('d-leaf',  Math.round(l)+' / 255');
+  set('d-stamen',Math.round(s)+' / 255');
+  set('d-blue',  Math.round(blue)+'%', blue>35?'special':'');
+  set('d-low',   low?'✓ 低輝度':'なし', low?'warn':'');
+}
+
+function updateResult(pattern, cls, freq, variance) {
+  const el = document.getElementById('result-pattern');
+  el.textContent = pattern;
+  el.style.color = cls==='hit'?'var(--green)':cls==='special'?'var(--yellow)':cls==='warn'?'var(--orange)':'#888';
+  document.getElementById('result-sub').textContent = freq+' Hz  |  分散: '+Math.round(variance);
+}
+
+// ===== グラフ =====
+const gMain = document.getElementById('graph-main');
+const gFreq = document.getElementById('graph-freq');
+const ctxM = gMain.getContext('2d');
+const ctxF = gFreq.getContext('2d');
+
+function initGraphs() {
+  [gMain,gFreq].forEach(c=>{
+    c.width=c.offsetWidth*window.devicePixelRatio||c.offsetWidth;
+    c.height=c.offsetHeight*window.devicePixelRatio||c.offsetHeight;
+  });
+}
+
+function drawGraphs() {
+  const W=gMain.width, H=gMain.height;
+  ctxM.fillStyle='#13131e'; ctxM.fillRect(0,0,W,H);
+  const drawLine=(buf,color)=>{
+    if(buf.length<2) return;
+    ctxM.strokeStyle=color; ctxM.lineWidth=1.5; ctxM.beginPath();
+    buf.forEach((v,i)=>{
+      const x=(i/(BUF_SIZE-1))*W, y=H-(v/255)*H;
+      i===0?ctxM.moveTo(x,y):ctxM.lineTo(x,y);
+    });
+    ctxM.stroke();
+  };
+  drawLine(bufPetal,'rgba(255,45,85,0.9)');
+  drawLine(bufLeaf,'rgba(50,215,75,0.9)');
+  drawLine(bufStamen,'rgba(255,214,10,0.9)');
+
+  // 周波数グラフ
+  const Wf=gFreq.width, Hf=gFreq.height;
+  ctxF.fillStyle='#13131e'; ctxF.fillRect(0,0,Wf,Hf);
+  if (freqHistory.length>1) {
+    ctxF.strokeStyle='var(--red)'; ctxF.lineWidth=2; ctxF.beginPath();
+    freqHistory.forEach((v,i)=>{
+      const x=(i/(20-1))*Wf, y=Hf-(Math.min(v,10)/10)*Hf;
+      i===0?ctxF.moveTo(x,y):ctxF.lineTo(x,y);
+    });
+    ctxF.stroke();
+  }
+}
+
+// ===== ログ =====
+let lastLogMsg='', lastLogTime=0;
+function addLogThrottle(msg, type) {
+  const now=Date.now();
+  if (msg===lastLogMsg && now-lastLogTime<2000) return;
+  lastLogMsg=msg; lastLogTime=now;
+  addLog(msg, type);
+}
+function addLog(msg, type='') {
+  const box=document.getElementById('log-box');
+  const time=new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const div=document.createElement('div');
+  div.className='log-'+type;
+  div.textContent=time+' '+msg;
+  box.appendChild(div);
+  box.scrollTop=box.scrollHeight;
+  if (box.children.length>100) box.removeChild(box.firstChild);
+}
+function clearLog() {
+  document.getElementById('log-box').innerHTML='';
+  bufPetal=[]; bufLeaf=[]; bufStamen=[]; bufAll=[]; bufTime=[];
+  freqHistory=[]; deltaHistory=[];
+}
+
+window.addEventListener('resize', ()=>{ initGraphs(); drawRegionBoxes(); });
+window.addEventListener('load', drawRegionBoxes);
+</script>
+</body>
+</html>
