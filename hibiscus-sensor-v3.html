@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>ハイビスカスランプ 認識テスト v3</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+  :root {
+    --red:#ff2d55; --orange:#ff9500; --yellow:#ffd60a;
+    --green:#32d74b; --blue:#0af; --dark:#0a0a0f;
+    --panel:#13131e; --border:#2a2a3a;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { height:100%; overflow:hidden; background:var(--dark); color:#eee; font-family:'Share Tech Mono',monospace; }
+
+  /* 全体レイアウト：縦に3段 */
+  #app {
+    display:flex; flex-direction:column;
+    height:100dvh; max-width:480px; margin:0 auto;
+    padding:4px;
+  }
+
+  /* ===上段：カメラ=== */
+  #camera-wrap {
+    position:relative; width:100%;
+    flex:0 0 42%; background:#000; border-radius:8px; overflow:hidden;
+  }
+  #video { width:100%; height:100%; object-fit:cover; display:block; }
+  #canvas-hidden { display:none; }
+
+  /* 領域ボックス */
+  .rbox {
+    position:absolute; border:1.5px solid rgba(255,255,255,0.35);
+    border-radius:3px; display:flex; align-items:flex-start;
+    justify-content:flex-end; padding:2px 3px;
+    font-size:.45rem; pointer-events:none; transition:border-color .15s;
+  }
+  .rbox.lit { border-color:rgba(255,255,100,0.9); }
+
+  /* ===中段：コントロール＋判定=== */
+  #mid { flex:0 0 auto; display:flex; flex-direction:column; gap:3px; padding:3px 0; }
+
+  /* 左右選択 */
+  #side-row { display:flex; gap:4px; }
+  .side-btn {
+    flex:1; padding:5px 0; border:1.5px solid var(--border);
+    border-radius:6px; background:var(--panel); color:#666;
+    font-family:'Share Tech Mono',monospace; font-size:.7rem;
+    cursor:pointer; text-align:center; line-height:1.4;
+  }
+  .side-btn.active { border-color:var(--red); color:var(--red); }
+
+  /* コントロールボタン */
+  #ctrl-row { display:flex; gap:4px; }
+  .cbtn {
+    flex:1; padding:7px 0; border:1px solid var(--border);
+    border-radius:6px; background:var(--panel); color:#eee;
+    font-family:'Share Tech Mono',monospace; font-size:.7rem; cursor:pointer;
+  }
+  .cbtn.primary { border-color:var(--red); color:var(--red); }
+  .cbtn.danger  { border-color:#ff3b30; color:#ff3b30; }
+
+  /* メイン判定 */
+  #result-box {
+    background:var(--panel); border:1px solid var(--border);
+    border-radius:8px; padding:6px 10px;
+    display:flex; align-items:center; justify-content:space-between; gap:6px;
+  }
+  #result-pattern { font-size:1rem; flex:1; }
+  #result-hz { font-size:.75rem; color:var(--red); white-space:nowrap; }
+
+  /* 部位メーター（横一列） */
+  #meters-row { display:flex; gap:4px; }
+  .meter {
+    flex:1; background:var(--panel); border:1px solid var(--border);
+    border-radius:6px; padding:4px 6px; display:flex;
+    align-items:center; gap:5px;
+  }
+  .meter-label { font-size:.55rem; color:#666; white-space:nowrap; }
+  .meter-val { font-size:.85rem; font-weight:bold; }
+  .mbar { flex:1; height:3px; background:var(--border); border-radius:2px; overflow:hidden; }
+  .mbar-fill { height:100%; border-radius:2px; transition:width .1s; }
+
+  /* ===下段：グラフ＋ログ=== */
+  #bottom { flex:1; display:flex; flex-direction:column; gap:3px; min-height:0; }
+
+  #graph-wrap { flex:0 0 auto; }
+  canvas.graph {
+    width:100%; height:55px; background:var(--panel);
+    border:1px solid var(--border); border-radius:6px; display:block;
+  }
+  .glabel { font-size:.5rem; color:#555; margin-bottom:2px; letter-spacing:.05em; }
+
+  #log-box {
+    flex:1; background:var(--panel); border:1px solid var(--border);
+    border-radius:6px; padding:5px 7px; overflow-y:auto;
+    font-size:.6rem; color:#555; line-height:1.7; min-height:0;
+  }
+  .ld { color:var(--green); } .lw { color:var(--orange); } .ls { color:var(--yellow); }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- カメラ -->
+  <div id="camera-wrap">
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="canvas-hidden"></canvas>
+    <!-- 領域ボックスはJSで生成 -->
+  </div>
+
+  <!-- 中段 -->
+  <div id="mid">
+    <div id="side-row">
+      <div class="side-btn active" id="btn-L" onclick="setSide('L')">◀ 左ランプ<br><span style="font-size:.55rem;color:#555">めしべ:右上</span></div>
+      <div class="side-btn"        id="btn-R" onclick="setSide('R')">右ランプ ▶<br><span style="font-size:.55rem;color:#555">めしべ:左上</span></div>
+    </div>
+    <div id="ctrl-row">
+      <button class="cbtn primary" id="btn-cam" onclick="toggleCam()">▶ 開始</button>
+      <button class="cbtn danger"  onclick="clearAll()">消去</button>
+    </div>
+    <div id="result-box">
+      <div id="result-pattern" style="color:#555">待機中...</div>
+      <div id="result-hz">-- Hz</div>
+    </div>
+    <div id="meters-row">
+      <div class="meter">
+        <span class="meter-label">花</span>
+        <span class="meter-val" id="mv-p" style="color:var(--red)">--</span>
+        <div class="mbar"><div class="mbar-fill" id="mb-p" style="width:0%;background:var(--red)"></div></div>
+      </div>
+      <div class="meter">
+        <span class="meter-label">葉</span>
+        <span class="meter-val" id="mv-l" style="color:var(--green)">--</span>
+        <div class="mbar"><div class="mbar-fill" id="mb-l" style="width:0%;background:var(--green)"></div></div>
+      </div>
+      <div class="meter">
+        <span class="meter-label">芯</span>
+        <span class="meter-val" id="mv-s" style="color:var(--yellow)">--</span>
+        <div class="mbar"><div class="mbar-fill" id="mb-s" style="width:0%;background:var(--yellow)"></div></div>
+      </div>
+      <div class="meter">
+        <span class="meter-label">青%</span>
+        <span class="meter-val" id="mv-b" style="color:var(--blue)">--</span>
+        <div class="mbar"><div class="mbar-fill" id="mb-b" style="width:0%;background:var(--blue)"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 下段 -->
+  <div id="bottom">
+    <div id="graph-wrap">
+      <div class="glabel">輝度波形（花:赤 葉:緑 芯:黄）</div>
+      <canvas class="graph" id="gc"></canvas>
+    </div>
+    <div id="log-box"></div>
+  </div>
+
+</div>
+<script>
+const BUF = 300, MS = 50;
+let side='L', stream=null, tid=null, running=false;
+const video=document.getElementById('video');
+const cvH=document.getElementById('canvas-hidden');
+const ctx=cvH.getContext('2d',{willReadFrequently:true});
+let bP=[],bL=[],bS=[],bA=[],bT=[];
+
+// 領域定義（0〜1比率）
+// 左：めしべ右上、右：めしべ左上
+const REGIONS = {
+  L: {
+    stamen:{x:.58,y:.02,w:.38,h:.28,c:'#ffd60a',n:'芯'},
+    petal: {x:.05,y:.18,w:.70,h:.52,c:'#ff2d55',n:'花'},
+    leaf1: {x:.02,y:.65,w:.25,h:.28,c:'#32d74b',n:'葉左'},
+    leaf2: {x:.70,y:.60,w:.25,h:.28,c:'#32d74b',n:'葉右'},
+  },
+  R: {
+    stamen:{x:.04,y:.02,w:.38,h:.28,c:'#ffd60a',n:'芯'},
+    petal: {x:.25,y:.18,w:.70,h:.52,c:'#ff2d55',n:'花'},
+    leaf1: {x:.02,y:.65,w:.25,h:.28,c:'#32d74b',n:'葉左'},
+    leaf2: {x:.70,y:.60,w:.25,h:.28,c:'#32d74b',n:'葉右'},
+  }
+};
+
+function setSide(s){
+  side=s;
+  document.getElementById('btn-L').className='side-btn'+(s==='L'?' active':'');
+  document.getElementById('btn-R').className='side-btn'+(s==='R'?' active':'');
+  drawBoxes();
+}
+
+function drawBoxes(){
+  const wrap=document.getElementById('camera-wrap');
+  [...wrap.querySelectorAll('.rbox')].forEach(e=>e.remove());
+  const rs=REGIONS[side];
+  Object.values(rs).forEach(r=>{
+    const d=document.createElement('div');
+    d.className='rbox';
+    d.style.cssText=`left:${r.x*100}%;top:${r.y*100}%;width:${r.w*100}%;height:${r.h*100}%;border-color:${r.c}55;color:${r.c};`;
+    d.textContent=r.n;
+    wrap.appendChild(d);
+  });
+}
+
+async function toggleCam(){
+  if(running){stopCam();return;}
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:640},height:{ideal:480}}});
+    video.srcObject=stream; await video.play();
+    cvH.width=320; cvH.height=240;
+    initG(); drawBoxes();
+    running=true;
+    document.getElementById('btn-cam').textContent='⏹ 停止';
+    tid=setInterval(analyze,MS);
+    log('開始','d');
+  }catch(e){log('エラー:'+e.message,'w');}
+}
+function stopCam(){
+  clearInterval(tid);
+  if(stream)stream.getTracks().forEach(t=>t.stop());
+  running=false;
+  document.getElementById('btn-cam').textContent='▶ 開始';
+}
+
+function sampleR(img,W,H,rx,ry,rw,rh){
+  const x0=Math.floor(rx*W),y0=Math.floor(ry*H);
+  const x1=Math.min(Math.floor((rx+rw)*W),W),y1=Math.min(Math.floor((ry+rh)*H),H);
+  let rs=0,gs=0,bs=0,n=0;
+  for(let y=y0;y<y1;y+=3)for(let x=x0;x<x1;x+=3){
+    const i=(y*W+x)*4; rs+=img[i]; gs+=img[i+1]; bs+=img[i+2]; n++;
+  }
+  if(!n)return{r:0,g:0,b:0,br:0};
+  const r=rs/n,g=gs/n,b=bs/n;
+  return{r,g,b,br:(r+g+b)/3};
+}
+
+function avg(a){return a.length?a.reduce((s,v)=>s+v,0)/a.length:0;}
+function vari(a){if(a.length<2)return 0;const m=avg(a);return a.reduce((s,v)=>s+(v-m)**2,0)/a.length;}
+function estHz(buf,times){
+  if(buf.length<10)return 0;
+  const m=avg(buf);let cr=0,ls=buf[0]>m?1:-1;
+  for(let i=1;i<buf.length;i++){const s=buf[i]>m?1:-1;if(s!==ls){cr++;ls=s;}}
+  const d=(times[times.length-1]-times[0])/1000;
+  return d<0.5?0:+((cr/2)/d).toFixed(2);
+}
+
+function analyze(){
+  if(!video.videoWidth)return;
+  ctx.drawImage(video,0,0,320,240);
+  const img=ctx.getImageData(0,0,320,240).data;
+  const W=320,H=240,rs=REGIONS[side];
+
+  const P=sampleR(img,W,H,rs.petal.x,rs.petal.y,rs.petal.w,rs.petal.h);
+  const L1=sampleR(img,W,H,rs.leaf1.x,rs.leaf1.y,rs.leaf1.w,rs.leaf1.h);
+  const L2=sampleR(img,W,H,rs.leaf2.x,rs.leaf2.y,rs.leaf2.w,rs.leaf2.h);
+  const S=sampleR(img,W,H,rs.stamen.x,rs.stamen.y,rs.stamen.w,rs.stamen.h);
+
+  const lAvg=(L1.br+L2.br)/2;
+  const all=(P.br+lAvg+S.br)/3;
+  const now=Date.now();
+
+  bP.push(P.br); bL.push(lAvg); bS.push(S.br); bA.push(all); bT.push(now);
+  [bP,bL,bS,bA,bT].forEach(b=>{if(b.length>BUF)b.shift();});
+
+  const hz=estHz(bA,bT);
+  const va=vari(bA);
+  const isBlinking=va>30;
+  const avgAll=avg(bA), maxAll=Math.max(...bA);
+  const isLow=avgAll<35&&maxAll>10&&isBlinking;
+  const isStatic=va<10&&avgAll>50;
+
+  // 青成分（葉の青比率）
+  const bRatio=(L1.br>5)?((L1.b/(L1.r+L1.g+L1.b+.001))*100):0;
+  const blueLeaf=bRatio>38;
+
+  // 黄色成分（めしべ）
+  const stamYellow=S.r>60&&S.g>60&&S.b<S.g*.7;
+  const leafGreen=(lAvg>20)&&((L1.g+L2.g)/2>((L1.r+L2.r)/2)*1.2);
+
+  // 速度判定（実測ベース）
+  // 通常点滅：実機で6.5Hz前後 → Hz>=4を通常とする
+  // 超低速：<0.3Hz
+  // 低速：0.3〜1.5Hz
+  // 中速：1.5〜4Hz
+  // 高速：>=8Hz
+  let speedLabel='';
+  const f=hz;
+  if(f===0)speedLabel='';
+  else if(f<0.3)speedLabel='超低速';
+  else if(f<1.5)speedLabel='低速';
+  else if(f<4)speedLabel='中速';
+  else if(f<8)speedLabel='通常速';
+  else speedLabel='高速';
+
+  // パターン判定
+  let pat='判定中...', col='#555';
+  if(isBlinking){
+    if(isLow){
+      if(!leafGreen&&!stamYellow)pat='🌑 低輝度点滅（全体）';
+      else if(stamYellow&&!leafGreen)pat='✨ 低輝度・芯のみ点滅';
+      else if(leafGreen&&!stamYellow)pat='🍃 低輝度・葉のみ点滅';
+      else pat='🌑 低輝度点滅';
+      col='var(--orange)';
+    } else if(blueLeaf){
+      pat='🔵 青葉っぱ点滅'; col='var(--blue)';
+    } else if(leafGreen&&!stamYellow&&P.br<30){
+      pat='🍃 葉っぱのみ点滅'; col='var(--green)';
+    } else if(stamYellow&&!leafGreen&&P.br<30){
+      pat='✨ 芯のみ点滅'; col='var(--yellow)';
+    } else {
+      pat='🌺 点滅検出 '+(speedLabel?'['+speedLabel+']':'');
+      col='var(--green)';
+    }
+    logThrottle(pat,'d');
+  } else if(isStatic){
+    pat='💡 点灯中'; col='var(--orange)';
+    logThrottle(pat,'w');
+  } else {
+    pat='消灯 / 待機'; col='#555';
+  }
+
+  // UI更新
+  document.getElementById('result-pattern').textContent=pat;
+  document.getElementById('result-pattern').style.color=col;
+  document.getElementById('result-hz').textContent=(hz||'--')+' Hz'+(speedLabel?' ['+speedLabel+']':'');
+  ['p','l','s'].forEach((k,i)=>{
+    const v=[P.br,lAvg,S.br][i];
+    document.getElementById('mv-'+k).textContent=Math.round(v);
+    document.getElementById('mb-'+k).style.width=(v/255*100)+'%';
+  });
+  document.getElementById('mv-b').textContent=Math.round(bRatio)+'%';
+  document.getElementById('mb-b').style.width=Math.min(bRatio,100)+'%';
+
+  drawG();
+}
+
+// グラフ
+const gc=document.getElementById('gc');
+const gctx=gc.getContext('2d');
+function initG(){
+  gc.width=gc.offsetWidth*(window.devicePixelRatio||1);
+  gc.height=gc.offsetHeight*(window.devicePixelRatio||1);
+}
+function drawG(){
+  const W=gc.width,H=gc.height;
+  gctx.fillStyle='#13131e'; gctx.fillRect(0,0,W,H);
+  [[bP,'rgba(255,45,85,.8)'],[bL,'rgba(50,215,75,.8)'],[bS,'rgba(255,214,10,.8)']].forEach(([buf,c])=>{
+    if(buf.length<2)return;
+    gctx.strokeStyle=c; gctx.lineWidth=1.5; gctx.beginPath();
+    buf.forEach((v,i)=>{const x=(i/(BUF-1))*W,y=H-(v/255)*H;i===0?gctx.moveTo(x,y):gctx.lineTo(x,y);});
+    gctx.stroke();
+  });
+}
+
+// ログ
+let lastMsg='',lastT=0;
+function logThrottle(m,t){const n=Date.now();if(m===lastMsg&&n-lastT<2000)return;lastMsg=m;lastT=n;log(m,t);}
+function log(msg,type=''){
+  const b=document.getElementById('log-box');
+  const t=new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const d=document.createElement('div');
+  d.className='l'+(type||'');
+  d.textContent=t+' '+msg;
+  b.appendChild(d);
+  b.scrollTop=b.scrollHeight;
+  if(b.children.length>60)b.removeChild(b.firstChild);
+}
+function clearAll(){
+  document.getElementById('log-box').innerHTML='';
+  bP=[];bL=[];bS=[];bA=[];bT=[];
+}
+
+window.addEventListener('resize',()=>{initG();drawBoxes();});
+window.addEventListener('load',drawBoxes);
+</script>
+</body>
+</html>
