@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sparebeat 音解析デモ</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a26;
+    --border: #2a2a3e;
+    --accent: #7c6aff;
+    --accent2: #ff6a9e;
+    --accent3: #6affd4;
+    --text: #e8e8f0;
+    --text-dim: #6666aa;
+    --beat-col: #7c6aff;
+    --drum-col: #ff6a9e;
+    --melody-col: #6affd4;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── グリッドノイズ背景 ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(124,106,255,.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124,106,255,.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrap {
+    position: relative; z-index: 1;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  /* ── ヘッダ ── */
+  header { margin-bottom: 48px; }
+  .logo {
+    font-size: 11px; font-weight: 700; letter-spacing: .25em;
+    color: var(--accent); text-transform: uppercase; margin-bottom: 12px;
+  }
+  h1 {
+    font-size: clamp(28px, 5vw, 48px); font-weight: 800; line-height: 1.1;
+    background: linear-gradient(135deg, var(--text) 30%, var(--accent));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .sub { margin-top: 10px; color: var(--text-dim); font-size: 14px; line-height: 1.7; }
+
+  /* ── ドロップゾーン ── */
+  .drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: 16px;
+    padding: 56px 32px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .2s, background .2s;
+    background: var(--surface);
+    margin-bottom: 32px;
+    position: relative;
+    overflow: hidden;
+  }
+  .drop-zone:hover, .drop-zone.drag { border-color: var(--accent); background: #16162a; }
+  .drop-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .drop-icon {
+    font-size: 48px; margin-bottom: 16px; display: block;
+    filter: drop-shadow(0 0 12px var(--accent));
+  }
+  .drop-title { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+  .drop-hint { font-size: 13px; color: var(--text-dim); }
+
+  /* ── モード選択 ── */
+  .mode-section { margin-bottom: 32px; }
+  .mode-label { font-size: 11px; letter-spacing: .2em; color: var(--text-dim); text-transform: uppercase; margin-bottom: 14px; }
+  .mode-btns { display: flex; gap: 12px; flex-wrap: wrap; }
+  .mode-btn {
+    padding: 10px 22px; border-radius: 8px; border: 1.5px solid var(--border);
+    background: var(--surface); color: var(--text-dim);
+    font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+    cursor: pointer; transition: all .15s; letter-spacing: .05em;
+  }
+  .mode-btn:hover { border-color: var(--accent); color: var(--text); }
+  .mode-btn.active { border-color: var(--accent); background: #1e1a3a; color: var(--accent); }
+  .mode-btn.active.melody { border-color: var(--melody-col); background: #0f2a26; color: var(--melody-col); }
+  .mode-btn.active.drum { border-color: var(--drum-col); background: #2a1020; color: var(--drum-col); }
+
+  /* ── パラメータ ── */
+  .params { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
+  .param-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+  .param-card label { display: block; font-size: 11px; letter-spacing: .15em; color: var(--text-dim); text-transform: uppercase; margin-bottom: 10px; }
+  .param-card input[type=range] { width: 100%; accent-color: var(--accent); }
+  .param-val { font-family: 'JetBrains Mono', monospace; font-size: 18px; font-weight: 600; color: var(--accent); margin-top: 6px; }
+  .param-card select {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); padding: 8px 10px; border-radius: 6px;
+    font-family: 'Syne', sans-serif; font-size: 13px; cursor: pointer;
+  }
+
+  /* ── 解析ボタン ── */
+  .analyze-btn {
+    display: block; width: 100%;
+    padding: 18px; border-radius: 12px; border: none;
+    background: linear-gradient(135deg, var(--accent), #5044cc);
+    color: #fff; font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 800;
+    cursor: pointer; letter-spacing: .08em; text-transform: uppercase;
+    transition: opacity .15s, transform .1s;
+    margin-bottom: 40px;
+  }
+  .analyze-btn:hover:not(:disabled) { opacity: .88; transform: translateY(-1px); }
+  .analyze-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+  /* ── プログレス ── */
+  .progress-wrap { margin-bottom: 32px; display: none; }
+  .progress-wrap.show { display: block; }
+  .progress-label { font-size: 12px; color: var(--text-dim); margin-bottom: 8px; font-family: 'JetBrains Mono', monospace; }
+  .progress-bar-bg { background: var(--surface); border-radius: 4px; height: 6px; overflow: hidden; }
+  .progress-bar { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 4px; transition: width .3s; width: 0%; }
+
+  /* ── 結果エリア ── */
+  .results { display: none; }
+  .results.show { display: block; }
+
+  .stat-row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 32px; }
+  .stat-card {
+    flex: 1 1 140px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px 16px; text-align: center;
+  }
+  .stat-card .label { font-size: 10px; letter-spacing: .2em; color: var(--text-dim); text-transform: uppercase; margin-bottom: 8px; }
+  .stat-card .value { font-family: 'JetBrains Mono', monospace; font-size: 28px; font-weight: 600; }
+  .stat-card.bpm .value { color: var(--beat-col); }
+  .stat-card.beats .value { color: var(--beat-col); }
+  .stat-card.drum .value { color: var(--drum-col); }
+  .stat-card.melody .value { color: var(--melody-col); }
+
+  /* ── ウェーブフォーム + タイムライン ── */
+  .viz-section { margin-bottom: 32px; }
+  .viz-title { font-size: 11px; letter-spacing: .2em; color: var(--text-dim); text-transform: uppercase; margin-bottom: 12px; }
+  canvas { display: block; width: 100%; border-radius: 10px; background: var(--surface); }
+  #waveCanvas { height: 80px; margin-bottom: 8px; }
+  #timelineCanvas { height: 120px; }
+
+  /* ── ノーツプレビュー ── */
+  .notes-section { margin-bottom: 32px; }
+  .notes-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+  .notes-title { font-size: 11px; letter-spacing: .2em; color: var(--text-dim); text-transform: uppercase; }
+  .notes-count { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-dim); }
+
+  .lane-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    overflow-x: auto;
+  }
+  .lane-labels { display: flex; gap: 4px; margin-bottom: 8px; }
+  .lane-label { flex: 1; text-align: center; font-size: 10px; letter-spacing: .1em; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; }
+  #noteGrid { display: flex; gap: 4px; }
+  .lane { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 40px; }
+  .note-cell {
+    height: 14px; border-radius: 3px; background: var(--surface2);
+    transition: background .1s;
+  }
+  .note-cell.on { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+  .note-cell.on.drum { background: var(--drum-col); box-shadow: 0 0 6px var(--drum-col); }
+  .note-cell.on.melody { background: var(--melody-col); box-shadow: 0 0 6px var(--melody-col); }
+
+  /* ── JSON出力 ── */
+  .json-section { margin-bottom: 32px; }
+  .json-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+  .json-title { font-size: 11px; letter-spacing: .2em; color: var(--text-dim); text-transform: uppercase; }
+  .copy-btn {
+    padding: 8px 16px; border-radius: 6px; border: 1px solid var(--accent);
+    background: transparent; color: var(--accent);
+    font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700; cursor: pointer;
+    transition: all .15s;
+  }
+  .copy-btn:hover { background: var(--accent); color: #fff; }
+  .json-box {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 20px; font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    line-height: 1.7; color: var(--accent3); overflow-x: auto;
+    white-space: pre; max-height: 320px; overflow-y: auto;
+  }
+
+  /* ── フッタ注記 ── */
+  .note-box {
+    background: #1a1530; border: 1px solid #3a2a60; border-radius: 10px;
+    padding: 16px 20px; font-size: 13px; color: var(--text-dim); line-height: 1.8;
+  }
+  .note-box strong { color: var(--text); }
+
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-right: 4px; }
+  .tag.beat { background: #2a2040; color: var(--beat-col); }
+  .tag.drum { background: #2a1020; color: var(--drum-col); }
+  .tag.melody { background: #0f2a26; color: var(--melody-col); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="logo">▶ Sparebeat Analyzer</div>
+    <h1>音解析<br>精度デモ</h1>
+    <p class="sub">MP3をアップロードすると、BPM・ビート・ドラム・メロディを検出して<br>Sparebeat用JSONを自動生成します。</p>
+  </header>
+
+  <!-- ドロップゾーン -->
+  <div class="drop-zone" id="dropZone">
+    <input type="file" id="fileInput" accept="audio/*">
+    <span class="drop-icon">🎵</span>
+    <div class="drop-title">MP3 / OGG / WAV をドロップ</div>
+    <div class="drop-hint">またはクリックして選択</div>
+  </div>
+
+  <!-- モード -->
+  <div class="mode-section">
+    <div class="mode-label">解析モード</div>
+    <div class="mode-btns">
+      <button class="mode-btn active drum" data-mode="drum" onclick="setMode('drum',this)">🥁 ドラム＋ベース</button>
+      <button class="mode-btn melody" data-mode="melody" onclick="setMode('melody',this)">🎹 メロディライン</button>
+      <button class="mode-btn" data-mode="both" onclick="setMode('both',this)">✦ 両方</button>
+    </div>
+  </div>
+
+  <!-- パラメータ -->
+  <div class="params">
+    <div class="param-card">
+      <label>感度（Threshold）</label>
+      <input type="range" id="threshold" min="1" max="10" value="5" oninput="updateParam('threshold',this.value)">
+      <div class="param-val" id="threshold-val">5</div>
+    </div>
+    <div class="param-card">
+      <label>難易度</label>
+      <select id="difficulty">
+        <option value="easy">Easy</option>
+        <option value="normal" selected>Normal</option>
+        <option value="hard">Hard</option>
+      </select>
+    </div>
+    <div class="param-card">
+      <label>最大ノーツ数 / 小節</label>
+      <input type="range" id="maxNotes" min="1" max="8" value="4" oninput="updateParam('maxNotes',this.value)">
+      <div class="param-val" id="maxNotes-val">4</div>
+    </div>
+  </div>
+
+  <button class="analyze-btn" id="analyzeBtn" disabled onclick="runAnalysis()">
+    解析スタート
+  </button>
+
+  <!-- プログレス -->
+  <div class="progress-wrap" id="progressWrap">
+    <div class="progress-label" id="progressLabel">解析中...</div>
+    <div class="progress-bar-bg"><div class="progress-bar" id="progressBar"></div></div>
+  </div>
+
+  <!-- 結果 -->
+  <div class="results" id="results">
+
+    <!-- 統計 -->
+    <div class="stat-row">
+      <div class="stat-card bpm"><div class="label">BPM</div><div class="value" id="statBpm">—</div></div>
+      <div class="stat-card beats"><div class="label">Beat検出</div><div class="value" id="statBeats">—</div></div>
+      <div class="stat-card drum"><div class="label">Drum Onset</div><div class="value" id="statDrum">—</div></div>
+      <div class="stat-card melody"><div class="label">Melody Note</div><div class="value" id="statMelody">—</div></div>
+    </div>
+
+    <!-- ウェーブフォーム -->
+    <div class="viz-section">
+      <div class="viz-title">ウェーブフォーム / 検出タイミング</div>
+      <canvas id="waveCanvas"></canvas>
+      <canvas id="timelineCanvas"></canvas>
+    </div>
+
+    <!-- ノーツプレビュー（先頭32拍分） -->
+    <div class="notes-section">
+      <div class="notes-header">
+        <div class="notes-title">ノーツ配置プレビュー（先頭64拍）</div>
+        <div class="notes-count" id="notesCount"></div>
+      </div>
+      <div class="lane-wrap">
+        <div class="lane-labels">
+          <div class="lane-label">D</div>
+          <div class="lane-label">F</div>
+          <div class="lane-label">J</div>
+          <div class="lane-label">K</div>
+        </div>
+        <div id="noteGrid"></div>
+      </div>
+    </div>
+
+    <!-- JSON出力 -->
+    <div class="json-section">
+      <div class="json-header">
+        <div class="json-title">Sparebeat JSON 出力</div>
+        <button class="copy-btn" onclick="copyJson()">コピー</button>
+      </div>
+      <div class="json-box" id="jsonBox"></div>
+    </div>
+
+    <div class="note-box">
+      <strong>精度について：</strong><br>
+      <span class="tag beat">ビート</span>librosaのbeat_trackによる検出。精度は高め。<br>
+      <span class="tag drum">ドラム</span>低周波帯域（〜200Hz）のonset検出。バスドラム・スネアに反応。複雑な楽曲では誤検知あり。<br>
+      <span class="tag melody">メロディ</span>中〜高周波帯域（200Hz〜4kHz）のpitch tracking。精度は中程度。<br>
+      生成されたJSONは既存エディタに読み込んで手修正することを推奨します。
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────
+// グローバル状態
+// ─────────────────────────────────────────
+let audioCtx = null;
+let audioBuffer = null;
+let currentMode = 'drum';
+let analysisResult = null;
+let fileName = '';
+
+// ─────────────────────────────────────────
+// UI操作
+// ─────────────────────────────────────────
+function setMode(mode, btn) {
+  currentMode = mode;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function updateParam(id, val) {
+  document.getElementById(id + '-val').textContent = val;
+}
+
+// ─────────────────────────────────────────
+// ファイル読み込み
+// ─────────────────────────────────────────
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if (file) loadFile(file);
+});
+fileInput.addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
+
+async function loadFile(file) {
+  fileName = file.name.replace(/\.[^.]+$/, '');
+  const dropTitle = dropZone.querySelector('.drop-title');
+  dropTitle.textContent = `✓ ${file.name}`;
+  dropZone.querySelector('.drop-hint').textContent = `${(file.size/1024/1024).toFixed(2)} MB`;
+
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const arrayBuffer = await file.arrayBuffer();
+  audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+  document.getElementById('analyzeBtn').disabled = false;
+}
+
+// ─────────────────────────────────────────
+// 解析メイン
+// ─────────────────────────────────────────
+async function runAnalysis() {
+  if (!audioBuffer) return;
+  document.getElementById('analyzeBtn').disabled = true;
+  showProgress(true);
+  document.getElementById('results').classList.remove('show');
+
+  await sleep(20);
+
+  const sampleRate = audioBuffer.sampleRate;
+  const channelData = audioBuffer.getChannelData(0); // モノラル化
+  const duration = audioBuffer.duration;
+
+  setProgress(10, 'ウェーブフォーム解析中...');
+  await sleep(20);
+
+  // ─── BPM & Beat detection ───
+  const bpmResult = estimateBPM(channelData, sampleRate);
+  setProgress(30, 'BPM検出完了。onsetを計算中...');
+  await sleep(20);
+
+  // ─── Onset detection (全体) ───
+  const onsets = detectOnsets(channelData, sampleRate);
+  setProgress(55, 'ドラム・メロディ帯域を分離中...');
+  await sleep(20);
+
+  // ─── 帯域別 onset ───
+  const drumOnsets = detectOnsetsBand(channelData, sampleRate, 'drum');
+  const melodyOnsets = detectOnsetsBand(channelData, sampleRate, 'melody');
+  setProgress(80, 'ノーツ配置を生成中...');
+  await sleep(20);
+
+  // ─── ノーツ生成 ───
+  const bpm = bpmResult.bpm;
+  const beatSec = 60 / bpm;
+  const subdiv = 4; // 16分音符 = beat/4
+  const subdivSec = beatSec / subdiv;
+
+  const threshold = parseInt(document.getElementById('threshold').value);
+  const maxNotes = parseInt(document.getElementById('maxNotes').value);
+
+  let sourceOnsets;
+  if (currentMode === 'drum') sourceOnsets = drumOnsets;
+  else if (currentMode === 'melody') sourceOnsets = melodyOnsets;
+  else sourceOnsets = [...new Set([...drumOnsets, ...melodyOnsets])].sort((a,b)=>a-b);
+
+  const notes = buildNotes(sourceOnsets, bpm, subdivSec, duration, maxNotes, currentMode);
+  const jsonStr = buildJson(notes, bpm, fileName, document.getElementById('difficulty').value);
+
+  setProgress(100, '完了！');
+  await sleep(200);
+
+  // ─── 保存 ───
+  analysisResult = { bpmResult, onsets, drumOnsets, melodyOnsets, notes, jsonStr, channelData, sampleRate, duration, bpm };
+
+  showProgress(false);
+  renderResults();
+  document.getElementById('analyzeBtn').disabled = false;
+}
+
+// ─────────────────────────────────────────
+// BPM推定（自己相関 + ピーク検出）
+// ─────────────────────────────────────────
+function estimateBPM(data, sr) {
+  const hopSize = 512;
+  const frameSize = 2048;
+  const energy = [];
+  for (let i = 0; i + frameSize < data.length; i += hopSize) {
+    let e = 0;
+    for (let j = i; j < i + frameSize; j++) e += data[j] * data[j];
+    energy.push(Math.sqrt(e / frameSize));
+  }
+
+  // 自己相関
+  const minBPM = 60, maxBPM = 200;
+  const minLag = Math.floor(sr / (maxBPM / 60) / hopSize);
+  const maxLag = Math.floor(sr / (minBPM / 60) / hopSize);
+  let bestBpm = 120, bestScore = -Infinity;
+
+  for (let lag = minLag; lag <= maxLag; lag++) {
+    let score = 0;
+    for (let i = 0; i < energy.length - lag; i++) score += energy[i] * energy[i + lag];
+    const bpm = (sr / hopSize / lag) * 60;
+    if (score > bestScore) { bestScore = score; bestBpm = bpm; }
+  }
+
+  // 丸め
+  const rounded = Math.round(bestBpm / 0.5) * 0.5;
+  const beats = [];
+  const beatSec = 60 / rounded;
+  for (let t = 0; t < data.length / sr; t += beatSec) beats.push(t);
+
+  return { bpm: Math.round(rounded), beats };
+}
+
+// ─────────────────────────────────────────
+// Onset検出（スペクトルフラックス）
+// ─────────────────────────────────────────
+function detectOnsets(data, sr, options = {}) {
+  const hopSize = options.hopSize || 256;
+  const frameSize = options.frameSize || 1024;
+  const { loFreq = 0, hiFreq = sr / 2 } = options;
+
+  const fftSize = frameSize;
+  const loIdx = Math.floor(loFreq / sr * fftSize);
+  const hiIdx = Math.ceil(hiFreq / sr * fftSize);
+
+  let prevMag = null;
+  const flux = [];
+
+  for (let i = 0; i + frameSize < data.length; i += hopSize) {
+    const frame = data.slice(i, i + frameSize);
+    const windowed = applyHann(frame);
+    const mag = simpleMagnitude(windowed, fftSize, loIdx, hiIdx);
+    if (prevMag) {
+      let f = 0;
+      for (let k = 0; k < mag.length; k++) f += Math.max(0, mag[k] - prevMag[k]);
+      flux.push(f);
+    } else {
+      flux.push(0);
+    }
+    prevMag = mag;
+  }
+
+  // ピーク検出
+  const onsets = [];
+  const meanFlux = flux.reduce((s,v)=>s+v,0) / flux.length;
+  const stdFlux = Math.sqrt(flux.reduce((s,v)=>s+(v-meanFlux)**2,0)/flux.length);
+  const thresh = meanFlux + stdFlux * 1.2;
+  const minGapFrames = Math.floor(0.08 * sr / hopSize);
+
+  let lastOnset = -minGapFrames;
+  for (let i = 2; i < flux.length - 2; i++) {
+    if (flux[i] > thresh && flux[i] >= flux[i-1] && flux[i] >= flux[i+1] && i - lastOnset > minGapFrames) {
+      onsets.push(i * hopSize / sr);
+      lastOnset = i;
+    }
+  }
+  return onsets;
+}
+
+function detectOnsetsBand(data, sr, band) {
+  if (band === 'drum') return detectOnsets(data, sr, { loFreq: 20, hiFreq: 300 });
+  if (band === 'melody') return detectOnsets(data, sr, { loFreq: 300, hiFreq: 4000 });
+  return detectOnsets(data, sr);
+}
+
+function applyHann(frame) {
+  return frame.map((v, i) => v * 0.5 * (1 - Math.cos(2 * Math.PI * i / (frame.length - 1))));
+}
+
+function simpleMagnitude(frame, fftSize, loIdx, hiIdx) {
+  // 簡易DFT（低精度だが高速）
+  const n = Math.min(frame.length, fftSize);
+  const bins = Math.min(64, hiIdx - loIdx);
+  const result = new Float32Array(bins);
+  const step = Math.floor((hiIdx - loIdx) / bins);
+  for (let k = 0; k < bins; k++) {
+    const freq = (loIdx + k * step);
+    let re = 0, im = 0;
+    for (let t = 0; t < n; t += 4) {
+      const angle = 2 * Math.PI * freq * t / fftSize;
+      re += frame[t] * Math.cos(angle);
+      im -= frame[t] * Math.sin(angle);
+    }
+    result[k] = Math.sqrt(re*re + im*im);
+  }
+  return result;
+}
+
+// ─────────────────────────────────────────
+// ノーツ構築
+// ─────────────────────────────────────────
+function buildNotes(onsets, bpm, subdivSec, duration, maxNotes, mode) {
+  const grid = [];
+  const totalSubdiv = Math.ceil(duration / subdivSec);
+  for (let i = 0; i < totalSubdiv; i++) grid.push([]);
+
+  onsets.forEach(t => {
+    const idx = Math.round(t / subdivSec);
+    if (idx < totalSubdiv && grid[idx].length < maxNotes) {
+      // レーン割り当て（onset時刻から疑似ランダムだが再現性あり）
+      const lane = assignLane(t, mode, grid[idx]);
+      if (lane !== null) grid[idx].push(lane);
+    }
+  });
+
+  return grid;
+}
+
+function assignLane(t, mode, occupied) {
+  const lanes = [0, 1, 2, 3];
+  const free = lanes.filter(l => !occupied.includes(l));
+  if (free.length === 0) return null;
+
+  // ドラムは左寄り、メロディは右寄り（仮ルール）
+  if (mode === 'drum') {
+    const pref = [0, 1, 2, 3];
+    return pref.find(l => free.includes(l)) ?? free[0];
+  } else if (mode === 'melody') {
+    const pref = [2, 3, 1, 0];
+    return pref.find(l => free.includes(l)) ?? free[0];
+  } else {
+    // both: 分散
+    const h = Math.abs(Math.sin(t * 997.3));
+    return free[Math.floor(h * free.length)];
+  }
+}
+
+// ─────────────────────────────────────────
+// Sparebeat JSON生成
+// ─────────────────────────────────────────
+const KEYS = ['1','2','3','4'];
+
+function buildJson(grid, bpm, title, difficulty) {
+  // 16分音符単位のgridを小節（16分音符×16）ごとにまとめ文字列化
+  const subdivPerMeasure = 16;
+  const measures = [];
+  for (let i = 0; i < grid.length; i += subdivPerMeasure) {
+    const cells = grid.slice(i, i + subdivPerMeasure);
+    while (cells.length < subdivPerMeasure) cells.push([]);
+    const parts = cells.map(cell => cell.map(l => KEYS[l]).join('') || '');
+    // カンマ区切り（末尾カンマなし）
+    measures.push(parts.join(','));
+  }
+
+  // 難易度テーブル
+  const lvMap = { easy: '1', normal: '5', hard: '10' };
+  const mapObj = { easy: [], normal: [], hard: [] };
+  mapObj[difficulty] = measures;
+
+  const obj = {
+    title: title || '無題',
+    artist: '',
+    url: '',
+    bgColor: ['#1a1a2e', '#16213e'],
+    bpm: bpm,
+    startTime: 0,
+    level: { easy: lvMap.easy, normal: lvMap.normal, hard: lvMap.hard },
+    map: mapObj
+  };
+
+  return JSON.stringify(obj, null, 2);
+}
+
+// ─────────────────────────────────────────
+// 描画
+// ─────────────────────────────────────────
+function renderResults() {
+  const r = analysisResult;
+  document.getElementById('statBpm').textContent = r.bpm;
+  document.getElementById('statBeats').textContent = r.bpmResult.beats.length;
+  document.getElementById('statDrum').textContent = r.drumOnsets.length;
+  document.getElementById('statMelody').textContent = r.melodyOnsets.length;
+
+  drawWaveform(r.channelData, r.sampleRate, r.duration);
+  drawTimeline(r.drumOnsets, r.melodyOnsets, r.bpmResult.beats, r.duration);
+  renderNoteGrid(r.notes);
+  document.getElementById('jsonBox').textContent = r.jsonStr;
+
+  const total = r.notes.reduce((s,n)=>s+n.length,0);
+  document.getElementById('notesCount').textContent = `${total} notes total`;
+
+  document.getElementById('results').classList.add('show');
+  document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function drawWaveform(data, sr, duration) {
+  const canvas = document.getElementById('waveCanvas');
+  canvas.width = canvas.offsetWidth * 2;
+  canvas.height = 160;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.fillStyle = '#12121a';
+  ctx.fillRect(0, 0, W, H);
+
+  const step = Math.ceil(data.length / W);
+  ctx.beginPath();
+  ctx.strokeStyle = '#7c6aff';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < W; x++) {
+    let min = 1, max = -1;
+    for (let j = 0; j < step; j++) {
+      const v = data[x * step + j] || 0;
+      if (v < min) min = v;
+      if (v > max) max = v;
+    }
+    const yMin = (1 - (min + 1) / 2) * H;
+    const yMax = (1 - (max + 1) / 2) * H;
+    if (x === 0) ctx.moveTo(x, H / 2);
+    ctx.lineTo(x, yMin);
+    ctx.lineTo(x, yMax);
+  }
+  ctx.stroke();
+
+  // center line
+  ctx.beginPath();
+  ctx.strokeStyle = 'rgba(124,106,255,0.2)';
+  ctx.moveTo(0, H/2); ctx.lineTo(W, H/2);
+  ctx.stroke();
+}
+
+function drawTimeline(drumOnsets, melodyOnsets, beats, duration) {
+  const canvas = document.getElementById('timelineCanvas');
+  canvas.width = canvas.offsetWidth * 2;
+  canvas.height = 240;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.fillStyle = '#12121a';
+  ctx.fillRect(0, 0, W, H);
+
+  const toX = t => t / duration * W;
+
+  // ラベル
+  ctx.font = `${Math.round(W/80)}px 'JetBrains Mono'`;
+  ctx.fillStyle = '#6666aa';
+  ctx.fillText('BEAT', 8, 30);
+  ctx.fillText('DRUM', 8, H/2 - 5);
+  ctx.fillText('MELODY', 8, H - 20);
+
+  // beats
+  beats.forEach(t => {
+    const x = toX(t);
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(124,106,255,0.5)';
+    ctx.lineWidth = 1;
+    ctx.moveTo(x, 0); ctx.lineTo(x, H * 0.3);
+    ctx.stroke();
+  });
+
+  // drum onsets
+  drumOnsets.forEach(t => {
+    const x = toX(t);
+    ctx.beginPath();
+    ctx.fillStyle = '#ff6a9e';
+    ctx.fillRect(x - 1, H * 0.35, 2, H * 0.28);
+  });
+
+  // melody onsets
+  melodyOnsets.forEach(t => {
+    const x = toX(t);
+    ctx.beginPath();
+    ctx.fillStyle = '#6affd4';
+    ctx.fillRect(x - 1, H * 0.68, 2, H * 0.28);
+  });
+}
+
+function renderNoteGrid(notes) {
+  const grid = document.getElementById('noteGrid');
+  const preview = notes.slice(0, 64);
+  const lanes = [[], [], [], []];
+  preview.forEach(cell => {
+    for (let l = 0; l < 4; l++) {
+      lanes[l].push(cell.includes(l));
+    }
+  });
+
+  grid.innerHTML = '';
+  lanes.forEach((lane, li) => {
+    const col = document.createElement('div');
+    col.className = 'lane';
+    lane.forEach(on => {
+      const cell = document.createElement('div');
+      cell.className = 'note-cell' + (on ? ` on ${currentMode}` : '');
+      col.appendChild(cell);
+    });
+    grid.appendChild(col);
+  });
+}
+
+// ─────────────────────────────────────────
+// JSON コピー
+// ─────────────────────────────────────────
+function copyJson() {
+  if (!analysisResult) return;
+  navigator.clipboard.writeText(analysisResult.jsonStr).then(() => {
+    const btn = document.querySelector('.copy-btn');
+    btn.textContent = '✓ コピー済み';
+    setTimeout(() => btn.textContent = 'コピー', 1500);
+  });
+}
+
+// ─────────────────────────────────────────
+// プログレス
+// ─────────────────────────────────────────
+function showProgress(show) {
+  document.getElementById('progressWrap').classList.toggle('show', show);
+  if (!show) { document.getElementById('progressBar').style.width = '0%'; }
+}
+function setProgress(pct, label) {
+  document.getElementById('progressBar').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = label;
+}
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+</script>
+</body>
+</html>
