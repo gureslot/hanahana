@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>ハイビスカス 測定モード（判別なし）</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+  :root{--red:#ff2d55;--orange:#ff9500;--yellow:#ffd60a;--green:#32d74b;--blue:#0af;--dark:#0a0a0f;--panel:#13131e;--border:#2a2a3a;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;overflow:hidden;background:var(--dark);color:#eee;font-family:'Share Tech Mono',monospace;}
+  #app{display:flex;flex-direction:column;height:100dvh;max-width:480px;margin:0 auto;padding:4px;gap:3px;}
+  #camera-wrap{position:relative;width:100%;flex:0 0 34%;background:#000;border-radius:8px;overflow:hidden;}
+  #video{width:100%;height:100%;object-fit:cover;display:block;}
+  #canvas-hidden{display:none;}
+  .rbox{position:absolute;border:2px solid rgba(255,255,255,0.4);border-radius:3px;touch-action:none;cursor:move;display:flex;align-items:flex-start;justify-content:flex-end;padding:2px 3px;font-size:.45rem;user-select:none;}
+  .rbox.dragging{opacity:.8;}
+  .resize-handle{position:absolute;bottom:0;right:0;width:14px;height:14px;cursor:se-resize;background:rgba(255,255,255,0.3);border-radius:2px 0 3px 0;}
+  #side-row{display:flex;gap:4px;}
+  .side-btn{flex:1;padding:5px 0;border:1.5px solid var(--border);border-radius:6px;background:var(--panel);color:#666;font-size:.7rem;cursor:pointer;text-align:center;line-height:1.4;}
+  .side-btn.active{border-color:var(--red);color:var(--red);}
+  #ctrl-row{display:flex;gap:4px;}
+  .cbtn{flex:1;padding:7px 0;border:1px solid var(--border);border-radius:6px;background:var(--panel);color:#eee;font-size:.62rem;cursor:pointer;}
+  .cbtn.primary{border-color:var(--red);color:var(--red);}
+  /* 測定パネル */
+  #measure{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:6px 8px;font-size:.62rem;line-height:1.55;}
+  #measure .hz{color:var(--red);float:right;}
+  #measure table{width:100%;border-collapse:collapse;margin-top:3px;}
+  #measure td{padding:1px 2px;}
+  #measure .lbl{color:#777;}
+  .vr{color:var(--red);} .vg{color:var(--green);} .vb{color:var(--blue);} .vy{color:var(--yellow);}
+  #rec-row{display:flex;gap:4px;}
+  .rbtn{flex:1;padding:9px 0;border-radius:6px;font-size:.7rem;cursor:pointer;border:1.5px solid;}
+  .rbtn.real{border-color:var(--green);color:var(--green);background:#0c1a0c;}
+  .rbtn.ng{border-color:var(--red);color:var(--red);background:#1a0c0c;}
+  #csvbox{flex:1;background:#000;border:1px solid var(--border);border-radius:6px;padding:5px 7px;overflow-y:auto;font-size:.55rem;color:#9f9;line-height:1.6;min-height:0;white-space:pre;}
+  #csv-ctrl{display:flex;gap:4px;}
+  .sbtn{flex:1;padding:6px 0;border:1px solid var(--border);border-radius:6px;background:var(--panel);color:#aaa;font-size:.58rem;cursor:pointer;}
+  .note{font-size:.5rem;color:#666;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="camera-wrap">
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="canvas-hidden"></canvas>
+  </div>
+
+  <div id="side-row">
+    <div class="side-btn active" id="btn-L" onclick="setSide('L')">◀ 左ランプ<br><span style="font-size:.5rem;color:#555">めしべ:右上</span></div>
+    <div class="side-btn" id="btn-R" onclick="setSide('R')">右ランプ ▶<br><span style="font-size:.5rem;color:#555">めしべ:左上</span></div>
+  </div>
+  <div id="ctrl-row">
+    <button class="cbtn primary" id="btn-cam" onclick="toggleCam()">▶ 開始</button>
+    <button class="cbtn" onclick="resetRegions()">座標リセット</button>
+  </div>
+
+  <div id="measure">
+    <span class="hz" id="m-hz">-- Hz</span>
+    <b>測定値（左:今の瞬間 / 右:点灯ピーク）</b>
+    <table>
+      <tr><td class="lbl">花 R/G/B</td><td id="m-p-now">-</td><td id="m-p-pk">-</td></tr>
+      <tr><td class="lbl">葉 R/G/B</td><td id="m-l-now">-</td><td id="m-l-pk">-</td></tr>
+      <tr><td class="lbl">芯 R/G/B</td><td id="m-s-now">-</td><td id="m-s-pk">-</td></tr>
+      <tr><td class="lbl">輝度分散</td><td id="m-var">-</td><td class="note">点滅:大 点灯:小</td></tr>
+    </table>
+  </div>
+
+  <div id="rec-row">
+    <button class="rbtn real" onclick="record('REAL')">本物を記録</button>
+    <button class="rbtn ng" onclick="record('NG')">NG(MAXBET等)記録</button>
+  </div>
+
+  <div id="csvbox">type,hz,var,pR,pG,pB,lR,lG,lB,sR,sG,sB
+</div>
+  <div id="csv-ctrl">
+    <button class="sbtn" onclick="copyCsv()">CSVコピー</button>
+    <button class="sbtn" onclick="dlCsv()">CSVダウンロード</button>
+    <button class="sbtn" onclick="clearCsv()">クリア</button>
+  </div>
+  <div class="note">使い方：本物にかざして光らせ「本物を記録」を数回／MAXBET等で「NG記録」を数回。各枠の<b>ピーク</b>値が1行ずつ溜まる。溜まったらCSVをコピーして渡してください。</div>
+</div>
+
+<script>
+const BUF=300, MS=50, PEAKWIN=30;
+let side='L', stream=null, tid=null, running=false;
+let bA=[], bPr=[], bLr=[], bSr=[], bT=[];
+let cur={hz:0,vr:0,Pn:null,Ln:null,Sn:null,Pp:null,Lp:null,Sp:null};
+
+const DEFAULT_REGIONS={
+  L:{stamen:{x:.58,y:.02,w:.38,h:.28,c:'#ffd60a',n:'芯'},petal:{x:.05,y:.18,w:.68,h:.50,c:'#ff2d55',n:'花'},leaf1:{x:.02,y:.63,w:.26,h:.28,c:'#32d74b',n:'葉左'},leaf2:{x:.70,y:.58,w:.26,h:.28,c:'#32d74b',n:'葉右'}},
+  R:{stamen:{x:.04,y:.02,w:.38,h:.28,c:'#ffd60a',n:'芯'},petal:{x:.27,y:.18,w:.68,h:.50,c:'#ff2d55',n:'花'},leaf1:{x:.02,y:.63,w:.26,h:.28,c:'#32d74b',n:'葉左'},leaf2:{x:.70,y:.58,w:.26,h:.28,c:'#32d74b',n:'葉右'}}
+};
+function loadRegions(){try{const s=localStorage.getItem('hibiscus_regions');if(s)return JSON.parse(s);}catch(e){}return JSON.parse(JSON.stringify(DEFAULT_REGIONS));}
+function saveRegions(){localStorage.setItem('hibiscus_regions',JSON.stringify(regions));}
+function resetRegions(){regions=JSON.parse(JSON.stringify(DEFAULT_REGIONS));saveRegions();drawBoxes();}
+let regions=loadRegions();
+
+const video=document.getElementById('video');
+const cvH=document.getElementById('canvas-hidden');
+const ctx2=cvH.getContext('2d',{willReadFrequently:true});
+
+function drawBoxes(){
+  const wrap=document.getElementById('camera-wrap');
+  [...wrap.querySelectorAll('.rbox')].forEach(e=>e.remove());
+  const rs=regions[side];
+  Object.entries(rs).forEach(([key,r])=>{
+    const div=document.createElement('div');
+    div.className='rbox';div.id='rbox-'+key;
+    div.style.cssText=`left:${r.x*100}%;top:${r.y*100}%;width:${r.w*100}%;height:${r.h*100}%;border-color:${r.c}88;color:${r.c};`;
+    div.textContent=r.n;
+    const handle=document.createElement('div');handle.className='resize-handle';div.appendChild(handle);
+    makeDraggable(div,key,handle);wrap.appendChild(div);
+  });
+}
+function makeDraggable(el,key,handle){
+  const wrap=document.getElementById('camera-wrap');let dragging=false,resizing=false,sx,sy,sl,st,sw,sh;
+  const gp=e=>{const t=e.touches?e.touches[0]:e;return{x:t.clientX,y:t.clientY};};
+  el.addEventListener('pointerdown',e=>{if(e.target===handle)return;e.preventDefault();dragging=true;el.classList.add('dragging');el.setPointerCapture(e.pointerId);const p=gp(e);sx=p.x;sy=p.y;const r=regions[side][key];sl=r.x;st=r.y;});
+  el.addEventListener('pointermove',e=>{if(!dragging)return;e.preventDefault();const p=gp(e);const W=wrap.offsetWidth,H=wrap.offsetHeight;const r=regions[side][key];r.x=Math.max(0,Math.min(1-r.w,sl+(p.x-sx)/W));r.y=Math.max(0,Math.min(1-r.h,st+(p.y-sy)/H));el.style.left=(r.x*100)+'%';el.style.top=(r.y*100)+'%';});
+  el.addEventListener('pointerup',e=>{if(!dragging)return;dragging=false;el.classList.remove('dragging');saveRegions();});
+  handle.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();resizing=true;handle.setPointerCapture(e.pointerId);const p=gp(e);sx=p.x;sy=p.y;const r=regions[side][key];sw=r.w;sh=r.h;});
+  handle.addEventListener('pointermove',e=>{if(!resizing)return;e.preventDefault();const p=gp(e);const W=wrap.offsetWidth,H=wrap.offsetHeight;const r=regions[side][key];r.w=Math.max(0.05,Math.min(1-r.x,sw+(p.x-sx)/W));r.h=Math.max(0.05,Math.min(1-r.y,sh+(p.y-sy)/H));el.style.width=(r.w*100)+'%';el.style.height=(r.h*100)+'%';});
+  handle.addEventListener('pointerup',e=>{if(!resizing)return;resizing=false;saveRegions();});
+}
+function setSide(s){side=s;document.getElementById('btn-L').className='side-btn'+(s==='L'?' active':'');document.getElementById('btn-R').className='side-btn'+(s==='R'?' active':'');drawBoxes();}
+
+async function toggleCam(){
+  if(running){clearInterval(tid);if(stream)stream.getTracks().forEach(t=>t.stop());running=false;document.getElementById('btn-cam').textContent='▶ 開始';return;}
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:640},height:{ideal:480}}});
+    video.srcObject=stream;await video.play();cvH.width=320;cvH.height=240;drawBoxes();
+    running=true;document.getElementById('btn-cam').textContent='⏹ 停止';tid=setInterval(analyze,MS);
+  }catch(e){alert('カメラエラー: '+e.message);}
+}
+
+function sampleR(img,W,H,rx,ry,rw,rh){
+  const x0=Math.floor(rx*W),y0=Math.floor(ry*H),x1=Math.min(Math.floor((rx+rw)*W),W),y1=Math.min(Math.floor((ry+rh)*H),H);
+  let r=0,g=0,b=0,n=0;
+  for(let y=y0;y<y1;y+=3)for(let x=x0;x<x1;x+=3){const i=(y*W+x)*4;r+=img[i];g+=img[i+1];b+=img[i+2];n++;}
+  if(!n)return{r:0,g:0,b:0,br:0};
+  return{r:r/n,g:g/n,b:b/n,br:(r/n+g/n+b/n)/3};
+}
+function avg(a){return a.length?a.reduce((s,v)=>s+v,0)/a.length:0;}
+function vari(a){if(a.length<2)return 0;const m=avg(a);return a.reduce((s,v)=>s+(v-m)**2,0)/a.length;}
+function estHz(buf,times){
+  if(buf.length<10)return 0;const m=avg(buf);let cr=0,ls=buf[0]>m?1:-1;
+  for(let i=1;i<buf.length;i++){const s=buf[i]>m?1:-1;if(s!==ls){cr++;ls=s;}}
+  const d=(times[times.length-1]-times[0])/1000;return d<0.5?0:+((cr/2)/d).toFixed(2);
+}
+const rgb=o=>o?`<span class="vr">${Math.round(o.r)}</span>/<span class="vg">${Math.round(o.g)}</span>/<span class="vb">${Math.round(o.b)}</span>`:'-';
+
+function analyze(){
+  if(!video.videoWidth)return;
+  ctx2.drawImage(video,0,0,320,240);
+  const img=ctx2.getImageData(0,0,320,240).data,W=320,H=240,rs=regions[side];
+  const P=sampleR(img,W,H,rs.petal.x,rs.petal.y,rs.petal.w,rs.petal.h);
+  const L1=sampleR(img,W,H,rs.leaf1.x,rs.leaf1.y,rs.leaf1.w,rs.leaf1.h);
+  const L2=sampleR(img,W,H,rs.leaf2.x,rs.leaf2.y,rs.leaf2.w,rs.leaf2.h);
+  const S=sampleR(img,W,H,rs.stamen.x,rs.stamen.y,rs.stamen.w,rs.stamen.h);
+  // 葉は左右の明るい方を採用（実際に葉が写っている側）
+  const L=(L1.br>=L2.br)?L1:L2;
+  const all=(P.br+L.br+S.br)/3, now=Date.now();
+  bA.push(all);bPr.push(P);bLr.push(L);bSr.push(S);bT.push(now);
+  [bA,bPr,bLr,bSr,bT].forEach(b=>{if(b.length>BUF)b.shift();});
+
+  const hz=estHz(bA,bT), vr=vari(bA);
+  // 点灯ピークフレーム
+  let pi=bA.length-1,pb=-1;
+  for(let i=Math.max(0,bA.length-PEAKWIN);i<bA.length;i++){if(bA[i]>pb){pb=bA[i];pi=i;}}
+  const Pp=bPr[pi],Lp=bLr[pi],Sp=bSr[pi];
+  cur={hz,vr,Pn:P,Ln:L,Sn:S,Pp,Lp,Sp};
+
+  document.getElementById('m-hz').textContent=(hz||'--')+' Hz';
+  document.getElementById('m-p-now').innerHTML=rgb(P);  document.getElementById('m-p-pk').innerHTML=rgb(Pp);
+  document.getElementById('m-l-now').innerHTML=rgb(L);  document.getElementById('m-l-pk').innerHTML=rgb(Lp);
+  document.getElementById('m-s-now').innerHTML=rgb(S);  document.getElementById('m-s-pk').innerHTML=rgb(Sp);
+  document.getElementById('m-var').textContent=Math.round(vr);
+}
+
+let rows=[];
+function record(type){
+  if(!cur.Pp){alert('カメラ開始＆かざしてから記録してください');return;}
+  const r=o=>`${Math.round(o.r)},${Math.round(o.g)},${Math.round(o.b)}`;
+  const line=`${type},${cur.hz},${Math.round(cur.vr)},${r(cur.Pp)},${r(cur.Lp)},${r(cur.Sp)}`;
+  rows.push(line);
+  const box=document.getElementById('csvbox');
+  box.textContent+=line+'\n';box.scrollTop=box.scrollHeight;
+}
+function csvText(){return 'type,hz,var,pR,pG,pB,lR,lG,lB,sR,sG,sB\n'+rows.join('\n');}
+function copyCsv(){navigator.clipboard.writeText(csvText()).then(()=>alert('コピーしました')).catch(()=>alert('コピー失敗。手動選択してください'));}
+function dlCsv(){const b=new Blob([csvText()],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='hibiscus-measure.csv';a.click();}
+function clearCsv(){rows=[];document.getElementById('csvbox').textContent='type,hz,var,pR,pG,pB,lR,lG,lB,sR,sG,sB\n';}
+
+window.addEventListener('load',drawBoxes);
+</script>
+</body>
+</html>
