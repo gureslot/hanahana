@@ -20,18 +20,12 @@
   #video{width:100%;height:100%;object-fit:cover;display:block;}
   #canvas-hidden{display:none;}
 
-  /* 領域ボックス */
+  /* 領域ボックス（固定表示） */
   .rbox{
     position:absolute;border:2px solid rgba(255,255,255,0.4);
-    border-radius:3px;touch-action:none;cursor:move;
+    border-radius:3px;
     display:flex;align-items:flex-start;justify-content:flex-end;
-    padding:2px 3px;font-size:.45rem;user-select:none;
-  }
-  .rbox.dragging{opacity:.8;border-width:2px;}
-  .resize-handle{
-    position:absolute;bottom:0;right:0;width:14px;height:14px;
-    cursor:se-resize;background:rgba(255,255,255,0.3);
-    border-radius:2px 0 3px 0;
+    padding:2px 3px;font-size:.45rem;user-select:none;pointer-events:none;
   }
 
   /* 中段 */
@@ -42,7 +36,6 @@
   #ctrl-row{display:flex;gap:4px;}
   .cbtn{flex:1;padding:7px 0;border:1px solid var(--border);border-radius:6px;background:var(--panel);color:#eee;font-family:'Share Tech Mono',monospace;font-size:.65rem;cursor:pointer;}
   .cbtn.primary{border-color:var(--red);color:var(--red);}
-  .cbtn.warn{border-color:var(--orange);color:var(--orange);}
   .cbtn.danger{border-color:#ff3b30;color:#ff3b30;}
 
   /* 判定 */
@@ -57,12 +50,6 @@
   .meter-val{font-size:.8rem;font-weight:bold;}
   .mbar{flex:1;height:3px;background:var(--border);border-radius:2px;overflow:hidden;}
   .mbar-fill{height:100%;border-radius:2px;transition:width .1s;}
-
-  /* 座標表示パネル */
-  #coord-panel{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:5px 8px;display:none;}
-  #coord-panel.show{display:block;}
-  #coord-title{font-size:.55rem;color:#666;margin-bottom:3px;}
-  #coord-text{font-size:.55rem;color:var(--yellow);line-height:1.8;word-break:break-all;}
 
   /* グラフ */
   #bottom{flex:1;display:flex;flex-direction:column;gap:3px;min-height:0;}
@@ -86,9 +73,7 @@
     </div>
     <div id="ctrl-row">
       <button class="cbtn primary" id="btn-cam" onclick="toggleCam()">▶ 開始</button>
-      <button class="cbtn warn" onclick="toggleCoord()">座標表示</button>
-      <button class="cbtn warn" onclick="resetRegions()">座標リセット</button>
-      <button class="cbtn danger" onclick="clearAll()">消去</button>
+      <button class="cbtn danger" onclick="clearAll()">ログ消去</button>
     </div>
     <div id="result-box">
       <div id="result-pattern" style="color:#555">待機中...</div>
@@ -100,10 +85,6 @@
       <div class="meter"><span class="meter-label">葉</span><span class="meter-val" id="mv-l" style="color:var(--green)">--</span><div class="mbar"><div class="mbar-fill" id="mb-l" style="width:0%;background:var(--green)"></div></div></div>
       <div class="meter"><span class="meter-label">芯</span><span class="meter-val" id="mv-s" style="color:var(--yellow)">--</span><div class="mbar"><div class="mbar-fill" id="mb-s" style="width:0%;background:var(--yellow)"></div></div></div>
       <div class="meter"><span class="meter-label">青%</span><span class="meter-val" id="mv-b" style="color:var(--blue)">--</span><div class="mbar"><div class="mbar-fill" id="mb-b" style="width:0%;background:var(--blue)"></div></div></div>
-    </div>
-    <div id="coord-panel">
-      <div id="coord-title">▌ 現在の座標（私に共有してください）</div>
-      <div id="coord-text">-</div>
     </div>
   </div>
   <div id="bottom">
@@ -133,54 +114,21 @@ const HOLD_FRAMES=20;   // 周波数が一瞬乱れても色比が生きてい�
 // デフォルト座標
 const DEFAULT_REGIONS = {
   L:{
-    stamen:{x:.58,y:.02,w:.38,h:.28,c:'#ffd60a',n:'芯'},
-    petal: {x:.05,y:.18,w:.68,h:.50,c:'#ff2d55',n:'花'},
-    leaf1: {x:.02,y:.63,w:.26,h:.28,c:'#32d74b',n:'葉左'},
-    leaf2: {x:.70,y:.58,w:.26,h:.28,c:'#32d74b',n:'葉右'},
+    stamen:{x:0.570,y:0.107,w:0.219,h:0.280,c:'#ffd60a',n:'芯'},
+    petal: {x:0.202,y:0.203,w:0.534,h:0.635,c:'#ff2d55',n:'花'},
+    leaf1: {x:0.144,y:0.595,w:0.260,h:0.280,c:'#32d74b',n:'葉左'},
+    leaf2: {x:0.641,y:0.439,w:0.185,h:0.281,c:'#32d74b',n:'葉右'},
   },
   R:{
-    stamen:{x:.04,y:.02,w:.38,h:.28,c:'#ffd60a',n:'芯'},
-    petal: {x:.27,y:.18,w:.68,h:.50,c:'#ff2d55',n:'花'},
-    leaf1: {x:.02,y:.63,w:.26,h:.28,c:'#32d74b',n:'葉左'},
-    leaf2: {x:.70,y:.58,w:.26,h:.28,c:'#32d74b',n:'葉右'},
+    stamen:{x:0.211,y:0.107,w:0.219,h:0.280,c:'#ffd60a',n:'芯'},
+    petal: {x:0.264,y:0.203,w:0.534,h:0.635,c:'#ff2d55',n:'花'},
+    leaf1: {x:0.174,y:0.439,w:0.185,h:0.281,c:'#32d74b',n:'葉左'},
+    leaf2: {x:0.596,y:0.595,w:0.260,h:0.280,c:'#32d74b',n:'葉右'},
   }
 };
 
-// 座標をlocalStorageから読み込み
-function loadRegions(){
-  try{
-    const s=localStorage.getItem('hibiscus_regions');
-    if(s) return JSON.parse(s);
-  }catch(e){}
-  return JSON.parse(JSON.stringify(DEFAULT_REGIONS));
-}
-// 右ランプ＝左ランプの左右反転（ユーザー調整は左のみ。右は常に左から自動生成）
-// x_右 = 1 - x_左 - w_左 / y,w,h は不変。葉左↔葉右は物理的に入れ替わるので名前も入替。
-function mirrorLfromR(){
-  const L=regions.L;
-  const mir=(r)=>({x:1-r.x-r.w, y:r.y, w:r.w, h:r.h, c:r.c, n:r.n});
-  regions.R = {
-    stamen: mir(L.stamen),                 // 芯：右上→左上
-    petal:  mir(L.petal),
-    leaf1:  {...mir(L.leaf2), n:'葉左'},    // 左の葉右を反転→右ランプの葉左
-    leaf2:  {...mir(L.leaf1), n:'葉右'},    // 左の葉左を反転→右ランプの葉右
-  };
-}
-function saveRegions(){
-  mirrorLfromR();
-  localStorage.setItem('hibiscus_regions', JSON.stringify(regions));
-}
-function resetRegions(){
-  regions = JSON.parse(JSON.stringify(DEFAULT_REGIONS));
-  mirrorLfromR();
-  saveRegions();
-  drawBoxes();
-  updateCoordText();
-  log('座標をリセットしました');
-}
-
-let regions = loadRegions();
-mirrorLfromR();   // 起動時、保存済みの左から右を再生成
+// 座標は固定（コードに焼き込み済み）。ドラッグ・リセット・保存機能は廃止。
+let regions = JSON.parse(JSON.stringify(DEFAULT_REGIONS));
 
 const video=document.getElementById('video');
 const cvH=document.getElementById('canvas-hidden');
@@ -197,105 +145,8 @@ function drawBoxes(){
     div.id='rbox-'+key;
     div.style.cssText=`left:${r.x*100}%;top:${r.y*100}%;width:${r.w*100}%;height:${r.h*100}%;border-color:${r.c}88;color:${r.c};`;
     div.textContent=r.n;
-    // リサイズハンドル
-    const handle=document.createElement('div');
-    handle.className='resize-handle';
-    div.appendChild(handle);
-    // ドラッグ（移動）
-    makeDraggable(div, key, handle);
     wrap.appendChild(div);
   });
-}
-
-function makeDraggable(el, key, handle){
-  const wrap=document.getElementById('camera-wrap');
-  let dragging=false, resizing=false;
-  let startX,startY,startL,startT,startW,startH;
-
-  function getPos(e){
-    const t=e.touches?e.touches[0]:e;
-    return{x:t.clientX,y:t.clientY};
-  }
-
-  // 移動
-  el.addEventListener('pointerdown',e=>{
-    if(e.target===handle)return;
-    e.preventDefault();
-    dragging=true;
-    el.classList.add('dragging');
-    el.setPointerCapture(e.pointerId);
-    const p=getPos(e);
-    startX=p.x; startY=p.y;
-    const r=regions[side][key];
-    startL=r.x; startT=r.y;
-  });
-  el.addEventListener('pointermove',e=>{
-    if(!dragging)return;
-    e.preventDefault();
-    const p=getPos(e);
-    const W=wrap.offsetWidth, H=wrap.offsetHeight;
-    const dx=(p.x-startX)/W, dy=(p.y-startY)/H;
-    const r=regions[side][key];
-    r.x=Math.max(0,Math.min(1-r.w, startL+dx));
-    r.y=Math.max(0,Math.min(1-r.h, startT+dy));
-    el.style.left=(r.x*100)+'%';
-    el.style.top=(r.y*100)+'%';
-    updateCoordText();
-  });
-  el.addEventListener('pointerup',e=>{
-    if(!dragging)return;
-    dragging=false;
-    el.classList.remove('dragging');
-    saveRegions();
-    updateCoordText();
-  });
-
-  // リサイズ
-  handle.addEventListener('pointerdown',e=>{
-    e.preventDefault();
-    e.stopPropagation();
-    resizing=true;
-    handle.setPointerCapture(e.pointerId);
-    const p=getPos(e);
-    startX=p.x; startY=p.y;
-    const r=regions[side][key];
-    startW=r.w; startH=r.h;
-  });
-  handle.addEventListener('pointermove',e=>{
-    if(!resizing)return;
-    e.preventDefault();
-    const p=getPos(e);
-    const W=wrap.offsetWidth, H=wrap.offsetHeight;
-    const dw=(p.x-startX)/W, dh=(p.y-startY)/H;
-    const r=regions[side][key];
-    r.w=Math.max(0.05,Math.min(1-r.x, startW+dw));
-    r.h=Math.max(0.05,Math.min(1-r.y, startH+dh));
-    el.style.width=(r.w*100)+'%';
-    el.style.height=(r.h*100)+'%';
-    updateCoordText();
-  });
-  handle.addEventListener('pointerup',e=>{
-    if(!resizing)return;
-    resizing=false;
-    saveRegions();
-    updateCoordText();
-  });
-}
-
-function updateCoordText(){
-  const rs=regions[side];
-  let lines=[];
-  Object.entries(rs).forEach(([k,r])=>{
-    lines.push(`${r.n}: x=${r.x.toFixed(3)} y=${r.y.toFixed(3)} w=${r.w.toFixed(3)} h=${r.h.toFixed(3)}`);
-  });
-  document.getElementById('coord-text').textContent=lines.join('\n');
-}
-
-let coordVisible=false;
-function toggleCoord(){
-  coordVisible=!coordVisible;
-  document.getElementById('coord-panel').className=coordVisible?'coord-panel show':'coord-panel';
-  if(coordVisible) updateCoordText();
 }
 
 // ===== 左右切替 =====
@@ -304,7 +155,6 @@ function setSide(s){
   document.getElementById('btn-L').className='side-btn'+(s==='L'?' active':'');
   document.getElementById('btn-R').className='side-btn'+(s==='R'?' active':'');
   drawBoxes();
-  updateCoordText();
 }
 
 // ===== カメラ =====
@@ -608,7 +458,7 @@ function clearAll(){
 }
 
 window.addEventListener('resize',()=>{initG();drawBoxes();fxResize();});
-window.addEventListener('load',()=>{drawBoxes();updateCoordText();});
+window.addEventListener('load',()=>{drawBoxes();});
 </script>
 </body>
 </html>
