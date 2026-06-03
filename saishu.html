@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>チカリウム採取</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;800&display=swap');
+  :root{--gold:#e8c25a;--gold-hi:#fff3c8;--red:#ff2d55;--green:#3fe08a;}
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;overflow:hidden;background:#0a0509;font-family:'Shippori Mincho','Yu Mincho',serif;color:var(--gold-hi);}
+  #app{display:flex;flex-direction:column;width:100%;max-width:480px;margin:0 auto;height:100dvh;}
+  #cam-wrap{position:relative;width:100%;aspect-ratio:4/3;background:#000;overflow:hidden;flex:0 0 auto;}
+  #video{width:100%;height:100%;object-fit:cover;display:block;}
+  #cv-hidden{display:none;}
+  #fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
+  .rbox{position:absolute;border:1.5px solid rgba(255,255,255,0.30);border-radius:3px;}
+  #panel{flex:1 1 auto;background:linear-gradient(180deg,#140913,#0a0509);display:flex;flex-direction:column;align-items:center;padding:14px 16px;gap:10px;overflow-y:auto;}
+  #title{font-size:15px;letter-spacing:3px;color:var(--gold);}
+  #gain{font-size:44px;font-weight:800;line-height:1;color:var(--gold-hi);text-shadow:0 0 16px rgba(255,200,90,.6);transition:transform .1s;}
+  #gain .max{font-size:18px;color:#cdb488;}
+  #daily{width:220px;height:6px;background:rgba(0,0,0,.6);border:1px solid rgba(232,194,90,.5);border-radius:4px;overflow:hidden;}
+  #daily>div{height:100%;width:0;background:linear-gradient(90deg,#ffb84d,#ffe28a);box-shadow:0 0 6px rgba(255,200,90,.8);transition:width .25s;}
+  #total{font-size:13px;color:#e7d3a6;}
+  #lockWrap{width:240px;text-align:center;margin-top:2px;}
+  #lockLabel{font-size:12px;letter-spacing:1px;margin-bottom:4px;}
+  #lockLabel.ok{color:var(--green);}
+  #lockLabel.searching{color:var(--gold);}
+  #lockBar{width:100%;height:12px;background:rgba(0,0,0,.6);border:1.5px solid rgba(232,194,90,.5);border-radius:8px;overflow:hidden;}
+  #lockFill{height:100%;width:0;background:linear-gradient(90deg,#ff9500,#ffe28a);transition:width .15s;}
+  #lockWrap.locked #lockFill{background:linear-gradient(90deg,#1fc46a,#9dffce);}
+  #lockWrap.locked #lockBar{border-color:var(--green);box-shadow:0 0 12px rgba(63,224,138,.5);}
+  #hint{font-size:11px;color:#a98f66;text-align:center;line-height:1.6;margin-top:2px;}
+  #back{margin-top:6px;padding:11px 36px;font-family:inherit;font-size:15px;font-weight:800;color:var(--gold-hi);background:rgba(20,10,16,.9);border:1.5px solid rgba(232,194,90,.6);border-radius:12px;cursor:pointer;}
+  #back:active{filter:brightness(1.1);}
+  #done{position:fixed;inset:0;z-index:10;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:rgba(8,4,8,.9);text-align:center;}
+  #done.show{display:flex;}
+  #done .big{font-size:28px;font-weight:800;color:var(--gold-hi);}
+  #done .amt{font-size:40px;font-weight:800;color:#ffe28a;}
+  #done .sub{font-size:14px;color:#e7d3a6;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="cam-wrap">
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="cv-hidden"></canvas>
+    <canvas id="fx"></canvas>
+  </div>
+
+  <div id="panel">
+    <div id="title">チカリウム採取</div>
+    <div id="gain"><span id="gain-num">0</span><span class="max"> / <span id="gain-max">300</span></span></div>
+    <div id="daily"><div id="daily-fill"></div></div>
+    <div id="total">所持 <span id="total-num">12,345</span></div>
+
+    <div id="lockWrap">
+      <div id="lockLabel" class="searching">ハイビスカスランプを探しています…</div>
+      <div id="lockBar"><div id="lockFill"></div></div>
+    </div>
+    <div id="hint">ランプ全体が枠に収まるようにかざし、<br>点滅パターンを認識するまで数秒静止してください</div>
+
+    <button id="back" onclick="goBack()">ホームに戻る</button>
+  </div>
+
+  <div id="done">
+    <div class="big">本日の採取完了</div>
+    <div class="amt">+<span id="done-amt">0</span></div>
+    <div class="sub">また0時にリセットされます</div>
+    <button id="back" style="position:static" onclick="goBack()">ホームに戻る</button>
+  </div>
+</div>
+
+<script>
+const DAILY_MAX=300, PER_BLINK=6, MS=50;
+// 形・色の判定しきい（点灯画像から逆算）
+const BR_MIN=80;
+const LEAF_H_LO=70, LEAF_H_HI=170;
+const FILL_MAX=0.90, FILL_MIN=0.30;   // 赤の充填率（ベタ塗り=1.0を弾く・本物0.5-0.8）
+const EDGE_MIN=0.08;                   // 花枠内の黒縁線率（本物0.26 / ベタ塗り≈0）
+const DIFF_MIN=20;
+const LOCK_NEED=40;                    // 連続合格(約2秒)でロック→採取開始
+let lockCnt=0, locked=false;
+
+let totalChikarium=parseInt(localStorage.getItem('ck_total')||'12345',10);
+let dailyGot=0, sessionGain=0;
+let stream=null, tid=null, fxRaf=null, running=false, track=null;
+let prevBr=0, rising=false, lastSpawn=0, particles=[];
+
+const REGIONS={
+  petal:{x:0.12,y:0.20,w:0.72,h:0.52},
+  leaf1:{x:0.09,y:0.55,w:0.30,h:0.22},
+  leaf2:{x:0.78,y:0.43,w:0.21,h:0.27},
+  stamen:{x:0.66,y:0.16,w:0.22,h:0.16},
+};
+
+const video=document.getElementById('video');
+const cvH=document.getElementById('cv-hidden');
+const ctx2=cvH.getContext('2d',{willReadFrequently:true});
+const fx=document.getElementById('fx'); const fxc=fx.getContext('2d');
+
+function fmt(n){return n.toLocaleString();}
+function refreshUI(){
+  document.getElementById('gain-num').textContent=sessionGain;
+  document.getElementById('gain-max').textContent=DAILY_MAX;
+  document.getElementById('total-num').textContent=fmt(totalChikarium);
+  document.getElementById('daily-fill').style.width=Math.min(100,dailyGot/DAILY_MAX*100)+'%';
+}
+
+async function start(){
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:640},height:{ideal:480}}});
+    video.srcObject=stream; await video.play();
+    cvH.width=320; cvH.height=240; fxResize();
+    track=stream.getVideoTracks()[0];
+    lowerExposure();
+    drawBoxes();
+    running=true; tid=setInterval(analyze,MS); fxLoop();
+  }catch(e){
+    document.getElementById('lockLabel').textContent='カメラを起動できません: '+e.message;
+  }
+}
+async function lowerExposure(){
+  if(!track||!track.getCapabilities)return;
+  try{
+    const cap=track.getCapabilities(); const adv=[];
+    if(cap.exposureMode&&cap.exposureMode.includes('manual')) adv.push({exposureMode:'manual'});
+    if(cap.exposureCompensation) adv.push({exposureCompensation:Math.max(cap.exposureCompensation.min,-2)});
+    if(cap.iso) adv.push({iso:cap.iso.min});
+    if(adv.length) await track.applyConstraints({advanced:adv});
+  }catch(e){}
+}
+function stop(){running=false;if(tid)clearInterval(tid);if(fxRaf)cancelAnimationFrame(fxRaf);if(stream)stream.getTracks().forEach(t=>t.stop());}
+function goBack(){stop();location.href='./home-mockup.html';}
+
+function drawBoxes(){
+  const wrap=document.getElementById('cam-wrap');
+  [...wrap.querySelectorAll('.rbox')].forEach(e=>e.remove());
+  Object.values(REGIONS).forEach(r=>{
+    const d=document.createElement('div');d.className='rbox';
+    d.style.cssText=`left:${r.x*100}%;top:${r.y*100}%;width:${r.w*100}%;height:${r.h*100}%;`;
+    wrap.appendChild(d);
+  });
+}
+
+function scanRegion(img,W,H,r){
+  const x0=Math.floor(r.x*W),y0=Math.floor(r.y*H),x1=Math.min(Math.floor((r.x+r.w)*W),W),y1=Math.min(Math.floor((r.y+r.h)*H),H);
+  let R=0,Gg=0,Bb=0,n=0,redPix=0,darkPix=0;
+  for(let y=y0;y<y1;y+=2)for(let x=x0;x<x1;x+=2){
+    const i=(y*W+x)*4,pr=img[i],pg=img[i+1],pb=img[i+2];
+    R+=pr;Gg+=pg;Bb+=pb;n++;
+    const b=(pr+pg+pb)/3;
+    if(pr>120&&pr>pg*1.4&&pr>pb*1.4)redPix++;
+    if(b<40)darkPix++;
+  }
+  if(!n)return{r:0,g:0,b:0,br:0,h:0,fill:0,edge:0};
+  R/=n;Gg/=n;Bb/=n;const br=(R+Gg+Bb)/3;
+  const mx=Math.max(R,Gg,Bb),mn=Math.min(R,Gg,Bb),d=mx-mn;
+  let h=0;if(d){if(mx===R)h=((Gg-Bb)/d)%6;else if(mx===Gg)h=(Bb-R)/d+2;else h=(R-Gg)/d+4;h*=60;if(h<0)h+=360;}
+  return{r:R,g:Gg,b:Bb,br,h,fill:redPix/n,edge:darkPix/n};
+}
+
+function analyze(){
+  if(!video.videoWidth)return;
+  ctx2.drawImage(video,0,0,320,240);
+  const img=ctx2.getImageData(0,0,320,240).data,W=320,H=240;
+  const P=scanRegion(img,W,H,REGIONS.petal);
+  const L1=scanRegion(img,W,H,REGIONS.leaf1);
+  const L2=scanRegion(img,W,H,REGIONS.leaf2);
+  const S=scanRegion(img,W,H,REGIONS.stamen);
+  const L=(L1.br>=L2.br)?L1:L2;
+
+  const colorDiff=(Math.abs(P.r-L.r)+Math.abs(P.g-L.g)+Math.abs(P.b-L.b)
+                 +Math.abs(P.r-S.r)+Math.abs(P.g-S.g)+Math.abs(P.b-S.b)
+                 +Math.abs(L.r-S.r)+Math.abs(L.g-S.g)+Math.abs(L.b-S.b))/9;
+
+  const colorOK = P.br>BR_MIN && L.br>BR_MIN && L.h>=LEAF_H_LO && L.h<=LEAF_H_HI && colorDiff>DIFF_MIN;
+  const shapeOK = P.fill>=FILL_MIN && P.fill<=FILL_MAX && P.edge>=EDGE_MIN;
+  const frameOK = colorOK && shapeOK;
+
+  if(frameOK){ if(lockCnt<LOCK_NEED)lockCnt++; } else { lockCnt=0; locked=false; }
+  if(lockCnt>=LOCK_NEED) locked=true;
+  updateLockUI();
+
+  if(locked) detectPeakAndSpawn(P.br,true);
+  else { rising=false; prevBr=P.br; }
+}
+
+function updateLockUI(){
+  const wrap=document.getElementById('lockWrap');
+  const label=document.getElementById('lockLabel');
+  document.getElementById('lockFill').style.width=Math.min(100,lockCnt/LOCK_NEED*100)+'%';
+  if(locked){wrap.classList.add('locked');label.className='ok';label.textContent='採取中';}
+  else{wrap.classList.remove('locked');label.className='searching';
+    label.textContent=lockCnt>0?'パターン認識中…':'ハイビスカスランプを探しています…';}
+}
+
+function onPeak(){
+  if(dailyGot>=DAILY_MAX)return;
+  const add=Math.min(PER_BLINK,DAILY_MAX-dailyGot);
+  dailyGot+=add;sessionGain+=add;totalChikarium+=add;
+  localStorage.setItem('ck_total',String(totalChikarium));
+  spawnChikarium();
+  const g=document.getElementById('gain');g.style.transform='scale(1.12)';setTimeout(()=>g.style.transform='scale(1)',90);
+  refreshUI();
+  if(dailyGot>=DAILY_MAX)finish();
+}
+function detectPeakAndSpawn(curBr,ok){
+  if(ok){
+    if(curBr>prevBr)rising=true;
+    else if(rising&&curBr<prevBr){rising=false;const now=Date.now();if(now-lastSpawn>80){onPeak();lastSpawn=now;}}
+  }else rising=false;
+  prevBr=curBr;
+}
+
+function fxResize(){fx.width=fx.clientWidth;fx.height=fx.clientHeight;}
+function spawnChikarium(){
+  const W=fx.width,H=fx.height;if(!W||!H)return;
+  const x=W*(0.2+Math.random()*0.6),y=H*(0.3+Math.random()*0.4);
+  const ang=-Math.PI/2+(Math.random()-0.5)*1.2,sp=H*(0.012+Math.random()*0.012);
+  particles.push({x,y,vx:Math.cos(ang)*sp*(0.6+Math.random()*0.8),vy:Math.sin(ang)*sp,life:0,maxLife:55+Math.random()*25,size:H*(0.04+Math.random()*0.03),rot:Math.random()*6.28,vrot:(Math.random()-0.5)*0.3});
+  if(particles.length>100)particles.splice(0,particles.length-100);
+}
+function updateFx(){
+  const W=fx.width,H=fx.height;fxc.clearRect(0,0,W,H);const grav=H*0.0016;
+  for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.life++;p.vy+=grav;p.x+=p.vx;p.y+=p.vy;p.rot+=p.vrot;
+    if(p.life>p.maxLife||p.y>H+p.size){particles.splice(i,1);continue;}
+    const t=p.life/p.maxLife,al=t<0.15?t/0.15:1-(t-0.15)/0.85;drawP(p,Math.max(0,Math.min(1,al)));}
+}
+function drawP(p,al){
+  fxc.save();fxc.globalAlpha=al;fxc.translate(p.x,p.y);fxc.rotate(p.rot);const r=p.size/2;
+  const g=fxc.createRadialGradient(0,0,0,0,0,r);g.addColorStop(0,'#fff7c0');g.addColorStop(0.4,'#ffd60a');g.addColorStop(1,'rgba(255,149,0,0)');
+  fxc.fillStyle=g;fxc.beginPath();fxc.arc(0,0,r,0,6.28);fxc.fill();
+  fxc.globalAlpha=al*0.9;fxc.strokeStyle='#fffbe6';fxc.lineWidth=Math.max(1,r*0.12);
+  fxc.beginPath();fxc.moveTo(-r*0.9,0);fxc.lineTo(r*0.9,0);fxc.moveTo(0,-r*0.9);fxc.lineTo(0,r*0.9);fxc.stroke();fxc.restore();
+}
+function fxLoop(){updateFx();fxRaf=requestAnimationFrame(fxLoop);}
+
+function finish(){
+  document.getElementById('done-amt').textContent=sessionGain;
+  document.getElementById('done').classList.add('show');stop();
+}
+
+window.addEventListener('load',()=>{refreshUI();start();});
+window.addEventListener('resize',fxResize);
+</script>
+</body>
+</html>
