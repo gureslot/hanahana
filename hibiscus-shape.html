@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>ハイビスカス 形状測定</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+  :root{--red:#ff2d55;--green:#32d74b;--blue:#0af;--panel:#13131e;--border:#2a2a3a;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;overflow:hidden;background:#0a0a0f;color:#eee;font-family:'Share Tech Mono',monospace;}
+  #app{display:flex;flex-direction:column;height:100dvh;max-width:480px;margin:0 auto;padding:4px;gap:3px;}
+  #cam{position:relative;width:100%;flex:0 0 38%;background:#000;border-radius:8px;overflow:hidden;}
+  #video{width:100%;height:100%;object-fit:cover;display:block;}
+  #cvH{display:none;}
+  .rbox{position:absolute;border:2px solid;border-radius:3px;touch-action:none;}
+  .rbox .lbl{position:absolute;top:-2px;left:2px;font-size:.5rem;}
+  .rbox .handle{position:absolute;right:-9px;bottom:-9px;width:18px;height:18px;background:#fff;border-radius:50%;opacity:.7;}
+  #ctrl{display:flex;gap:4px;flex-wrap:wrap;}
+  .cbtn{flex:1;min-width:30%;padding:7px 0;border:1px solid var(--border);border-radius:6px;background:var(--panel);color:#eee;font-size:.6rem;cursor:pointer;}
+  .cbtn.on{border-color:var(--red);color:var(--red);}
+  .cbtn.exp{border-color:var(--blue);color:var(--blue);}
+  #live{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:6px 8px;font-size:.58rem;line-height:1.5;}
+  #live b{color:#fa0;}
+  #live table{width:100%;border-collapse:collapse;margin-top:2px;}
+  #live td{padding:1px 2px;border-bottom:1px solid #1d1d28;}
+  #live .h{color:#777;}
+  #exp-status{font-size:.55rem;color:var(--blue);}
+  #ng-label{display:flex;gap:4px;align-items:center;font-size:.55rem;color:#999;}
+  #ng-label select{flex:1;background:var(--panel);color:#eee;border:1px solid var(--border);border-radius:4px;padding:3px;font-family:inherit;font-size:.6rem;}
+  #rec{padding:11px 0;border-radius:6px;font-size:.72rem;cursor:pointer;border:1.5px solid var(--green);color:var(--green);background:#0c1a0c;font-weight:bold;}
+  #rec.recording{background:var(--red);color:#fff;border-color:var(--red);}
+  #info{flex:1;background:#000;border:1px solid var(--border);border-radius:6px;padding:5px 7px;overflow-y:auto;font-size:.56rem;color:#9f9;min-height:40px;}
+  #save{display:flex;gap:4px;}
+  .sbtn{flex:1;padding:6px 0;border:1px solid var(--border);border-radius:6px;background:var(--panel);color:#aaa;font-size:.56rem;cursor:pointer;}
+  .note{font-size:.5rem;color:#666;line-height:1.5;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="cam">
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="cvH"></canvas>
+  </div>
+
+  <div id="ctrl">
+    <button class="cbtn on" id="btnCam" onclick="toggleCam()">▶ カメラ開始</button>
+    <button class="cbtn exp" id="btnExp" onclick="toggleExposure()">露出↓ 試行</button>
+    <button class="cbtn" onclick="resetBoxes()">枠リセット</button>
+  </div>
+  <div id="exp-status">露出制御: 未試行</div>
+
+  <div id="live">
+    <b>各枠（今の瞬間）</b> fill=赤充填率 edge=黒縁線率
+    <table>
+      <tr><td class="h">枠</td><td class="h">RGB</td><td class="h">H°</td><td class="h">輝度</td><td class="h">fill</td><td class="h">edge</td></tr>
+      <tr><td>花</td><td id="p-rgb">-</td><td id="p-h">-</td><td id="p-br">-</td><td id="p-fill">-</td><td id="p-edge">-</td></tr>
+      <tr><td>葉</td><td id="l-rgb">-</td><td id="l-h">-</td><td id="l-br">-</td><td id="l-fill">-</td><td id="l-edge">-</td></tr>
+      <tr><td>芯</td><td id="s-rgb">-</td><td id="s-h">-</td><td id="s-br">-</td><td id="s-fill">-</td><td id="s-edge">-</td></tr>
+    </table>
+    枠間色差: <b id="cdiff">-</b>
+  </div>
+
+  <div id="ng-label">
+    種別:<select id="ngtype">
+      <option value="REAL">本物（実機ランプ）</option>
+      <option value="NG_HAND">NG:手パタパタ</option>
+      <option value="NG_COVER">NG:カバー</option>
+      <option value="NG_MAXBET">NG:MAXBETランプ</option>
+      <option value="NG_OTHER">NG:その他</option>
+    </select>
+  </div>
+  <button id="rec" onclick="toggleRec()">選択種別で3秒記録</button>
+
+  <div id="info">記録なし</div>
+  <div id="save">
+    <button class="sbtn" onclick="copyCsv()">CSVコピー</button>
+    <button class="sbtn" onclick="dlCsv()">ダウンロード</button>
+    <button class="sbtn" onclick="clearCsv()">クリア</button>
+  </div>
+  <div class="note">①カメラ開始 ②「露出↓試行」を押し下がるか確認（status参照）③各枠を実際の花/葉/めしべにドラッグで合わせる（角の白丸でサイズ変更、枠内ドラッグで移動）④種別を選び3秒記録。本物・手・カバー・MAXBETを各2〜3回 ⑤CSVを渡す。fill=枠内の赤割合 edge=枠内の黒縁線割合（形の指標）。</div>
+</div>
+
+<script>
+const MS=50, REC_SEC=3;
+let stream=null,track=null,tid=null,running=false,recording=false,recRows=[],recStart=0,curCount=0,allRows=[],recCounts={},expOn=false;
+
+const DEFAULT={
+  petal:{x:0.12,y:0.18,w:0.72,h:0.55,c:'#ff2d55',n:'花'},
+  leaf1:{x:0.06,y:0.58,w:0.30,h:0.30,c:'#32d74b',n:'葉左'},
+  leaf2:{x:0.74,y:0.42,w:0.24,h:0.34,c:'#32d74b',n:'葉右'},
+  stamen:{x:0.62,y:0.10,w:0.30,h:0.22,c:'#ffd60a',n:'芯'},
+};
+function loadB(){try{const s=localStorage.getItem('hibi_shape_boxes');if(s)return JSON.parse(s);}catch(e){}return JSON.parse(JSON.stringify(DEFAULT));}
+function saveB(){localStorage.setItem('hibi_shape_boxes',JSON.stringify(boxes));}
+function resetBoxes(){boxes=JSON.parse(JSON.stringify(DEFAULT));saveB();renderBoxes();}
+let boxes=loadB();
+
+const video=document.getElementById('video'),cvH=document.getElementById('cvH'),ctx=cvH.getContext('2d',{willReadFrequently:true});
+
+function renderBoxes(){
+  const cam=document.getElementById('cam');
+  [...cam.querySelectorAll('.rbox')].forEach(e=>e.remove());
+  for(const k in boxes){const r=boxes[k];
+    const d=document.createElement('div');d.className='rbox';d.dataset.k=k;
+    d.style.cssText=`left:${r.x*100}%;top:${r.y*100}%;width:${r.w*100}%;height:${r.h*100}%;border-color:${r.c};`;
+    d.innerHTML=`<span class="lbl" style="color:${r.c}">${r.n}</span><span class="handle"></span>`;
+    cam.appendChild(d);
+    makeDrag(d,k);
+  }
+}
+function makeDrag(el,k){
+  let mode=null,sx,sy,ox,oy,ow,oh;
+  const cam=document.getElementById('cam');
+  function down(e){const t=e.touches?e.touches[0]:e;sx=t.clientX;sy=t.clientY;const b=boxes[k];ox=b.x;oy=b.y;ow=b.w;oh=b.h;
+    mode=e.target.classList.contains('handle')?'resize':'move';e.preventDefault();
+    document.addEventListener('mousemove',move);document.addEventListener('touchmove',move,{passive:false});
+    document.addEventListener('mouseup',up);document.addEventListener('touchend',up);}
+  function move(e){const t=e.touches?e.touches[0]:e;const rect=cam.getBoundingClientRect();
+    const dx=(t.clientX-sx)/rect.width,dy=(t.clientY-sy)/rect.height;const b=boxes[k];
+    if(mode==='move'){b.x=Math.max(0,Math.min(1-b.w,ox+dx));b.y=Math.max(0,Math.min(1-b.h,oy+dy));}
+    else{b.w=Math.max(0.05,Math.min(1-b.x,ow+dx));b.h=Math.max(0.05,Math.min(1-b.y,oh+dy));}
+    el.style.left=b.x*100+'%';el.style.top=b.y*100+'%';el.style.width=b.w*100+'%';el.style.height=b.h*100+'%';e.preventDefault();}
+  function up(){mode=null;saveB();document.removeEventListener('mousemove',move);document.removeEventListener('touchmove',move);document.removeEventListener('mouseup',up);document.removeEventListener('touchend',up);}
+  el.addEventListener('mousedown',down);el.addEventListener('touchstart',down,{passive:false});
+}
+
+async function toggleCam(){
+  if(running){clearInterval(tid);if(stream)stream.getTracks().forEach(t=>t.stop());running=false;document.getElementById('btnCam').textContent='▶ カメラ開始';return;}
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:640},height:{ideal:480}}});
+    video.srcObject=stream;await video.play();cvH.width=320;cvH.height=240;track=stream.getVideoTracks()[0];
+    renderBoxes();running=true;document.getElementById('btnCam').textContent='⏹ 停止';tid=setInterval(sample,MS);
+  }catch(e){alert('カメラエラー: '+e.message);}
+}
+
+async function toggleExposure(){
+  if(!track){alert('先にカメラ開始');return;}
+  const st=document.getElementById('exp-status');
+  if(!track.getCapabilities){st.textContent='露出制御: この端末は非対応(getCapabilities無し)';return;}
+  const cap=track.getCapabilities();
+  try{
+    if(!expOn){
+      const adv=[];
+      if(cap.exposureMode&&cap.exposureMode.includes('manual'))adv.push({exposureMode:'manual'});
+      if(cap.exposureCompensation)adv.push({exposureCompensation:Math.max(cap.exposureCompensation.min,-3)});
+      if(cap.iso)adv.push({iso:cap.iso.min});
+      if(cap.exposureTime)adv.push({exposureTime:cap.exposureTime.min});
+      if(!adv.length){st.textContent='露出制御: 非対応(調整可能項目なし)';return;}
+      await track.applyConstraints({advanced:adv});
+      expOn=true;document.getElementById('btnExp').textContent='露出↓ ON';
+      st.textContent='露出制御: 成功（'+adv.map(a=>Object.keys(a)[0]).join(',')+'）';
+    }else{
+      if(cap.exposureMode&&cap.exposureMode.includes('continuous'))await track.applyConstraints({advanced:[{exposureMode:'continuous'}]});
+      expOn=false;document.getElementById('btnExp').textContent='露出↓ 試行';st.textContent='露出制御: 通常に戻した';
+    }
+  }catch(e){st.textContent='露出制御: 失敗 '+e.message;}
+}
+
+function scan(img,W,H,r){
+  const x0=Math.floor(r.x*W),y0=Math.floor(r.y*H),x1=Math.min(Math.floor((r.x+r.w)*W),W),y1=Math.min(Math.floor((r.y+r.h)*H),H);
+  let R=0,G=0,B=0,n=0,redPix=0,grnPix=0,darkPix=0;
+  for(let y=y0;y<y1;y+=2)for(let x=x0;x<x1;x+=2){
+    const i=(y*W+x)*4,pr=img[i],pg=img[i+1],pb=img[i+2];R+=pr;G+=pg;B+=pb;n++;
+    const b=(pr+pg+pb)/3;
+    if(pr>120&&pr>pg*1.4&&pr>pb*1.4)redPix++;
+    if(pg>70&&pg>pr*1.1&&pg>pb*1.1)grnPix++;
+    if(b<40)darkPix++;
+  }
+  if(!n)return{r:0,g:0,b:0,br:0,h:0,fill:0,grn:0,edge:0};
+  R/=n;G/=n;B/=n;const br=(R+G+B)/3,mx=Math.max(R,G,B),mn=Math.min(R,G,B),d=mx-mn;
+  let h=0;if(d){if(mx===R)h=((G-B)/d)%6;else if(mx===G)h=(B-R)/d+2;else h=(R-G)/d+4;h*=60;if(h<0)h+=360;}
+  return{r:R,g:G,b:B,br,h,fill:redPix/n,grn:grnPix/n,edge:darkPix/n};
+}
+
+function sample(){
+  if(!video.videoWidth)return;
+  ctx.drawImage(video,0,0,320,240);const img=ctx.getImageData(0,0,320,240).data,W=320,H=240;
+  const P=scan(img,W,H,boxes.petal),L1=scan(img,W,H,boxes.leaf1),L2=scan(img,W,H,boxes.leaf2),S=scan(img,W,H,boxes.stamen);
+  const L=(L1.br>=L2.br)?L1:L2;
+  const cd=(Math.abs(P.r-L.r)+Math.abs(P.g-L.g)+Math.abs(P.b-L.b)+Math.abs(P.r-S.r)+Math.abs(P.g-S.g)+Math.abs(P.b-S.b)+Math.abs(L.r-S.r)+Math.abs(L.g-S.g)+Math.abs(L.b-S.b))/9;
+  const rgb=o=>`${Math.round(o.r)},${Math.round(o.g)},${Math.round(o.b)}`;
+  const set=(id,v)=>document.getElementById(id).textContent=v;
+  set('p-rgb',rgb(P));set('p-h',Math.round(P.h));set('p-br',Math.round(P.br));set('p-fill',P.fill.toFixed(2));set('p-edge',P.edge.toFixed(2));
+  set('l-rgb',rgb(L));set('l-h',Math.round(L.h));set('l-br',Math.round(L.br));set('l-fill',L.grn.toFixed(2));set('l-edge',L.edge.toFixed(2));
+  set('s-rgb',rgb(S));set('s-h',Math.round(S.h));set('s-br',Math.round(S.br));set('s-fill',S.fill.toFixed(2));set('s-edge',S.edge.toFixed(2));
+  set('cdiff',cd.toFixed(1));
+
+  if(recording){
+    const t=Date.now()-recStart,typ=document.getElementById('ngtype').value;
+    recRows.push([typ,t,
+      P.r.toFixed(0),P.g.toFixed(0),P.b.toFixed(0),P.br.toFixed(0),P.h.toFixed(0),P.fill.toFixed(3),P.edge.toFixed(3),
+      L.r.toFixed(0),L.g.toFixed(0),L.b.toFixed(0),L.br.toFixed(0),L.h.toFixed(0),L.grn.toFixed(3),L.edge.toFixed(3),
+      S.r.toFixed(0),S.g.toFixed(0),S.b.toFixed(0),S.br.toFixed(0),S.h.toFixed(0),S.fill.toFixed(3),S.edge.toFixed(3),
+      cd.toFixed(1),expOn?1:0
+    ].join(','));
+    curCount++;document.getElementById('info').textContent=`記録中 ${typ} … ${curCount}`;
+    if(t>=REC_SEC*1000)stopRec();
+  }
+}
+
+function toggleRec(){if(!running){alert('先にカメラ開始');return;}if(recording){stopRec();return;}recording=true;recRows=[];recStart=Date.now();curCount=0;document.getElementById('rec').classList.add('recording');}
+function stopRec(){if(!recording)return;recording=false;document.getElementById('rec').classList.remove('recording');allRows=allRows.concat(recRows);const t=document.getElementById('ngtype').value;recCounts[t]=(recCounts[t]||0)+1;updateInfo();}
+function updateInfo(){const c=Object.entries(recCounts).map(([k,v])=>`${k}:${v}`).join(' / ');document.getElementById('info').innerHTML=`記録済み ${c||'なし'}<br>合計 ${allRows.length} 行`;}
+const HEADER='type,t_ms,pR,pG,pB,pBr,pH,pFill,pEdge,lR,lG,lB,lBr,lH,lGrn,lEdge,sR,sG,sB,sBr,sH,sFill,sEdge,colorDiff,exp';
+function csv(){return HEADER+'\n'+allRows.join('\n');}
+function copyCsv(){if(!allRows.length){alert('記録なし');return;}navigator.clipboard.writeText(csv()).then(()=>alert('コピーしました')).catch(()=>alert('失敗→DLを使用'));}
+function dlCsv(){if(!allRows.length){alert('記録なし');return;}const b=new Blob([csv()],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='hibiscus-shape.csv';a.click();}
+function clearCsv(){allRows=[];recCounts={};updateInfo();}
+
+window.addEventListener('load',renderBoxes);
+</script>
+</body>
+</html>
