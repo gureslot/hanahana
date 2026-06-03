@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>ハイビスカス 内外測定</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+  :root{--red:#ff2d55;--green:#32d74b;--blue:#0af;--panel:#13131e;--border:#2a2a3a;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;overflow:hidden;background:#0a0a0f;color:#eee;font-family:'Share Tech Mono',monospace;}
+  #app{display:flex;flex-direction:column;height:100dvh;max-width:480px;margin:0 auto;padding:4px;gap:3px;}
+  #cam{position:relative;width:100%;flex:0 0 38%;background:#000;border-radius:8px;overflow:hidden;}
+  #video{width:100%;height:100%;object-fit:cover;display:block;}
+  #cvH{display:none;}
+  .rbox{position:absolute;border:2px solid;border-radius:3px;touch-action:none;}
+  .rbox .lbl{position:absolute;top:-2px;left:2px;font-size:.5rem;}
+  .rbox .handle{position:absolute;right:-9px;bottom:-9px;width:18px;height:18px;background:#fff;border-radius:50%;opacity:.7;}
+  #ctrl{display:flex;gap:4px;flex-wrap:wrap;}
+  .cbtn{flex:1;min-width:30%;padding:7px 0;border:1px solid var(--border);border-radius:6px;background:var(--panel);color:#eee;font-size:.6rem;cursor:pointer;}
+  .cbtn.on{border-color:var(--red);color:var(--red);}
+  .cbtn.exp{border-color:var(--blue);color:var(--blue);}
+  #live{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:6px 8px;font-size:.56rem;line-height:1.5;}
+  #live b{color:#fa0;}
+  #live table{width:100%;border-collapse:collapse;margin-top:2px;}
+  #live td{padding:1px 2px;border-bottom:1px solid #1d1d28;}
+  #live .h{color:#777;}
+  #exp-status{font-size:.55rem;color:var(--blue);}
+  #ng-label{display:flex;gap:4px;align-items:center;font-size:.55rem;color:#999;}
+  #ng-label select{flex:1;background:var(--panel);color:#eee;border:1px solid var(--border);border-radius:4px;padding:3px;font-family:inherit;font-size:.6rem;}
+  #rec{padding:11px 0;border-radius:6px;font-size:.72rem;cursor:pointer;border:1.5px solid var(--green);color:var(--green);background:#0c1a0c;font-weight:bold;}
+  #rec.recording{background:var(--red);color:#fff;border-color:var(--red);}
+  #info{flex:1;background:#000;border:1px solid var(--border);border-radius:6px;padding:5px 7px;overflow-y:auto;font-size:.56rem;color:#9f9;min-height:40px;}
+  #save{display:flex;gap:4px;}
+  .sbtn{flex:1;padding:6px 0;border:1px solid var(--border);border-radius:6px;background:var(--panel);color:#aaa;font-size:.56rem;cursor:pointer;}
+  .note{font-size:.5rem;color:#666;line-height:1.5;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="cam">
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="cvH"></canvas>
+  </div>
+
+  <div id="ctrl">
+    <button class="cbtn on" id="btnCam" onclick="toggleCam()">▶ カメラ開始</button>
+    <button class="cbtn exp" id="btnExp" onclick="toggleExposure()">露出↓ 試行</button>
+    <button class="cbtn" onclick="resetBoxes()">枠リセット</button>
+  </div>
+  <div id="exp-status">露出制御: 未試行</div>
+
+  <div id="live">
+    <b>内側 / 外周リング</b> 内外差が大きい＝枠の外で途切れる＝形がある
+    <table>
+      <tr><td class="h">枠</td><td class="h">内RGB</td><td class="h">内輝度</td><td class="h">外輝度</td><td class="h">内外差</td></tr>
+      <tr><td>花</td><td id="p-in">-</td><td id="p-ib">-</td><td id="p-ob">-</td><td id="p-d">-</td></tr>
+      <tr><td>葉</td><td id="l-in">-</td><td id="l-ib">-</td><td id="l-ob">-</td><td id="l-d">-</td></tr>
+      <tr><td>芯</td><td id="s-in">-</td><td id="s-ib">-</td><td id="s-ob">-</td><td id="s-d">-</td></tr>
+    </table>
+    枠間色差: <b id="cdiff">-</b>
+  </div>
+
+  <div id="ng-label">
+    種別:<select id="ngtype">
+      <option value="REAL">本物（実機ランプ）</option>
+      <option value="NG_HAND">NG:手パタパタ</option>
+      <option value="NG_COVER">NG:カバー</option>
+      <option value="NG_MAXBET">NG:MAXBETランプ</option>
+      <option value="NG_OTHER">NG:その他</option>
+    </select>
+  </div>
+  <button id="rec" onclick="toggleRec()">選択種別で3秒記録</button>
+
+  <div id="info">記録なし</div>
+  <div id="save">
+    <button class="sbtn" onclick="copyCsv()">CSVコピー</button>
+    <button class="sbtn" onclick="dlCsv()">ダウンロード</button>
+    <button class="sbtn" onclick="clearCsv()">クリア</button>
+  </div>
+  <div class="note">①カメラ開始 ②露出↓試行（statusで対応確認）③各枠を花/葉/めしべに合わせる（角の白丸でサイズ、枠内で移動）。枠は実物ぴったりに。外周リングは枠の少し外を自動で測ります ④種別選んで本物・手・カバー・MAXBETを各2〜3回記録 ⑤CSV渡す。内外差=枠内輝度−枠外輝度。本物は外が黒く落ちて差が大きいはず。</div>
+</div>
+
+<script>
+const MS=50, REC_SEC=3, RING=0.35;  // 外周リングの幅（枠サイズに対する比）
+let stream=null,track=null,tid=null,running=false,recording=false,recRows=[],recStart=0,curCount=0,allRows=[],recCounts={},expOn=false;
+
+const DEFAULT={
+  petal:{x:0.12,y:0.18,w:0.72,h:0.55,c:'#ff2d55',n:'花'},
+  leaf1:{x:0.06,y:0.58,w:0.30,h:0.30,c:'#32d74b',n:'葉左'},
+  leaf2:{x:0.74,y:0.42,w:0.24,h:0.34,c:'#32d74b',n:'葉右'},
+  stamen:{x:0.62,y:0.10,w:0.30,h:0.22,c:'#ffd60a',n:'芯'},
+};
+function loadB(){try{const s=localStorage.getItem('hibi_io_boxes');if(s)return JSON.parse(s);}catch(e){}return JSON.parse(JSON.stringify(DEFAULT));}
+function saveB(){localStorage.setItem('hibi_io_boxes',JSON.stringify(boxes));}
+function resetBoxes(){boxes=JSON.parse(JSON.stringify(DEFAULT));saveB();renderBoxes();}
+let boxes=loadB();
+
+const video=document.getElementById('video'),cvH=document.getElementById('cvH'),ctx=cvH.getContext('2d',{willReadFrequently:true});
+
+function renderBoxes(){
+  const cam=document.getElementById('cam');
+  [...cam.querySelectorAll('.rbox')].forEach(e=>e.remove());
+  for(const k in boxes){const r=boxes[k];
+    const d=document.createElement('div');d.className='rbox';d.dataset.k=k;
+    d.style.cssText=`left:${r.x*100}%;top:${r.y*100}%;width:${r.w*100}%;height:${r.h*100}%;border-color:${r.c};`;
+    d.innerHTML=`<span class="lbl" style="color:${r.c}">${r.n}</span><span class="handle"></span>`;
+    cam.appendChild(d);makeDrag(d,k);
+  }
+}
+function makeDrag(el,k){
+  let mode=null,sx,sy,ox,oy,ow,oh;const cam=document.getElementById('cam');
+  function down(e){const t=e.touches?e.touches[0]:e;sx=t.clientX;sy=t.clientY;const b=boxes[k];ox=b.x;oy=b.y;ow=b.w;oh=b.h;
+    mode=e.target.classList.contains('handle')?'resize':'move';e.preventDefault();
+    document.addEventListener('mousemove',move);document.addEventListener('touchmove',move,{passive:false});
+    document.addEventListener('mouseup',up);document.addEventListener('touchend',up);}
+  function move(e){const t=e.touches?e.touches[0]:e;const rect=cam.getBoundingClientRect();
+    const dx=(t.clientX-sx)/rect.width,dy=(t.clientY-sy)/rect.height;const b=boxes[k];
+    if(mode==='move'){b.x=Math.max(0,Math.min(1-b.w,ox+dx));b.y=Math.max(0,Math.min(1-b.h,oy+dy));}
+    else{b.w=Math.max(0.05,Math.min(1-b.x,ow+dx));b.h=Math.max(0.05,Math.min(1-b.y,oh+dy));}
+    el.style.left=b.x*100+'%';el.style.top=b.y*100+'%';el.style.width=b.w*100+'%';el.style.height=b.h*100+'%';e.preventDefault();}
+  function up(){mode=null;saveB();document.removeEventListener('mousemove',move);document.removeEventListener('touchmove',move);document.removeEventListener('mouseup',up);document.removeEventListener('touchend',up);}
+  el.addEventListener('mousedown',down);el.addEventListener('touchstart',down,{passive:false});
+}
+
+async function toggleCam(){
+  if(running){clearInterval(tid);if(stream)stream.getTracks().forEach(t=>t.stop());running=false;document.getElementById('btnCam').textContent='▶ カメラ開始';return;}
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:640},height:{ideal:480}}});
+    video.srcObject=stream;await video.play();cvH.width=320;cvH.height=240;track=stream.getVideoTracks()[0];
+    renderBoxes();running=true;document.getElementById('btnCam').textContent='⏹ 停止';tid=setInterval(sample,MS);
+  }catch(e){alert('カメラエラー: '+e.message);}
+}
+
+async function toggleExposure(){
+  if(!track){alert('先にカメラ開始');return;}
+  const st=document.getElementById('exp-status');
+  if(!track.getCapabilities){st.textContent='露出制御: 非対応(getCapabilities無し)';return;}
+  const cap=track.getCapabilities();
+  try{
+    if(!expOn){
+      const adv=[];
+      if(cap.exposureMode&&cap.exposureMode.includes('manual'))adv.push({exposureMode:'manual'});
+      if(cap.exposureCompensation)adv.push({exposureCompensation:Math.max(cap.exposureCompensation.min,-3)});
+      if(cap.iso)adv.push({iso:cap.iso.min});
+      if(cap.exposureTime)adv.push({exposureTime:cap.exposureTime.min});
+      if(!adv.length){st.textContent='露出制御: 非対応(調整可能項目なし)';return;}
+      await track.applyConstraints({advanced:adv});
+      expOn=true;document.getElementById('btnExp').textContent='露出↓ ON';
+      st.textContent='露出制御: 成功（'+adv.map(a=>Object.keys(a)[0]).join(',')+'）';
+    }else{
+      if(cap.exposureMode&&cap.exposureMode.includes('continuous'))await track.applyConstraints({advanced:[{exposureMode:'continuous'}]});
+      expOn=false;document.getElementById('btnExp').textContent='露出↓ 試行';st.textContent='露出制御: 通常に戻した';
+    }
+  }catch(e){st.textContent='露出制御: 失敗 '+e.message;}
+}
+
+// 内側の矩形を平均
+function avgRect(img,W,H,x0,y0,x1,y1){
+  x0=Math.max(0,Math.floor(x0));y0=Math.max(0,Math.floor(y0));x1=Math.min(W,Math.floor(x1));y1=Math.min(H,Math.floor(y1));
+  let R=0,G=0,B=0,n=0;
+  for(let y=y0;y<y1;y+=2)for(let x=x0;x<x1;x+=2){const i=(y*W+x)*4;R+=img[i];G+=img[i+1];B+=img[i+2];n++;}
+  if(!n)return{r:0,g:0,b:0,br:0};R/=n;G/=n;B/=n;return{r:R,g:G,b:B,br:(R+G+B)/3};
+}
+// 外周リング（枠の外側の帯）の平均輝度＝枠の少し外を四辺ぶん測る
+function ringAvg(img,W,H,r){
+  const x0=r.x*W,y0=r.y*H,x1=(r.x+r.w)*W,y1=(r.y+r.h)*H;
+  const mw=r.w*W*RING, mh=r.h*H*RING;
+  // 上下左右の帯を平均
+  const top=avgRect(img,W,H,x0-mw,y0-mh,x1+mw,y0);
+  const bot=avgRect(img,W,H,x0-mw,y1,x1+mw,y1+mh);
+  const lft=avgRect(img,W,H,x0-mw,y0,x0,y1);
+  const rgt=avgRect(img,W,H,x1,y0,x1+mw,y1);
+  const br=(top.br+bot.br+lft.br+rgt.br)/4;
+  const R=(top.r+bot.r+lft.r+rgt.r)/4,G=(top.g+bot.g+lft.g+rgt.g)/4,B=(top.b+bot.b+lft.b+rgt.b)/4;
+  return{r:R,g:G,b:B,br};
+}
+function hueOf(o){const mx=Math.max(o.r,o.g,o.b),mn=Math.min(o.r,o.g,o.b),d=mx-mn;let h=0;if(d){if(mx===o.r)h=((o.g-o.b)/d)%6;else if(mx===o.g)h=(o.b-o.r)/d+2;else h=(o.r-o.g)/d+4;h*=60;if(h<0)h+=360;}return h;}
+
+function measure(img,W,H,r){
+  const inn=avgRect(img,W,H,r.x*W,r.y*H,(r.x+r.w)*W,(r.y+r.h)*H);
+  const out=ringAvg(img,W,H,r);
+  return{inn,out,h:hueOf(inn),diff:inn.br-out.br};
+}
+
+function sample(){
+  if(!video.videoWidth)return;
+  ctx.drawImage(video,0,0,320,240);const img=ctx.getImageData(0,0,320,240).data,W=320,H=240;
+  const P=measure(img,W,H,boxes.petal),L1=measure(img,W,H,boxes.leaf1),L2=measure(img,W,H,boxes.leaf2),S=measure(img,W,H,boxes.stamen);
+  const L=(L1.inn.br>=L2.inn.br)?L1:L2;
+  const cd=(Math.abs(P.inn.r-L.inn.r)+Math.abs(P.inn.g-L.inn.g)+Math.abs(P.inn.b-L.inn.b)+Math.abs(P.inn.r-S.inn.r)+Math.abs(P.inn.g-S.inn.g)+Math.abs(P.inn.b-S.inn.b)+Math.abs(L.inn.r-S.inn.r)+Math.abs(L.inn.g-S.inn.g)+Math.abs(L.inn.b-S.inn.b))/9;
+  const rgb=o=>`${Math.round(o.r)},${Math.round(o.g)},${Math.round(o.b)}`;
+  const set=(id,v)=>document.getElementById(id).textContent=v;
+  set('p-in',rgb(P.inn));set('p-ib',Math.round(P.inn.br));set('p-ob',Math.round(P.out.br));set('p-d',Math.round(P.diff));
+  set('l-in',rgb(L.inn));set('l-ib',Math.round(L.inn.br));set('l-ob',Math.round(L.out.br));set('l-d',Math.round(L.diff));
+  set('s-in',rgb(S.inn));set('s-ib',Math.round(S.inn.br));set('s-ob',Math.round(S.out.br));set('s-d',Math.round(S.diff));
+  set('cdiff',cd.toFixed(1));
+
+  if(recording){
+    const t=Date.now()-recStart,typ=document.getElementById('ngtype').value;
+    const row=[typ,t];
+    for(const m of [P,L,S]) row.push(m.inn.r.toFixed(0),m.inn.g.toFixed(0),m.inn.b.toFixed(0),m.inn.br.toFixed(0),m.h.toFixed(0),m.out.r.toFixed(0),m.out.g.toFixed(0),m.out.b.toFixed(0),m.out.br.toFixed(0),m.diff.toFixed(0));
+    row.push(cd.toFixed(1),expOn?1:0);
+    recRows.push(row.join(','));
+    curCount++;document.getElementById('info').textContent=`記録中 ${typ} … ${curCount}`;
+    if(t>=REC_SEC*1000)stopRec();
+  }
+}
+
+function toggleRec(){if(!running){alert('先にカメラ開始');return;}if(recording){stopRec();return;}recording=true;recRows=[];recStart=Date.now();curCount=0;document.getElementById('rec').classList.add('recording');}
+function stopRec(){if(!recording)return;recording=false;document.getElementById('rec').classList.remove('recording');allRows=allRows.concat(recRows);const t=document.getElementById('ngtype').value;recCounts[t]=(recCounts[t]||0)+1;updateInfo();}
+function updateInfo(){const c=Object.entries(recCounts).map(([k,v])=>`${k}:${v}`).join(' / ');document.getElementById('info').innerHTML=`記録済み ${c||'なし'}<br>合計 ${allRows.length} 行`;}
+// 各枠：内RGB,内輝度,内H,外RGB,外輝度,内外差
+const HEADER='type,t_ms,pIr,pIg,pIb,pIbr,pH,pOr,pOg,pOb,pObr,pDiff,lIr,lIg,lIb,lIbr,lH,lOr,lOg,lOb,lObr,lDiff,sIr,sIg,sIb,sIbr,sH,sOr,sOg,sOb,sObr,sDiff,colorDiff,exp';
+function csv(){return HEADER+'\n'+allRows.join('\n');}
+function copyCsv(){if(!allRows.length){alert('記録なし');return;}navigator.clipboard.writeText(csv()).then(()=>alert('コピーしました')).catch(()=>alert('失敗→DLを使用'));}
+function dlCsv(){if(!allRows.length){alert('記録なし');return;}const b=new Blob([csv()],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='hibiscus-io.csv';a.click();}
+function clearCsv(){allRows=[];recCounts={};updateInfo();}
+
+window.addEventListener('load',renderBoxes);
+</script>
+</body>
+</html>
