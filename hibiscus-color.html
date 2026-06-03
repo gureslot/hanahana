@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>ハイビスカス 強化測定（彩度・色相）</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+  :root{--red:#ff2d55;--orange:#ff9500;--green:#32d74b;--blue:#0af;--dark:#0a0a0f;--panel:#13131e;--border:#2a2a3a;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;overflow:hidden;background:var(--dark);color:#eee;font-family:'Share Tech Mono',monospace;}
+  #app{display:flex;flex-direction:column;height:100dvh;max-width:480px;margin:0 auto;padding:4px;gap:3px;}
+  #camera-wrap{position:relative;width:100%;flex:0 0 30%;background:#000;border-radius:8px;overflow:hidden;}
+  #video{width:100%;height:100%;object-fit:cover;display:block;}
+  #canvas-hidden{display:none;}
+  .rbox{position:absolute;border:2px solid rgba(255,255,255,0.4);border-radius:3px;display:flex;align-items:flex-start;justify-content:flex-end;padding:2px 3px;font-size:.45rem;}
+  #ctrl-row{display:flex;gap:4px;}
+  .cbtn{flex:1;padding:7px 0;border:1px solid var(--border);border-radius:6px;background:var(--panel);color:#eee;font-size:.62rem;cursor:pointer;}
+  .cbtn.primary{border-color:var(--red);color:var(--red);}
+  #live{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:6px 8px;font-size:.6rem;line-height:1.6;}
+  #live b{color:var(--orange);}
+  #live table{width:100%;border-collapse:collapse;margin-top:3px;}
+  #live td{padding:1px 3px;border-bottom:1px solid #1d1d28;}
+  #live .h{color:#777;}
+  #rec-row{display:flex;gap:4px;}
+  .rbtn{flex:1;padding:11px 0;border-radius:6px;font-size:.72rem;cursor:pointer;border:1.5px solid;font-weight:bold;}
+  .rbtn.real{border-color:var(--green);color:var(--green);background:#0c1a0c;}
+  .rbtn.ng{border-color:var(--red);color:var(--red);background:#1a0c0c;}
+  .rbtn.recording{background:var(--red)!important;color:#fff!important;}
+  #csv-info{flex:1;background:#000;border:1px solid var(--border);border-radius:6px;padding:5px 7px;overflow-y:auto;font-size:.56rem;color:#9f9;min-height:0;}
+  #csv-ctrl{display:flex;gap:4px;}
+  .sbtn{flex:1;padding:6px 0;border:1px solid var(--border);border-radius:6px;background:var(--panel);color:#aaa;font-size:.56rem;cursor:pointer;}
+  .note{font-size:.5rem;color:#666;line-height:1.5;}
+  #ng-label{display:flex;gap:4px;align-items:center;font-size:.55rem;color:#999;}
+  #ng-label select{background:var(--panel);color:#eee;border:1px solid var(--border);border-radius:4px;padding:2px;font-family:inherit;font-size:.6rem;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="camera-wrap">
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="canvas-hidden"></canvas>
+  </div>
+
+  <div id="ctrl-row">
+    <button class="cbtn primary" id="btn-cam" onclick="toggleCam()">▶ カメラ開始</button>
+    <button class="cbtn" onclick="resetRegions()">座標リセット</button>
+  </div>
+
+  <div id="live">
+    <b>各枠の色（今の瞬間）</b> S=彩度 H=色相°
+    <table>
+      <tr><td class="h">枠</td><td class="h">R/G/B</td><td class="h">S</td><td class="h">H°</td><td class="h">輝度</td></tr>
+      <tr><td>花</td><td id="p-rgb">-</td><td id="p-s">-</td><td id="p-h">-</td><td id="p-br">-</td></tr>
+      <tr><td>葉</td><td id="l-rgb">-</td><td id="l-s">-</td><td id="l-h">-</td><td id="l-br">-</td></tr>
+      <tr><td>芯</td><td id="s-rgb">-</td><td id="s-s">-</td><td id="s-h">-</td><td id="s-br">-</td></tr>
+    </table>
+    枠間色差(花-葉-芯がどれだけ違う色か): <b id="colordiff">-</b>
+  </div>
+
+  <div id="ng-label">
+    記録種別: <select id="ngtype">
+      <option value="REAL">本物（実機ランプ）</option>
+      <option value="NG_HAND">NG: 手パタパタ</option>
+      <option value="NG_COVER">NG: カバー</option>
+      <option value="NG_OTHER">NG: その他</option>
+    </select>
+  </div>
+  <div id="rec-row">
+    <button class="rbtn real" id="rbtn-rec" onclick="toggleRec()">選択した種別で3秒記録</button>
+  </div>
+
+  <div id="csv-info">記録なし</div>
+  <div id="csv-ctrl">
+    <button class="sbtn" onclick="copyCsv()">CSVコピー</button>
+    <button class="sbtn" onclick="dlCsv()">ダウンロード</button>
+    <button class="sbtn" onclick="clearCsv()">クリア</button>
+  </div>
+  <div class="note">使い方：本物（実機）にかざして「本物」で3秒記録を2〜3回。種別を「手パタパタ」に変えて2〜3回、「カバー」に変えて2〜3回。各枠の彩度S/色相H/RGB/輝度を全サンプル記録。溜まったらCSVを渡す。彩度Sが本物と手/カバーを分ける主軸の想定。</div>
+</div>
+
+<script>
+const MS=50, REC_SEC=3;
+let side='L', stream=null, tid=null, running=false;
+let recording=false, recRows=[], recStart=0, curCount=0;
+let allRows=[], recCounts={};
+
+const DEFAULT_REGIONS={
+  L:{stamen:{x:0.570,y:0.107,w:0.219,h:0.280,c:'#ffd60a',n:'芯'},petal:{x:0.202,y:0.203,w:0.534,h:0.635,c:'#ff2d55',n:'花'},leaf1:{x:0.144,y:0.595,w:0.260,h:0.280,c:'#32d74b',n:'葉左'},leaf2:{x:0.641,y:0.439,w:0.185,h:0.281,c:'#32d74b',n:'葉右'}}
+};
+function loadRegions(){try{const s=localStorage.getItem('hibiscus_regions_m');if(s)return JSON.parse(s);}catch(e){}return JSON.parse(JSON.stringify(DEFAULT_REGIONS));}
+function saveRegions(){localStorage.setItem('hibiscus_regions_m',JSON.stringify(regions));}
+function resetRegions(){regions=JSON.parse(JSON.stringify(DEFAULT_REGIONS));saveRegions();drawBoxes();}
+let regions=loadRegions();
+
+const video=document.getElementById('video');
+const cvH=document.getElementById('canvas-hidden');
+const ctx2=cvH.getContext('2d',{willReadFrequently:true});
+
+function drawBoxes(){
+  const wrap=document.getElementById('camera-wrap');
+  [...wrap.querySelectorAll('.rbox')].forEach(e=>e.remove());
+  Object.values(regions.L).forEach(r=>{
+    const d=document.createElement('div');d.className='rbox';
+    d.style.cssText=`left:${r.x*100}%;top:${r.y*100}%;width:${r.w*100}%;height:${r.h*100}%;border-color:${r.c}88;color:${r.c};`;
+    d.textContent=r.n;wrap.appendChild(d);
+  });
+}
+
+async function toggleCam(){
+  if(running){clearInterval(tid);if(stream)stream.getTracks().forEach(t=>t.stop());running=false;document.getElementById('btn-cam').textContent='▶ カメラ開始';return;}
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:640},height:{ideal:480}}});
+    video.srcObject=stream;await video.play();cvH.width=320;cvH.height=240;drawBoxes();
+    running=true;document.getElementById('btn-cam').textContent='⏹ カメラ停止';tid=setInterval(sample,MS);
+  }catch(e){alert('カメラエラー: '+e.message);}
+}
+
+// RGB平均＋彩度・色相（その枠の平均色からHSVを算出）
+function sampleRegion(img,W,H,rx,ry,rw,rh){
+  const x0=Math.floor(rx*W),y0=Math.floor(ry*H),x1=Math.min(Math.floor((rx+rw)*W),W),y1=Math.min(Math.floor((ry+rh)*H),H);
+  let r=0,g=0,b=0,n=0;
+  // 彩度の平均も画素ごとに計算（平均色のSではなく、画素彩度の平均＝色の鮮やかさの実態）
+  let satSum=0;
+  for(let y=y0;y<y1;y+=3)for(let x=x0;x<x1;x+=3){
+    const i=(y*W+x)*4;const pr=img[i],pg=img[i+1],pb=img[i+2];
+    r+=pr;g+=pg;b+=pb;n++;
+    const mx=Math.max(pr,pg,pb),mn=Math.min(pr,pg,pb);
+    satSum += mx===0?0:(mx-mn)/mx;   // 画素ごとの彩度(0-1)
+  }
+  if(!n)return{r:0,g:0,b:0,br:0,s:0,h:0,satPix:0};
+  r/=n;g/=n;b/=n;
+  const br=(r+g+b)/3;
+  // 平均色のHSV
+  const mx=Math.max(r,g,b),mn=Math.min(r,g,b),d=mx-mn;
+  const s=mx===0?0:d/mx;
+  let h=0;
+  if(d!==0){
+    if(mx===r)h=((g-b)/d)%6;
+    else if(mx===g)h=(b-r)/d+2;
+    else h=(r-g)/d+4;
+    h*=60;if(h<0)h+=360;
+  }
+  return{r,g,b,br,s,h,satPix:satSum/n};
+}
+
+function sample(){
+  if(!video.videoWidth)return;
+  ctx2.drawImage(video,0,0,320,240);
+  const img=ctx2.getImageData(0,0,320,240).data,W=320,H=240,rs=regions.L;
+  const P=sampleRegion(img,W,H,rs.petal.x,rs.petal.y,rs.petal.w,rs.petal.h);
+  const L1=sampleRegion(img,W,H,rs.leaf1.x,rs.leaf1.y,rs.leaf1.w,rs.leaf1.h);
+  const L2=sampleRegion(img,W,H,rs.leaf2.x,rs.leaf2.y,rs.leaf2.w,rs.leaf2.h);
+  const S=sampleRegion(img,W,H,rs.stamen.x,rs.stamen.y,rs.stamen.w,rs.stamen.h);
+  const L=(L1.br>=L2.br)?L1:L2;
+
+  // 枠間の色差：花・葉・芯の平均RGBがどれだけ離れているか（全枠同色=手なら小さい）
+  const colorDiff = (Math.abs(P.r-L.r)+Math.abs(P.g-L.g)+Math.abs(P.b-L.b)
+                   + Math.abs(P.r-S.r)+Math.abs(P.g-S.g)+Math.abs(P.b-S.b)
+                   + Math.abs(L.r-S.r)+Math.abs(L.g-S.g)+Math.abs(L.b-S.b))/9;
+
+  // ライブ表示
+  const rgb=o=>`${Math.round(o.r)}/${Math.round(o.g)}/${Math.round(o.b)}`;
+  document.getElementById('p-rgb').textContent=rgb(P);document.getElementById('p-s').textContent=P.satPix.toFixed(2);document.getElementById('p-h').textContent=Math.round(P.h);document.getElementById('p-br').textContent=Math.round(P.br);
+  document.getElementById('l-rgb').textContent=rgb(L);document.getElementById('l-s').textContent=L.satPix.toFixed(2);document.getElementById('l-h').textContent=Math.round(L.h);document.getElementById('l-br').textContent=Math.round(L.br);
+  document.getElementById('s-rgb').textContent=rgb(S);document.getElementById('s-s').textContent=S.satPix.toFixed(2);document.getElementById('s-h').textContent=Math.round(S.h);document.getElementById('s-br').textContent=Math.round(S.br);
+  document.getElementById('colordiff').textContent=colorDiff.toFixed(1);
+
+  if(recording){
+    const t=Date.now()-recStart;
+    const typ=document.getElementById('ngtype').value;
+    // 列: type,t_ms, 各枠[R,G,B,輝度,彩度pix,色相], 枠間色差
+    recRows.push([typ,t,
+      P.r.toFixed(0),P.g.toFixed(0),P.b.toFixed(0),P.br.toFixed(0),P.satPix.toFixed(3),P.h.toFixed(0),
+      L.r.toFixed(0),L.g.toFixed(0),L.b.toFixed(0),L.br.toFixed(0),L.satPix.toFixed(3),L.h.toFixed(0),
+      S.r.toFixed(0),S.g.toFixed(0),S.b.toFixed(0),S.br.toFixed(0),S.satPix.toFixed(3),S.h.toFixed(0),
+      colorDiff.toFixed(1)
+    ].join(','));
+    curCount++;document.getElementById('csv-info').textContent=`記録中 ${typ} … ${curCount}サンプル`;
+    if(t>=REC_SEC*1000)stopRec();
+  }
+}
+
+function toggleRec(){
+  if(!running){alert('先にカメラを開始してください');return;}
+  if(recording){stopRec();return;}
+  recording=true;recRows=[];recStart=Date.now();curCount=0;
+  document.getElementById('rbtn-rec').classList.add('recording');
+}
+function stopRec(){
+  if(!recording)return;recording=false;
+  document.getElementById('rbtn-rec').classList.remove('recording');
+  allRows=allRows.concat(recRows);
+  const typ=document.getElementById('ngtype').value;
+  recCounts[typ]=(recCounts[typ]||0)+1;
+  updateInfo();
+}
+function updateInfo(){
+  const c=Object.entries(recCounts).map(([k,v])=>`${k}:${v}回`).join(' / ');
+  document.getElementById('csv-info').innerHTML=`記録済み ${c||'なし'}<br>合計 ${allRows.length} 行`;
+}
+const HEADER='type,t_ms,pR,pG,pB,pBr,pS,pH,lR,lG,lB,lBr,lS,lH,sR,sG,sB,sBr,sS,sH,colorDiff';
+function csvText(){return HEADER+'\n'+allRows.join('\n');}
+function copyCsv(){if(!allRows.length){alert('記録なし');return;}navigator.clipboard.writeText(csvText()).then(()=>alert('コピーしました')).catch(()=>alert('コピー失敗→ダウンロードを使用'));}
+function dlCsv(){if(!allRows.length){alert('記録なし');return;}const b=new Blob([csvText()],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='hibiscus-color.csv';a.click();}
+function clearCsv(){allRows=[];recCounts={};updateInfo();}
+
+window.addEventListener('load',drawBoxes);
+</script>
+</body>
+</html>
