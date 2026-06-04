@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>ハイビスカス 2段枠測定</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+  :root{--red:#ff2d55;--green:#32d74b;--blue:#0af;--panel:#13131e;--border:#2a2a3a;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;overflow:hidden;background:#0a0a0f;color:#eee;font-family:'Share Tech Mono',monospace;}
+  #app{display:flex;flex-direction:column;height:100dvh;max-width:480px;margin:0 auto;padding:4px;gap:3px;}
+  #cam{position:relative;width:100%;aspect-ratio:4/3;background:#000;border-radius:8px;overflow:hidden;flex:0 0 auto;}
+  #video{width:100%;height:100%;object-fit:cover;display:block;}
+  #cvH{display:none;}
+  .rbox{position:absolute;border-radius:3px;}
+  #ctrl{display:flex;gap:4px;}
+  .cbtn{flex:1;padding:7px 0;border:1px solid var(--border);border-radius:6px;background:var(--panel);color:#eee;font-size:.62rem;cursor:pointer;}
+  .cbtn.on{border-color:var(--red);color:var(--red);}
+  .cbtn.exp{border-color:var(--blue);color:var(--blue);}
+  .cbtn.side.active{border-color:#fa0;color:#fa0;}
+  #exp-status{font-size:.55rem;color:var(--blue);}
+  #live{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:6px 8px;font-size:.58rem;line-height:1.5;}
+  #live b{color:#fa0;}
+  #live table{width:100%;border-collapse:collapse;margin-top:2px;}
+  #live td{padding:1px 3px;border-bottom:1px solid #1d1d28;}
+  #live .h{color:#777;}
+  #ng-label{display:flex;gap:4px;align-items:center;font-size:.55rem;color:#999;}
+  #ng-label select{flex:1;background:var(--panel);color:#eee;border:1px solid var(--border);border-radius:4px;padding:3px;font-family:inherit;font-size:.6rem;}
+  #rec{padding:11px 0;border-radius:6px;font-size:.72rem;cursor:pointer;border:1.5px solid var(--green);color:var(--green);background:#0c1a0c;font-weight:bold;}
+  #rec.recording{background:var(--red);color:#fff;border-color:var(--red);}
+  #info{flex:1;background:#000;border:1px solid var(--border);border-radius:6px;padding:5px 7px;overflow-y:auto;font-size:.56rem;color:#9f9;min-height:36px;}
+  #save{display:flex;gap:4px;}
+  .sbtn{flex:1;padding:6px 0;border:1px solid var(--border);border-radius:6px;background:var(--panel);color:#aaa;font-size:.56rem;cursor:pointer;}
+  .note{font-size:.5rem;color:#666;line-height:1.5;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="cam">
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="cvH"></canvas>
+  </div>
+
+  <div id="ctrl">
+    <button class="cbtn on" id="btnCam" onclick="toggleCam()">▶ カメラ</button>
+    <button class="cbtn exp" id="btnExp" onclick="toggleExposure()">露出↓</button>
+    <button class="cbtn side active" id="btnL" onclick="setSide('L')">◀左</button>
+    <button class="cbtn side" id="btnR" onclick="setSide('R')">右▶</button>
+  </div>
+  <div id="exp-status">露出: 未試行</div>
+
+  <div id="live">
+    <b>内枠の色明るさ / 外枠外リング明るさ / 内外差</b>
+    <table>
+      <tr><td class="h">枠</td><td class="h">内RGB</td><td class="h">内輝度</td><td class="h">外輝度</td><td class="h">内外差</td></tr>
+      <tr><td>花</td><td id="p-in">-</td><td id="p-ib">-</td><td id="p-ob">-</td><td id="p-d">-</td></tr>
+      <tr><td>葉左</td><td id="l1-in">-</td><td id="l1-ib">-</td><td id="l1-ob">-</td><td id="l1-d">-</td></tr>
+      <tr><td>葉右</td><td id="l2-in">-</td><td id="l2-ib">-</td><td id="l2-ob">-</td><td id="l2-d">-</td></tr>
+      <tr><td>芯</td><td id="s-in">-</td><td id="s-ib">-</td><td id="s-ob">-</td><td id="s-d">-</td></tr>
+      <tr style="border-top:2px solid #fa0;"><td style="color:#fa0;">全体</td><td style="color:#fa0;">枠内/枠外→</td><td id="u-in" style="color:#9f9;">-</td><td id="u-out" style="color:#f99;">-</td><td id="u-d" style="color:#fa0;">-</td></tr>
+    </table>
+  </div>
+
+  <div id="ng-label">
+    種別:<select id="ngtype">
+      <option value="REAL">本物（実機ランプ）</option>
+      <option value="NG_HAND">NG:手パタパタ</option>
+      <option value="NG_COVER">NG:カバー</option>
+      <option value="NG_MAXBET">NG:MAXBETランプ</option>
+      <option value="NG_OTHER">NG:その他</option>
+    </select>
+  </div>
+  <button id="rec" onclick="toggleRec()">選択種別で3秒記録</button>
+
+  <div id="info">記録なし</div>
+  <div id="save">
+    <button class="sbtn" onclick="copyCsv()">CSVコピー</button>
+    <button class="sbtn" onclick="dlCsv()">DL</button>
+    <button class="sbtn" onclick="clearCsv()">クリア</button>
+  </div>
+  <div class="note">採取画面と同じ2段階枠。枠は固定（採取画面の確定座標）。①カメラ ②露出↓で対応確認 ③左/右を実機に合わせ、ランプに正しくかざす ④種別選び本物・手・カバー・MAXBETを各2〜3回記録 ⑤CSV渡す。内枠=部位の色。最下行「全体」=4枠の和集合の内側 vs その外側全部(1つの背景)の輝度差。これが正しい形の指標。</div>
+</div>
+
+<script>
+const MS=50, REC_SEC=3, RING=0.35;
+let stream=null,track=null,tid=null,running=false,recording=false,recRows=[],recStart=0,curCount=0,allRows=[],recCounts={},expOn=false,side='L';
+
+// 採取画面と同一の2段階座標（左ランプ基準）
+const OUTER_L={
+  stamen:{x:0.564,y:0.075,w:0.219,h:0.280,c:'#ffd60a'},
+  petal:{x:0.171,y:0.180,w:0.588,h:0.670,c:'#ff2d55'},
+  leaf1:{x:0.144,y:0.595,w:0.231,h:0.288,c:'#32d74b'},
+  leaf2:{x:0.652,y:0.446,w:0.188,h:0.280,c:'#32d74b'},
+};
+const INNER_L={
+  stamen:{x:0.646,y:0.178,w:0.055,h:0.073},
+  petal:{x:0.304,y:0.292,w:0.278,h:0.279},
+  leaf1:{x:0.203,y:0.658,w:0.098,h:0.119},
+  leaf2:{x:0.721,y:0.553,w:0.050,h:0.065},
+};
+function mirror(r){return {x:1-r.x-r.w,y:r.y,w:r.w,h:r.h,c:r.c};}
+function regions(){
+  if(side==='L')return {outer:OUTER_L,inner:INNER_L};
+  const o={},inn={};for(const k in OUTER_L)o[k]=mirror(OUTER_L[k]);for(const k in INNER_L)inn[k]=mirror(INNER_L[k]);
+  return {outer:{stamen:o.stamen,petal:o.petal,leaf1:o.leaf2,leaf2:o.leaf1},inner:{stamen:inn.stamen,petal:inn.petal,leaf1:inn.leaf2,leaf2:inn.leaf1}};
+}
+
+const video=document.getElementById('video'),cvH=document.getElementById('cvH'),ctx=cvH.getContext('2d',{willReadFrequently:true});
+
+function drawBoxes(){
+  const cam=document.getElementById('cam');[...cam.querySelectorAll('.rbox')].forEach(e=>e.remove());
+  const rs=regions();
+  Object.values(rs.outer).forEach(r=>{const d=document.createElement('div');d.className='rbox';d.style.cssText=`position:absolute;left:${r.x*100}%;top:${r.y*100}%;width:${r.w*100}%;height:${r.h*100}%;border:2px solid ${r.c};`;cam.appendChild(d);});
+  for(const k in rs.inner){const r=rs.inner[k],c=rs.outer[k].c;const d=document.createElement('div');d.className='rbox';d.style.cssText=`position:absolute;left:${r.x*100}%;top:${r.y*100}%;width:${r.w*100}%;height:${r.h*100}%;border:1px dashed ${c};opacity:.7;`;cam.appendChild(d);}
+}
+function setSide(s){side=s;document.getElementById('btnL').classList.toggle('active',s==='L');document.getElementById('btnR').classList.toggle('active',s==='R');drawBoxes();}
+
+async function toggleCam(){
+  if(running){clearInterval(tid);if(stream)stream.getTracks().forEach(t=>t.stop());running=false;document.getElementById('btnCam').textContent='▶ カメラ';return;}
+  try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:640},height:{ideal:480}}});
+    video.srcObject=stream;await video.play();cvH.width=320;cvH.height=240;track=stream.getVideoTracks()[0];
+    drawBoxes();running=true;document.getElementById('btnCam').textContent='⏹停止';tid=setInterval(sample,MS);
+  }catch(e){alert('カメラエラー: '+e.message);}
+}
+async function toggleExposure(){
+  if(!track){alert('先にカメラ');return;}const st=document.getElementById('exp-status');
+  if(!track.getCapabilities){st.textContent='露出: 非対応';return;}
+  const cap=track.getCapabilities();
+  try{if(!expOn){const adv=[];
+    if(cap.exposureMode&&cap.exposureMode.includes('manual'))adv.push({exposureMode:'manual'});
+    if(cap.exposureCompensation)adv.push({exposureCompensation:Math.max(cap.exposureCompensation.min,-3)});
+    if(cap.iso)adv.push({iso:cap.iso.min});if(cap.exposureTime)adv.push({exposureTime:cap.exposureTime.min});
+    if(!adv.length){st.textContent='露出: 調整項目なし';return;}
+    await track.applyConstraints({advanced:adv});expOn=true;document.getElementById('btnExp').textContent='露出↓ON';st.textContent='露出: 成功('+adv.map(a=>Object.keys(a)[0]).join(',')+')';
+  }else{if(cap.exposureMode&&cap.exposureMode.includes('continuous'))await track.applyConstraints({advanced:[{exposureMode:'continuous'}]});expOn=false;document.getElementById('btnExp').textContent='露出↓';st.textContent='露出: 通常に戻した';}
+  }catch(e){st.textContent='露出: 失敗 '+e.message;}
+}
+
+function avgRect(img,W,H,x0,y0,x1,y1){
+  x0=Math.max(0,Math.floor(x0));y0=Math.max(0,Math.floor(y0));x1=Math.min(W,Math.floor(x1));y1=Math.min(H,Math.floor(y1));
+  let R=0,G=0,B=0,n=0;for(let y=y0;y<y1;y+=2)for(let x=x0;x<x1;x+=2){const i=(y*W+x)*4;R+=img[i];G+=img[i+1];B+=img[i+2];n++;}
+  if(!n)return{r:0,g:0,b:0,br:0};R/=n;G/=n;B/=n;return{r:R,g:G,b:B,br:(R+G+B)/3};
+}
+// 4つの外枠の和集合＝「枠内」、それ以外＝「枠外（1つの背景）」。隣の部位を拾わない正しい内外比較。
+function unionInOut(img,W,H,outers){
+  // 各外枠のピクセル範囲を事前計算
+  const boxes=Object.values(outers).map(r=>({x0:r.x*W,y0:r.y*H,x1:(r.x+r.w)*W,y1:(r.y+r.h)*H}));
+  let inSum=0,inN=0,outSum=0,outN=0;
+  for(let y=0;y<H;y+=2)for(let x=0;x<W;x+=2){
+    let inside=false;
+    for(const b of boxes){if(x>=b.x0&&x<b.x1&&y>=b.y0&&y<b.y1){inside=true;break;}}
+    const i=(y*W+x)*4, br=(img[i]+img[i+1]+img[i+2])/3;
+    if(inside){inSum+=br;inN++;}else{outSum+=br;outN++;}
+  }
+  const inBr=inN?inSum/inN:0, outBr=outN?outSum/outN:0;
+  return {inBr, outBr, diff:inBr-outBr};
+}
+
+function measure(img,W,H,inner,outer){
+  const inn=avgRect(img,W,H,inner.x*W,inner.y*H,(inner.x+inner.w)*W,(inner.y+inner.h)*H);
+  const x0=outer.x*W,y0=outer.y*H,x1=(outer.x+outer.w)*W,y1=(outer.y+outer.h)*H,mw=outer.w*W*RING,mh=outer.h*H*RING;
+  const top=avgRect(img,W,H,x0-mw,y0-mh,x1+mw,y0),bot=avgRect(img,W,H,x0-mw,y1,x1+mw,y1+mh),lft=avgRect(img,W,H,x0-mw,y0,x0,y1),rgt=avgRect(img,W,H,x1,y0,x1+mw,y1);
+  const obr=(top.br+bot.br+lft.br+rgt.br)/4;
+  const mx=Math.max(inn.r,inn.g,inn.b),mn=Math.min(inn.r,inn.g,inn.b),d=mx-mn;let h=0;if(d){if(mx===inn.r)h=((inn.g-inn.b)/d)%6;else if(mx===inn.g)h=(inn.b-inn.r)/d+2;else h=(inn.r-inn.g)/d+4;h*=60;if(h<0)h+=360;}
+  return{r:inn.r,g:inn.g,b:inn.b,br:inn.br,h,obr,diff:inn.br-obr};
+}
+
+function sample(){
+  if(!video.videoWidth)return;
+  ctx.drawImage(video,0,0,320,240);const img=ctx.getImageData(0,0,320,240).data,W=320,H=240;const rs=regions();
+  const P=measure(img,W,H,rs.inner.petal,rs.outer.petal);
+  const L1=measure(img,W,H,rs.inner.leaf1,rs.outer.leaf1);
+  const L2=measure(img,W,H,rs.inner.leaf2,rs.outer.leaf2);
+  const S=measure(img,W,H,rs.inner.stamen,rs.outer.stamen);
+  const U=unionInOut(img,W,H,rs.outer);   // 4枠の和集合の内 vs 外
+  const rgb=o=>`${Math.round(o.r)},${Math.round(o.g)},${Math.round(o.b)}`,set=(id,v)=>document.getElementById(id).textContent=v;
+  set('p-in',rgb(P));set('p-ib',Math.round(P.br));set('p-ob',Math.round(P.obr));set('p-d',Math.round(P.diff));
+  set('l1-in',rgb(L1));set('l1-ib',Math.round(L1.br));set('l1-ob',Math.round(L1.obr));set('l1-d',Math.round(L1.diff));
+  set('l2-in',rgb(L2));set('l2-ib',Math.round(L2.br));set('l2-ob',Math.round(L2.obr));set('l2-d',Math.round(L2.diff));
+  set('s-in',rgb(S));set('s-ib',Math.round(S.br));set('s-ob',Math.round(S.obr));set('s-d',Math.round(S.diff));
+  set('u-in',Math.round(U.inBr));set('u-out',Math.round(U.outBr));set('u-d',Math.round(U.diff));
+
+  if(recording){
+    const t=Date.now()-recStart,typ=document.getElementById('ngtype').value,row=[typ,t,side];
+    for(const m of [P,L1,L2,S]) row.push(m.r.toFixed(0),m.g.toFixed(0),m.b.toFixed(0),m.br.toFixed(0),m.h.toFixed(0),m.obr.toFixed(0),m.diff.toFixed(0));
+    row.push(U.inBr.toFixed(0),U.outBr.toFixed(0),U.diff.toFixed(0));
+    row.push(expOn?1:0);recRows.push(row.join(','));
+    curCount++;document.getElementById('info').textContent=`記録中 ${typ} … ${curCount}`;
+    if(t>=REC_SEC*1000)stopRec();
+  }
+}
+function toggleRec(){if(!running){alert('先にカメラ');return;}if(recording){stopRec();return;}recording=true;recRows=[];recStart=Date.now();curCount=0;document.getElementById('rec').classList.add('recording');}
+function stopRec(){if(!recording)return;recording=false;document.getElementById('rec').classList.remove('recording');allRows=allRows.concat(recRows);const t=document.getElementById('ngtype').value;recCounts[t]=(recCounts[t]||0)+1;updateInfo();}
+function updateInfo(){const c=Object.entries(recCounts).map(([k,v])=>`${k}:${v}`).join(' / ');document.getElementById('info').innerHTML=`記録済み ${c||'なし'}<br>合計 ${allRows.length} 行`;}
+const HEADER='type,t_ms,side,pIr,pIg,pIb,pIbr,pH,pObr,pDiff,l1Ir,l1Ig,l1Ib,l1Ibr,l1H,l1Obr,l1Diff,l2Ir,l2Ig,l2Ib,l2Ibr,l2H,l2Obr,l2Diff,sIr,sIg,sIb,sIbr,sH,sObr,sDiff,uIn,uOut,uDiff,exp';
+function csv(){return HEADER+'\n'+allRows.join('\n');}
+function copyCsv(){if(!allRows.length){alert('記録なし');return;}navigator.clipboard.writeText(csv()).then(()=>alert('コピー完了')).catch(()=>alert('失敗→DL'));}
+function dlCsv(){if(!allRows.length){alert('記録なし');return;}const b=new Blob([csv()],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='hibiscus-2box.csv';a.click();}
+function clearCsv(){allRows=[];recCounts={};updateInfo();}
+window.addEventListener('load',drawBoxes);
+</script>
+</body>
+</html>
