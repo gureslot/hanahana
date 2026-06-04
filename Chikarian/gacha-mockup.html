@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>チカリアン ガチャ</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;800&display=swap');
+
+  :root{
+    --gold:#e8c25a; --gold-hi:#fff3c8; --panel:rgba(20,10,16,.72);
+    --border:1.5px solid rgba(232,194,90,.55);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; height:100%;}
+  body{
+    font-family:'Shippori Mincho','Yu Mincho',serif; color:var(--gold-hi);
+    background:#0a0509; overflow:hidden;
+  }
+  /* 縦長コンテナ。PCでもスマホ同様の縦長表示にする（ホームと同じ） */
+  .root{position:relative; width:100%; max-width:480px; margin:0 auto; min-height:100dvh; overflow:hidden; background:#070409;}
+  /* 背景：コンテナ内に収める（画面全幅に広げない） */
+  .bg{position:absolute; inset:0; z-index:0;
+      background:#070409 url('./images/gacha-bg.png') center/cover no-repeat;}
+  .bgVignette{position:absolute; inset:0; pointer-events:none; z-index:1; background:
+      radial-gradient(70% 50% at 50% 38%, rgba(255,180,90,.16), transparent 60%),
+      linear-gradient(180deg, rgba(0,0,0,.5), rgba(0,0,0,.15) 30%, rgba(0,0,0,.6));}
+
+  .wrap{position:relative; z-index:2; min-height:100dvh;
+        display:flex; flex-direction:column; align-items:center; padding:18px 16px 22px;}
+
+  .title{font-size:22px; font-weight:800; letter-spacing:3px; margin-top:6px;
+          color:var(--gold-hi); text-shadow:0 2px 6px #3a0010, 0 0 16px rgba(255,180,80,.5);}
+  .sub{font-size:11px; color:#cdb488; letter-spacing:2px; margin-top:4px;}
+
+  /* カード場 */
+  .stage{flex:1; width:100%; display:flex; align-items:center; justify-content:center; gap:12px;
+         perspective:1200px;}
+  /* 外枠：登場アニメ（下から＋フェード）担当。回転はしない */
+  .card{position:relative; width:30%; max-width:124px; aspect-ratio:5/7;
+        filter:drop-shadow(0 8px 16px rgba(0,0,0,.55));}
+  /* 内側：フリップ担当。初期=0度で裏面が正面。flippedで180度回って表 */
+  .cardInner{position:relative; width:100%; height:100%; transform-style:preserve-3d;
+             transition:transform .55s cubic-bezier(.2,.7,.25,1); transform:rotateY(0deg);}
+  .card.flipped .cardInner{transform:rotateY(180deg);}
+  .face{position:absolute; inset:0; border-radius:12px; overflow:hidden;
+        backface-visibility:hidden; -webkit-backface-visibility:hidden; border:var(--border);
+        box-shadow:inset 0 0 14px rgba(0,0,0,.5);}
+  .face img{width:100%; height:100%; object-fit:cover; display:block;}
+  .back{} /* 裏面（正面・初期表示） */
+  .front{transform:rotateY(180deg);} /* 表（キャラ）。180度側に配置 */
+  .backPh{background:
+          radial-gradient(60% 45% at 50% 38%, rgba(255,200,110,.25), transparent 70%),
+          linear-gradient(160deg, #2a1430 0%, #160a1c 60%, #0d0612 100%);
+        display:grid; place-items:center;}
+  .backMark{font-size:34px; color:rgba(232,194,90,.85); filter:drop-shadow(0 0 8px rgba(255,180,80,.5));}
+  /* プレースホルダ表面 */
+  .frontPh{background:linear-gradient(165deg,#3a2418,#1c1018); display:grid; place-items:center;
+           color:#e7d3a6;}
+  .frontPh .ph-emoji{font-size:30px; filter:drop-shadow(0 0 6px rgba(0,0,0,.6));}
+  .frontPh .ph-name{position:absolute; left:0; right:0; bottom:0; padding:8px 4px 6px; font-size:11px;
+                    text-align:center; background:linear-gradient(0deg,rgba(0,0,0,.75),transparent);}
+
+  /* 引くボタン */
+  .actions{height:64px; display:flex; align-items:center; justify-content:center; width:100%;}
+  .pull{
+    font-family:inherit; font-weight:800; font-size:17px; letter-spacing:2px;
+    color:#2a160a; cursor:pointer; border:none; padding:13px 46px; border-radius:30px;
+    background:linear-gradient(180deg,#ffe49a,#e8b54d 60%,#b9842f);
+    box-shadow:0 4px 0 #7a531c, 0 8px 18px rgba(0,0,0,.5), inset 0 1px 2px rgba(255,255,255,.6);
+    transition:transform .08s, box-shadow .08s;
+  }
+  .pull:active{transform:translateY(3px); box-shadow:0 1px 0 #7a531c, 0 4px 10px rgba(0,0,0,.5), inset 0 1px 2px rgba(255,255,255,.6);}
+  .pull:disabled{filter:grayscale(.5) brightness(.7); cursor:default;}
+  .balance{display:flex; align-items:baseline; gap:8px; margin-top:8px; padding:5px 16px; border-radius:10px;
+           background:var(--panel); border:var(--border); box-shadow:inset 0 0 10px rgba(255,200,90,.12);}
+  .balLabel{font-size:10px; color:#cdb488; letter-spacing:1px;}
+  .balVal{font-size:18px; font-weight:700; color:var(--gold-hi); text-shadow:0 0 8px rgba(255,200,90,.5);}
+  .balVal.spend{animation:spendPulse 1.1s ease;}
+  @keyframes spendPulse{
+    0%{color:#ffffff; transform:scale(1.18); text-shadow:0 0 18px #fff, 0 0 30px rgba(255,235,170,.9);}
+    40%{color:#fff7e0; text-shadow:0 0 14px rgba(255,240,200,.9);}
+    100%{color:var(--gold-hi); transform:scale(1); text-shadow:0 0 8px rgba(255,200,90,.5);}
+  }
+  .cost{font-size:11px; color:#cdb488; letter-spacing:1px; margin-top:5px; text-align:center;}
+
+  .back-home{margin-top:6px; background:none; border:var(--border); color:var(--gold-hi);
+             font-family:inherit; font-size:14px; padding:10px 30px; border-radius:24px; cursor:pointer;
+             background:var(--panel);}
+  .back-home:active{transform:translateY(1px);}
+
+  .hidden{display:none;}
+  .fadein{animation:fadein .5s ease both;}
+  @keyframes fadein{from{opacity:0;} to{opacity:1;}}
+  /* カード登場：下からスッと（回転を含まない＝フリップと競合しない） */
+  .enter{animation:cardEnter .45s cubic-bezier(.2,.8,.25,1) both;}
+  @keyframes cardEnter{from{opacity:0; transform:translateY(26px);} to{opacity:1; transform:translateY(0);}}
+</style>
+</head>
+<body>
+<div class="root">
+<div class="bg"></div>
+<div class="bgVignette"></div>
+
+<div class="wrap">
+  <div class="title">チカリアンガチャ</div>
+  <div class="balance"><span class="balLabel">所持チカリウム</span><span class="balVal" id="balVal">12,345</span></div>
+  <div class="cost" id="costLine">1回 300 チカリウム ・ 3枚排出</div>
+  <div class="sub" id="sub">3枚を引く</div>
+
+  <div class="stage" id="stage"><!-- カードはJSで生成 --></div>
+
+  <div class="actions">
+    <button class="pull" id="pull">引く</button>
+  </div>
+  <button class="back-home" id="home">ホームに戻る</button>
+</div>
+</div>
+
+<script>
+// ===== 画像アセット（後で本番パスに差し替え）=====
+const ASSETS = {
+  cardBack: "./images/card_back.png",
+  imgDir: "./images/",
+  // 排出プール（全カードのファイル名・拡張子なし）。引くたびに3枚ランダム抽選。
+  pool: [
+    "chara_dragon_sp",
+    "chara_girl_sp",
+    "chara_houou_sp",
+    "chara_hibiscus_ha_ken_n",
+    "chara_hibiscus_ha_ken_r",
+    "chara_hibiscus_ha_ken_sr",
+    "chara_hibiscus_ha_ken_ssr",
+    "chara_hibiscus_ha_tate_n",
+    "chara_hibiscus_ha_tate_r",
+    "chara_hibiscus_ha_tate_sr",
+    "chara_hibiscus_ha_tate_ssr",
+    "chara_hibiscus_ha_tsue_n",
+    "chara_hibiscus_ha_tsue_r",
+    "chara_hibiscus_ha_tsue_sr",
+    "chara_hibiscus_ha_tsue_ssr",
+    "chara_hibiscus_hana_ken_n",
+    "chara_hibiscus_hana_ken_r",
+    "chara_hibiscus_hana_ken_sr",
+    "chara_hibiscus_hana_ken_ssr",
+    "chara_hibiscus_hana_tate_n",
+    "chara_hibiscus_hana_tate_r",
+    "chara_hibiscus_hana_tate_sr",
+    "chara_hibiscus_hana_tate_ssr",
+    "chara_hibiscus_hana_tsue_n",
+    "chara_hibiscus_hana_tsue_r",
+    "chara_hibiscus_hana_tsue_sr",
+    "chara_hibiscus_hana_tsue_ssr",
+    "chara_hibiscus_shin_ken_n",
+    "chara_hibiscus_shin_ken_r",
+    "chara_hibiscus_shin_ken_sr",
+    "chara_hibiscus_shin_ken_ssr",
+    "chara_hibiscus_shin_tate_n",
+    "chara_hibiscus_shin_tate_r",
+    "chara_hibiscus_shin_tate_sr",
+    "chara_hibiscus_shin_tate_ssr",
+    "chara_hibiscus_shin_tsue_n",
+    "chara_hibiscus_shin_tsue_r",
+    "chara_hibiscus_shin_tsue_sr",
+    "chara_hibiscus_shin_tsue_ssr",
+    "chara_meshibe_shin_tsue_sr",
+    "chara_meshibe_shin_tsue_ssr"
+  ],
+};
+
+const stage = document.getElementById('stage');
+const pull  = document.getElementById('pull');
+const home  = document.getElementById('home');
+const sub   = document.getElementById('sub');
+const costLine = document.getElementById('costLine');
+const balVal = document.getElementById('balVal');
+
+const COST = 300;
+let chikarium = 12345;   // モック所持数（本番はサーバ/保存値）
+function renderBal(){ balVal.textContent = chikarium.toLocaleString(); }
+renderBal();
+
+function buildCard(item){
+  const card = document.createElement('div');
+  card.className = 'card';
+  const inner = document.createElement('div');
+  inner.className = 'cardInner';
+
+  // 裏面（初期は正面に見える）
+  const back = document.createElement('div');
+  back.className = 'face back';
+  if(ASSETS.cardBack){
+    const img = document.createElement('img'); img.src = ASSETS.cardBack; img.alt = '';
+    back.appendChild(img);
+  } else {
+    back.classList.add('backPh');
+    back.innerHTML = `<span class="backMark">❖</span>`;
+  }
+
+  // 表面（キャラ。180度側に配置、めくると正面に来る）
+  const front = document.createElement('div');
+  front.className = 'face front';
+  if(item){
+    const img = document.createElement('img'); img.src = ASSETS.imgDir + item + '.png'; img.alt = item;
+    front.appendChild(img);
+  } else {
+    front.classList.add('frontPh');
+    front.innerHTML = `<span class="ph-emoji">❖</span>`;
+  }
+
+  inner.appendChild(back); inner.appendChild(front);
+  card.appendChild(inner);
+  return card;
+}
+
+// プールからn枚ランダム抽選（重複あり＝同じカードが複数出てもOK）
+function drawRandom(n){
+  const out=[];
+  for(let i=0;i<n;i++){ out.push(ASSETS.pool[Math.floor(Math.random()*ASSETS.pool.length)]); }
+  return out;
+}
+
+let drawing = false;
+function draw(){
+  if(drawing) return;
+  if(chikarium < COST){ sub.textContent = 'チカリウムが足りません'; return; }
+  drawing = true;
+  pull.disabled = true;
+  // チカリウムを消費（減る演出付き）
+  chikarium -= COST;
+  renderBal();
+  balVal.classList.remove('spend'); void balVal.offsetWidth; balVal.classList.add('spend');
+  sub.textContent = '排出中…';
+
+  // 1) 3枚ランダム抽選して裏向きで整列して登場（時間差）
+  stage.innerHTML = '';
+  const picks = drawRandom(3);
+  const cards = picks.map(buildCard);
+  cards.forEach((c, i)=>{
+    c.classList.add('enter');
+    c.style.animationDelay = (i*0.1)+'s';
+    stage.appendChild(c);
+  });
+
+  // 2) 登場後に一拍おいて、左から順にめくる
+  const enterDone = 0.45 + (cards.length-1)*0.1;
+  setTimeout(()=>{
+    cards.forEach((c, i)=>{
+      setTimeout(()=> c.classList.add('flipped'), i*180);
+    });
+    // 3) 全部めくり終えたら余韻→「引く」を再度押せるように戻す
+    const flipDone = (cards.length-1)*180 + 560;
+    setTimeout(()=>{
+      sub.textContent = '獲得しました';
+      pull.disabled = false;
+      drawing = false;
+    }, flipDone + 500);
+  }, enterDone*1000 + 250);
+}
+
+pull.addEventListener('click', draw);
+home.addEventListener('click', ()=>{ location.href = './home-mockup.html'; });
+
+// 初期表示：裏向きのカードを3枚置いておく
+(function initBacks(){
+  for(let i=0;i<3;i++){ stage.appendChild(buildCard(null)); }
+})();
+</script>
+</body>
+</html>
