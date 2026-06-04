@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>チカリアン ホーム（モックアップ）</title>
+<style>html,body{margin:0;padding:0;background:#0a0509;}</style>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef } = React;
+
+/**
+ * チカリアン ホーム画面 モックアップ（本実装に近い構造）
+ * - 確定見本のレイアウトに準拠：
+ *   上部リソース / 中央=チカリウム採取(上限到達でグレーアウト) / 採取リセットのカウントダウン(0時基準)
+ *   上段ボタン: 探索・ボス戦・デッキ編成 / 下段: ガチャ・建物・ミッション / 最下部: 放置報酬
+ * - 画像は ASSETS のパスを差し替えるだけで本番画像に置換できる。
+ *   今は画像が無いので CSS プレースホルダ（金枠＋アイコン文字）で代用。
+ * - 数値・ゲージ・カウントダウン・ラベルはすべてコード描画（画像に焼かない方針）。
+ */
+
+// ===== 画像アセット（後で本番画像のパスに差し替え）=====
+// 例: bg: "/images/home_bg.png" のように置換。null の間はプレースホルダ表示。
+const ASSETS = {
+  bg: "./images/home_bg.png",
+  saishu: "./images/btn_saishu.png",
+  saishuOff: "./images/btn_saishu_gray.png",
+  buttons: {
+    tansaku:  "./images/btn_tansaku.png",
+    boss:     "./images/btn_boss.png",
+    deck:     "./images/btn_deck.png",
+    gacha:    "./images/btn_gacha.png",
+    tatemono: "./images/btn_tatemono.png",
+    mission:  "./images/btn_mission.png",
+  },
+  houchi: "./images/btn_houchi.png",
+  ic: { chikarium: "./images/ic_chikarium.png", medal: "./images/ic_medal.png", menu: "./images/ic_menu.png", zukan: "./images/ic_zukan.png", settings: "./images/ic_settings.png" },
+};
+
+// ===== 0時までの残り時間 =====
+function msUntilMidnight() {
+  const now = new Date();
+  const next = new Date(now);
+  next.setHours(24, 0, 0, 0);
+  return next - now;
+}
+function fmt(ms) {
+  if (ms < 0) ms = 0;
+  const s = Math.floor(ms / 1000);
+  const h = String(Math.floor(s / 3600)).padStart(2, "0");
+  const m = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
+  const ss = String(s % 60).padStart(2, "0");
+  return `${h}:${m}:${ss}`;
+}
+
+function ChikarianHome() {
+  // ゲーム状態（モック値）
+  const [chikarium, setChikarium] = useState(12345);
+  const [medal] = useState(678900);
+  const DAILY_MAX = 300;
+  const [dailyGot, setDailyGot] = useState(120);      // 本日採取済み
+  const [countdown, setCountdown] = useState(msUntilMidnight());
+  const [houchiReady] = useState(true);                // 放置報酬あり
+  const [toast, setToast] = useState(null);
+
+  const reachedCap = dailyGot >= DAILY_MAX;            // 上限到達＝採取ボタングレーアウト
+
+  // カウントダウン更新（0時で日次リセット）
+  useEffect(() => {
+    const t = setInterval(() => {
+      const left = msUntilMidnight();
+      setCountdown(left);
+      if (left <= 1000) setDailyGot(0);                // 0時跨ぎでリセット
+    }, 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  const flash = (msg) => { setToast(msg); setTimeout(() => setToast(null), 1600); };
+
+  const onSaishu = () => {
+    if (reachedCap) { flash("本日分の採取は完了しています（0時にリセット）"); return; }
+    // 実機ではカメラ採取画面へ遷移。ここではモックとして満タンにする。
+    setDailyGot(DAILY_MAX);
+    setChikarium((c) => c + (DAILY_MAX - dailyGot) * 1);
+    flash("採取画面へ（モック）");
+  };
+
+  const pct = Math.min(100, (dailyGot / DAILY_MAX) * 100);
+
+  return (
+    <div style={S.root}>
+      <style>{CSS}</style>
+      {/* 背景 */}
+      <div style={{ ...S.bg, ...(ASSETS.bg ? { backgroundImage: `url(${ASSETS.bg})` } : {}) }} />
+      <div style={S.bgVignette} />
+
+      <div style={S.frame}>
+        {/* ===== 上部リソース ===== */}
+        <header style={S.top}>
+          <div style={S.resPanel}>
+            <Icon src={ASSETS.ic.chikarium} fallback="◈" color="#ffd86b" big />
+            <div style={S.resCol}>
+              <div style={S.resLabel}>チカリウム</div>
+              <div style={S.resVal}>{chikarium.toLocaleString()}</div>
+              <div style={S.gaugeWrap}>
+                <div style={S.gaugeText}>本日 {dailyGot}/{DAILY_MAX}</div>
+                <div style={S.gaugeBar}><div style={{ ...S.gaugeFill, width: `${pct}%` }} /></div>
+              </div>
+            </div>
+          </div>
+
+          <div style={S.resPanelSm}>
+            <Icon src={ASSETS.ic.medal} fallback="◉" color="#ffcf5a" />
+            <div style={S.resCol}>
+              <div style={S.resLabel}>メダル</div>
+              <div style={S.resVal}>{medal.toLocaleString()}</div>
+            </div>
+          </div>
+
+          <button style={S.menuBtn} onClick={() => flash("メニュー")}>
+            <Icon src={ASSETS.ic.menu} fallback="≡" color="#f5e6c8" />
+          </button>
+        </header>
+
+        {/* ===== 右側 小アイコン ===== */}
+        <div style={S.sideIcons}>
+          <SideIcon src={ASSETS.ic.zukan} fallback="❖" label="図鑑" onClick={() => flash("図鑑")} />
+          <SideIcon src={ASSETS.ic.settings} fallback="⚙" label="設定" onClick={() => flash("設定")} />
+        </div>
+
+        {/* ===== 中央：チカリウム採取 ===== */}
+        <main style={S.center}>
+          <button
+            style={{ ...S.saishu, ...(reachedCap ? S.saishuOff : {}) }}
+            onClick={onSaishu}
+            className={reachedCap ? "" : "saishu-glow"}
+          >
+            {ASSETS.saishu
+              ? <img alt="チカリウム採取" src={reachedCap ? (ASSETS.saishuOff || ASSETS.saishu) : ASSETS.saishu} style={S.fill} />
+              : <div style={S.saishuInner}><div style={S.cam}>📷</div><div style={S.saishuTitle}>チカリウム<br />採取</div></div>}
+            {reachedCap && <div style={S.capBadge}>本日完了</div>}
+          </button>
+
+          {/* 採取説明 */}
+          <div style={S.saishuDesc}>{reachedCap ? "本日分の採取は完了しています" : "赤い光にかざして採取"}</div>
+
+          {/* 採取リセット表示（案C：カウントダウン＋0時リセット併記） */}
+          <div style={S.timer}>
+            <div style={S.timerLabel}>次の採取まで</div>
+            <div style={S.timerVal}>{fmt(countdown)}</div>
+            <div style={S.timerSub}>0時にリセット</div>
+          </div>
+        </main>
+
+        {/* ===== メニューボタン（確定配置）===== */}
+        <nav style={S.grid}>
+          {/* 上段 */}
+          <CardBtn label="探索"       color="#2fa86a" src={ASSETS.buttons.tansaku}  fb="🧭" onClick={() => flash("探索")} />
+          <CardBtn label="ボス戦"     color="#9b3bd6" src={ASSETS.buttons.boss}     fb="⚔" onClick={() => flash("ボス戦")} />
+          <CardBtn label="デッキ編成" color="#3b6fd6" src={ASSETS.buttons.deck}     fb="🃏" onClick={() => flash("デッキ編成")} />
+          {/* 下段 */}
+          <CardBtn label="ガチャ"     color="#d6433b" src={ASSETS.buttons.gacha}    fb="🎁" onClick={() => flash("ガチャ")} />
+          <CardBtn label="建物"       color="#b07b32" src={ASSETS.buttons.tatemono} fb="🏛" onClick={() => flash("建物")} />
+          <CardBtn label="ミッション" color="#3b86d6" src={ASSETS.buttons.mission}  fb="📜" onClick={() => flash("ミッション")} />
+        </nav>
+
+        {/* ===== 放置報酬 ===== */}
+        <button style={S.houchi} onClick={() => flash("放置報酬を受け取る")}>
+          {ASSETS.houchi
+            ? <img alt="" src={ASSETS.houchi} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+            : <span style={S.houchiIcon}>🧰</span>}
+          <div style={S.houchiLabel}>放置報酬</div>
+          {houchiReady && <span style={S.notif}>◆</span>}
+        </button>
+      </div>
+
+      {toast && <div style={S.toast}>{toast}</div>}
+    </div>
+  );
+}
+
+// ===== 部品 =====
+function Icon({ src, fallback, color, big }) {
+  if (src) return <img alt="" src={src} style={{ width: big ? 44 : 30, height: big ? 44 : 30, objectFit: "contain" }} />;
+  return <span style={{ fontSize: big ? 34 : 22, color: color || "#f5e6c8", lineHeight: 1, filter: "drop-shadow(0 0 6px rgba(255,200,80,.6))" }}>{fallback}</span>;
+}
+function SideIcon({ src, fallback, label, onClick }) {
+  return (
+    <button style={S.sideIcon} onClick={onClick}>
+      <div style={S.sideIconCircle}>{src ? <img alt="" src={src} style={S.fill} /> : <span style={{ fontSize: 20, color: "#f0dcb0" }}>{fallback}</span>}</div>
+      <span style={S.sideIconLabel}>{label}</span>
+    </button>
+  );
+}
+function CardBtn({ label, color, src, fb, onClick }) {
+  return (
+    <button style={S.card} onClick={onClick}>
+      <div style={{ ...S.cardArt, ...(src ? { backgroundImage: `url(${src})` } : { background: `radial-gradient(circle at 50% 40%, ${color}55, #120a14 80%)` }) }}>
+        {!src && <span style={S.cardEmoji}>{fb}</span>}
+        <div style={S.cardLabel}>{label}</div>
+      </div>
+    </button>
+  );
+}
+
+// ===== スタイル =====
+const GOLD = "#e8c25a";
+const GOLD_HI = "#fff3c8";
+const PANEL = "rgba(20,10,16,.72)";
+const BORDER = "1.5px solid rgba(232,194,90,.55)";
+
+const S = {
+  root: { position: "relative", width: "100%", maxWidth: 480, margin: "0 auto", minHeight: "100dvh", overflow: "hidden", fontFamily: "'Shippori Mincho','Yu Mincho',serif", color: GOLD_HI, background: "#0a0509" },
+  bg: { position: "absolute", inset: 0, backgroundImage: "radial-gradient(120% 90% at 50% 18%, #5a1f3a 0%, #2a1024 38%, #140913 68%, #090509 100%)", backgroundSize: "cover", backgroundPosition: "center" },
+  bgVignette: { position: "absolute", inset: 0, background: "radial-gradient(80% 60% at 50% 30%, rgba(255,180,90,.18), transparent 60%), linear-gradient(180deg, rgba(0,0,0,.35), rgba(0,0,0,.1) 30%, rgba(0,0,0,.55))", pointerEvents: "none" },
+  frame: { position: "relative", display: "flex", flexDirection: "column", minHeight: "100dvh", padding: "10px 12px 16px" },
+
+  top: { display: "flex", alignItems: "flex-start", gap: 8 },
+  resPanel: { display: "flex", gap: 8, alignItems: "center", background: PANEL, border: BORDER, borderRadius: 10, padding: "6px 10px", flex: 1, backdropFilter: "blur(2px)", boxShadow: "inset 0 0 12px rgba(255,200,90,.12)" },
+  resPanelSm: { display: "flex", gap: 6, alignItems: "center", background: PANEL, border: BORDER, borderRadius: 10, padding: "6px 10px", backdropFilter: "blur(2px)" },
+  resCol: { display: "flex", flexDirection: "column", lineHeight: 1.1 },
+  resLabel: { fontSize: 10, color: "#cdb488", letterSpacing: 1 },
+  resVal: { fontSize: 20, fontWeight: 700, color: GOLD_HI, textShadow: "0 0 8px rgba(255,200,90,.5)" },
+  gaugeWrap: { marginTop: 3 },
+  gaugeText: { fontSize: 9, color: "#cdb488" },
+  gaugeBar: { width: 130, height: 5, background: "rgba(0,0,0,.5)", borderRadius: 3, overflow: "hidden", border: "1px solid rgba(232,194,90,.4)" },
+  gaugeFill: { height: "100%", background: "linear-gradient(90deg,#ffb84d,#ffe28a)", boxShadow: "0 0 6px rgba(255,200,90,.8)", transition: "width .4s" },
+  menuBtn: { width: 46, height: 46, background: PANEL, border: BORDER, borderRadius: 10, cursor: "pointer", display: "grid", placeItems: "center" },
+
+  sideIcons: { position: "absolute", right: 12, top: 92, display: "flex", flexDirection: "column", gap: 14, zIndex: 4 },
+  sideIcon: { background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 2 },
+  sideIconCircle: { width: 40, height: 40, borderRadius: "50%", background: "none", border: "none", display: "grid", placeItems: "center" },
+  sideIconLabel: { fontSize: 10, color: "#e7d3a6", textShadow: "0 1px 2px #000" },
+
+  center: { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, minHeight: 260, paddingTop: 30 },
+  saishu: { position: "relative", width: 240, height: 240, border: "none", cursor: "pointer", padding: 0, background: "none" },
+  saishuOff: { filter: "grayscale(.85) brightness(.5)", cursor: "not-allowed" },
+  saishuInner: { position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6 },
+  cam: { fontSize: 46, filter: "drop-shadow(0 0 10px rgba(255,210,120,.8))" },
+  saishuTitle: { fontSize: 26, fontWeight: 800, textAlign: "center", lineHeight: 1.15, color: GOLD_HI, textShadow: "0 2px 4px #3a0010, 0 0 14px rgba(255,180,80,.7)" },
+  saishuDesc: { fontSize: 12, color: "#cdb488", textAlign: "center", letterSpacing: 1, textShadow: "0 1px 3px #000" },
+  capBadge: { position: "absolute", bottom: 22, left: "50%", transform: "translateX(-50%)", fontSize: 11, color: "#ffd", background: "rgba(0,0,0,.6)", border: "1px solid rgba(232,194,90,.6)", borderRadius: 10, padding: "2px 10px", whiteSpace: "nowrap" },
+
+  timer: { display: "flex", flexDirection: "column", alignItems: "center", background: PANEL, border: BORDER, borderRadius: 12, padding: "6px 26px", boxShadow: "inset 0 0 10px rgba(255,200,90,.12)" },
+  timerLabel: { fontSize: 11, color: "#cdb488", letterSpacing: 2 },
+  timerVal: { fontSize: 26, fontWeight: 700, color: GOLD_HI, letterSpacing: 2, textShadow: "0 0 8px rgba(255,200,90,.5)" },
+  timerSub: { fontSize: 9, color: "#a98f66", letterSpacing: 1 },
+
+  grid: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginTop: 6 },
+  card: { background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", flexDirection: "column", alignItems: "center" },
+  cardArt: { width: "100%", aspectRatio: "4/3", borderRadius: 10, border: BORDER, backgroundSize: "cover", backgroundPosition: "center", display: "grid", placeItems: "center", boxShadow: "inset 0 0 14px rgba(0,0,0,.6), 0 2px 6px rgba(0,0,0,.5)", position: "relative", overflow: "hidden" },
+  cardEmoji: { fontSize: 34, filter: "drop-shadow(0 0 8px rgba(0,0,0,.7))" },
+  cardLabel: { position: "absolute", left: 0, right: 0, bottom: 0, padding: "10px 4px 5px", fontSize: 14, fontWeight: 700, color: GOLD_HI, textAlign: "center", textShadow: "0 1px 3px #000, 0 0 8px rgba(0,0,0,.9)", background: "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.75) 100%)" },
+
+  houchi: { position: "relative", marginTop: 10, width: "100%", aspectRatio: "5/2", borderRadius: 12, border: BORDER, cursor: "pointer", overflow: "hidden", background: "linear-gradient(180deg, rgba(60,30,55,.85), rgba(30,12,25,.9))", boxShadow: "0 2px 8px rgba(0,0,0,.5)" },
+  houchiIcon: { fontSize: 34, filter: "drop-shadow(0 0 8px rgba(255,210,120,.7))" },
+  houchiLabel: { position: "absolute", left: 0, right: 0, bottom: 0, padding: "14px 4px 8px", fontSize: 18, fontWeight: 800, color: GOLD_HI, textAlign: "center", textShadow: "0 2px 4px #000, 0 0 10px rgba(255,200,90,.5)", background: "linear-gradient(0deg, rgba(0,0,0,.7) 0%, transparent 100%)", zIndex: 1 },
+  notif: { position: "absolute", top: 8, right: 12, color: "#ff4d6a", fontSize: 14, filter: "drop-shadow(0 0 4px #ff4d6a)" },
+
+  fill: { width: "100%", height: "100%", objectFit: "contain" },
+  toast: { position: "fixed", left: "50%", bottom: 90, transform: "translateX(-50%)", background: "rgba(0,0,0,.85)", border: BORDER, color: GOLD_HI, padding: "8px 18px", borderRadius: 20, fontSize: 13, zIndex: 50, whiteSpace: "nowrap" },
+};
+
+const CSS = `
+@import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;800&display=swap');
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+@keyframes saishuPulse{0%,100%{filter:drop-shadow(0 0 12px rgba(255,160,60,.5));}50%{filter:drop-shadow(0 0 26px rgba(255,180,70,.85));}}
+.saishu-glow{animation:saishuPulse 2.4s ease-in-out infinite;}
+.saishu-glow:active{transform:scale(.97);}
+button:active{filter:brightness(1.08);}
+`;
+
+ReactDOM.createRoot(document.getElementById('root')).render(<ChikarianHome />);
+</script>
+</body>
+</html>
