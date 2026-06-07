@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>チカリアン ボス挑戦</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;800&display=swap');
+  :root{ --gold-hi:#fff3c8; --gold:#e8c25a; --panel:rgba(18,10,14,.9); --border:1.5px solid rgba(232,194,90,.55);
+         --red:#e0563b; }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; height:100%;}
+  body{font-family:'Shippori Mincho','Yu Mincho',serif; color:var(--gold-hi); background:#070409; overflow:hidden;}
+  img{-webkit-user-drag:none; user-select:none;}
+  .root{position:relative; width:100%; max-width:480px; margin:0 auto; height:100dvh; overflow:hidden;
+        background:#070409; display:flex; align-items:center; justify-content:center;}
+  .mapWrap{position:relative; width:100%; aspect-ratio:941/1672; max-height:100dvh;
+           background:#070409 url('./images/boss_map_1.png') center/100% 100% no-repeat;}
+  .mapDim{position:absolute; inset:0; pointer-events:none;
+          background:linear-gradient(180deg, rgba(0,0,0,.5), transparent 14% 78%, rgba(0,0,0,.55));}
+
+  .node{position:absolute; transform:translate(-50%,-50%); text-align:center; cursor:pointer; z-index:4;}
+  .dot{position:relative; width:38px; height:38px; margin:0 auto; display:grid; place-items:center;
+       border:2px solid #ffd6c2; box-shadow:0 0 16px rgba(224,86,59,.85), 0 2px 6px rgba(0,0,0,.6);
+       background:radial-gradient(circle at 50% 40%, #ff8a6b, #e0563b 55%, #7a2414);
+       animation:bossPulse 2.1s ease-in-out infinite;}
+  .dot.sub{width:32px; height:32px; transform:rotate(45deg); border-radius:6px;}   /* 中ボス＝菱形 */
+  .dot.boss{width:46px; height:46px; border-radius:50%;}                            /* 面ボス＝大円 */
+  .dot.sub .gi{transform:rotate(-45deg);}
+  .gi{font-size:16px; color:#2a0d06; font-weight:800;}
+  .dot img{position:absolute; inset:-4px; width:calc(100% + 8px); height:calc(100% + 8px); object-fit:contain;}
+  .dot.hasimg{background:none!important; border:none!important; box-shadow:none!important; animation:none!important;}
+  .dot.hasimg .gi{display:none;}
+  @keyframes bossPulse{0%,100%{box-shadow:0 0 12px rgba(224,86,59,.6),0 2px 6px rgba(0,0,0,.6);}
+                       50%{box-shadow:0 0 24px rgba(255,110,70,1),0 2px 6px rgba(0,0,0,.6);}}
+  .node .lbl{margin-top:6px; font-size:11px; letter-spacing:1px; color:var(--gold-hi);
+             text-shadow:0 1px 4px #000,0 0 8px #000; white-space:nowrap;}
+  .node.up .lbl{margin-top:0; margin-bottom:6px;}            /* ラベルを上に（下端ノード用） */
+  .node.up{display:flex; flex-direction:column-reverse;}
+
+  /* 状態 */
+  .node.cleared .dot{background:radial-gradient(circle at 50% 40%,#bfe9c0,#5fa564 60%,#2f5e34);
+                     border-color:#dff5e0; box-shadow:0 0 12px rgba(120,220,140,.6),0 2px 6px rgba(0,0,0,.6); animation:none;}
+  .node.cleared .gi{content:''; color:#0b2a12;}
+  .node.cleared .gi::after{content:'✓';}
+  .node.locked .dot{background:radial-gradient(circle at 50% 40%,#5a5048,#2a2420);
+                    border-color:rgba(180,170,150,.5); box-shadow:0 2px 6px rgba(0,0,0,.6); animation:none;}
+  .node.locked .lbl{color:#b9ad95;}
+  .node.locked .gi::after{content:'🔒'; font-size:13px;}
+  .node.busy .dot{animation:bossSpin 1.6s linear infinite;}
+  .node.busy .gi::after{content:'⟳';}
+  @keyframes bossSpin{to{filter:hue-rotate(30deg)}}
+
+  .topbar{position:absolute; z-index:6; top:0; left:0; right:0; padding:12px 14px;}
+  .topRow{display:flex; align-items:center; gap:10px;}
+  .back{font-family:inherit; font-size:13px; letter-spacing:1px; color:var(--gold-hi); background:var(--panel);
+        border:var(--border); border-radius:18px; padding:7px 14px; cursor:pointer;}
+  .area{flex:1; text-align:center; font-size:16px; font-weight:800; letter-spacing:2px; text-shadow:0 2px 6px #000,0 0 14px rgba(255,180,80,.4);}
+  .res{display:flex; gap:6px; align-items:center; background:var(--panel); border:var(--border); border-radius:14px; padding:5px 12px; font-size:13px;}
+  .res b{color:#ffe39a;}
+  .hpwrap{display:flex; align-items:center; gap:8px; margin:9px auto 0; max-width:240px;
+          background:var(--panel); border:var(--border); border-radius:12px; padding:5px 12px;}
+  .hpwrap .k{font-size:11px; color:#cdb488; letter-spacing:1px;}
+  .hpbar{flex:1; height:9px; border-radius:6px; background:rgba(255,255,255,.12); overflow:hidden;}
+  .hpfill{height:100%; width:100%; background:linear-gradient(90deg,#5fa564,#9fe0a0); transition:width .4s;}
+  .hptxt{font-size:11px; color:var(--gold-hi); font-weight:700;}
+
+  .scrim{position:absolute; inset:0; z-index:7; background:rgba(0,0,0,.45); opacity:0; pointer-events:none; transition:.3s;}
+  .scrim.show{opacity:1; pointer-events:auto;}
+  .sheet{position:absolute; z-index:8; left:0; right:0; bottom:0; transform:translateY(110%); max-width:480px; margin:0 auto;
+         transition:transform .35s cubic-bezier(.2,.8,.25,1); background:var(--panel);
+         border-top:var(--border); border-left:var(--border); border-right:var(--border);
+         border-radius:18px 18px 0 0; padding:16px 18px 22px; box-shadow:0 -8px 24px rgba(0,0,0,.6);}
+  .sheet.show{transform:translateY(0);}
+  .sheet h3{margin:2px 0 4px; font-size:19px; letter-spacing:2px; text-align:center; text-shadow:0 0 12px rgba(255,120,80,.4);}
+  .sub-t{text-align:center; font-size:11px; color:#cdb488; letter-spacing:2px; margin-bottom:8px;}
+  .stat{display:flex; justify-content:space-between; padding:7px 4px; border-bottom:1px dashed rgba(232,194,90,.25); font-size:14px;}
+  .stat .k{color:#cdb488; letter-spacing:1px;} .stat .v{color:var(--gold-hi); font-weight:700; text-align:right;}
+  .stat .v.attr-none{color:#9fd09f;}
+  .secTitle{margin:13px 0 5px; font-size:12px; color:#cdb488; letter-spacing:2px; border-left:3px solid var(--gold); padding-left:8px;}
+  .drops{display:flex; flex-wrap:wrap; gap:6px;}
+  .drop{font-size:12px; background:rgba(255,235,180,.07); border:1px solid rgba(232,194,90,.4); border-radius:10px; padding:4px 10px;}
+  .drop.rare{border-color:#ffb3a0; color:#ffd8cc; box-shadow:0 0 8px rgba(255,120,80,.3);}
+  .deckTitle{font-size:12px; color:#cdb488; letter-spacing:1px; margin:13px 0 6px;}
+  .decks{display:flex; gap:8px;}
+  .deck{flex:1; background:rgba(255,235,180,.06); border:var(--border); border-radius:12px; padding:9px 6px; text-align:center; cursor:pointer;}
+  .deck.sel{background:linear-gradient(180deg,rgba(255,228,154,.28),rgba(232,181,77,.18)); box-shadow:0 0 12px rgba(255,200,90,.35);}
+  .deck .dn{font-size:13px; font-weight:800;} .deck .dp{font-size:11px; color:#cdb488; margin-top:2px;}
+  .deck .dp.win{color:#9fe0a0;} .deck .dp.lose{color:#ff9a8a;}
+  .go{margin-top:14px; width:100%; font-family:inherit; font-weight:800; font-size:16px; letter-spacing:2px; color:#2a160a;
+      border:none; padding:13px; border-radius:26px; cursor:pointer;
+      background:linear-gradient(180deg,#ffcaa0,#e0563b 60%,#a0341c); color:#2a0d06;
+      box-shadow:0 4px 0 #6a1e0e,0 8px 18px rgba(0,0,0,.45);}
+  .go:active{transform:translateY(3px);} .go:disabled{filter:grayscale(.6) brightness(.7); cursor:default;}
+  .warn{text-align:center; font-size:11px; color:#ff9a8a; margin-top:8px; min-height:14px;}
+
+  /* 出撃中 */
+  .travel{text-align:center; padding:6px 0 2px;}
+  .travel .big{font-size:24px; font-weight:800; color:#ffd6c2; text-shadow:0 0 14px rgba(255,120,80,.5);}
+  .travel .cap{font-size:11px; color:#cdb488; letter-spacing:1px; margin-top:4px;}
+  .travel .note{font-size:10px; color:#9a8c70; margin-top:8px;}
+
+  .close{position:absolute; top:10px; right:14px; font-size:20px; color:#cdb488; cursor:pointer; line-height:1;}
+
+  /* 報告書 */
+  .report{position:absolute; z-index:10; left:50%; top:50%; transform:translate(-50%,-50%) scale(.92);
+          width:84%; max-width:360px; background:var(--panel); border:var(--border); border-radius:16px;
+          padding:20px 20px 22px; text-align:center; opacity:0; pointer-events:none; transition:.28s; box-shadow:0 10px 30px rgba(0,0,0,.7);}
+  .report.show{opacity:1; pointer-events:auto; transform:translate(-50%,-50%) scale(1);}
+  .report .rt{font-size:12px; letter-spacing:3px; color:#cdb488; margin-bottom:6px;}
+  .report .res-big{font-size:30px; font-weight:800; letter-spacing:4px; margin:6px 0 10px;}
+  .report .res-big.win{color:#9fe0a0; text-shadow:0 0 16px rgba(120,220,140,.6);}
+  .report .res-big.lose{color:#ff9a8a; text-shadow:0 0 16px rgba(255,120,80,.5);}
+  .report .line{font-size:14px; margin:3px 0;} .report .line b{color:#ffe39a;}
+  .report .ok{margin-top:16px; width:100%; font-family:inherit; font-weight:800; font-size:15px; letter-spacing:2px;
+              color:#2a160a; border:none; padding:12px; border-radius:24px; cursor:pointer;
+              background:linear-gradient(180deg,#ffe49a,#e8b54d 60%,#b9842f);}
+</style>
+</head>
+<body>
+<div class="root" id="root">
+  <div class="mapWrap">
+    <div class="mapDim"></div>
+    <div class="node" id="n0" style="left:28%; top:23%;"><div class="dot sub"><span class="gi"></span><img src="./images/ic_map_subboss.png" alt="" onload="this.parentNode.classList.add('hasimg')" onerror="this.remove()"></div><div class="lbl">中ボス ・ ヴェルグラフ</div></div>
+    <div class="node" id="n1" style="left:67%; top:52%;"><div class="dot sub"><span class="gi"></span><img src="./images/ic_map_subboss.png" alt="" onload="this.parentNode.classList.add('hasimg')" onerror="this.remove()"></div><div class="lbl">中ボス ・ ゼルヴァニクス</div></div>
+    <div class="node up" id="n2" style="left:52%; top:84%;"><div class="dot boss"><span class="gi"></span><img src="./images/ic_map_boss.png" alt="" onload="this.parentNode.classList.add('hasimg')" onerror="this.remove()"></div><div class="lbl">面ボス ・ アルヴェノクス</div></div>
+  </div>
+
+  <div class="topbar">
+    <div class="topRow">
+      <button class="back" id="back">‹ 戻る</button>
+      <div class="area">古代樹海界</div>
+      <div class="res">メダル <b>1,240</b></div>
+    </div>
+    <div class="hpwrap"><span class="k">部隊HP</span><div class="hpbar"><div class="hpfill" id="hpfill"></div></div><span class="hptxt" id="hptxt">100</span></div>
+  </div>
+
+  <div class="scrim" id="scrim"></div>
+
+  <div class="sheet" id="sheet">
+    <span class="close" id="close">×</span>
+    <h3 id="sheetTitle">ヴェルグラフ</h3>
+    <div class="sub-t" id="sheetSub">中ボス</div>
+    <div id="info"></div>
+    <div class="deckTitle">出撃するデッキ</div>
+    <div class="decks" id="decks"></div>
+    <button class="go" id="go">出撃</button>
+    <div class="warn" id="warn"></div>
+  </div>
+
+  <div class="sheet" id="travelSheet">
+    <span class="close" id="travelClose">×</span>
+    <h3 id="travelTitle">出撃中</h3>
+    <div class="travel">
+      <div class="big" id="travelTime">0:04</div>
+      <div class="cap">現場へ向かっています…到着で戦闘 → 報告書</div>
+      <div class="note">※ 実際の到達時間は約30分（戦闘画面はありません）</div>
+    </div>
+  </div>
+
+  <div class="report" id="report">
+    <div class="rt">戦 闘 報 告 書</div>
+    <div class="res-big" id="reportRes">勝利</div>
+    <div id="reportBody"></div>
+    <button class="ok" id="reportOk">閉じる</button>
+  </div>
+</div>
+
+<script>
+  // 1面=古代樹海界・道化師。属性なし（段階解放の起点）。戦力は確定テーブル(1周目)。
+  const BOSSES = [
+    { id:0, name:'ヴェルグラフ', kind:'中ボス', power:3000, attr:'なし', reward:{medal:300,exp:'経験の書（中）×2'}, rare:'道化の仮面', state:'open'   },
+    { id:1, name:'ゼルヴァニクス', kind:'中ボス', power:5000, attr:'なし', reward:{medal:600,exp:'経験の書（中）×4'}, rare:'歪んだ鈴',   state:'locked' },
+    { id:2, name:'アルヴェノクス', kind:'面ボス', power:8000, attr:'なし', reward:{medal:1500,exp:'経験の書（大）×3'}, rare:'樹海王の証', state:'locked' },
+  ];
+  const DECKS = [ {name:'デッキ1', power:4200}, {name:'デッキ2', power:2100} ];
+  const HP_COST = 30;
+
+  let hp=100, selDeck=0, cur=-1;
+  const $=s=>document.getElementById(s);
+  const fmt=n=>n.toLocaleString();
+  const nodeEls=[0,1,2].map(i=>$('n'+i));
+
+  function renderStates(){
+    BOSSES.forEach((b,i)=>{ const el=nodeEls[i]; el.classList.remove('cleared','locked','busy');
+      if(b.state==='cleared') el.classList.add('cleared');
+      else if(b.state==='locked') el.classList.add('locked');
+      else if(b.state==='busy') el.classList.add('busy'); });
+  }
+  function renderHP(){ $('hpfill').style.width=hp+'%'; $('hptxt').textContent=hp; }
+  renderStates(); renderHP();
+
+  function showSheet(id){ $('scrim').classList.add('show'); $(id).classList.add('show'); }
+  function hideSheets(){ $('scrim').classList.remove('show'); $('sheet').classList.remove('show'); $('travelSheet').classList.remove('show'); }
+
+  function openSheet(i){
+    const b=BOSSES[i]; cur=i;
+    if(b.state==='locked'){ flashReport('まだ挑めない','<div class="line">手前のボスを倒すと挑戦できます</div>',true); return; }
+    if(b.state==='cleared'){ /* 再挑戦も可。そのまま開く */ }
+    $('sheetTitle').textContent=b.name; $('sheetSub').textContent=b.kind;
+    $('info').innerHTML=`
+      <div class="stat"><span class="k">敵の戦力</span><span class="v">${fmt(b.power)}</span></div>
+      <div class="stat"><span class="k">属性</span><span class="v attr-none">${b.attr}</span></div>
+      <div class="secTitle">クリア報酬</div>
+      <div class="stat"><span class="k">メダル</span><span class="v">${fmt(b.reward.medal)}</span></div>
+      <div class="stat"><span class="k">EXPアイテム</span><span class="v">${b.reward.exp}</span></div>
+      <div class="secTitle">ドロップ</div>
+      <div class="drops"><span class="drop">装備片</span><span class="drop rare">${b.rare}</span></div>`;
+    $('decks').innerHTML=DECKS.map((d,di)=>{ const win=d.power>=b.power;
+      return `<div class="deck ${di===selDeck?'sel':''}" data-d="${di}"><div class="dn">${d.name}</div><div class="dp ${win?'win':'lose'}">戦力 ${fmt(d.power)}</div></div>`;}).join('');
+    $('decks').querySelectorAll('.deck').forEach(el=>el.addEventListener('click',()=>{selDeck=+el.dataset.d;
+      $('decks').querySelectorAll('.deck').forEach(x=>x.classList.toggle('sel',+x.dataset.d===selDeck)); checkWarn();}));
+    checkWarn();
+    showSheet('sheet');
+  }
+  function checkWarn(){ $('warn').textContent = hp<HP_COST ? '部隊HPが足りません（回復を待つ）' : ''; $('go').disabled = hp<HP_COST; }
+
+  $('go').addEventListener('click',()=>{
+    if(hp<HP_COST) return;
+    hp-=HP_COST; renderHP();
+    const i=cur; BOSSES[i].state='busy'; renderStates(); hideSheets();
+    // 出撃中（デモ用に4秒。実際は約30分）
+    openTravel(i, 4);
+  });
+
+  function openTravel(i, sec){
+    cur=i; $('travelTitle').textContent=BOSSES[i].name+'へ出撃中';
+    let t=sec; $('travelTime').textContent='0:0'+t; showSheet('travelSheet');
+    const iv=setInterval(()=>{ t--; if(t<=0){ clearInterval(iv); arrive(i); return;} $('travelTime').textContent='0:0'+t; },1000);
+  }
+
+  function arrive(i){
+    hideSheets();
+    const b=BOSSES[i]; const win=DECKS[selDeck].power>=b.power;
+    if(win){ b.state='cleared'; if(BOSSES[i+1]) BOSSES[i+1].state='open'; }
+    else { b.state='open'; } // 敗北なら再挑戦可（解放は維持）
+    renderStates();
+    if(win){
+      flashReport('勝利', `<div class="line">${b.name} を撃破</div>
+        <div class="line">メダル <b>+${fmt(b.reward.medal)}</b></div>
+        <div class="line">EXPアイテム <b>${b.reward.exp}</b></div>
+        <div class="line">ドロップ <b>${b.rare}</b></div>
+        ${BOSSES[i+1]?'<div class="line" style="color:#9fe0a0;margin-top:8px;">次のボスが解放された</div>':'<div class="line" style="color:#9fe0a0;margin-top:8px;">この界を制圧した</div>'}`, true);
+    } else {
+      flashReport('敗北', `<div class="line">${b.name} に届かなかった</div>
+        <div class="line" style="color:#ff9a8a;">戦力が足りない（要 ${fmt(b.power)}／編成 ${fmt(DECKS[selDeck].power)}）</div>
+        <div class="line" style="margin-top:8px;">部隊を鍛えて再挑戦を</div>`, false);
+    }
+  }
+
+  function flashReport(resText, bodyHtml, win){
+    $('reportRes').textContent=resText;
+    $('reportRes').className='res-big '+(win?'win':'lose');
+    $('reportBody').innerHTML=bodyHtml;
+    $('scrim').classList.add('show'); $('report').classList.add('show');
+  }
+  $('reportOk').addEventListener('click',()=>{ $('report').classList.remove('show'); $('scrim').classList.remove('show'); });
+
+  nodeEls.forEach((el,i)=>el.addEventListener('click',()=>openSheet(i)));
+  $('close').addEventListener('click',hideSheets);
+  $('travelClose').addEventListener('click',()=>{ /* デモ：出撃中は閉じても進行 */ $('travelSheet').classList.remove('show'); $('scrim').classList.remove('show'); });
+  $('scrim').addEventListener('click',()=>{ if($('report').classList.contains('show')) return; hideSheets(); });
+  $('back').addEventListener('click',()=>{ location.href='./home-mockup.html'; });
+
+  // HP自然回復（デモ：3秒ごと+5）
+  setInterval(()=>{ if(hp<100){ hp=Math.min(100,hp+5); renderHP(); if($('sheet').classList.contains('show')) checkWarn(); } },3000);
+</script>
+</body>
+</html>
