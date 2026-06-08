@@ -144,7 +144,7 @@
     const p=name.split('_'); let c;
     if(name.endsWith('_sp')){ c={id:name, sp:true, fam:'SP', attr:null, weap:null, rar:'SP', basePw:800, name:SPNAME[p[1]]||p[1]}; }
     else { c={id:name, sp:false, fam:p[1], attr:p[2], weap:p[3], rar:p[4], basePw:RARPW[p[4]]||300,
-              name:`${FAM[p[1]]||p[1]}・${ATTR[p[2]].lab}${WEAP[p[3]]}` }; }
+              name:`${FAM[p[1]]||p[1]}` }; }
     const rb={n:1,r:2,sr:3,ssr:4,SP:3}[c.rar]||1;
     const h=[...name].reduce((a,ch)=>a+ch.charCodeAt(0),0);
     c.level = 1 + (h%30);                       // Lv（仮）
@@ -191,7 +191,7 @@
     $('cardList').innerHTML=slice.map(c=>`<div class="cl ${c.id===highlight?'sel':''} ${equipped.has(c.id)?'equipped':''}" data-id="${c.id}">
       ${equipped.has(c.id)?'<span class="eqMark">編成済</span>':''}
       <div class="clThumb">${thumbInner(c)}</div>
-      <div class="clInfo"><div class="clName">${c.name}</div><div class="clBadges">${badges(c)}<span class="badge" style="background:#3a2a40;color:#e7d3ff">${c.rar}</span></div><div class="clStar">${stars(c)}</div></div></div>`).join('');
+      <div class="clInfo"><div class="clName">${c.name}</div><div class="clBadges">${badges(c)}<span class="badge" style="background:#3a2a40;color:#e7d3ff">${c.rar.toUpperCase()}</span></div><div class="clStar">${stars(c)}</div></div></div>`).join('');
     $('cardList').querySelectorAll('.cl').forEach(el=>el.addEventListener('click',()=>{ highlight=el.dataset.id; renderSelect(); }));
     $('pInfo').textContent=`${page+1} / ${pages}`; $('pPrev').disabled=page<=0; $('pNext').disabled=page>=pages-1;
     renderDetail();
@@ -204,7 +204,7 @@
       <div class="dTop">
         <div class="dThumb">${thumbInner(c)}</div>
         <div class="dName">${c.name}</div>
-        <div class="dBadges">${badges(c)}<span class="badge" style="background:#3a2a40;color:#e7d3ff">${c.rar}</span></div>
+        <div class="dBadges">${badges(c)}<span class="badge" style="background:#3a2a40;color:#e7d3ff">${c.rar.toUpperCase()}</span></div>
         <div class="dStarRow">${stars(c)}</div>
       </div>
       <div class="dStats">
