@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>チカリアン デッキ編成</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;800&display=swap');
+  :root{ --gold-hi:#fff3c8; --gold:#e8c25a; --panel:rgba(20,11,16,.9); --border:1.5px solid rgba(232,194,90,.5);
+         --hana:#e86b8a; --ha:#5fa564; --shin:#e8c25a; }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; height:100%;}
+  body{font-family:'Shippori Mincho','Yu Mincho',serif; color:var(--gold-hi); background:#070409; overflow:hidden;}
+  img{-webkit-user-drag:none; user-select:none;}
+  .root{position:relative; width:100%; max-width:480px; margin:0 auto; height:100dvh; overflow:hidden;
+        background:#0a0509 radial-gradient(80% 45% at 50% 0%, rgba(80,60,120,.2), transparent 60%);}
+  .screen{position:absolute; inset:0; display:flex; flex-direction:column;}
+  .screen.hide{display:none;}
+  .head{flex:none; text-align:center; padding:16px 16px 6px;}
+  .head .t{font-size:19px; font-weight:800; letter-spacing:4px; text-shadow:0 2px 6px #1a1030,0 0 16px rgba(150,130,255,.3);}
+  .badge{font-size:9px; font-weight:800; padding:1px 5px; border-radius:5px; color:#16100a;}
+  .badge.hana{background:var(--hana);} .badge.ha{background:var(--ha);} .badge.shin{background:var(--shin);} .badge.sp{background:linear-gradient(90deg,#ffe39a,#e8b54d);}
+  .wbadge{font-size:9px; font-weight:800; padding:1px 5px; border-radius:5px; color:#16100a; background:#cdb488;}
+
+  /* ===== 編成画面 ===== */
+  .tabs{flex:none; display:flex; gap:6px; padding:8px 14px 4px; overflow-x:auto;}
+  .tab{flex:none; font-family:inherit; font-size:12px; letter-spacing:1px; color:var(--gold-hi); background:var(--panel); border:var(--border); border-radius:16px; padding:7px 15px; cursor:pointer;}
+  .tab.sel{background:linear-gradient(180deg,rgba(255,228,154,.28),rgba(232,181,77,.18)); box-shadow:0 0 12px rgba(255,200,90,.3);}
+  .tab.locked{color:#8a7c60; cursor:default;}
+  .slots{flex:none; display:flex; gap:10px; padding:16px 16px 8px; justify-content:center;}
+  .slot{flex:1; max-width:128px; aspect-ratio:5/7; border-radius:12px; border:1.5px dashed rgba(232,194,90,.5); background:rgba(0,0,0,.3); position:relative; cursor:pointer; overflow:hidden;}
+  .slot.filled{border-style:solid;}
+  .slot .empty{position:absolute; inset:0; display:grid; place-items:center; font-size:30px; color:#6a5a3a;}
+  .slot .empty small{display:block; font-size:10px; color:#6a5a3a; letter-spacing:1px; margin-top:4px;}
+  .slot img{width:100%; height:100%; object-fit:cover; display:block;}
+  .slot .ph{position:absolute; inset:0; display:grid; place-items:center; font-size:26px; color:#7a5a3a; background:#241018;}
+  .slot .meta{position:absolute; left:0; right:0; bottom:0; padding:5px; background:linear-gradient(0deg,rgba(0,0,0,.85),transparent); display:flex; gap:4px; align-items:center;}
+  .slot .wp{font-size:9px; color:#fff3c8; margin-left:auto;}
+  .slot .rm{position:absolute; top:4px; right:4px; width:18px; height:18px; border-radius:50%; background:rgba(0,0,0,.6); border:1px solid rgba(232,194,90,.5); color:#ffd; font-size:11px; display:grid; place-items:center; z-index:2;}
+  .summary{flex:none; text-align:center; padding:6px 16px;}
+  .summary .pw{font-size:13px; color:#cdb488;} .summary .pw b{font-size:24px; color:#ffe39a; text-shadow:0 0 12px rgba(255,200,90,.5); margin-left:6px;}
+  .legend{font-size:10px; color:#9a8c70; margin-top:6px;}
+  .hint{flex:1; display:flex; align-items:center; justify-content:center; color:#7a6a4a; font-size:13px; letter-spacing:1px; padding:0 30px; text-align:center;}
+  .back{position:absolute; z-index:7; left:14px; bottom:14px; font-family:inherit; font-size:14px; letter-spacing:1px; color:var(--gold-hi); background:var(--panel); border:var(--border); border-radius:22px; padding:10px 20px; cursor:pointer;}
+
+  /* ===== カード選択画面 ===== */
+  .selHead{flex:none; display:flex; align-items:center; gap:10px; padding:14px 14px 8px;}
+  .selBack{font-family:inherit; font-size:13px; color:var(--gold-hi); background:var(--panel); border:var(--border); border-radius:18px; padding:7px 13px; cursor:pointer;}
+  .selTitle{flex:1; text-align:center; font-size:15px; font-weight:800; letter-spacing:2px;}
+  .selBody{flex:1; display:flex; gap:12px; padding:6px 14px 8px; min-height:0;}
+  /* 左：縦4枚 */
+  .leftCol{flex:none; width:40%; display:flex; flex-direction:column;}
+  .cardList{flex:1; display:flex; flex-direction:column; gap:8px; overflow:hidden;}
+  .cardList .cl{height:calc((100% - 24px)/4);}  /* 常に4枚ぶんの高さで割る＝最終ページでも伸びない */
+  .cl{flex:none; display:flex; gap:8px; align-items:center; background:var(--panel); border:1.5px solid rgba(232,194,90,.35); border-radius:10px; padding:6px; cursor:pointer; min-height:0;}
+  .cl.sel{border-color:#ffd98a; box-shadow:0 0 12px rgba(255,200,90,.4); background:linear-gradient(180deg,rgba(255,228,154,.16),rgba(232,181,77,.08));}
+  .cl.equipped{border-color:#8fe0a0; background:linear-gradient(180deg,rgba(120,200,120,.16),rgba(60,140,80,.08)); box-shadow:0 0 12px rgba(120,220,140,.35);}
+  .cl{position:relative;}
+  .cl .eqMark{position:absolute; top:5px; right:6px; font-size:9px; font-weight:800; color:#0b2a12; background:#8fe0a0; border-radius:6px; padding:1px 6px; letter-spacing:1px;}
+  .clThumb{flex:none; width:42px; aspect-ratio:5/7; border-radius:6px; overflow:hidden; border:1px solid rgba(232,194,90,.4); background:#241018; position:relative;}
+  .clThumb img{width:100%; height:100%; object-fit:cover;} .clThumb .cph{position:absolute; inset:0; display:grid; place-items:center; font-size:14px; color:#7a5a3a;}
+  .clInfo{flex:1; min-width:0;}
+  .clName{font-size:11px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .clBadges{display:flex; gap:3px; margin-top:4px;}
+  .clStar{font-size:10px; color:#ffd98a; margin-top:3px;}
+  .pager{flex:none; display:flex; align-items:center; justify-content:center; gap:14px; margin-top:8px;}
+  .pager button{font-family:inherit; font-size:16px; color:var(--gold-hi); background:var(--panel); border:var(--border); border-radius:50%; width:34px; height:34px; cursor:pointer;}
+  .pager button:disabled{opacity:.35; cursor:default;} .pager .pInfo{font-size:11px; color:#cdb488;}
+  /* 右：詳細 */
+  .rightCol{flex:1; display:flex; flex-direction:column; background:var(--panel); border:var(--border); border-radius:12px; padding:12px; min-width:0; overflow:hidden;}
+  .dTop{display:flex; flex-direction:column; align-items:center; text-align:center;}
+  .dThumb{flex:none; width:46%; max-width:150px; aspect-ratio:5/7; border-radius:8px; overflow:hidden; border:1px solid rgba(232,194,90,.5); background:#241018; position:relative;}
+  .dThumb img{width:100%; height:100%; object-fit:cover;} .dThumb .cph{position:absolute; inset:0; display:grid; place-items:center; font-size:22px; color:#7a5a3a;}
+  .dName{font-size:16px; font-weight:800; line-height:1.4; margin-top:10px;}
+  .dStarRow{font-size:13px; color:#ffd98a; margin-top:6px;}
+  .dBadges{display:flex; gap:4px; margin-top:7px; flex-wrap:wrap; justify-content:center;}
+  .dStats{flex:1; overflow-y:auto; margin-top:10px;}
+  .dRow{display:flex; justify-content:space-between; padding:6px 2px; border-bottom:1px dashed rgba(232,194,90,.22); font-size:13px;}
+  .dRow .k{color:#cdb488; letter-spacing:1px;} .dRow .v{color:var(--gold-hi); font-weight:700; text-align:right;}
+  .skillBlock{margin-top:8px;} .skillT{font-size:11px; color:#cdb488; letter-spacing:1px; margin-bottom:5px;}
+  .skill{font-size:12px; background:rgba(255,235,180,.06); border:1px solid rgba(232,194,90,.3); border-radius:8px; padding:5px 9px; margin-bottom:5px;}
+  .skill.empty{color:#7a6a4a; border-style:dashed;}
+  .skill .fx{color:#cdb488; font-size:11px; margin-left:6px;}
+  .equip{flex:none; margin-top:10px; width:100%; font-family:inherit; font-weight:800; font-size:15px; letter-spacing:2px; color:#2a160a; border:none; padding:12px; border-radius:24px; cursor:pointer; background:linear-gradient(180deg,#ffe49a,#e8b54d 60%,#b9842f);}
+  .equip:active{transform:translateY(2px);} .equip.cur{filter:grayscale(.4) brightness(.85);}
+</style>
+</head>
+<body>
+<div class="root">
+  <!-- 編成画面 -->
+  <div class="screen" id="scrDeck">
+    <div class="head"><div class="t">デッキ編成</div></div>
+    <div class="tabs" id="tabs"></div>
+    <div class="slots" id="slots"></div>
+    <div class="summary">
+      <div class="pw">デッキ総戦力 <b id="deckPw">0</b></div>
+      <div class="legend">属性 花→芯→葉→花 ／ 装備 剣→盾→杖→剣（SPは無属性・装備なし）</div>
+    </div>
+    <div class="hint">編成したい枠（上の3つ）をタップして<br>カードを選んでください</div>
+    <button class="back" id="back">‹ 戻る</button>
+  </div>
+
+  <!-- カード選択画面 -->
+  <div class="screen hide" id="scrSelect">
+    <div class="selHead">
+      <button class="selBack" id="selBack">‹ 戻る</button>
+      <div class="selTitle" id="selTitle">枠 1 のカードを選ぶ</div>
+      <span style="width:54px"></span>
+    </div>
+    <div class="selBody">
+      <div class="leftCol">
+        <div class="cardList" id="cardList"></div>
+        <div class="pager"><button id="pPrev">‹</button><span class="pInfo" id="pInfo">1 / 1</span><button id="pNext">›</button></div>
+      </div>
+      <div class="rightCol" id="rightCol"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const $=s=>document.getElementById(s); const fmt=n=>n.toLocaleString();
+  const ATTR={hana:{lab:'花',cls:'hana'}, ha:{lab:'葉',cls:'ha'}, shin:{lab:'芯',cls:'shin'}};
+  const WEAP={ken:'剣', tate:'盾', tsue:'杖'};
+  const RARPW={n:300,r:700,sr:1400,ssr:2600};
+  const FAM={hibiscus:'ハイビスカスマン', meshibe:'めしべだけマン'};
+  const SPNAME={dragon:'ゴールドドラゴン', girl:'ゴーストガール', houou:'鳳凰'};
+  const POOL=["chara_dragon_sp","chara_girl_sp","chara_houou_sp",
+    "chara_hibiscus_ha_ken_n","chara_hibiscus_ha_ken_r","chara_hibiscus_ha_ken_sr","chara_hibiscus_ha_ken_ssr",
+    "chara_hibiscus_ha_tate_n","chara_hibiscus_ha_tate_r","chara_hibiscus_ha_tate_sr","chara_hibiscus_ha_tate_ssr",
+    "chara_hibiscus_ha_tsue_n","chara_hibiscus_ha_tsue_r","chara_hibiscus_ha_tsue_sr","chara_hibiscus_ha_tsue_ssr",
+    "chara_hibiscus_hana_ken_n","chara_hibiscus_hana_ken_r","chara_hibiscus_hana_ken_sr","chara_hibiscus_hana_ken_ssr",
+    "chara_hibiscus_hana_tate_n","chara_hibiscus_hana_tate_r","chara_hibiscus_hana_tate_sr","chara_hibiscus_hana_tate_ssr",
+    "chara_hibiscus_hana_tsue_n","chara_hibiscus_hana_tsue_r","chara_hibiscus_hana_tsue_sr","chara_hibiscus_hana_tsue_ssr",
+    "chara_hibiscus_shin_ken_n","chara_hibiscus_shin_ken_r","chara_hibiscus_shin_ken_sr","chara_hibiscus_shin_ken_ssr",
+    "chara_hibiscus_shin_tate_n","chara_hibiscus_shin_tate_r","chara_hibiscus_shin_tate_sr","chara_hibiscus_shin_tate_ssr",
+    "chara_hibiscus_shin_tsue_n","chara_hibiscus_shin_tsue_r","chara_hibiscus_shin_tsue_sr","chara_hibiscus_shin_tsue_ssr",
+    "chara_meshibe_shin_tsue_sr","chara_meshibe_shin_tsue_ssr"];
+  const SKILLS=['一閃','守勢の構え','癒しの風','連撃','貫通','鼓舞'];
+  const SKILLFX={ '一閃':'攻撃 ×1.2（仮）','守勢の構え':'被ダメ ×0.85（仮）','癒しの風':'毎ターン装備パワー回復（仮）','連撃':'攻撃回数 ×1.15（仮）','貫通':'対防御 ×1.25（仮）','鼓舞':'味方全体 攻撃 ×1.1（仮）' };
+  const fx=n=> n&&SKILLFX[n]?`<span class="fx">${SKILLFX[n]}</span>`:'';
+
+  // カード1枚ごとの記録（モック：レア度等から決定的に生成。本番はSupabase/保存値）
+  function build(name){
+    const p=name.split('_'); let c;
+    if(name.endsWith('_sp')){ c={id:name, sp:true, fam:'SP', attr:null, weap:null, rar:'SP', basePw:800, name:SPNAME[p[1]]||p[1]}; }
+    else { c={id:name, sp:false, fam:p[1], attr:p[2], weap:p[3], rar:p[4], basePw:RARPW[p[4]]||300,
+              name:`${FAM[p[1]]||p[1]}・${ATTR[p[2]].lab}${WEAP[p[3]]}` }; }
+    const rb={n:1,r:2,sr:3,ssr:4,SP:3}[c.rar]||1;
+    const h=[...name].reduce((a,ch)=>a+ch.charCodeAt(0),0);
+    c.level = 1 + (h%30);                       // Lv（仮）
+    c.star  = (h%4);                            // 強化値★（仮）
+    c.maxStar = 5;
+    c.power = c.basePw + c.level*40 + c.star*120;// 戦闘力（仮）
+    c.capacity = c.sp ? null : 600 + rb*500 + c.star*150; // 装備容量（仮・SPは装備しない）
+    c.skillFixed = c.sp ? null : SKILLS[h%SKILLS.length];
+    c.skillSlots = c.sp ? [] : [ (h%3===0?SKILLS[(h+2)%SKILLS.length]:null), null ]; // 空きスロット2（一部埋まり）
+    return c;
+  }
+  const CARDS = POOL.map(build);
+  const byId = id => CARDS.find(c=>c.id===id);
+
+  const DECKS=[
+    {name:'デッキ1', locked:false, slots:['chara_hibiscus_hana_ken_ssr','chara_hibiscus_ha_tate_sr','chara_dragon_sp']},
+    {name:'デッキ2', locked:false, slots:['chara_hibiscus_ha_tsue_r','chara_hibiscus_shin_ken_n','chara_houou_sp']},
+    {name:'デッキ3', locked:true,  slots:[null,null,null]},
+    {name:'デッキ4', locked:true,  slots:[null,null,null]},
+  ];
+  let curDeck=0, selSlot=-1, page=0, highlight=null;
+  const PER=4;
+
+  function thumbInner(c){ return `<div class="cph">❖</div><img src="./images/${c.id}.png" alt="" onload="this.previousElementSibling.style.display='none'" onerror="this.remove()">`; }
+  function badges(c){ return c.sp ? `<span class="badge sp">SP</span>` : `<span class="badge ${ATTR[c.attr].cls}">${ATTR[c.attr].lab}</span><span class="wbadge">${WEAP[c.weap]}</span>`; }
+  function stars(c){ return c.sp ? '—' : (c.star>0 ? '★'.repeat(c.star) : '強化なし'); }
+
+  /* 編成画面 */
+  function renderTabs(){ $('tabs').innerHTML=DECKS.map((d,i)=>`<button class="tab ${i===curDeck?'sel':''} ${d.locked?'locked':''}" data-i="${i}">${d.name}${d.locked?' 🔒':''}</button>`).join('');
+    $('tabs').querySelectorAll('.tab').forEach(el=>el.addEventListener('click',()=>{const i=+el.dataset.i; if(DECKS[i].locked) return; curDeck=i; renderDeck();})); }
+  function renderSlots(){ const d=DECKS[curDeck];
+    $('slots').innerHTML=d.slots.map((sid,si)=>{ if(!sid) return `<div class="slot" data-s="${si}"><div class="empty">＋<small>枠 ${si+1}</small></div></div>`;
+      const c=byId(sid); return `<div class="slot filled" data-s="${si}"><div class="rm" data-rm="${si}">×</div>${thumbInner(c)}<div class="meta">${badges(c)}<span class="wp">${fmt(c.power)}</span></div></div>`;}).join('');
+    $('slots').querySelectorAll('.slot').forEach(el=>el.addEventListener('click',(e)=>{ if(e.target.dataset.rm!==undefined){ d.slots[+e.target.dataset.rm]=null; renderDeck(); return;} openSelect(+el.dataset.s); })); }
+  function renderDeck(){ renderTabs(); renderSlots(); const d=DECKS[curDeck]; $('deckPw').textContent=fmt(d.slots.reduce((a,s)=>a+(s?byId(s).power:0),0)); }
+
+  /* カード選択画面 */
+  function openSelect(si){ selSlot=si; highlight = DECKS[curDeck].slots[si] || CARDS[0].id; page = Math.floor(CARDS.findIndex(c=>c.id===highlight)/PER); if(page<0)page=0;
+    $('selTitle').textContent=`枠 ${si+1} のカードを選ぶ`; $('scrDeck').classList.add('hide'); $('scrSelect').classList.remove('hide'); renderSelect(); }
+  function renderSelect(){
+    const pages=Math.ceil(CARDS.length/PER); page=Math.max(0,Math.min(page,pages-1));
+    const slice=CARDS.slice(page*PER,page*PER+PER);
+    const equipped=new Set(DECKS[curDeck].slots.filter(Boolean));
+    $('cardList').innerHTML=slice.map(c=>`<div class="cl ${c.id===highlight?'sel':''} ${equipped.has(c.id)?'equipped':''}" data-id="${c.id}">
+      ${equipped.has(c.id)?'<span class="eqMark">編成済</span>':''}
+      <div class="clThumb">${thumbInner(c)}</div>
+      <div class="clInfo"><div class="clName">${c.name}</div><div class="clBadges">${badges(c)}<span class="badge" style="background:#3a2a40;color:#e7d3ff">${c.rar}</span></div><div class="clStar">${stars(c)}</div></div></div>`).join('');
+    $('cardList').querySelectorAll('.cl').forEach(el=>el.addEventListener('click',()=>{ highlight=el.dataset.id; renderSelect(); }));
+    $('pInfo').textContent=`${page+1} / ${pages}`; $('pPrev').disabled=page<=0; $('pNext').disabled=page>=pages-1;
+    renderDetail();
+  }
+  function renderDetail(){ const c=byId(highlight); const equipped = DECKS[curDeck].slots.includes(c.id); const isCur = DECKS[curDeck].slots[selSlot]===c.id;
+    const skillsHtml = c.sp
+      ? `<div class="skill empty">SPカードはスキルを持ちません</div>`
+      : `<div class="skill">固定：${c.skillFixed}${fx(c.skillFixed)}</div>` + c.skillSlots.map(s=> s?`<div class="skill">習得：${s}${fx(s)}</div>`:`<div class="skill empty">空きスロット</div>`).join('');
+    $('rightCol').innerHTML=`
+      <div class="dTop">
+        <div class="dThumb">${thumbInner(c)}</div>
+        <div class="dName">${c.name}</div>
+        <div class="dBadges">${badges(c)}<span class="badge" style="background:#3a2a40;color:#e7d3ff">${c.rar}</span></div>
+        <div class="dStarRow">${stars(c)}</div>
+      </div>
+      <div class="dStats">
+        <div class="dRow"><span class="k">レベル</span><span class="v">Lv ${c.level}</span></div>
+        <div class="dRow"><span class="k">強化値</span><span class="v">${c.sp?'—':(c.star>0?('★'+c.star):'強化なし')}</span></div>
+        <div class="dRow"><span class="k">戦闘力</span><span class="v">${fmt(c.power)}</span></div>
+        <div class="dRow"><span class="k">装備容量</span><span class="v">${c.capacity?fmt(c.capacity):'— (装備なし)'}</span></div>
+        <div class="dRow"><span class="k">種族</span><span class="v">${c.sp?'SP':(FAM[c.fam]||c.fam)}</span></div>
+        <div class="skillBlock"><div class="skillT">スキル（固定1＋空き2）</div>${skillsHtml}</div>
+      </div>
+      <button class="equip ${isCur?'cur':''}" id="equipBtn">${isCur?'この枠に編成済み':(equipped?'別の枠から移して編成':'この枠に編成')}</button>`;
+    $('equipBtn').addEventListener('click',()=>{ const d=DECKS[curDeck];
+      // 既に別枠にいれば外してから
+      const at=d.slots.indexOf(c.id); if(at>=0 && at!==selSlot) d.slots[at]=null;
+      d.slots[selSlot]=c.id; backToDeck(); });
+  }
+  function backToDeck(){ $('scrSelect').classList.add('hide'); $('scrDeck').classList.remove('hide'); renderDeck(); }
+
+  $('pPrev').addEventListener('click',()=>{ page--; renderSelect(); });
+  $('pNext').addEventListener('click',()=>{ page++; renderSelect(); });
+  $('selBack').addEventListener('click',backToDeck);
+  $('back').addEventListener('click',()=>{ location.href='./home-mockup.html'; });
+  renderDeck();
+</script>
+</body>
+</html>

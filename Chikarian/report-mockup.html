@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>チカリアン 戦闘報告書</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;800&display=swap');
+  :root{ --gold-hi:#fff3c8; --gold:#e8c25a; --panel:rgba(20,11,16,.9); --border:1.5px solid rgba(232,194,90,.5); }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; height:100%;}
+  body{font-family:'Shippori Mincho','Yu Mincho',serif; color:var(--gold-hi); background:#070409; overflow:hidden;}
+  .root{position:relative; width:100%; max-width:480px; margin:0 auto; height:100dvh; overflow:hidden;
+        background:#0a0509 radial-gradient(80% 50% at 50% 0%, rgba(120,40,30,.22), transparent 60%); display:flex; flex-direction:column;}
+  .head{flex:none; text-align:center; padding:18px 16px 10px;}
+  .head .t{font-size:20px; font-weight:800; letter-spacing:4px; text-shadow:0 2px 6px #3a0010,0 0 16px rgba(255,150,70,.4);}
+  .head .s{font-size:11px; color:#cdb488; letter-spacing:2px; margin-top:4px;}
+
+  /* ===== 一覧 ===== */
+  .list{flex:1; overflow-y:auto; padding:6px 14px 90px;}
+  .empty{margin-top:60px; text-align:center; color:#9a8c70; font-size:14px; letter-spacing:1px; line-height:2;}
+  .rep{position:relative; background:var(--panel); border:var(--border); border-radius:14px; padding:13px 15px; margin-bottom:11px; box-shadow:0 3px 12px rgba(0,0,0,.4); cursor:pointer;}
+  .rep.unread{border-color:rgba(255,210,120,.8); box-shadow:0 0 14px rgba(255,190,90,.25);}
+  .rep .unreadDot{position:absolute; top:12px; right:13px; width:9px; height:9px; border-radius:50%; background:#ffcf6a; box-shadow:0 0 8px rgba(255,200,90,.9);}
+  .repTop{display:flex; align-items:center; gap:10px; margin-bottom:7px;}
+  .badge{flex:none; font-size:12px; font-weight:800; letter-spacing:2px; padding:3px 11px; border-radius:8px;}
+  .badge.win{color:#0b2a12; background:linear-gradient(180deg,#bfe9c0,#5fa564);}
+  .badge.lose{color:#2a0d09; background:linear-gradient(180deg,#ffb3a0,#e0563b);}
+  .repName{flex:1; font-size:15px; font-weight:800; letter-spacing:1px;}
+  .repTime{flex:none; font-size:10px; color:#9a8c70;}
+  .repSub{font-size:11px; color:#cdb488; letter-spacing:1px;}
+  .chev{position:absolute; right:14px; bottom:12px; color:#cdb488; font-size:13px;}
+
+  .footer{position:absolute; left:0; right:0; bottom:0; padding:12px 16px 18px; background:linear-gradient(0deg, #0a0509 60%, transparent); display:flex; gap:10px; max-width:480px; margin:0 auto;}
+  .back{flex:1; font-family:inherit; font-size:15px; letter-spacing:2px; color:var(--gold-hi); background:var(--panel); border:var(--border); border-radius:24px; padding:13px; cursor:pointer;}
+  .back:active{transform:translateY(1px);}
+  .dev{flex:none; font-family:inherit; font-size:11px; color:#9a8c70; background:rgba(255,255,255,.04); border:1px solid rgba(232,194,90,.3); border-radius:24px; padding:0 14px; cursor:pointer;}
+
+  /* ===== 個別詳細 ===== */
+  .detail{position:absolute; inset:0; z-index:10; background:#0a0509; display:none; flex-direction:column;}
+  .detail.show{display:flex;}
+  .detail .scroll{flex:1; overflow-y:auto; padding:18px 16px 90px;}
+  .result{text-align:center; font-size:34px; font-weight:800; letter-spacing:6px; margin:6px 0 4px;}
+  .result.win{color:#9fe0a0; text-shadow:0 0 18px rgba(120,220,140,.6);}
+  .result.lose{color:#ff9a8a; text-shadow:0 0 18px rgba(255,120,80,.5);}
+  .dHead{text-align:center; font-size:12px; color:#cdb488; letter-spacing:1px; line-height:1.9; margin-bottom:12px;}
+  .dHead b{color:var(--gold-hi);}
+  .msg{background:rgba(255,235,180,.05); border-left:3px solid var(--gold); border-radius:6px; padding:10px 12px; font-size:13px; line-height:1.8; color:#ffe8c8; margin-bottom:14px;}
+  .msg.lose{border-left-color:#e0563b; color:#ffd2c6;}
+  .sec{margin:0 0 14px;}
+  .secT{font-size:12px; color:#cdb488; letter-spacing:2px; border-left:3px solid var(--gold); padding-left:8px; margin-bottom:8px;}
+  .rewards{display:flex; flex-wrap:wrap; gap:6px;}
+  .rw{font-size:12px; background:rgba(255,235,180,.07); border:1px solid rgba(232,194,90,.4); border-radius:9px; padding:4px 11px; color:var(--gold-hi);}
+  .rw b{color:#ffe39a;} .rw.rare{border-color:#ffb3a0; color:#ffd8cc;} .none{font-size:12px; color:#9a8c70;}
+  .vs{display:flex; align-items:center; justify-content:center; gap:14px; background:rgba(0,0,0,.25); border:1px dashed rgba(232,194,90,.3); border-radius:12px; padding:12px;}
+  .vs .side{text-align:center; flex:1;} .vs .lab{font-size:10px; color:#cdb488; letter-spacing:1px;}
+  .vs .num{font-size:22px; font-weight:800; margin-top:3px;} .vs .num.me{color:#ffe39a;} .vs .num.foe{color:#ff9a8a;}
+  .vs .x{font-size:13px; color:#cdb488;}
+  /* 装備パワー表 */
+  .ptable{width:100%; border-collapse:collapse; font-size:12px;}
+  .ptable th{font-size:10px; color:#cdb488; letter-spacing:1px; font-weight:600; padding:5px 4px; border-bottom:1px solid rgba(232,194,90,.3); text-align:right;}
+  .ptable th:first-child{text-align:left;}
+  .ptable td{padding:7px 4px; border-bottom:1px solid rgba(232,194,90,.14); text-align:right; color:var(--gold-hi);}
+  .ptable td.c{text-align:left; display:flex; align-items:center; gap:7px;}
+  .ptable td .th{width:22px; height:30px; border-radius:4px; overflow:hidden; border:1px solid rgba(232,194,90,.4); background:#241018; position:relative; flex:none;}
+  .ptable td .th img{width:100%; height:100%; object-fit:cover;}
+  .ptable td .th .ph{position:absolute; inset:0; display:grid; place-items:center; font-size:10px; color:#7a5a3a;}
+  .ptable td.loss{color:#ff9a8a;} .ptable td.remain{color:#9fe0a0;}
+
+  .dnav{position:absolute; left:0; right:0; bottom:0; padding:12px 14px 18px; background:linear-gradient(0deg,#0a0509 60%,transparent); display:flex; gap:8px; max-width:480px; margin:0 auto;}
+  .dnav button{font-family:inherit; font-size:13px; letter-spacing:1px; border-radius:22px; padding:11px 0; cursor:pointer; background:var(--panel); border:var(--border); color:var(--gold-hi);}
+  .dnav .b-list{flex:1.2;} .dnav .b-prev,.dnav .b-next{flex:1;} .dnav .b-del{flex:1; color:#ff9a8a; border-color:rgba(224,86,59,.5);}
+  .dnav button:disabled{opacity:.4; cursor:default;}
+</style>
+</head>
+<body>
+<div class="root">
+  <div class="head"><div class="t">戦 闘 報 告 書</div><div class="s">ボス戦の記録</div></div>
+  <div class="list" id="list"></div>
+  <div class="footer">
+    <button class="back" id="back">‹ ホームに戻る</button>
+    <button class="dev" id="dev" title="確認用サンプル">＋例</button>
+  </div>
+
+  <!-- 個別詳細 -->
+  <div class="detail" id="detail">
+    <div class="scroll" id="detailBody"></div>
+    <div class="dnav">
+      <button class="b-list" id="navList">リスト</button>
+      <button class="b-prev" id="navPrev">‹ 前</button>
+      <button class="b-next" id="navNext">次 ›</button>
+      <button class="b-del" id="navDel">削除</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const $=s=>document.getElementById(s); const fmt=n=>n.toLocaleString();
+  function load(){ try{ return JSON.parse(localStorage.getItem('ck_reports')||'[]'); }catch(e){ return []; } }
+  function save(log){ try{ localStorage.setItem('ck_reports', JSON.stringify(log)); }catch(e){} }
+  function readMark(){ try{ return +(localStorage.getItem('ck_reports_read')||0); }catch(e){ return 0; } }
+  function setReadMark(t){ try{ localStorage.setItem('ck_reports_read', String(t)); }catch(e){} }
+  function dt(ts){ const d=new Date(ts); const p=n=>String(n).padStart(2,'0'); return `${p(d.getMonth()+1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; }
+
+  let curIdx=-1;
+
+  function renderList(){
+    const log=load(); const lastRead=readMark();
+    if(!log.length){ $('list').innerHTML=`<div class="empty">まだ報告書はありません。<br>ボスへ出撃すると、到達時にここへ記録が届きます。</div>`; return; }
+    $('list').innerHTML = log.map((r,idx)=>{
+      const unread = r.t> lastRead;
+      return `<div class="rep ${unread?'unread':''}" data-i="${idx}">
+        ${unread?'<span class="unreadDot"></span>':''}
+        <div class="repTop"><span class="badge ${r.win?'win':'lose'}">${r.win?'勝利':'敗北'}</span><span class="repName">${r.name}</span><span class="repTime">${dt(r.t)}</span></div>
+        <div class="repSub">${r.area||'―'} ／ 出撃：${r.deck||'―'}</div>
+        <span class="chev">詳細 ›</span></div>`;
+    }).join('');
+    $('list').querySelectorAll('.rep').forEach(el=>el.addEventListener('click',()=>openDetail(+el.dataset.i)));
+    if(log[0]) setReadMark(log[0].t);
+  }
+
+  function openDetail(idx){
+    const log=load(); if(idx<0||idx>=log.length) return; curIdx=idx; const r=log[idx];
+    const win=r.win;
+    const msg = win
+      ? `${r.deck} の部隊は、${r.area||''} ${r.name} の討伐に成功した。`
+      : `${r.deck} の部隊は ${r.name} に届かなかった。戦力の差が大きく、敵を退けられなかった。`;
+    const rewards = win
+      ? `<span class="rw">メダル <b>+${fmt(r.medal)}</b></span><span class="rw">EXP <b>${r.exp}</b></span>${r.rare?`<span class="rw rare">${r.rare}</span>`:''}`
+      : `<span class="none">報酬なし（再挑戦できます）</span>`;
+    const cards = (r.cards||[]);
+    const rows = cards.length ? cards.map(c=>`
+      <tr><td class="c"><span class="th"><span class="ph">❖</span><img src="./images/${c.img}.png" onload="this.previousElementSibling.style.display='none'" onerror="this.remove()"></span>装備</td>
+      <td>${fmt(c.pw)}</td><td class="loss">-${fmt(c.loss)}</td><td class="remain">${fmt(c.remain)}</td></tr>`).join('')
+      : `<tr><td class="c">―</td><td>―</td><td>―</td><td>―</td></tr>`;
+    $('detailBody').innerHTML = `
+      <div class="result ${win?'win':'lose'}">${win?'VICTORY':'DEFEATED'}</div>
+      <div class="dHead">出撃：<b>${r.deck||'―'}</b> ／ 相手：<b>${r.name}</b>（${r.kind||''}）<br>${r.area||''}　${dt(r.t)}</div>
+      <div class="msg ${win?'':'lose'}">${msg}</div>
+      <div class="sec"><div class="secT">獲得報酬</div><div class="rewards">${rewards}</div></div>
+      <div class="sec"><div class="secT">戦闘力</div>
+        <div class="vs"><div class="side"><div class="lab">自軍（${r.deck||'―'}）</div><div class="num me">${fmt(r.deckPower||0)}</div></div>
+        <div class="x">VS</div><div class="side"><div class="lab">敵軍（${r.name}）</div><div class="num foe">${fmt(r.bossPower||0)}</div></div></div></div>
+      <div class="sec"><div class="secT">装備パワー</div>
+        <table class="ptable"><thead><tr><th>カード</th><th>出撃</th><th>損失</th><th>残存</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    $('navPrev').disabled = (idx>=log.length-1); // 古い方向
+    $('navNext').disabled = (idx<=0);            // 新しい方向
+    $('detail').classList.add('show');
+  }
+
+  $('navList').addEventListener('click',()=>{ $('detail').classList.remove('show'); renderList(); });
+  $('navPrev').addEventListener('click',()=>{ if(curIdx<load().length-1) openDetail(curIdx+1); }); // 前＝古い
+  $('navNext').addEventListener('click',()=>{ if(curIdx>0) openDetail(curIdx-1); });                // 次＝新しい
+  $('navDel').addEventListener('click',()=>{ const log=load(); if(curIdx<0) return; log.splice(curIdx,1); save(log);
+    if(!log.length){ $('detail').classList.remove('show'); renderList(); return; }
+    if(curIdx>=log.length) curIdx=log.length-1; openDetail(curIdx); });
+
+  $('dev').addEventListener('click',()=>{
+    const log=load();
+    const samples=[
+      {name:'ヴェルグラフ', kind:'中ボス', area:'古代樹海界', win:true, deck:'デッキ1', deckPower:4200, bossPower:3000, medal:300, exp:'経験の書（中）×2', rare:'道化の仮面',
+       cards:[{img:'chara_hibiscus_hana_ken_ssr',pw:2000,loss:300,remain:1700},{img:'chara_hibiscus_ha_tate_sr',pw:1400,loss:210,remain:1190},{img:'chara_dragon_sp',pw:800,loss:120,remain:680}]},
+      {name:'ゼルヴァニクス', kind:'中ボス', area:'古代樹海界', win:false, deck:'デッキ2', deckPower:2100, bossPower:5000, medal:0, exp:'', rare:'',
+       cards:[{img:'chara_hibiscus_ha_tsue_r',pw:1000,loss:1000,remain:0},{img:'chara_hibiscus_shin_ken_n',pw:600,loss:600,remain:0},{img:'chara_houou_sp',pw:500,loss:500,remain:0}]},
+    ];
+    const s=JSON.parse(JSON.stringify(samples[log.length%2])); s.t=Date.now();
+    log.unshift(s); save(log); renderList();
+  });
+
+  $('back').addEventListener('click',()=>{ location.href='./home-mockup.html'; });
+  renderList();
+</script>
+</body>
+</html>

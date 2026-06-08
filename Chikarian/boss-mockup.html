@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>チカリアン ボス挑戦</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;800&display=swap');
+  :root{ --gold-hi:#fff3c8; --gold:#e8c25a; --panel:rgba(18,10,14,.9); --border:1.5px solid rgba(232,194,90,.55); --red:#e0563b; }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; height:100%;}
+  body{font-family:'Shippori Mincho','Yu Mincho',serif; color:var(--gold-hi); background:#070409; overflow:hidden;}
+  img{-webkit-user-drag:none; user-select:none;}
+  .root{position:relative; width:100%; max-width:480px; margin:0 auto; height:100dvh; overflow:hidden; background:#070409; display:flex; align-items:center; justify-content:center;}
+  .mapWrap{position:relative; width:100%; aspect-ratio:941/1672; max-height:100dvh; background:#070409 url('./images/boss_map_1.png') center/100% 100% no-repeat;}
+  .mapDim{position:absolute; inset:0; pointer-events:none; background:linear-gradient(180deg, rgba(0,0,0,.5), transparent 14% 80%, rgba(0,0,0,.5));}
+  .mapWrap.placeholder{background:#0c0810; display:grid; place-items:center;}
+  .phTxt{display:none; color:#8a7c60; font-size:14px; letter-spacing:2px; text-align:center; padding:0 30px;}
+  .mapWrap.placeholder .phTxt{display:block;}
+
+  .node{position:absolute; transform:translate(-50%,-50%); text-align:center; cursor:pointer; z-index:4;}
+  .dot{position:relative; margin:0 auto; display:grid; place-items:center;}
+  .dot.sub{width:42px; height:42px;} .dot.boss{width:52px; height:52px;}
+  .gi{width:14px; height:14px; border-radius:50%; background:var(--red); box-shadow:0 0 10px rgba(224,86,59,.9); animation:bossPulse 2.1s ease-in-out infinite; display:grid; place-items:center;}
+  .gi::after{font-size:11px;}
+  .dot img{position:absolute; inset:0; width:100%; height:100%; object-fit:contain;}
+  .dot.hasimg .gi{display:none;}
+  @keyframes bossPulse{0%,100%{box-shadow:0 0 8px rgba(224,86,59,.6);}50%{box-shadow:0 0 16px rgba(255,110,70,1);}}
+  .node .lbl{margin-top:7px; font-size:11px; letter-spacing:1px; color:var(--gold-hi); text-shadow:0 1px 4px #000,0 0 8px #000; white-space:nowrap;}
+  .node.up{display:flex; flex-direction:column-reverse;} .node.up .lbl{margin-top:0; margin-bottom:7px;}
+  .node.locked .lbl{color:#b9ad95;}
+  .node.cleared .gi{background:#5fa564; box-shadow:0 0 8px rgba(120,220,140,.7); animation:none;}
+  .node.cleared .gi::after{content:'✓'; color:#0b2a12; font-weight:800;}
+  .node.locked .gi{background:#5a5048; box-shadow:none; animation:none;}
+  .node.locked .gi::after{content:'🔒';}
+  .node.busy .gi{animation:bossSpin 1.6s linear infinite;}
+  .dot::after{content:''; position:absolute; top:-4px; right:-4px; width:18px; height:18px; border-radius:50%; display:none; place-items:center; font-size:11px; border:1.5px solid rgba(0,0,0,.4);}
+  .node.cleared .dot.hasimg::after{display:grid; content:'✓'; background:#5fa564; color:#0b2a12;}
+  .node.locked .dot.hasimg::after{display:grid; content:'🔒'; background:#2a2420; color:#cdb488; font-size:9px;}
+  .node.busy .dot.hasimg::after{display:grid; content:'⟳'; background:#234a6a; color:#cfeeff; font-size:10px;}
+  .node.cleared .dot.hasimg img{filter:brightness(.85) saturate(.9);}
+  .node.locked .dot.hasimg img{filter:grayscale(1) brightness(.5);}
+  .node.busy .dot.hasimg img{animation:busyDim 1.4s ease-in-out infinite;}
+  @keyframes busyDim{0%,100%{filter:brightness(1);}50%{filter:brightness(.6);}}
+  @keyframes bossSpin{to{filter:hue-rotate(30deg)}}
+
+  /* 左上：出撃ゲージ（複数を縦に積む。細くスマート） */
+  .sorties{position:absolute; z-index:6; top:14px; left:14px; width:182px; display:flex; flex-direction:column; gap:7px;}
+  .sortie{background:var(--panel); border:var(--border); border-radius:10px; padding:6px 9px; box-shadow:0 2px 10px rgba(0,0,0,.5);}
+  .sortieTop{display:flex; align-items:center; gap:6px; margin-bottom:5px;}
+  .sortie .nm{font-size:11px; color:var(--gold-hi); letter-spacing:.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1;}
+  .cancel{flex:none; width:17px; height:17px; border-radius:50%; border:1px solid rgba(232,194,90,.5); background:rgba(0,0,0,.3); color:#cdb488; font-size:11px; line-height:1; cursor:pointer; padding:0; display:grid; place-items:center;}
+  .cancel:active{transform:scale(.9);}
+  .sgRow{display:flex; align-items:center; gap:7px;}
+  .sgRow .ph{font-size:9px; letter-spacing:.5px; color:#cdb488; flex:none; width:42px;}
+  .sgRow .ph.pg-go{color:#e0a23b;} .sgRow .ph.pg-back{color:#9fd0ff;} .sgRow .ph.pg-cancel{color:#bbb;}
+  .sgbar{flex:1; height:5px; border-radius:3px; background:rgba(255,255,255,.14); overflow:hidden;}
+  .sgfill{display:block; height:5px; width:0%; border-radius:3px;}
+  .sgfill.pg-go{background:linear-gradient(90deg,#e0a23b,#ffd98a);}
+  .sgfill.pg-back{background:linear-gradient(90deg,#3b7ae0,#9fd0ff);}
+  .sgfill.pg-cancel{background:linear-gradient(90deg,#9a9a9a,#cfcfcf);}
+  .sgRow .tm{font-size:9px; color:var(--gold-hi); flex:none; min-width:30px; text-align:right;}
+
+  /* 右上：界選択（畳み式）＋挑戦回数 */
+  .worldsel{position:absolute; z-index:7; top:14px; right:14px; width:152px;}
+  .wbtn{width:100%; background:var(--panel); border:var(--border); border-radius:12px; padding:8px 12px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; gap:6px;}
+  .wbtn .wn{font-size:13px; font-weight:800; color:var(--gold-hi); letter-spacing:1px;}
+  .wbtn .ar{font-size:11px; color:#cdb488; transition:transform .25s;}
+  .worldsel.open .wbtn .ar{transform:rotate(180deg);}
+  .wlist{margin-top:6px; background:var(--panel); border:var(--border); border-radius:12px; overflow:hidden; max-height:0; transition:max-height .3s ease;}
+  .worldsel.open .wlist{max-height:60vh; overflow-y:auto;}
+  .witem{padding:9px 12px; font-size:12px; letter-spacing:1px; border-bottom:1px solid rgba(232,194,90,.18); cursor:pointer; color:var(--gold-hi); display:flex; justify-content:space-between; align-items:center;}
+  .witem:last-child{border-bottom:none;} .witem.cur{background:rgba(255,228,154,.16);} .witem.locked{color:#8a7c60; cursor:default;}
+  .tries{margin-top:6px; background:var(--panel); border:var(--border); border-radius:12px; padding:6px 12px; text-align:center; font-size:11px; color:#cdb488; letter-spacing:1px;}
+  .tries b{color:#ffe39a; font-weight:800;}
+
+  .back{position:absolute; z-index:7; left:14px; bottom:16px; font-family:inherit; font-size:14px; letter-spacing:1px; color:var(--gold-hi); background:var(--panel); border:var(--border); border-radius:22px; padding:11px 22px; cursor:pointer;}
+  .back:active{transform:translateY(1px);}
+
+  .scrim{position:absolute; inset:0; z-index:8; background:rgba(0,0,0,.45); opacity:0; pointer-events:none; transition:.3s;}
+  .scrim.show{opacity:1; pointer-events:auto;}
+  .sheet{position:absolute; z-index:9; left:0; right:0; bottom:0; transform:translateY(110%); max-width:480px; margin:0 auto; transition:transform .35s cubic-bezier(.2,.8,.25,1); background:var(--panel); border-top:var(--border); border-left:var(--border); border-right:var(--border); border-radius:18px 18px 0 0; padding:16px 18px 22px; box-shadow:0 -8px 24px rgba(0,0,0,.6);}
+  .sheet.show{transform:translateY(0);}
+  .sheet h3{margin:2px 0 4px; font-size:19px; letter-spacing:2px; text-align:center; text-shadow:0 0 12px rgba(255,120,80,.4);}
+  .sub-t{text-align:center; font-size:11px; color:#cdb488; letter-spacing:2px; margin-bottom:8px;}
+  .stat{display:flex; justify-content:space-between; padding:7px 4px; border-bottom:1px dashed rgba(232,194,90,.25); font-size:14px;}
+  .stat .k{color:#cdb488; letter-spacing:1px;} .stat .v{color:var(--gold-hi); font-weight:700; text-align:right;}
+  .stat .v.attr-none{color:#9fd09f;}
+  .secTitle{margin:13px 0 5px; font-size:12px; color:#cdb488; letter-spacing:2px; border-left:3px solid var(--gold); padding-left:8px;}
+  .drops{display:flex; flex-wrap:wrap; gap:6px;}
+  .drop{font-size:12px; background:rgba(255,235,180,.07); border:1px solid rgba(232,194,90,.4); border-radius:10px; padding:4px 10px;}
+  .drop.rare{border-color:#ffb3a0; color:#ffd8cc; box-shadow:0 0 8px rgba(255,120,80,.3);}
+  .deckTitle{font-size:12px; color:#cdb488; letter-spacing:1px; margin:13px 0 6px;}
+  .decks{display:flex; gap:8px;}
+  .deck{flex:1; background:rgba(255,235,180,.06); border:var(--border); border-radius:12px; padding:9px 6px; text-align:center; cursor:pointer;}
+  .deck.sel{background:linear-gradient(180deg,rgba(255,228,154,.28),rgba(232,181,77,.18)); box-shadow:0 0 12px rgba(255,200,90,.35);}
+  .deck.busy{opacity:.4; cursor:default;}
+  .deck .dn{font-size:13px; font-weight:800;} .deck .dp{font-size:11px; color:#cdb488; margin-top:2px;}
+  .deck .dp.win{color:#9fe0a0;} .deck .dp.lose{color:#ff9a8a;} .deck .dp.busy{color:#9a8c70;}
+  .deckView{margin-top:10px; background:rgba(0,0,0,.25); border:1px dashed rgba(232,194,90,.3); border-radius:12px; padding:9px;}
+  .dvHead{font-size:11px; color:#cdb488; letter-spacing:1px; margin-bottom:7px; display:flex; justify-content:space-between;}
+  .cards{display:flex; gap:6px;}
+  .card{flex:1; aspect-ratio:5/7; border-radius:7px; overflow:hidden; border:1px solid rgba(232,194,90,.4); background:#241018; position:relative;}
+  .card img{width:100%; height:100%; object-fit:cover; display:block;}
+  .card .cph{position:absolute; inset:0; display:grid; place-items:center; font-size:16px; color:#7a5a3a;}
+  .go{margin-top:14px; width:100%; font-family:inherit; font-weight:800; font-size:16px; letter-spacing:2px; border:none; padding:13px; border-radius:26px; cursor:pointer; background:linear-gradient(180deg,#ffcaa0,#e0563b 60%,#a0341c); color:#2a0d06; box-shadow:0 4px 0 #6a1e0e,0 8px 18px rgba(0,0,0,.45);}
+  .go:active{transform:translateY(3px);} .go:disabled{filter:grayscale(.6) brightness(.7); cursor:default;}
+  .warn{text-align:center; font-size:11px; color:#ff9a8a; margin-top:8px; min-height:14px;}
+  .close{position:absolute; top:10px; right:14px; font-size:20px; color:#cdb488; cursor:pointer; line-height:1;}
+</style>
+</head>
+<body>
+<div class="root" id="root">
+  <div class="mapWrap" id="mapWrap">
+    <div class="mapDim"></div>
+    <div class="phTxt">この界はまだ実装されていません<br>（古代樹海界を選んでください）</div>
+    <div class="node" id="n0" style="left:28%; top:23%;"><div class="dot sub"><span class="gi"></span><img src="./images/ic_map_subboss.png" alt="" onload="this.parentNode.classList.add('hasimg')" onerror="this.remove()"></div><div class="lbl">中ボス ・ ヴェルグラフ</div></div>
+    <div class="node" id="n1" style="left:70%; top:53.5%;"><div class="dot sub"><span class="gi"></span><img src="./images/ic_map_subboss.png" alt="" onload="this.parentNode.classList.add('hasimg')" onerror="this.remove()"></div><div class="lbl">中ボス ・ ゼルヴァニクス</div></div>
+    <div class="node up" id="n2" style="left:52%; top:84%;"><div class="dot boss"><span class="gi"></span><img src="./images/ic_map_boss.png" alt="" onload="this.parentNode.classList.add('hasimg')" onerror="this.remove()"></div><div class="lbl">面ボス ・ アルヴェノクス</div></div>
+  </div>
+
+  <div class="sorties" id="sorties"></div>
+
+  <div class="worldsel" id="worldsel">
+    <div class="wbtn" id="wbtn"><span class="wn" id="curWorld">古代樹海界</span><span class="ar">▾</span></div>
+    <div class="wlist" id="wlist"></div>
+    <div class="tries">本日の挑戦 残り <b id="triesN">3</b>/3</div>
+  </div>
+
+  <button class="back" id="back">‹ 戻る</button>
+
+  <div class="scrim" id="scrim"></div>
+  <div class="sheet" id="sheet">
+    <span class="close" id="close">×</span>
+    <h3 id="sheetTitle">ヴェルグラフ</h3>
+    <div class="sub-t" id="sheetSub">中ボス</div>
+    <div id="info"></div>
+    <div class="deckTitle">出撃するデッキ</div>
+    <div class="decks" id="decks"></div>
+    <div class="deckView" id="deckView"></div>
+    <button class="go" id="go">出撃</button>
+    <div class="warn" id="warn"></div>
+  </div>
+</div>
+
+<script>
+  const WORLDS=['古代樹海界','黒曜山界','神域界','鋼殻要塞界','雷帝界','群体界','幻妖界','終幕界'];
+  const UNLOCKED_WORLD=0;
+  const BOSSES=[
+    { name:'ヴェルグラフ', kind:'中ボス', power:3000, attr:'なし', reward:{medal:300,exp:'経験の書（中）×2'}, rare:'道化の仮面', state:'open'   },
+    { name:'ゼルヴァニクス', kind:'中ボス', power:5000, attr:'なし', reward:{medal:600,exp:'経験の書（中）×4'}, rare:'歪んだ鈴',   state:'locked' },
+    { name:'アルヴェノクス', kind:'面ボス', power:8000, attr:'なし', reward:{medal:1500,exp:'経験の書（大）×3'}, rare:'樹海王の証', state:'locked' },
+  ];
+  const DECKS=[
+    { name:'デッキ1', power:4200, cards:[{img:'chara_hibiscus_hana_ken_ssr',pw:2000},{img:'chara_hibiscus_ha_tate_sr',pw:1400},{img:'chara_dragon_sp',pw:800}] },
+    { name:'デッキ2', power:2100, cards:[{img:'chara_hibiscus_ha_tsue_r',pw:1000},{img:'chara_hibiscus_shin_ken_n',pw:600},{img:'chara_houou_sp',pw:500}] },
+  ];
+  const TRAVEL_SEC=15; // デモ15秒（実際1面約15分）
+
+  let selDeck=0, cur=-1, tries=3;
+  const deckBusy={};      // deckIndex -> true（出撃占有中）
+  const nodeBusy={};      // bossIndex -> true
+  const missions={};      // id -> {bossIndex, deckIndex, ...} 走行中
+  let missionSeq=0;
+  const $=s=>document.getElementById(s); const fmt=n=>n.toLocaleString();
+  const nodeEls=[0,1,2].map(i=>$('n'+i));
+
+  // 界リスト
+  $('wlist').innerHTML=WORLDS.map((w,i)=>{const l=i>UNLOCKED_WORLD; return `<div class="witem ${i===0?'cur':''} ${l?'locked':''}" data-w="${i}">${w}${l?'<span>🔒</span>':''}</div>`;}).join('');
+  $('wbtn').addEventListener('click',()=>$('worldsel').classList.toggle('open'));
+  $('wlist').querySelectorAll('.witem').forEach(el=>el.addEventListener('click',()=>{const i=+el.dataset.w; $('worldsel').classList.remove('open');
+    $('wlist').querySelectorAll('.witem').forEach(x=>x.classList.toggle('cur',+x.dataset.w===i)); $('curWorld').textContent=WORLDS[i];
+    if(i===0){$('mapWrap').classList.remove('placeholder'); nodeEls.forEach(n=>n.style.display='');} else {$('mapWrap').classList.add('placeholder'); nodeEls.forEach(n=>n.style.display='none');}}));
+
+  function renderStates(){ BOSSES.forEach((b,i)=>{ const el=nodeEls[i]; el.classList.remove('cleared','locked','busy');
+    if(b.state==='cleared') el.classList.add('cleared'); else if(b.state==='locked') el.classList.add('locked'); if(nodeBusy[i]) el.classList.add('busy'); }); }
+  renderStates(); $('triesN').textContent=tries;
+
+  function firstFreeDeck(){ for(let i=0;i<DECKS.length;i++) if(!deckBusy[i]) return i; return -1; }
+  function showSheet(){ $('scrim').classList.add('show'); $('sheet').classList.add('show'); }
+  function hideSheet(){ $('scrim').classList.remove('show'); $('sheet').classList.remove('show'); }
+
+  function renderDeckView(){ const d=DECKS[selDeck];
+    $('deckView').innerHTML=`<div class="dvHead"><span>${d.name} の編成</span><span>戦力 ${fmt(d.power)}</span></div>
+      <div class="cards">${d.cards.map(c=>`<div class="card"><div class="cph">❖</div><img src="./images/${c.img}.png" alt="" onload="this.previousElementSibling.style.display='none'" onerror="this.remove()"></div>`).join('')}</div>`; }
+
+  function openSheet(i){ const b=BOSSES[i]; cur=i;
+    if(b.state==='locked'){ return; }
+    if(nodeBusy[i]){ return; } // 同じボスへ二重出撃はしない（部隊は別ボスへ）
+    // 空きデッキを初期選択
+    const free=firstFreeDeck(); selDeck = free>=0?free:0;
+    $('sheetTitle').textContent=b.name; $('sheetSub').textContent=b.kind;
+    $('info').innerHTML=`
+      <div class="stat"><span class="k">敵の戦力</span><span class="v">${fmt(b.power)}</span></div>
+      <div class="stat"><span class="k">属性</span><span class="v attr-none">${b.attr}</span></div>
+      <div class="stat"><span class="k">所要時間</span><span class="v">片道 約15分（往復で約30分）</span></div>
+      <div class="secTitle">クリア報酬</div>
+      <div class="stat"><span class="k">メダル</span><span class="v">${fmt(b.reward.medal)}</span></div>
+      <div class="stat"><span class="k">EXPアイテム</span><span class="v">${b.reward.exp}</span></div>
+      <div class="secTitle">ドロップ</div><div class="drops"><span class="drop">装備片</span><span class="drop rare">${b.rare}</span></div>`;
+    renderDecks(); renderDeckView(); refreshGo(); showSheet();
+  }
+  function renderDecks(){ const b=BOSSES[cur];
+    $('decks').innerHTML=DECKS.map((d,di)=>{ const win=d.power>=b.power; const busy=deckBusy[di];
+      const dp = busy?'出撃中':('戦力 '+fmt(d.power)); const cls = busy?'busy':(win?'win':'lose');
+      return `<div class="deck ${di===selDeck?'sel':''} ${busy?'busy':''}" data-d="${di}"><div class="dn">${d.name}</div><div class="dp ${cls}">${dp}</div></div>`;}).join('');
+    $('decks').querySelectorAll('.deck').forEach(el=>el.addEventListener('click',()=>{ const di=+el.dataset.d; if(deckBusy[di]) return; selDeck=di;
+      $('decks').querySelectorAll('.deck').forEach(x=>x.classList.toggle('sel',+x.dataset.d===selDeck)); renderDeckView(); refreshGo(); }));
+  }
+  function refreshGo(){ let msg='';
+    if(tries<=0) msg='本日の挑戦回数を使い切りました（0時に回復）';
+    else if(deckBusy[selDeck]) msg='このデッキは出撃中です（別デッキを選択）';
+    else if(firstFreeDeck()<0) msg='出撃できるデッキがありません';
+    $('warn').textContent=msg; $('go').disabled = (tries<=0)||deckBusy[selDeck]; }
+
+  $('go').addEventListener('click',()=>{ if(tries<=0||deckBusy[selDeck]) return; launch(cur, selDeck); hideSheet(); });
+
+  // 出撃（複数同時）。デッキ占有・ノードbusy・回数消費。ゲージを積む。
+  function launch(bossIndex, deckIndex){
+    tries--; $('triesN').textContent=tries;
+    deckBusy[deckIndex]=true; nodeBusy[bossIndex]=true; renderStates();
+    const id='m'+(missionSeq++);
+    const win=DECKS[deckIndex].power>=BOSSES[bossIndex].power;
+    const m={id, bossIndex, deckIndex, win, phase:'go'};
+    missions[id]=m;
+    addGaugeUI(m);
+    runGauge(m, 'go', TRAVEL_SEC, ()=>{
+      // 到達：報告書ログへ静かに追加（ポップアップなし）
+      pushReport(BOSSES[bossIndex], win, DECKS[deckIndex]);
+      if(win){ BOSSES[bossIndex].state='cleared'; if(BOSSES[bossIndex+1]&&BOSSES[bossIndex+1].state==='locked') BOSSES[bossIndex+1].state='open'; nodeBusy[bossIndex]=false; }
+      renderStates();
+      // 帰還
+      runGauge(m,'back',TRAVEL_SEC, ()=>{ finishMission(m); });
+    });
+  }
+  function finishMission(m){
+    deckBusy[m.deckIndex]=false; nodeBusy[m.bossIndex]=false;
+    if(!m.win && BOSSES[m.bossIndex].state!=='cleared') BOSSES[m.bossIndex].state='open';
+    renderStates(); removeGaugeUI(m.id); delete missions[m.id];
+    if($('sheet').classList.contains('show')){ renderDecks(); refreshGo(); }
+  }
+
+  function addGaugeUI(m){
+    const el=document.createElement('div'); el.className='sortie'; el.id='g_'+m.id;
+    el.innerHTML=`<div class="sortieTop"><div class="nm">${BOSSES[m.bossIndex].name}</div><button class="cancel" title="引き返す">×</button></div>
+      <div class="sgRow"><span class="ph pg-go">到達まで</span><div class="sgbar"><span class="sgfill pg-go"></span></div><span class="tm">0:15</span></div>`;
+    el.querySelector('.cancel').addEventListener('click',()=>cancelMission(m));
+    $('sorties').appendChild(el);
+  }
+  function removeGaugeUI(id){ const el=$('g_'+id); if(el) el.remove(); }
+
+  function mmss(t){ t=Math.max(0,t); return Math.floor(t/60)+':'+String(t%60).padStart(2,'0'); }
+  function runGauge(m, phase, total, done){
+    m.phase=phase;
+    const el=$('g_'+m.id); if(!el){ done(); return; }
+    const ph=el.querySelector('.ph'), fill=el.querySelector('.sgfill'), tm=el.querySelector('.tm');
+    ph.className='ph pg-'+phase; ph.textContent = phase==='go'?'到達まで':(phase==='cancel'?'引き返し中':'帰還まで');
+    fill.className='sgfill pg-'+phase;
+    let t=total;
+    const tick=()=>{ fill.style.width=((total-t)/total*100)+'%'; tm.textContent=mmss(t); };
+    tick();
+    m._t=t; m._total=total;
+    m.iv=setInterval(()=>{ t--; m._t=t; if(t<0){ clearInterval(m.iv); fill.style.width='100%'; done(); return;} tick(); },1000);
+  }
+  function cancelMission(m){
+    if(m.phase!=='go'){ return; } // 帰還中・引き返し中は不可
+    clearInterval(m.iv);
+    const elapsed = m._total - m._t;
+    tries++; $('triesN').textContent=tries;  // 戦闘していないので回数返却
+    nodeBusy[m.bossIndex]=false; renderStates();
+    runGauge(m,'cancel', Math.max(1,Math.round(elapsed)), ()=>{ finishMission(m); });
+    if($('sheet').classList.contains('show')){ renderDecks(); refreshGo(); }
+  }
+
+  function pushReport(b, win, deck){
+    const area = $('curWorld').textContent;
+    const cards = deck.cards.map(c=>{ const loss = win ? Math.round(c.pw*0.15) : c.pw; // 敗北=装備パワー全損
+      return {img:c.img, pw:c.pw, loss, remain:c.pw-loss}; });
+    const rec={ t:Date.now(), name:b.name, kind:b.kind, area, win, deck:deck.name,
+      deckPower:deck.power, bossPower:b.power, medal:b.reward.medal, exp:b.reward.exp, rare:b.rare, cards };
+    try{ const log=JSON.parse(localStorage.getItem('ck_reports')||'[]');
+      log.unshift(rec); localStorage.setItem('ck_reports', JSON.stringify(log.slice(0,50))); }catch(e){}
+  }
+
+  nodeEls.forEach((el,i)=>el.addEventListener('click',()=>openSheet(i)));
+  $('close').addEventListener('click',hideSheet);
+  $('scrim').addEventListener('click',hideSheet);
+  $('back').addEventListener('click',()=>{ location.href='./home-mockup.html'; });
+</script>
+</body>
+</html>
