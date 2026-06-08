@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>チカリアン ミッション</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;800&display=swap');
+  :root{ --gold-hi:#fff3c8; --gold:#e8c25a; --panel:rgba(20,11,16,.9); --border:1.5px solid rgba(232,194,90,.5); }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; height:100%;}
+  body{font-family:'Shippori Mincho','Yu Mincho',serif; color:var(--gold-hi); background:#070409; overflow:hidden;}
+  .root{position:relative; width:100%; max-width:480px; margin:0 auto; height:100dvh; overflow:hidden;
+        background:#0a0509 radial-gradient(80% 45% at 50% 0%, rgba(90,80,40,.2), transparent 60%); display:flex; flex-direction:column;}
+  .head{flex:none; text-align:center; padding:16px 16px 4px;}
+  .head .t{font-size:19px; font-weight:800; letter-spacing:4px; text-shadow:0 2px 6px #2a2000,0 0 16px rgba(255,180,70,.3);}
+  .head .s{font-size:11px; color:#cdb488; letter-spacing:1px; margin-top:5px;}
+  .tabs{flex:none; display:flex; gap:6px; padding:8px 14px 4px;}
+  .tab{flex:1; font-family:inherit; font-size:12px; letter-spacing:1px; color:var(--gold-hi); background:var(--panel); border:var(--border); border-radius:14px; padding:8px 0; cursor:pointer; text-align:center;}
+  .tab.sel{background:linear-gradient(180deg,rgba(255,228,154,.26),rgba(232,181,77,.14)); box-shadow:0 0 10px rgba(255,200,90,.3);}
+
+  .list{flex:1; overflow-y:auto; padding:8px 16px 24px;}
+  .ms{background:var(--panel); border:var(--border); border-radius:13px; padding:12px 14px; margin-bottom:10px;}
+  .ms.done{opacity:.96; border-color:rgba(120,200,120,.5);}
+  .msTop{display:flex; align-items:center; gap:8px;}
+  .msName{flex:1; font-size:14px; font-weight:800; letter-spacing:.5px;}
+  .msState{font-size:10px; font-weight:800; padding:2px 9px; border-radius:8px;}
+  .msState.prog{color:#cdb488; background:rgba(255,255,255,.06); border:1px solid rgba(232,194,90,.4);}
+  .msState.claim{color:#0b2a12; background:linear-gradient(180deg,#bfe9c0,#5fa564);}
+  .msState.got{color:#9a8c70; background:rgba(255,255,255,.04); border:1px solid rgba(150,140,110,.3);}
+  .msDesc{font-size:12px; color:#cdb488; margin-top:6px; line-height:1.6;}
+  .bar{height:8px; border-radius:5px; background:rgba(255,255,255,.12); overflow:hidden; margin-top:9px;}
+  .fill{height:100%; background:linear-gradient(90deg,#e0a23b,#ffd98a);}
+  .msFoot{display:flex; align-items:center; gap:10px; margin-top:9px;}
+  .prog-t{font-size:11px; color:#cdb488;} .reward{font-size:11px; color:#ffe39a; margin-left:auto;}
+  .claimBtn{font-family:inherit; font-weight:800; font-size:12px; color:#2a160a; border:none; padding:7px 16px; border-radius:16px; cursor:pointer; background:linear-gradient(180deg,#ffe49a,#e8b54d 60%,#b9842f);}
+  .claimBtn:disabled{filter:grayscale(.6) brightness(.8); cursor:default;}
+
+  .back{position:absolute; z-index:7; left:14px; bottom:14px; font-family:inherit; font-size:14px; color:var(--gold-hi); background:var(--panel); border:var(--border); border-radius:22px; padding:10px 20px; cursor:pointer;}
+  .toast{position:absolute; z-index:20; left:50%; top:44%; transform:translate(-50%,-50%) scale(.9); background:var(--panel); border:var(--border); border-radius:14px; padding:14px 22px; text-align:center; font-size:13px; opacity:0; pointer-events:none; transition:.25s;} .toast.show{opacity:1; transform:translate(-50%,-50%) scale(1);}
+  .scrim{position:absolute; inset:0; z-index:10; background:rgba(0,0,0,.6); opacity:0; pointer-events:none; transition:.3s;} .scrim.show{opacity:1; pointer-events:auto;}
+  .rewardPop{position:absolute; z-index:11; left:50%; top:50%; transform:translate(-50%,-50%) scale(.9); width:80%; max-width:330px; background:var(--panel); border:var(--border); border-radius:18px; padding:24px 22px 22px; text-align:center; opacity:0; pointer-events:none; transition:.28s; box-shadow:0 12px 36px rgba(0,0,0,.7);}
+  .rewardPop.show{opacity:1; pointer-events:auto; transform:translate(-50%,-50%) scale(1);}
+  .rpClose{position:absolute; top:10px; right:14px; font-size:22px; color:#cdb488; cursor:pointer; line-height:1;}
+  .rpTitle{font-size:13px; letter-spacing:2px; color:#cdb488;}
+  .rpIcon{font-size:46px; margin:14px 0 6px; filter:drop-shadow(0 0 12px rgba(255,200,90,.6));}
+  .rpName{font-size:14px; color:#cdb488; letter-spacing:1px;}
+  .rpReward{font-size:20px; font-weight:800; color:#ffe39a; text-shadow:0 0 14px rgba(255,200,90,.5); margin-top:10px; line-height:1.5;}
+  .rpOk{margin-top:20px; width:100%; font-family:inherit; font-weight:800; font-size:16px; letter-spacing:2px; color:#2a160a; border:none; padding:13px; border-radius:26px; cursor:pointer; background:linear-gradient(180deg,#ffe49a,#e8b54d 60%,#b9842f);}
+</style>
+</head>
+<body>
+<div class="root">
+  <div class="head"><div class="t">ミッション</div><div class="s">目標を達成して報酬を受け取る</div></div>
+  <div class="tabs" id="tabs"></div>
+  <div class="list" id="list"></div>
+  <button class="back" id="back">‹ 戻る</button>
+  <div class="scrim" id="scrim"></div>
+  <div class="rewardPop" id="rewardPop">
+    <span class="rpClose" id="rpClose">×</span>
+    <div class="rpTitle">報酬を受け取りました</div>
+    <div class="rpIcon">🎁</div>
+    <div class="rpName" id="rpName">―</div>
+    <div class="rpReward" id="rpReward">―</div>
+    <button class="rpOk" id="rpOk">閉じる</button>
+  </div>
+</div>
+<script>
+  const $=s=>document.getElementById(s); const fmt=n=>n.toLocaleString();
+  const TABS=[['daily','デイリー'],['main','メイン'],['ach','達成']];
+  let tab='daily';
+  // 数値・内容は仮
+  const MISSIONS={
+    daily:[
+      {name:'チカリウムを採取する', desc:'本日の採取を上限まで行う', cur:500, max:500, reward:'メダル ×100'},
+      {name:'ボスへ1回出撃する', desc:'いずれかのボスへ出撃', cur:1, max:1, reward:'メダル ×80'},
+      {name:'ガチャを1回引く', desc:'チカリアンガチャを1回', cur:0, max:1, reward:'メダル ×50'},
+      {name:'探索へ部隊を出す', desc:'探索に1部隊以上', cur:2, max:1, reward:'EXPの書（小）×3'},
+    ],
+    main:[
+      {name:'古代樹海界・中ボスA撃破', desc:'ヴェルグラフを討伐', cur:1, max:1, reward:'メダル ×300 / SRカード確定券'},
+      {name:'古代樹海界・面ボス撃破', desc:'アルヴェノクスを討伐', cur:0, max:1, reward:'メダル ×1,000 / 黒曜山界 解放'},
+      {name:'デッキを2つ編成する', desc:'デッキ1・2に3枚ずつ', cur:2, max:2, reward:'メダル ×200'},
+      {name:'カードを★3まで強化', desc:'いずれか1枚を強化値3', cur:1, max:3, reward:'確率保証石 ×1'},
+    ],
+    ach:[
+      {name:'図鑑コンプ率 25%', desc:'所持カードを増やす', cur:33, max:41, reward:'メダル ×500'},
+      {name:'累計ボス撃破 10体', desc:'ボスを倒した数', cur:4, max:10, reward:'ゴーストガール(SP)欠片 ×5'},
+      {name:'累計採取 30日', desc:'採取した日数', cur:12, max:30, reward:'鳳凰(SP)欠片 ×3'},
+    ],
+  };
+  // 受取済み状態（モック）
+  const claimed={};
+
+  function render(){
+    $('tabs').innerHTML=TABS.map(([k,l])=>`<button class="tab ${k===tab?'sel':''}" data-k="${k}">${l}</button>`).join('');
+    $('tabs').querySelectorAll('.tab').forEach(el=>el.addEventListener('click',()=>{ tab=el.dataset.k; render(); }));
+    $('list').innerHTML=MISSIONS[tab].map((m,i)=>{
+      const complete=m.cur>=m.max; const got=claimed[tab+i];
+      const pct=Math.min(100,m.cur/m.max*100);
+      const state = got?'<span class="msState got">受取済</span>':(complete?'<span class="msState claim">受取可</span>':'<span class="msState prog">進行中</span>');
+      return `<div class="ms ${complete?'done':''}">
+        <div class="msTop"><span class="msName">${m.name}</span>${state}</div>
+        <div class="msDesc">${m.desc}</div>
+        <div class="bar"><div class="fill" style="width:${pct}%"></div></div>
+        <div class="msFoot"><span class="prog-t">${Math.min(m.cur,m.max)} / ${m.max}</span><span class="reward">報酬：${m.reward}</span>
+          <button class="claimBtn" data-i="${i}" ${(!complete||got)?'disabled':''}>${got?'受取済':'受け取る'}</button></div>
+      </div>`;
+    }).join('');
+    $('list').querySelectorAll('.claimBtn').forEach(el=>el.addEventListener('click',()=>{ const i=+el.dataset.i; const m=MISSIONS[tab][i];
+      if(m.cur<m.max||claimed[tab+i]) return; claimed[tab+i]=true; render(); openReward(m); }));
+  }
+  function openReward(m){ $('rpName').textContent=m.name; $('rpReward').textContent=m.reward;
+    $('scrim').classList.add('show'); $('rewardPop').classList.add('show'); }
+  function closeReward(){ $('scrim').classList.remove('show'); $('rewardPop').classList.remove('show'); }
+  function toast(t){ $('toast') && (function(){ const el=$('toast'); if(!el) return; el.textContent=t; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),1500); })(); }
+  render();
+  $('rpClose').addEventListener('click',closeReward);
+  $('rpOk').addEventListener('click',closeReward);
+  $('scrim').addEventListener('click',closeReward);
+  $('back').addEventListener('click',()=>{ location.href='./home-mockup.html'; });
+</script>
+</body>
+</html>
