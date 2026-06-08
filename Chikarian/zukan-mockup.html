@@ -27,8 +27,8 @@
   .count{flex:none; text-align:center; font-size:11px; color:#cdb488; padding:3px 0 4px;} .count b{color:#ffe39a;}
 
   /* 2列×2行の大きめカード */
-  .pageGrid{flex:1; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:12px; padding:6px 16px 6px; min-height:0;}
-  .cardItem{position:relative; border-radius:12px; overflow:hidden; border:2px solid rgba(232,194,90,.5); background:#241018; cursor:pointer; min-height:0;}
+  .pageGrid{flex:1; overflow-y:auto; padding:6px 16px 6px; display:grid; grid-template-columns:1fr 1fr; gap:12px; align-content:start; justify-items:center;}
+  .cardItem{position:relative; width:100%; aspect-ratio:5/7; border-radius:12px; overflow:hidden; border:2px solid rgba(232,194,90,.5); background:#241018; cursor:pointer;}
   .cardItem.locked{filter:grayscale(1) brightness(.4); cursor:default;}
   .cardItem .art{position:absolute; inset:0;} .cardItem .art img{width:100%; height:100%; object-fit:cover; display:block;}
   .cardItem .cph{position:absolute; inset:0; display:grid; place-items:center; font-size:30px; color:#7a5a3a;}
@@ -129,8 +129,8 @@
     const pages=Math.max(1,Math.ceil(view.length/PER)); page=Math.max(0,Math.min(page,pages-1));
     const slice=view.slice(page*PER,page*PER+PER);
     $('pageGrid').innerHTML=slice.map(c=>{ if(!c.owned) return `<div class="cardItem locked"><div class="qm">？</div></div>`;
-      return `<div class="cardItem" data-id="${c.id}">${thumb(c)}<div class="cb">${badges(c)}</div><div class="rank">${c.rankCh}</div>
-        <div class="foot"><div class="star">${stars(c)}</div><div class="nm">${c.name}</div></div></div>`;}).join('');
+      return `<div class="cardItem" data-id="${c.id}">${thumb(c)}
+        <div class="foot"><div class="nm">${c.name}</div></div></div>`;}).join('');
     $('pageGrid').querySelectorAll('.cardItem[data-id]').forEach(el=>el.addEventListener('click',()=>openDetail(el.dataset.id)));
     $('pInfo').textContent=`${page+1} / ${pages}`; $('pPrev').disabled=page<=0; $('pNext').disabled=page>=pages-1;
   }

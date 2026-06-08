@@ -141,23 +141,24 @@ function ChikarianHome() {
 
         </header>
 
+        {/* 出撃中部隊（チカリウムの下・出撃=ボス / 探索 を別々に） */}
+        {(busyBoss > 0 || busyTansaku > 0) && (
+          <div style={S.fleet}>
+            {busyBoss > 0 && <div style={S.fleetPill}><span style={S.fleetN}>出撃 ×{busyBoss}</span></div>}
+            {busyTansaku > 0 && <div style={S.fleetPill}><span style={S.fleetN}>探索 ×{busyTansaku}</span></div>}
+          </div>
+        )}
+
         {/* ===== 右側 小アイコン ===== */}
         <div style={S.sideIcons}>
-          <SideIcon src={ASSETS.ic.mission} fallback="📜" label="ミッション" onClick={() => flash("ミッション")} />
+          <SideIcon src={ASSETS.ic.mission} fallback="📜" label="ミッション" onClick={() => { location.href = "./mission-mockup.html"; }} />
           <SideIcon src={ASSETS.ic.report} fallback="🗎" label="報告書" badge={hasUnread} onClick={() => { location.href = "./report-mockup.html"; }} />
-          <SideIcon src={ASSETS.ic.zukan} fallback="❖" label="図鑑" onClick={() => flash("図鑑")} />
-          <SideIcon src={ASSETS.ic.settings} fallback="⚙" label="設定" onClick={() => flash("設定")} />
+          <SideIcon src={ASSETS.ic.zukan} fallback="❖" label="図鑑" onClick={() => { location.href = "./zukan-mockup.html"; }} />
+          <SideIcon src={ASSETS.ic.settings} fallback="⚙" label="設定" onClick={() => { location.href = "./settings-mockup.html"; }} />
         </div>
 
         {/* ===== 中央：チカリウム採取 ===== */}
         <main style={S.center}>
-          {/* 出撃中部隊（採取ボタン左・出撃=ボス / 探索 を別々に） */}
-          {(busyBoss > 0 || busyTansaku > 0) && (
-            <div style={S.fleet}>
-              {busyBoss > 0 && <div style={S.fleetPill}><span style={S.fleetIc}>⚔</span><span style={S.fleetN}>出撃 ×{busyBoss}</span></div>}
-              {busyTansaku > 0 && <div style={S.fleetPill}><span style={S.fleetIc}>🧭</span><span style={S.fleetN}>探索 ×{busyTansaku}</span></div>}
-            </div>
-          )}
           <button
             style={{ ...S.saishu, ...(reachedCap ? S.saishuOff : {}) }}
             onClick={onSaishu}
@@ -187,8 +188,8 @@ function ChikarianHome() {
           <CardBtn label="デッキ編成" color="#3b6fd6" src={ASSETS.buttons.deck}     fb="🃏" onClick={() => { location.href = "./deck-mockup.html"; }} />
           {/* 下段 */}
           <CardBtn label="チカリアンガチャ"     color="#d6433b" src={ASSETS.buttons.gacha}    fb="🎁" onClick={() => { location.href = "./gacha-mockup.html"; }} />
-          <CardBtn label="建物"       color="#b07b32" src={ASSETS.buttons.tatemono} fb="🏛" onClick={() => flash("建物")} />
-          <CardBtn label="強化合成" color="#c8632e" src={ASSETS.buttons.kyoka}    fb="⚒" onClick={() => flash("強化合成")} />
+          <CardBtn label="建物"       color="#b07b32" src={ASSETS.buttons.tatemono} fb="🏛" onClick={() => { location.href = "./tatemono-mockup.html"; }} />
+          <CardBtn label="強化合成" color="#c8632e" src={ASSETS.buttons.kyoka}    fb="⚒" onClick={() => { location.href = "./kyoka-mockup.html"; }} />
         </nav>
 
         {/* ===== 放置報酬 ===== */}
@@ -262,8 +263,8 @@ const S = {
   sideIcon: { background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 2 },
   sideIconCircle: { position: "relative", width: 40, height: 40, borderRadius: "50%", background: "none", border: "none", display: "grid", placeItems: "center" },
   sideBadge: { position: "absolute", top: 0, right: 0, width: 10, height: 10, borderRadius: "50%", background: "#ffcf6a", boxShadow: "0 0 8px rgba(255,200,90,.9)", border: "1.5px solid #1a0e14" },
-  fleet: { position: "absolute", left: 6, top: "50%", transform: "translateY(-50%)", display: "flex", flexDirection: "column", gap: 6, zIndex: 4 },
-  fleetPill: { display: "flex", alignItems: "center", gap: 5, background: "rgba(20,11,16,.8)", border: "1px solid rgba(232,194,90,.5)", borderRadius: 12, padding: "4px 9px" },
+  fleet: { position: "absolute", left: 16, top: 92, display: "flex", flexDirection: "column", gap: 6, zIndex: 6 },
+  fleetPill: { display: "inline-flex", alignItems: "center", background: "rgba(20,11,16,.82)", border: "1px solid rgba(232,194,90,.5)", borderRadius: 12, padding: "4px 11px", alignSelf: "flex-start" },
   fleetIc: { fontSize: 13 },
   fleetN: { fontSize: 11, color: "#fff3c8", letterSpacing: ".5px" },
   sideIconLabel: { fontSize: 10, color: "#e7d3a6", textShadow: "0 1px 2px #000" },

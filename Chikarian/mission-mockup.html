@@ -38,6 +38,15 @@
 
   .back{position:absolute; z-index:7; left:14px; bottom:14px; font-family:inherit; font-size:14px; color:var(--gold-hi); background:var(--panel); border:var(--border); border-radius:22px; padding:10px 20px; cursor:pointer;}
   .toast{position:absolute; z-index:20; left:50%; top:44%; transform:translate(-50%,-50%) scale(.9); background:var(--panel); border:var(--border); border-radius:14px; padding:14px 22px; text-align:center; font-size:13px; opacity:0; pointer-events:none; transition:.25s;} .toast.show{opacity:1; transform:translate(-50%,-50%) scale(1);}
+  .scrim{position:absolute; inset:0; z-index:10; background:rgba(0,0,0,.6); opacity:0; pointer-events:none; transition:.3s;} .scrim.show{opacity:1; pointer-events:auto;}
+  .rewardPop{position:absolute; z-index:11; left:50%; top:50%; transform:translate(-50%,-50%) scale(.9); width:80%; max-width:330px; background:var(--panel); border:var(--border); border-radius:18px; padding:24px 22px 22px; text-align:center; opacity:0; pointer-events:none; transition:.28s; box-shadow:0 12px 36px rgba(0,0,0,.7);}
+  .rewardPop.show{opacity:1; pointer-events:auto; transform:translate(-50%,-50%) scale(1);}
+  .rpClose{position:absolute; top:10px; right:14px; font-size:22px; color:#cdb488; cursor:pointer; line-height:1;}
+  .rpTitle{font-size:13px; letter-spacing:2px; color:#cdb488;}
+  .rpIcon{font-size:46px; margin:14px 0 6px; filter:drop-shadow(0 0 12px rgba(255,200,90,.6));}
+  .rpName{font-size:14px; color:#cdb488; letter-spacing:1px;}
+  .rpReward{font-size:20px; font-weight:800; color:#ffe39a; text-shadow:0 0 14px rgba(255,200,90,.5); margin-top:10px; line-height:1.5;}
+  .rpOk{margin-top:20px; width:100%; font-family:inherit; font-weight:800; font-size:16px; letter-spacing:2px; color:#2a160a; border:none; padding:13px; border-radius:26px; cursor:pointer; background:linear-gradient(180deg,#ffe49a,#e8b54d 60%,#b9842f);}
 </style>
 </head>
 <body>
@@ -46,7 +55,15 @@
   <div class="tabs" id="tabs"></div>
   <div class="list" id="list"></div>
   <button class="back" id="back">‹ 戻る</button>
-  <div class="toast" id="toast"></div>
+  <div class="scrim" id="scrim"></div>
+  <div class="rewardPop" id="rewardPop">
+    <span class="rpClose" id="rpClose">×</span>
+    <div class="rpTitle">報酬を受け取りました</div>
+    <div class="rpIcon">🎁</div>
+    <div class="rpName" id="rpName">―</div>
+    <div class="rpReward" id="rpReward">―</div>
+    <button class="rpOk" id="rpOk">閉じる</button>
+  </div>
 </div>
 <script>
   const $=s=>document.getElementById(s); const fmt=n=>n.toLocaleString();
@@ -91,10 +108,16 @@
       </div>`;
     }).join('');
     $('list').querySelectorAll('.claimBtn').forEach(el=>el.addEventListener('click',()=>{ const i=+el.dataset.i; const m=MISSIONS[tab][i];
-      if(m.cur<m.max||claimed[tab+i]) return; claimed[tab+i]=true; render(); toast('報酬を受け取りました：'+m.reward); }));
+      if(m.cur<m.max||claimed[tab+i]) return; claimed[tab+i]=true; render(); openReward(m); }));
   }
-  function toast(t){ $('toast').textContent=t; const el=$('toast'); el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),1500); }
+  function openReward(m){ $('rpName').textContent=m.name; $('rpReward').textContent=m.reward;
+    $('scrim').classList.add('show'); $('rewardPop').classList.add('show'); }
+  function closeReward(){ $('scrim').classList.remove('show'); $('rewardPop').classList.remove('show'); }
+  function toast(t){ $('toast') && (function(){ const el=$('toast'); if(!el) return; el.textContent=t; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),1500); })(); }
   render();
+  $('rpClose').addEventListener('click',closeReward);
+  $('rpOk').addEventListener('click',closeReward);
+  $('scrim').addEventListener('click',closeReward);
   $('back').addEventListener('click',()=>{ location.href='./home-mockup.html'; });
 </script>
 </body>
