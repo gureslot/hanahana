@@ -144,13 +144,69 @@
 </div>
 
 <script>
-  const WORLDS=['古代樹海界','黒曜山界','神域界','鋼殻要塞界','雷帝界','群体界','幻妖界','終幕界'];
-  const UNLOCKED_WORLD=0;
-  const BOSSES=[
-    { name:'ヴェルグラフ', kind:'中ボス', power:3000, attr:'なし', reward:{medal:300,exp:'経験の書（中）×2'}, rare:'道化の仮面', state:'open'   },
-    { name:'ゼルヴァニクス', kind:'中ボス', power:5000, attr:'なし', reward:{medal:600,exp:'経験の書（中）×4'}, rare:'歪んだ鈴',   state:'locked' },
-    { name:'アルヴェノクス', kind:'面ボス', power:8000, attr:'なし', reward:{medal:1500,exp:'経験の書（大）×3'}, rare:'樹海王の証', state:'locked' },
+  // ===== ボスデータ（全8界＋終幕界2周目）=====
+  // 各ボス：役割(role)・名前(name)・画像ファイル名(img)。界の情報：面番号(stage)・界名(world)・モチーフ(motif)。
+  // 画像規則：1周目 boss_{面}_a / _b / _boss、終幕界2周目のみ boss_8_a_r2 / _b_r2 / _boss_r2。
+  const STAGES=[
+    { stage:1, world:'古代樹海界', motif:'リス', bosses:[
+      { role:'中ボスA', name:'ヴェルグラフ',     img:'boss_1_a'    },
+      { role:'中ボスB', name:'ゼルヴァニクス',   img:'boss_1_b'    },
+      { role:'面ボス',  name:'アルヴェノクス',   img:'boss_1_boss' } ] },
+    { stage:2, world:'黒曜山界', motif:'牛', bosses:[
+      { role:'中ボスA', name:'グラドム',         img:'boss_2_a'    },
+      { role:'中ボスB', name:'ヴォルガルド',     img:'boss_2_b'    },
+      { role:'面ボス',  name:'ザグロディオン',   img:'boss_2_boss' } ] },
+    { stage:3, world:'神域界', motif:'柴犬', bosses:[
+      { role:'中ボスA', name:'シラフェイン',     img:'boss_3_a'    },
+      { role:'中ボスB', name:'アークレオン',     img:'boss_3_b'    },
+      { role:'面ボス',  name:'ラディシオン',     img:'boss_3_boss' } ] },
+    { stage:4, world:'鋼殻要塞界', motif:'サイ', bosses:[
+      { role:'中ボスA', name:'フォートガル',     img:'boss_4_a'    },
+      { role:'中ボスB', name:'アイゼルバスト',   img:'boss_4_b'    },
+      { role:'面ボス',  name:'ガルドニクス',     img:'boss_4_boss' } ] },
+    { stage:5, world:'雷帝界', motif:'虎', bosses:[
+      { role:'中ボスA', name:'ライガルス',       img:'boss_5_a'    },
+      { role:'中ボスB', name:'ジンライヴァ',     img:'boss_5_b'    },
+      { role:'面ボス',  name:'ザルギアント',     img:'boss_5_boss' } ] },
+    { stage:6, world:'群体界', motif:'ネズミ', bosses:[
+      { role:'中ボスA', name:'ミュラト',         img:'boss_6_a'    },
+      { role:'中ボスB', name:'ミュラゴス',       img:'boss_6_b'    },
+      { role:'面ボス',  name:'ヌグラミアス',     img:'boss_6_boss' } ] },
+    { stage:7, world:'幻妖界', motif:'狐', bosses:[
+      { role:'中ボスA', name:'セリナフ',         img:'boss_7_a'    },
+      { role:'中ボスB', name:'ファルヴェイラ',   img:'boss_7_b'    },
+      { role:'面ボス',  name:'ナギュリスカ',     img:'boss_7_boss' } ] },
+    { stage:8, world:'終幕界', motif:'ピエロ', bosses:[
+      { role:'中ボスA', name:'カリヴェナ',       img:'boss_8_a'    },
+      { role:'中ボスB', name:'ノルディアス',     img:'boss_8_b'    },
+      { role:'面ボス',  name:'グラヴィネア＝ディスカリオ', img:'boss_8_boss' } ] },
   ];
+  // 終幕界2周目（女型3体）。マップ・解放は今後対応のため、データのみ保持。
+  const STAGE_FINALE_R2={ stage:8, round:2, world:'終幕界', motif:'ピエロ（女型）', bosses:[
+    { role:'中ボスA', name:'カリオネラ',       img:'boss_8_a_r2'    },
+    { role:'中ボスB', name:'ノルディアーナ',   img:'boss_8_b_r2'    },
+    { role:'面ボス',  name:'グラヴィエラ＝ディスカリス', img:'boss_8_boss_r2' } ] };
+
+  const WORLDS = STAGES.map(s=>s.world);
+  const UNLOCKED_WORLD=0;
+
+  // 画面で扱う実行用ボス配列（表示は1面のみ）。戦闘力などの数値は仮値。
+  const kindOf = role => role==='面ボス' ? '面ボス' : '中ボス';
+  const STAT_PLACEHOLDER=[
+    { power:3000, attr:'なし', reward:{medal:300, exp:'経験の書（中）×2'}, rare:'道化の仮面' },
+    { power:5000, attr:'なし', reward:{medal:600, exp:'経験の書（中）×4'}, rare:'歪んだ鈴'   },
+    { power:8000, attr:'なし', reward:{medal:1500,exp:'経験の書（大）×3'}, rare:'樹海王の証' },
+  ];
+  function buildBosses(stage){
+    return stage.bosses.map((b,i)=>{
+      const s=STAT_PLACEHOLDER[i]||STAT_PLACEHOLDER[STAT_PLACEHOLDER.length-1];
+      return { name:b.name, role:b.role, kind:kindOf(b.role), img:b.img,
+        stage:stage.stage, world:stage.world, motif:stage.motif,
+        power:s.power, attr:s.attr, reward:s.reward, rare:s.rare,
+        state: i===0 ? 'open' : 'locked' };
+    });
+  }
+  const BOSSES = buildBosses(STAGES[0]); // 表示中の界（1面）のみ実体化
   const DECKS=[
     { name:'デッキ1', power:4200, cards:[{img:'chara_hibiscus_hana_ken_ssr',pw:2000},{img:'chara_hibiscus_ha_tate_sr',pw:1400},{img:'chara_dragon_sp',pw:800}] },
     { name:'デッキ2', power:2100, cards:[{img:'chara_hibiscus_ha_tsue_r',pw:1000},{img:'chara_hibiscus_shin_ken_n',pw:600},{img:'chara_houou_sp',pw:500}] },
