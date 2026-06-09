@@ -43,8 +43,9 @@
 
   /* 上部バー */
   .topbar{position:absolute; z-index:6; top:0; left:0; right:0; display:flex; align-items:center; gap:10px; padding:12px 14px;}
-  .back{font-family:inherit; font-size:13px; letter-spacing:1px; color:var(--gold-hi); background:var(--panel);
-        border:var(--border); border-radius:18px; padding:7px 14px; cursor:pointer;}
+  .back{position:absolute; z-index:9; left:14px; bottom:16px; font-family:inherit; font-size:14px; letter-spacing:1px; color:var(--gold-hi); background:var(--panel);
+        border:var(--border); border-radius:22px; padding:11px 22px; cursor:pointer;}
+  .back:active{transform:translateY(1px);}
   .area{flex:1; text-align:center; font-size:16px; font-weight:800; letter-spacing:2px;
         text-shadow:0 2px 6px #000, 0 0 14px rgba(255,180,80,.4);}
   .res{display:flex; gap:6px; align-items:center; background:var(--panel); border:var(--border);
@@ -106,6 +107,7 @@
   .toast .ti{font-size:15px; margin:3px 0;}
   .toast .ti b{color:#ffe39a; font-weight:800;}
 </style>
+<script src="./cksound.js"></script>
 </head>
 <body>
 <div class="root" id="root">
@@ -118,7 +120,6 @@
   </div>
 
   <div class="topbar">
-    <button class="back" id="back">‹ 戻る</button>
     <div class="area">古代樹海界</div>
     <div class="res">メダル <b id="medal">1,240</b></div>
   </div>
@@ -148,6 +149,9 @@
   </div>
 
   <div class="toast" id="toast"><div class="tt" id="toastTitle">回収しました</div><div id="toastBody"></div></div>
+
+  <!-- 戻るは左下（ボス戦などと統一） -->
+  <button class="back" id="back">‹ 戻る</button>
 </div>
 
 <script>

@@ -104,6 +104,7 @@
   .pickBtn:disabled{filter:grayscale(.6) brightness(.7); cursor:default;}
   .cond{flex:none; font-size:11px; color:#ff9a8a; text-align:center; margin-top:6px; min-height:14px;}
 </style>
+<script src="./cksound.js"></script>
 </head>
 <body>
 <div class="root">
@@ -266,6 +267,7 @@
   });
 
   function showResult(ok, b, m, matLost){
+    if(window.CKSound) CKSound.play(ok?'se_enhance_success':'se_enhance_fail');
     $('resBig').textContent = ok?'強化成功':'強化失敗';
     $('resBig').className='big '+(ok?'ok':'ng');
     $('resCard').innerHTML=thumbInner(b);

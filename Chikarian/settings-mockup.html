@@ -30,14 +30,14 @@
   .back{position:absolute; z-index:7; left:14px; bottom:14px; font-family:inherit; font-size:14px; color:var(--gold-hi); background:var(--panel); border:var(--border); border-radius:22px; padding:10px 20px; cursor:pointer;}
   .toast{position:absolute; z-index:20; left:50%; top:44%; transform:translate(-50%,-50%) scale(.9); background:var(--panel); border:var(--border); border-radius:14px; padding:14px 22px; text-align:center; font-size:13px; opacity:0; pointer-events:none; transition:.25s;} .toast.show{opacity:1; transform:translate(-50%,-50%) scale(1);}
 </style>
+<script src="./cksound.js"></script>
 </head>
 <body>
 <div class="root">
   <div class="head"><div class="t">設定</div></div>
   <div class="body">
     <div class="sec">サウンド</div>
-    <div class="row"><div><div class="k">BGM</div></div><div class="toggle on" data-t="bgm"><div class="knob"></div></div></div>
-    <div class="row"><div><div class="k">効果音</div></div><div class="toggle on" data-t="se"><div class="knob"></div></div></div>
+    <div class="row"><div><div class="k">サウンド</div><div class="sub">BGM・効果音のオン/オフ（全画面共通）</div></div><div class="toggle" id="soundMaster"><div class="knob"></div></div></div>
     <div class="row"><div class="k">音量</div><div class="slider"><input type="range" min="0" max="100" value="70"></div></div>
 
     <div class="sec">アカウント・データ</div>
@@ -56,7 +56,15 @@
 </div>
 <script>
   const $=s=>document.getElementById(s);
-  document.querySelectorAll('.toggle').forEach(t=>t.addEventListener('click',()=>t.classList.toggle('on')));
+  // サウンド：ck_sound_on を全画面共通で読み書き（"1"=オン/"0"=オフ・未設定はオン）
+  const soundMaster=$('soundMaster');
+  function paintSound(){ const on=(localStorage.getItem('ck_sound_on')!=='0'); soundMaster.classList.toggle('on',on); }
+  paintSound();
+  soundMaster.addEventListener('click',()=>{
+    const on=(localStorage.getItem('ck_sound_on')!=='0');
+    if(window.CKSound) CKSound.setOn(!on); else localStorage.setItem('ck_sound_on', on?'0':'1');
+    paintSound();
+  });
   function toast(t){ $('toast').textContent=t; const el=$('toast'); el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),1400); }
   $('copyId').addEventListener('click',()=>toast('プレイヤーIDをコピーしました（モック）'));
   $('linkBtn').addEventListener('click',()=>toast('データ連携は本番で実装（Supabase）'));

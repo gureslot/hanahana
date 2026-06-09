@@ -68,6 +68,12 @@
   .settings img{width:30px; height:30px; object-fit:contain;}
   .settings .fb{font-size:24px; color:#f0dcb0;}
 
+  /* 音声オン/オフ（左上・ゲーム開始とは別操作）*/
+  .soundtog{position:absolute; z-index:5; left:14px; top:14px; font-family:inherit; font-size:12px; font-weight:800;
+            letter-spacing:1px; color:var(--gold-hi); background:var(--panel); border:var(--border);
+            border-radius:16px; padding:8px 14px; cursor:pointer; filter:drop-shadow(0 1px 3px rgba(0,0,0,.6));}
+  .soundtog.off{color:#9a8c70;}
+
   /* タップ時の白フェードでホームへ */
   .flash{position:absolute; inset:0; z-index:9; background:#fff; opacity:0; pointer-events:none;
          transition:opacity .45s ease;}
@@ -78,6 +84,7 @@
          padding:8px 18px; border-radius:20px; font-size:13px; white-space:nowrap; display:none;}
   .toast.show{display:block;}
 </style>
+<script src="./cksound.js"></script>
 </head>
 <body>
 <div class="root" id="root">
@@ -96,6 +103,8 @@
       <div class="startHint">画面をタップ</div>
     </div>
   </div>
+
+  <button class="soundtog" id="soundTog" aria-label="音声切替">♪ 音声 ON</button>
 
   <button class="settings" id="settings" aria-label="設定">
     <!-- 本番は ic_settings.png。無ければ⚙ -->
@@ -121,6 +130,17 @@
   }
   // 画面どこでもタップで開始
   root.addEventListener('click', startGame);
+
+  // 音声オン/オフ（ck_sound_on を全画面共通で読み書き）。開始とは別操作なので伝播を止める。
+  const soundTog=document.getElementById('soundTog');
+  function paintSound(){ const on=(localStorage.getItem('ck_sound_on')!=='0'); soundTog.textContent=on?'♪ 音声 ON':'♪ 音声 OFF'; soundTog.classList.toggle('off',!on); }
+  paintSound();
+  soundTog.addEventListener('click',(e)=>{
+    e.stopPropagation();
+    const on=(localStorage.getItem('ck_sound_on')!=='0');
+    if(window.CKSound) CKSound.setOn(!on); else localStorage.setItem('ck_sound_on', on?'0':'1');
+    paintSound();
+  });
 
   // 設定は開始とは別操作（伝播を止める）
   settings.addEventListener('click', (e)=>{

@@ -96,6 +96,7 @@
   .enter{animation:cardEnter .45s cubic-bezier(.2,.8,.25,1) both;}
   @keyframes cardEnter{from{opacity:0; transform:translateY(26px);} to{opacity:1; transform:translateY(0);}}
 </style>
+<script src="./cksound.js"></script>
 </head>
 <body>
 <div class="root">
@@ -246,7 +247,7 @@ function draw(){
   const enterDone = 0.45 + (cards.length-1)*0.1;
   setTimeout(()=>{
     cards.forEach((c, i)=>{
-      setTimeout(()=> c.classList.add('flipped'), i*180);
+      setTimeout(()=>{ c.classList.add('flipped'); if(window.CKSound) CKSound.play('se_card_flip'); }, i*180);
     });
     // 3) 全部めくり終えたら余韻→「引く」を再度押せるように戻す
     const flipDone = (cards.length-1)*180 + 560;
