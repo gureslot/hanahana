@@ -92,6 +92,16 @@
   const FAM={hibiscus:'ハイビスカスマン', meshibe:'めしべだけマン'};
   const SPNAME={dragon:'ゴールドドラゴン', girl:'ゴーストガール', houou:'鳳凰'};
   const RARRANK={n:'N',r:'R',sr:'S',ssr:'A',SP:'SP'}; // 表示用ランク章（仮）
+  // ===== カード戦力（戦国IXA式・設計書§2-1〜2-4／×0.63適用後・図鑑はLv1基準で表示）=====
+  const LVCAP={n:30,r:40,sr:50,ssr:60,SP:50};
+  const BODY_BASE={n:63,r:158,sr:284,ssr:441,SP:560}; // 本体戦闘力 基礎（§2-2・×0.63後／SPは独立560）
+  const EQATK={n:7,r:12,sr:20,ssr:30};                // 装備パワー攻撃力 1単位（§2-3／SPは持たない）
+  const CAPBASE={n:63,r:95,sr:126,ssr:158};           // 充填量 基礎 Lv1（§2-4・×0.63後）
+  const CAPMAX ={n:189,r:315,sr:441,ssr:630};         // 充填量 MAX（§2-4・×0.63後）
+  function calcBody(rar, lv, star){ const cap=LVCAP[rar]||30; return Math.floor((BODY_BASE[rar]||63)*(1+(lv-1)*(2.0/(cap-1)))*(1+0.15*star)); }
+  function calcCapacity(rar, lv){ if(CAPBASE[rar]==null) return 0; const cap=LVCAP[rar]||30; return Math.round(CAPBASE[rar]+(CAPMAX[rar]-CAPBASE[rar])*(lv-1)/(cap-1)); }
+  // 総合戦力（§2-1）。SPは装備パワーを持たない＝本体戦闘力のみ。
+  function calcPower(c){ const body=calcBody(c.rar, c.level, c.star); return c.sp ? body : calcCapacity(c.rar,c.level)*(EQATK[c.rar]||0)+body; }
   const POOL=["chara_dragon_sp","chara_girl_sp","chara_houou_sp",
     "chara_hibiscus_ha_ken_n","chara_hibiscus_ha_ken_r","chara_hibiscus_ha_ken_sr","chara_hibiscus_ha_ken_ssr",
     "chara_hibiscus_ha_tate_n","chara_hibiscus_ha_tate_r","chara_hibiscus_ha_tate_sr","chara_hibiscus_ha_tate_ssr",
@@ -108,8 +118,8 @@
     else { c={id:name, sp:false, fam:p[1], attr:p[2], weap:p[3], rar:p[4], name:`${FAM[p[1]]||p[1]}・${ATTR[p[2]].lab}${WEAP[p[3]]}`}; }
     const h=[...name].reduce((a,ch)=>a+ch.charCodeAt(0),0);
     c.owned=(h%5!==0); c.star=c.sp?0:(h%4);
-    c.atk=({n:300,r:700,sr:1400,ssr:2600,SP:800}[c.rar]||300)+ (c.star*120);
-    c.def=Math.round(c.atk*0.55); c.cap = c.sp?null:(600+ ({n:1,r:2,sr:3,ssr:4}[c.rar]||1)*500);
+    c.level=1;                                   // 図鑑は基準としてLv1で戦闘力を表示
+    c.power=calcPower(c);                         // 総合戦力（設計書§2-1・Lv1基準）
     c.rankCh=RARRANK[c.rar]||'?';
     return c; }
   const CARDS=POOL.map(build);
@@ -142,9 +152,7 @@
       <div class="dBadges">${badges(c)}<span class="badge" style="background:#3a2a40;color:#e7d3ff">${c.rar}</span></div>
       <div class="dStarRow">${stars(c)}</div>
       <div class="dStats">
-        <div class="dRow"><span class="k">基本攻撃力</span><span class="v">${fmt(c.atk)}（仮）</span></div>
-        <div class="dRow"><span class="k">基本防御力</span><span class="v">${fmt(c.def)}（仮）</span></div>
-        <div class="dRow"><span class="k">装備容量</span><span class="v">${c.cap?fmt(c.cap):'— (装備なし)'}</span></div>
+        <div class="dRow"><span class="k">戦闘力</span><span class="v">${fmt(c.power)}（Lv1基準・仮）</span></div>
         <div class="dRow"><span class="k">種族</span><span class="v">${c.sp?'SP':(FAM[c.fam]||c.fam)}</span></div>
       </div>
       <div class="dFlavor">※ フレーバー（世界観の解説）は後日。物理描写のみ・実機想起語は使わない方針。</div>`;

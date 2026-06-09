@@ -190,27 +190,43 @@
   const WORLDS = STAGES.map(s=>s.world);
   const UNLOCKED_WORLD=0;
 
-  // 画面で扱う実行用ボス配列（表示は1面のみ）。戦闘力などの数値は仮値。
+  // ===== 全8界の戦力・報酬（設計書 balance-chikarian-2026-06-09-2040.md §6）=====
+  // 並びは [中ボスA, 中ボスB, 面ボス]。EXP書ランク：1〜3面=中／4〜6面=大／7〜8面=特大（§6-3）。
+  const STAGE_STATS={
+    1:{ power:[3000,5000,8000],       medal:[300,600,1500],     exp:['経験の書（中）×2','経験の書（中）×4','経験の書（大）×3'] },
+    2:{ power:[10000,15000,25000],    medal:[1000,2000,5000],   exp:['経験の書（中）×3','経験の書（中）×6','経験の書（大）×4'] },
+    3:{ power:[25000,35000,50000],    medal:[2500,5000,12500],  exp:['経験の書（中）×4','経験の書（中）×8','経験の書（大）×5'] },
+    4:{ power:[45000,60000,80000],    medal:[4500,9000,22500],  exp:['経験の書（大）×5','経験の書（大）×10','経験の書（特大）×6'] },
+    5:{ power:[65000,80000,90000],    medal:[6500,13000,32500], exp:['経験の書（大）×6','経験の書（大）×12','経験の書（特大）×7'] },
+    6:{ power:[75000,90000,100000],   medal:[7500,15000,37500], exp:['経験の書（大）×7','経験の書（大）×14','経験の書（特大）×8'] },
+    7:{ power:[90000,100000,110000],  medal:[9000,18000,45000], exp:['経験の書（特大）×8','経験の書（特大）×16','経験の書（特大）×9'] },
+    8:{ power:[100000,110000,120000], medal:[10000,20000,50000],exp:['経験の書（特大）×9','経験の書（特大）×18','経験の書（特大）×10'] },
+  };
+  // 界レアドロップは面ボスのみ追加（§6-4）。1面のみ確定名、他界は実装時に確定。
+  const RARE_BOSS={ 1:'樹海王の証' };
+
+  // 画面で扱う実行用ボス配列（表示は1面のみ）。属性は全エリアなし（段階解放の起点）。
   const kindOf = role => role==='面ボス' ? '面ボス' : '中ボス';
-  const STAT_PLACEHOLDER=[
-    { power:3000, attr:'なし', reward:{medal:300, exp:'経験の書（中）×2'}, rare:'道化の仮面' },
-    { power:5000, attr:'なし', reward:{medal:600, exp:'経験の書（中）×4'}, rare:'歪んだ鈴'   },
-    { power:8000, attr:'なし', reward:{medal:1500,exp:'経験の書（大）×3'}, rare:'樹海王の証' },
-  ];
   function buildBosses(stage){
+    const st=STAGE_STATS[stage.stage];
     return stage.bosses.map((b,i)=>{
-      const s=STAT_PLACEHOLDER[i]||STAT_PLACEHOLDER[STAT_PLACEHOLDER.length-1];
+      const isBoss = b.role==='面ボス';
       return { name:b.name, role:b.role, kind:kindOf(b.role), img:b.img,
         stage:stage.stage, world:stage.world, motif:stage.motif,
-        power:s.power, attr:s.attr, reward:s.reward, rare:s.rare,
+        power:st.power[i], attr:'なし',
+        reward:{ medal:st.medal[i], exp:st.exp[i] },
+        rare: isBoss ? (RARE_BOSS[stage.stage]||'界レアドロップ（仮）') : null,
         state: i===0 ? 'open' : 'locked' };
     });
   }
   const BOSSES = buildBosses(STAGES[0]); // 表示中の界（1面）のみ実体化
+  // カードは本体戦闘力(body)＋装備パワー(equip)で持つ（§2-1）。SPは装備なし＝equip0。
+  // pw＝総合戦力(body+equip)、デッキ総戦力power＝3枚合計。損失は装備パワーのみ・本体無傷（§9）。
   const DECKS=[
-    { name:'デッキ1', power:4200, cards:[{img:'chara_hibiscus_hana_ken_ssr',pw:2000},{img:'chara_hibiscus_ha_tate_sr',pw:1400},{img:'chara_dragon_sp',pw:800}] },
-    { name:'デッキ2', power:2100, cards:[{img:'chara_hibiscus_ha_tsue_r',pw:1000},{img:'chara_hibiscus_shin_ken_n',pw:600},{img:'chara_houou_sp',pw:500}] },
+    { name:'デッキ1', cards:[{img:'chara_hibiscus_hana_ken_ssr',body:2500,equip:7500},{img:'chara_hibiscus_ha_tate_sr',body:1200,equip:4000},{img:'chara_dragon_sp',body:4000,equip:0}] },
+    { name:'デッキ2', cards:[{img:'chara_hibiscus_ha_tsue_r',body:600,equip:2200},{img:'chara_hibiscus_shin_ken_n',body:300,equip:1000},{img:'chara_houou_sp',body:3500,equip:0}] },
   ];
+  DECKS.forEach(d=>{ d.cards.forEach(c=>{ c.pw=c.body+c.equip; }); d.power=d.cards.reduce((a,c)=>a+c.pw,0); });
   const TRAVEL_SEC=15; // デモ15秒（実際1面約15分）
 
   let selDeck=0, cur=-1, tries=3;
@@ -253,7 +269,7 @@
       <div class="secTitle">クリア報酬</div>
       <div class="stat"><span class="k">メダル</span><span class="v">${fmt(b.reward.medal)}</span></div>
       <div class="stat"><span class="k">EXPアイテム</span><span class="v">${b.reward.exp}</span></div>
-      <div class="secTitle">ドロップ</div><div class="drops"><span class="drop">装備片</span><span class="drop rare">${b.rare}</span></div>`;
+      <div class="secTitle">ドロップ</div><div class="drops"><span class="drop">装備片</span>${b.rare?`<span class="drop rare">${b.rare}</span>`:''}</div>`;
     renderDecks(); renderDeckView(); refreshGo(); showSheet();
   }
   function renderDecks(){ const b=BOSSES[cur];
@@ -330,10 +346,13 @@
 
   function pushReport(b, win, deck){
     const area = $('curWorld').textContent;
-    const cards = deck.cards.map(c=>{ const loss = win ? Math.round(c.pw*0.15) : c.pw; // 敗北=装備パワー全損
-      return {img:c.img, pw:c.pw, loss, remain:c.pw-loss}; });
+    // §9：装備パワー損失率 = clamp(0.5 × 敵戦力/自デッキ戦力, 0.10, 1.00)。本体戦闘力は無傷。
+    const R = b.power / Math.max(1, deck.power);
+    const lossRate = Math.min(1.00, Math.max(0.10, 0.5*R));
+    const cards = deck.cards.map(c=>{ const eq=c.equip||0; const loss=Math.round(eq*lossRate);
+      return {img:c.img, body:c.body||0, equip:eq, loss, remain:eq-loss}; });
     const rec={ t:Date.now(), name:b.name, kind:b.kind, area, win, deck:deck.name,
-      deckPower:deck.power, bossPower:b.power, medal:b.reward.medal, exp:b.reward.exp, rare:b.rare, cards };
+      deckPower:deck.power, bossPower:b.power, lossRate, medal:b.reward.medal, exp:b.reward.exp, rare:b.rare, cards };
     try{ const log=JSON.parse(localStorage.getItem('ck_reports')||'[]');
       log.unshift(rec); localStorage.setItem('ck_reports', JSON.stringify(log.slice(0,50))); }catch(e){}
   }

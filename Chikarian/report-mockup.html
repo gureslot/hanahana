@@ -129,9 +129,13 @@
       ? `<span class="rw">メダル <b>+${fmt(r.medal)}</b></span><span class="rw">EXP <b>${r.exp}</b></span>${r.rare?`<span class="rw rare">${r.rare}</span>`:''}`
       : `<span class="none">報酬なし（再挑戦できます）</span>`;
     const cards = (r.cards||[]);
-    const rows = cards.length ? cards.map(c=>`
-      <tr><td class="c"><span class="th"><span class="ph">❖</span><img src="./images/${c.img}.png" onload="this.previousElementSibling.style.display='none'" onerror="this.remove()"></span>装備</td>
-      <td>${fmt(c.pw)}</td><td class="loss">-${fmt(c.loss)}</td><td class="remain">${fmt(c.remain)}</td></tr>`).join('')
+    // §9：戦闘で消耗するのは装備パワーの項のみ。本体戦闘力は無傷。SP（装備なし）は損失対象外。
+    const rows = cards.length ? cards.map(c=>{
+      const eq = (c.equip!=null ? c.equip : c.pw); // 後方互換（旧記録は総合pwのみ）
+      const thumb = `<span class="th"><span class="ph">❖</span><img src="./images/${c.img}.png" onload="this.previousElementSibling.style.display='none'" onerror="this.remove()"></span>`;
+      if(!eq){ return `<tr><td class="c">${thumb}本体のみ</td><td>—</td><td>—</td><td class="remain">装備なし</td></tr>`; }
+      return `<tr><td class="c">${thumb}装備</td><td>${fmt(eq)}</td><td class="loss">-${fmt(c.loss)}</td><td class="remain">${fmt(c.remain)}</td></tr>`;
+    }).join('')
       : `<tr><td class="c">―</td><td>―</td><td>―</td><td>―</td></tr>`;
     $('detailBody').innerHTML = `
       <div class="result ${win?'win':'lose'}">${win?'VICTORY':'DEFEATED'}</div>
@@ -142,7 +146,8 @@
         <div class="vs"><div class="side"><div class="lab">自軍（${r.deck||'―'}）</div><div class="num me">${fmt(r.deckPower||0)}</div></div>
         <div class="x">VS</div><div class="side"><div class="lab">敵軍（${r.name}）</div><div class="num foe">${fmt(r.bossPower||0)}</div></div></div></div>
       <div class="sec"><div class="secT">装備パワー</div>
-        <table class="ptable"><thead><tr><th>カード</th><th>出撃</th><th>損失</th><th>残存</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+        <table class="ptable"><thead><tr><th>カード</th><th>出撃</th><th>損失</th><th>残存</th></tr></thead><tbody>${rows}</tbody></table>
+        <div style="font-size:11px;color:#9a8c70;margin-top:6px;line-height:1.5;">※ 消耗するのは装備パワーのみ。<b style="color:#9fe0a0;">本体戦闘力は無傷</b>です（鍛冶場で補充）。損失率＝0.5×(敵戦力÷自軍戦力)・最大100%。</div></div>`;
     $('navPrev').disabled = (idx>=log.length-1); // 古い方向
     $('navNext').disabled = (idx<=0);            // 新しい方向
     $('detail').classList.add('show');
@@ -157,11 +162,12 @@
 
   $('dev').addEventListener('click',()=>{
     const log=load();
+    // 装備パワーのみ損失・本体無傷（§9：損失率=clamp(0.5×敵戦力/自軍戦力,0.10,1.00)）。SPは装備なし＝損失なし。
     const samples=[
-      {name:'ヴェルグラフ', kind:'中ボス', area:'古代樹海界', win:true, deck:'デッキ1', deckPower:4200, bossPower:3000, medal:300, exp:'経験の書（中）×2', rare:'道化の仮面',
-       cards:[{img:'chara_hibiscus_hana_ken_ssr',pw:2000,loss:300,remain:1700},{img:'chara_hibiscus_ha_tate_sr',pw:1400,loss:210,remain:1190},{img:'chara_dragon_sp',pw:800,loss:120,remain:680}]},
-      {name:'ゼルヴァニクス', kind:'中ボス', area:'古代樹海界', win:false, deck:'デッキ2', deckPower:2100, bossPower:5000, medal:0, exp:'', rare:'',
-       cards:[{img:'chara_hibiscus_ha_tsue_r',pw:1000,loss:1000,remain:0},{img:'chara_hibiscus_shin_ken_n',pw:600,loss:600,remain:0},{img:'chara_houou_sp',pw:500,loss:500,remain:0}]},
+      {name:'ヴェルグラフ', kind:'中ボス', area:'古代樹海界', win:true, deck:'デッキ1', deckPower:19200, bossPower:3000, lossRate:0.10, medal:300, exp:'経験の書（中）×2', rare:'',
+       cards:[{img:'chara_hibiscus_hana_ken_ssr',body:2500,equip:7500,loss:750,remain:6750},{img:'chara_hibiscus_ha_tate_sr',body:1200,equip:4000,loss:400,remain:3600},{img:'chara_dragon_sp',body:4000,equip:0,loss:0,remain:0}]},
+      {name:'アルヴェノクス', kind:'面ボス', area:'古代樹海界', win:false, deck:'デッキ2', deckPower:7600, bossPower:8000, lossRate:0.526, medal:0, exp:'', rare:'',
+       cards:[{img:'chara_hibiscus_ha_tsue_r',body:600,equip:2200,loss:1158,remain:1042},{img:'chara_hibiscus_shin_ken_n',body:300,equip:1000,loss:526,remain:474},{img:'chara_houou_sp',body:3500,equip:0,loss:0,remain:0}]},
     ];
     const s=JSON.parse(JSON.stringify(samples[log.length%2])); s.t=Date.now();
     log.unshift(s); save(log); renderList();

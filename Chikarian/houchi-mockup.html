@@ -63,8 +63,8 @@ function ChikarianHome() {
   // ゲーム状態（モック値）
   const [chikarium, setChikarium] = useState(12345);
   const [medal] = useState(678900);
-  const DAILY_MAX = 500;
-  const [dailyGot, setDailyGot] = useState(120);      // 本日採取済み
+  const DAILY_MAX = 500;                               // 1日のチカリウム獲得上限（設計書§8・連続式）
+  const [dailyGot, setDailyGot] = useState(0);         // 本日の採取量（チカリウム）
   const [countdown, setCountdown] = useState(msUntilMidnight());
   const [houchiReady] = useState(true);                // 放置報酬あり
   const [toast, setToast] = useState(null);
@@ -100,10 +100,11 @@ function ChikarianHome() {
 
   const onSaishu = () => {
     if (reachedCap) { flash("本日分の採取は完了しています（0時にリセット）"); return; }
-    // 実機ではカメラ採取画面へ遷移。ここではモックとして満タンにする。
+    // 実機ではカメラ採取画面へ遷移（連続式・1かざし約10秒で上限500）。モックは残り全量を一括取得。
+    const gain = DAILY_MAX - dailyGot;
     setDailyGot(DAILY_MAX);
-    setChikarium((c) => c + (DAILY_MAX - dailyGot) * 1);
-    flash("採取画面へ（モック）");
+    setChikarium((c) => c + gain);
+    flash(`チカリウム +${gain.toLocaleString()}（本日 ${DAILY_MAX}/${DAILY_MAX}）`);
   };
 
   const pct = Math.min(100, (dailyGot / DAILY_MAX) * 100);
@@ -125,7 +126,7 @@ function ChikarianHome() {
               <div style={S.resLabel}>チカリウム</div>
               <div style={S.resVal}>{chikarium.toLocaleString()}</div>
               <div style={S.gaugeWrap}>
-                <div style={S.gaugeText}>本日 {dailyGot}/{DAILY_MAX}</div>
+                <div style={S.gaugeText}>本日 {dailyGot.toLocaleString()}/{DAILY_MAX.toLocaleString()}</div>
                 <div style={S.gaugeBar}><div style={{ ...S.gaugeFill, width: `${pct}%` }} /></div>
               </div>
             </div>

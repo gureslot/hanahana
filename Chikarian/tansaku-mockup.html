@@ -140,10 +140,10 @@
     <span class="close" id="busyClose">×</span>
     <h3 id="busyTitle">探索中</h3>
     <div class="reward">
-      <div class="col"><div class="amt" id="accMedal">0</div><div class="cap">メダル</div></div>
-      <div class="col"><div class="amt" id="accExp">0</div><div class="cap">EXPアイテム</div></div>
+      <div class="col"><div class="amt" id="accMedal">0</div><div class="cap">メダル <span id="capMedal"></span></div></div>
+      <div class="col"><div class="amt" id="accExp">0</div><div class="cap">EXPアイテム <span id="capExp"></span></div></div>
     </div>
-    <div class="note">時間で蓄積・倉庫上限まで。アイテムは引っ込めた時に判定（ボーナス）。</div>
+    <div class="note">時間で蓄積・最大8時間ぶん（上限到達で停止）。アイテムは引っ込めた時に判定（ボーナス）。</div>
     <button class="recall" id="recall">引っ込めて回収する</button>
   </div>
 
@@ -152,12 +152,13 @@
 
 <script>
   // 1面=古代樹海界。属性は全エリアなし（段階解放の起点）。数値はすべて仮。
+  // レート(/分)と蓄積上限(8時間=480分ぶん)は設計書§7-1・§7-2。
   const NODES = [
-    { name:'浅域 ・ 樹冠の広場', power:1200, attr:'なし', medalRate:8,  expRate:5,
+    { name:'浅域 ・ 樹冠の広場', power:1200, attr:'なし', medalRate:8,  expRate:5,  capMedal:3840,  capExp:2400,
       drops:['古びた装備片', '経験の書（小）'], rare:'樹海の結晶', locked:false },
-    { name:'中域 ・ 苔生す祭壇', power:3500, attr:'なし', medalRate:18, expRate:12,
+    { name:'中域 ・ 苔生す祭壇', power:3500, attr:'なし', medalRate:18, expRate:12, capMedal:8640,  capExp:5760,
       drops:['装備片', '経験の書（中）'], rare:'古代樹の雫', locked:false },
-    { name:'深域 ・ 霧底の遺構', power:8000, attr:'なし', medalRate:40, expRate:28,
+    { name:'深域 ・ 霧底の遺構', power:8000, attr:'なし', medalRate:40, expRate:28, capMedal:19200, capExp:13440,
       drops:['上等な装備片', '経験の書（大）'], rare:'霧底の宝珠', locked:true },
   ];
   const DECKS = [ {name:'デッキ1', power:4200}, {name:'デッキ2', power:2100} ];
@@ -177,9 +178,9 @@
     $('info').innerHTML=`
       <div class="stat"><span class="k">要求戦力</span><span class="v">${fmt(nd.power)}</span></div>
       <div class="stat"><span class="k">属性要求</span><span class="v attr-none">${nd.attr}</span></div>
-      <div class="secTitle">時間で蓄積</div>
-      <div class="stat"><span class="k">メダル</span><span class="v">${nd.medalRate} /分（目安）</span></div>
-      <div class="stat"><span class="k">EXPアイテム</span><span class="v">${nd.expRate} /分（目安）</span></div>
+      <div class="secTitle">時間で蓄積（最大8時間ぶん）</div>
+      <div class="stat"><span class="k">メダル</span><span class="v">${nd.medalRate} /分 ・ 上限 ${fmt(nd.capMedal)}</span></div>
+      <div class="stat"><span class="k">EXPアイテム</span><span class="v">${nd.expRate} /分 ・ 上限 ${fmt(nd.capExp)}</span></div>
       <div class="secTitle">ドロップ（ボーナス）</div>
       <div class="drops">${dropHtml}</div>`;
     $('decks').innerHTML=DECKS.map((d,di)=>`<div class="deck ${di===selDeck?'sel':''}" data-d="${di}"><div class="dn">${d.name}</div><div class="dp">戦力 ${fmt(d.power)}</div></div>`).join('');
@@ -189,11 +190,16 @@
   function showSheet(id){ $('scrim').classList.add('show'); $(id).classList.add('show'); }
   function hideSheets(){ $('scrim').classList.remove('show'); $('sheet').classList.remove('show'); $('busySheet').classList.remove('show'); }
 
-  $('go').addEventListener('click',()=>{ const i=curNode; deployed[i]={since:Date.now(),m:NODES[i].medalRate,e:NODES[i].expRate}; nodeEls[i].classList.add('busy'); hideSheets(); });
+  $('go').addEventListener('click',()=>{ const i=curNode; deployed[i]={since:Date.now(),m:NODES[i].medalRate,e:NODES[i].expRate,capM:NODES[i].capMedal,capE:NODES[i].capExp}; nodeEls[i].classList.add('busy'); hideSheets(); });
 
-  function accOf(i){ const d=deployed[i]; if(!d) return {m:0,e:0}; const sec=(Date.now()-d.since)/1000; return {m:Math.floor(sec*(d.m/60))+Math.floor(sec), e:Math.floor(sec*(d.e/60))+Math.floor(sec/2)}; }
+  // 蓄積は8時間ぶん（capM/capE）で頭打ち（設計書§7-2）。
+  function accOf(i){ const d=deployed[i]; if(!d) return {m:0,e:0}; const sec=(Date.now()-d.since)/1000;
+    const m=Math.floor(sec*(d.m/60))+Math.floor(sec), e=Math.floor(sec*(d.e/60))+Math.floor(sec/2);
+    return {m:Math.min(m,d.capM), e:Math.min(e,d.capE)}; }
   function openBusy(i){ curNode=i; $('busyTitle').textContent=NODES[i].name+'（探索中）'; updateAcc(); showSheet('busySheet'); }
-  function updateAcc(){ if(curNode>=0&&deployed[curNode]){ const a=accOf(curNode); $('accMedal').textContent=fmt(a.m); $('accExp').textContent=fmt(a.e); } }
+  function updateAcc(){ if(curNode>=0&&deployed[curNode]){ const a=accOf(curNode); const nd=NODES[curNode];
+    $('accMedal').textContent=fmt(a.m); $('accExp').textContent=fmt(a.e);
+    const cm=$('capMedal'), ce=$('capExp'); if(cm) cm.textContent='/ 上限 '+fmt(nd.capMedal); if(ce) ce.textContent='/ 上限 '+fmt(nd.capExp); } }
   setInterval(()=>{ if($('busySheet').classList.contains('show')) updateAcc(); },1000);
 
   $('recall').addEventListener('click',()=>{ const i=curNode; const a=accOf(i); const m=Math.max(1,a.m), e=Math.max(0,a.e);
