@@ -23,8 +23,8 @@
   .wbadge{font-size:9px; font-weight:800; padding:1px 5px; border-radius:5px; color:#16100a; background:#cdb488;}
 
   /* ===== 合成メイン ===== */
-  .body{flex:1; overflow-y:auto; padding:10px 16px 24px;}
-  .slotsRow{display:flex; align-items:center; justify-content:center; gap:10px; margin:6px 0 4px;}
+  .body{flex:1; overflow-y:auto; padding:10px 16px 96px;}
+  .slotsRow{display:flex; align-items:flex-start; justify-content:center; gap:10px; margin:6px 0 4px;}
   .cardSlot{flex:1; max-width:130px;}
   .cardSlot .lab{font-size:11px; color:#cdb488; letter-spacing:1px; text-align:center; margin-bottom:5px;}
   .cardBox{aspect-ratio:5/7; border-radius:12px; border:1.5px dashed rgba(232,194,90,.5); background:rgba(0,0,0,.3); position:relative; cursor:pointer; overflow:hidden;}
@@ -32,10 +32,16 @@
   .cardBox .empty{position:absolute; inset:0; display:grid; place-items:center; font-size:28px; color:#6a5a3a;}
   .cardBox img{width:100%; height:100%; object-fit:cover; display:block;}
   .cardBox .cph{position:absolute; inset:0; display:grid; place-items:center; font-size:24px; color:#7a5a3a; background:#241018;}
-  .cardBox .meta{position:absolute; left:0; right:0; bottom:0; padding:5px; background:linear-gradient(0deg,rgba(0,0,0,.85),transparent); display:flex; gap:4px; align-items:center;}
-  .cardBox .star{position:absolute; top:5px; left:6px; font-size:10px; color:#ffd98a; text-shadow:0 1px 3px #000;}
+  .cardBox .star{position:absolute; top:5px; left:6px; font-size:11px; font-weight:800; color:#ffd98a; text-shadow:0 1px 3px #000,0 0 4px #000;}
   .cardBox .rm{position:absolute; top:4px; right:4px; width:18px; height:18px; border-radius:50%; background:rgba(0,0,0,.6); border:1px solid rgba(232,194,90,.5); color:#ffd; font-size:11px; display:grid; place-items:center; z-index:2;}
-  .arrow{flex:none; font-size:24px; color:#e8b54d;}
+  .arrow{flex:none; font-size:24px; color:#e8b54d; align-self:center; margin-top:30px;}
+  /* カード画像下のレアリティ・属性・装備タイプ表示 */
+  .cardFoot{display:none; flex-wrap:wrap; gap:3px; align-items:center; justify-content:center; margin-top:5px; min-height:18px;}
+  .cardFoot.show{display:flex;}
+  .cardFoot .pw{width:100%; text-align:center; font-size:10px; color:#fff3c8; margin-top:1px;}
+  .cardFoot .lockMini{font-size:11px;}
+  /* レアリティ文字バッジ（N/R/SR/SSR を色分け） */
+  .rb{font-size:9px; font-weight:800; padding:1px 6px; border-radius:5px; color:#16100a; letter-spacing:.5px;}
 
   .rate{text-align:center; margin:12px 0 6px;}
   .rate .lab{font-size:11px; color:#cdb488; letter-spacing:1px;}
@@ -52,6 +58,14 @@
   .achip.on{background:linear-gradient(180deg,rgba(255,228,154,.26),rgba(232,181,77,.14)); box-shadow:0 0 10px rgba(255,200,90,.3); border-color:#ffd98a;}
   .achip .ct{font-size:10px; color:#9a8c70;}
   .achip.sp .nm{color:#ffe39a;}
+  /* 確率保証石 個数カウンター */
+  .ensCtrl{display:flex; align-items:center; gap:8px; flex-wrap:wrap; background:rgba(255,235,180,.05); border:1px solid rgba(232,194,90,.4); border-radius:10px; padding:7px 11px; margin-bottom:7px;}
+  .ensCtrl.active{background:linear-gradient(180deg,rgba(255,228,154,.22),rgba(232,181,77,.12)); border-color:#ffd98a;}
+  .ensCtrl .nm{font-size:12px; color:#ffe39a; font-weight:700;}
+  .ensCtrl .stp{font-family:inherit; font-weight:800; font-size:16px; line-height:1; color:#2a160a; border:none; width:26px; height:26px; border-radius:50%; cursor:pointer; background:linear-gradient(180deg,#ffe49a,#e8b54d 60%,#b9842f);}
+  .ensCtrl .stp:disabled{filter:grayscale(.6) brightness(.7); cursor:default;}
+  .ensCtrl .cnt{font-size:16px; font-weight:800; min-width:18px; text-align:center; color:#ffe39a;}
+  .ensCtrl .ct{font-size:10px; color:#9a8c70; margin-left:auto;}
 
   .cost{display:flex; justify-content:space-between; align-items:center; background:var(--panel); border:var(--border); border-radius:12px; padding:11px 14px; margin:12px 0 4px;}
   .cost .k{font-size:12px; color:#cdb488; letter-spacing:1px;} .cost .v{font-size:17px; font-weight:800; color:#ffe39a;}
@@ -87,8 +101,11 @@
   .cl.disabled{opacity:.32; cursor:default;}
   .clThumb{flex:none; width:42px; aspect-ratio:5/7; border-radius:6px; overflow:hidden; border:1px solid rgba(232,194,90,.4); background:#241018; position:relative;}
   .clThumb img{width:100%; height:100%; object-fit:cover;} .clThumb .cph{position:absolute; inset:0; display:grid; place-items:center; font-size:14px; color:#7a5a3a;}
+  .clThumb .lockTag{position:absolute; top:1px; right:1px; font-size:11px; text-shadow:0 1px 2px #000;}
   .clInfo{flex:1; min-width:0;} .clName{font-size:11px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-  .clBadges{display:flex; gap:3px; margin-top:4px;} .clStar{font-size:10px; color:#ffd98a; margin-top:3px;}
+  .clBadges{display:flex; gap:3px; margin-top:4px; align-items:center;} .clStar{font-size:10px; color:#ffd98a; margin-top:3px;}
+  .lockBtn{flex:none; align-self:center; font-family:inherit; font-size:14px; line-height:1; background:rgba(0,0,0,.35); border:1px solid rgba(232,194,90,.4); border-radius:8px; padding:6px 7px; cursor:pointer; color:#ffd;}
+  .lockBtn.on{background:rgba(232,90,120,.22); border-color:#e86b8a;}
   .pager{flex:none; display:flex; align-items:center; justify-content:center; gap:14px; margin-top:8px;}
   .pager button{font-family:inherit; font-size:16px; color:var(--gold-hi); background:var(--panel); border:var(--border); border-radius:50%; width:34px; height:34px; cursor:pointer;}
   .pager button:disabled{opacity:.35; cursor:default;} .pager .pInfo{font-size:11px; color:#cdb488;}
@@ -103,6 +120,19 @@
   .pickBtn{flex:none; margin-top:10px; width:100%; font-family:inherit; font-weight:800; font-size:15px; letter-spacing:2px; color:#2a160a; border:none; padding:12px; border-radius:24px; cursor:pointer; background:linear-gradient(180deg,#ffe49a,#e8b54d 60%,#b9842f);}
   .pickBtn:disabled{filter:grayscale(.6) brightness(.7); cursor:default;}
   .cond{flex:none; font-size:11px; color:#ff9a8a; text-align:center; margin-top:6px; min-height:14px;}
+  .lockToggle{flex:none; margin-top:8px; width:100%; font-family:inherit; font-weight:700; font-size:13px; letter-spacing:1px; border:1.5px solid rgba(232,194,90,.5); padding:9px; border-radius:20px; cursor:pointer; background:rgba(0,0,0,.3); color:var(--gold-hi);}
+  .lockToggle.on{background:rgba(232,90,120,.2); border-color:#e86b8a; color:#ffd;}
+
+  /* 確認ポップアップ */
+  .confirmModal{position:absolute; inset:0; z-index:20; background:rgba(5,3,6,.82); display:none; align-items:center; justify-content:center; padding:0 32px;}
+  .confirmModal.show{display:flex;}
+  .confirmBox{width:100%; max-width:320px; background:var(--panel); border:var(--border); border-radius:16px; padding:22px 20px 18px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.6);}
+  .confirmTtl{font-size:15px; font-weight:800; letter-spacing:2px; color:#ff9a8a; margin-bottom:10px;}
+  .confirmMsg{font-size:13px; color:var(--gold-hi); line-height:1.8; margin-bottom:18px;}
+  .confirmBtns{display:flex; gap:10px;}
+  .confirmBtns button{flex:1; font-family:inherit; font-weight:800; font-size:14px; letter-spacing:1px; border:none; padding:11px; border-radius:22px; cursor:pointer;}
+  #confirmNo{background:rgba(255,255,255,.08); border:1.5px solid rgba(232,194,90,.4); color:var(--gold-hi);}
+  #confirmYes{color:#2a160a; background:linear-gradient(180deg,#ffe49a,#e8b54d 60%,#b9842f);}
 </style>
 <script src="./cksound.js"></script>
 </head>
@@ -111,12 +141,12 @@
   <!-- 合成メイン -->
   <div class="screen" id="scrMain">
     <button class="back" id="back">‹ 戻る</button>
-    <div class="head"><div class="t">強化合成</div><div class="s">同じ強化値のカードを合成して強化値を上げる</div></div>
+    <div class="head"><div class="t">強化合成</div><div class="s">同じレアリティ・強化値のカードを合成して強化値を上げる</div></div>
     <div class="body">
       <div class="slotsRow">
-        <div class="cardSlot"><div class="lab">本体（強化する）</div><div class="cardBox" id="baseBox"><div class="empty">＋</div></div></div>
+        <div class="cardSlot"><div class="lab">本体</div><div class="cardBox" id="baseBox"><div class="empty">＋</div></div><div class="cardFoot" id="baseFoot"></div></div>
         <div class="arrow">＋</div>
-        <div class="cardSlot"><div class="lab">素材（食わせる）</div><div class="cardBox" id="matBox"><div class="empty">＋</div></div></div>
+        <div class="cardSlot"><div class="lab">素材</div><div class="cardBox" id="matBox"><div class="empty">＋</div></div><div class="cardFoot" id="matFoot"></div></div>
       </div>
 
       <div class="rate"><div class="lab">合成成功率</div><div class="val" id="rateVal">—</div></div>
@@ -124,11 +154,12 @@
 
       <div class="assist">
         <div class="assistT">補助素材</div>
+        <div id="ensWrap"></div>
         <div class="achips" id="achips"></div>
       </div>
 
       <div class="cost"><span class="k">消費メダル</span><span class="v" id="costVal">—</span></div>
-      <div class="note">・成功で強化値+1。失敗すると素材カードは消滅します（保護石で防止可）。<br>・成功率＝max(30, 90−5×現在の強化値)。確率保証石で+20%、SP素材で+40%。<br>・メダル消費＝500×(現在の強化値+1)。素材のスキルは合成で消滅します（スキル転移は別機能）。</div>
+      <div class="note">・成功で強化値+1。失敗すると素材カードは消滅します（保護石で防止可）。<br>・成功率＝max(30, 90−5×現在の強化値)。確率保証石1個ごとに+10%（上限100%）、SP素材で+40%。<br>・メダル消費＝500×(現在の強化値+1)。素材のスキルは合成で消滅します（スキル転移は別機能）。</div>
     </div>
     <div class="doBtn"><button id="doKyoka" disabled>カードを選んでください</button></div>
   </div>
@@ -144,6 +175,15 @@
       <div class="rightCol" id="rightCol"></div>
     </div>
     <div class="cond" id="cond"></div>
+  </div>
+
+  <!-- 確認ポップアップ -->
+  <div class="confirmModal" id="confirmModal">
+    <div class="confirmBox">
+      <div class="confirmTtl">確認</div>
+      <div class="confirmMsg" id="confirmMsg"></div>
+      <div class="confirmBtns"><button id="confirmNo">いいえ</button><button id="confirmYes">はい</button></div>
+    </div>
   </div>
 
   <!-- 結果 -->
@@ -192,15 +232,22 @@
     const cap=LVCAP[c.rar]||30;
     const h=[...name].reduce((a,ch)=>a+ch.charCodeAt(0),0);
     c.level=1+(h%cap); c.star=(h%4); c.power=calcPower(c); c.rankBase=rb;
+    c.locked = (c.rar==='ssr');   // SSRはモックの初期状態でロック（誤って素材に使わないように）
     return c;
   }
   const CARDS=POOL.map(build); const byId=id=>CARDS.find(c=>c.id===id);
 
-  // 補助素材（モック所持数）
-  const ASSIST={ protect:{name:'保護石', ct:5, on:false}, ensure:{name:'確率保証石', ct:2, on:false},
+  // レアリティ表示（文字＋色）
+  const RAR={ n:{t:'N',c:'#9aa0a6'}, r:{t:'R',c:'#5aa9e8'}, sr:{t:'SR',c:'#c77dff'}, ssr:{t:'SSR',c:'#ffcf5a'}, SP:{t:'SP',c:'#ffd98a'} };
+  function rarBadge(c){ const r=RAR[c.rar]||RAR.n; return `<span class="rb" style="background:${r.c}">${r.t}</span>`; }
+  function starMini(c){ return c.sp?'':('★'+c.star); }   // カード左上：強化値の★だけ
+
+  // 補助素材（モック所持数）。確率保証石は個数を入れられる別UI（ENSURE）として分離
+  const ASSIST={ protect:{name:'保護石', ct:5, on:false},
                 dragon:{name:'ゴールドドラゴン(SP)', sp:true, ct:1, on:false},  // 成功率UP
                 houou:{name:'鳳凰(SP)', sp:true, ct:1, on:false},               // 失敗時保護
                 girl:{name:'ゴーストガール(SP)', sp:true, ct:1, on:false} };     // 強化値ボーナス
+  const ENSURE={ name:'確率保証石', ct:3, use:0 };   // ct=所持数, use=投入数（1個ごと+10%）
 
   let baseId=null, matId=null, pickFor=null, page=0, highlight=null;
   const PER=4;
@@ -209,26 +256,34 @@
   function badges(c){ return c.sp?`<span class="badge sp">SP</span>`:`<span class="badge ${ATTR[c.attr].cls}">${ATTR[c.attr].lab}</span><span class="wbadge">${WEAP[c.weap]}</span>`; }
   function stars(c){ return c.sp?'—':(c.star>0?'★'.repeat(c.star):'強化なし'); }
 
-  function renderBox(boxId, id, role){ const box=$(boxId);
-    if(!id){ box.className='cardBox'; box.innerHTML=`<div class="empty">＋</div>`; return; }
+  function renderBox(boxId, footId, id, role){ const box=$(boxId), foot=$(footId);
+    if(!id){ box.className='cardBox'; box.innerHTML=`<div class="empty">＋</div>`; foot.className='cardFoot'; foot.innerHTML=''; return; }
     const c=byId(id); box.className='cardBox filled';
-    box.innerHTML=`<div class="rm" data-rm="${role}">×</div><div class="star">${stars(c)}</div>${thumbInner(c)}<div class="meta">${badges(c)}<span style="margin-left:auto;font-size:9px;color:#fff3c8">${fmt(c.power)}</span></div>`;
-    box.querySelector('.rm').addEventListener('click',(e)=>{ e.stopPropagation(); if(role==='base'){baseId=null; matId=matId;} else matId=null; if(role==='base')baseId=null; refresh(); });
+    // カード左上は強化値の★だけ。レアリティ／属性／装備タイプは画像下のフッターへ。
+    box.innerHTML=`<div class="rm" data-rm="${role}">×</div><div class="star">${starMini(c)}</div>${thumbInner(c)}`;
+    box.querySelector('.rm').addEventListener('click',(e)=>{ e.stopPropagation(); if(role==='base') baseId=null; else matId=null; refresh(); });
+    foot.className='cardFoot show';
+    foot.innerHTML=`${rarBadge(c)}${badges(c)}${c.locked?'<span class="lockMini">🔒</span>':''}<span class="pw">戦闘力 ${fmt(c.power)}</span>`;
   }
 
+  // 確率保証石を除いた成功率（保証石の投入可能数を判定するのに使う）
+  function rateBeforeEnsure(){ const b=byId(baseId); let r=Math.max(30, 90 - 5*b.star); if(ASSIST.dragon.on) r+=40; return Math.min(100,r); }
   function calcRate(){ if(!baseId||!matId) return null;
     const b=byId(baseId), m=byId(matId);
-    let rate=Math.max(30, 90 - 5*b.star);    // 成功率 = max(30, 90−5×現在の★)（設計書§5）
-    if(ASSIST.ensure.on) rate += 20;         // 確率保証石＝成功率+20%（設計書§5）
-    if(ASSIST.dragon.on) rate += 40;         // SP素材（ドラゴン）＝成功率+40%（設計書§5）
-    // 保護石／鳳凰(SP)は率ではなく「失敗しても素材が残る」効果（設計書§5）
-    rate=Math.min(99,rate);
+    let rate=Math.max(30, 90 - 5*b.star);    // 成功率 = max(30, 90−5×現在の★)
+    rate += ENSURE.use*10;                    // 確率保証石＝1個ごとに+10%
+    if(ASSIST.dragon.on) rate += 40;          // SP素材（ドラゴン）＝成功率+40%
+    // 保護石／鳳凰(SP)は率ではなく「失敗しても素材が残る」効果
+    rate=Math.min(100,rate);                  // 上限100%
     return {rate, b, m};
   }
   function calcCost(){ if(!baseId||!matId) return 0; const b=byId(baseId); return 500*(b.star+1); } // メダル = 500×(★+1)（設計書§5）
 
   function refresh(){
-    renderBox('baseBox', baseId, 'base'); renderBox('matBox', matId, 'mat');
+    renderBox('baseBox', 'baseFoot', baseId, 'base'); renderBox('matBox', 'matFoot', matId, 'mat');
+    // 保証石は「100%到達まで＆所持数まで」に収める（無駄な投入を防ぐ）
+    if(baseId&&matId){ const need=Math.max(0, Math.ceil((100 - rateBeforeEnsure())/10)); ENSURE.use=Math.min(ENSURE.use, need, ENSURE.ct); }
+    else ENSURE.use=0;
     const r=calcRate();
     if(!r){ $('rateVal').textContent='—'; $('rateVal').className='val'; $('breakdown').innerHTML=''; $('costVal').textContent='—'; $('doKyoka').disabled=true; $('doKyoka').textContent='カードを選んでください'; renderAssist(); return; }
     $('rateVal').textContent=r.rate+'%'; $('rateVal').className='val'+(r.rate>=80?' hi':(r.rate<40?' low':''));
@@ -236,7 +291,7 @@
       <div class="brow"><span class="k">本体</span><span class="v">${r.b.name}（${stars(r.b)}）</span></div>
       <div class="brow"><span class="k">素材</span><span class="v">${r.m.name}（${stars(r.m)}）</span></div>
       <div class="brow"><span class="k">成功で</span><span class="v plus">強化値 +1（★${r.b.star} → ★${r.b.star+1}）</span></div>
-      ${ASSIST.ensure.on?'<div class="brow"><span class="k">確率保証石</span><span class="v plus">成功率 +20%</span></div>':''}
+      ${ENSURE.use>0?`<div class="brow"><span class="k">確率保証石 ×${ENSURE.use}</span><span class="v plus">成功率 +${ENSURE.use*10}%</span></div>`:''}
       ${ASSIST.dragon.on?'<div class="brow"><span class="k">SP素材（ドラゴン）</span><span class="v plus">成功率 +40%</span></div>':''}
       ${ASSIST.protect.on?'<div class="brow"><span class="k">保護石</span><span class="v plus">失敗しても素材が残る</span></div>':''}
       ${ASSIST.girl.on?'<div class="brow"><span class="k">ゴーストガール</span><span class="v plus">成功時に強化値ボーナス</span></div>':''}`;
@@ -245,15 +300,43 @@
     renderAssist();
   }
   function renderAssist(){
+    // 確率保証石：個数を増減できるカウンターUI（1個ごと+10%）
+    const ready=baseId&&matId;
+    const curRate = ready ? calcRate().rate : 0;
+    const canInc = ready && ENSURE.use<ENSURE.ct && curRate<100;       // 所持数内＆100%未満のみ追加可
+    $('ensWrap').innerHTML=`<div class="ensCtrl ${ENSURE.use>0?'active':''}">
+      <span class="nm">確率保証石</span>
+      <button class="stp" data-act="dec" ${ENSURE.use>0?'':'disabled'}>−</button>
+      <span class="cnt">${ENSURE.use}</span>
+      <button class="stp" data-act="inc" ${canInc?'':'disabled'}>＋</button>
+      <span class="ct">所持 ×${ENSURE.ct}　投入1個ごと+10%</span></div>`;
+    $('ensWrap').querySelectorAll('.stp').forEach(el=>el.addEventListener('click',()=>{
+      if(el.disabled) return;
+      if(el.dataset.act==='inc') ENSURE.use++; else if(ENSURE.use>0) ENSURE.use--;
+      refresh();
+    }));
+    // その他の補助素材はオン/オフのチップ
     $('achips').innerHTML=Object.entries(ASSIST).map(([k,a])=>`<div class="achip ${a.on?'on':''} ${a.sp?'sp':''}" data-k="${k}"><span class="nm">${a.name}</span><span class="ct">×${a.ct}</span></div>`).join('');
     $('achips').querySelectorAll('.achip').forEach(el=>el.addEventListener('click',()=>{ const k=el.dataset.k; ASSIST[k].on=!ASSIST[k].on; refresh(); }));
   }
 
+  // 確認ポップアップ（Promiseで「はい/いいえ」を返す）
+  function askConfirm(msg){ return new Promise(res=>{
+    $('confirmMsg').textContent=msg; $('confirmModal').classList.add('show');
+    const done=v=>{ $('confirmModal').classList.remove('show'); $('confirmYes').onclick=null; $('confirmNo').onclick=null; res(v); };
+    $('confirmYes').onclick=()=>done(true); $('confirmNo').onclick=()=>done(false);
+  });}
+
   // 合成実行
-  $('doKyoka').addEventListener('click',()=>{
+  $('doKyoka').addEventListener('click', async ()=>{
     const r=calcRate(); if(!r) return;
-    const success = (Math.random()*100 < r.rate);
     const b=byId(baseId), m=byId(matId);
+    // SSR本体にSSR素材を食わせる場合は確認
+    if(b.rar==='ssr' && m.rar==='ssr'){
+      const ok=await askConfirm('SSRを素材として消費します。よろしいですか？');
+      if(!ok) return;
+    }
+    const success = (Math.random()*100 < r.rate);
     const protect = ASSIST.protect.on || ASSIST.houou.on;
     if(success){ b.star += 1 + (ASSIST.girl.on?1:0);
       b.power=calcPower(b);   // ★更新後の戦力を再計算（★は本体戦闘力に乗る・設計書§2-1）
@@ -262,7 +345,7 @@
     const matLost = success ? true : !protect;
     showResult(success, b, m, matLost);
     // 補助素材リセット（モック）
-    Object.values(ASSIST).forEach(a=>a.on=false);
+    Object.values(ASSIST).forEach(a=>a.on=false); ENSURE.use=0;
     matId=null; // 素材は消費/リセット
   });
 
@@ -281,15 +364,16 @@
   /* ===== カード選択（流用） ===== */
   $('baseBox').addEventListener('click',(e)=>{ if(e.target.dataset.rm!==undefined) return; openSelect('base'); });
   $('matBox').addEventListener('click',(e)=>{ if(e.target.dataset.rm!==undefined) return; openSelect('mat'); });
-  function selectable(c){ // 素材は本体と同じ強化値が条件（同強化値2枚で合成）
+  function selectable(c){ // 素材は本体と同じレアリティ・同じ強化値、かつロックされていないカードのみ
     if(pickFor==='base'){ return c.id!==matId; }
-    if(pickFor==='mat'){ if(!baseId) return false; return c.id!==baseId && c.star===byId(baseId).star; }
+    if(pickFor==='mat'){ if(!baseId) return false; const b=byId(baseId);
+      return c.id!==baseId && !c.locked && c.rar===b.rar && c.star===b.star; }
     return true;
   }
   function openSelect(role){ pickFor=role; const list=CARDS.filter(()=>true);
     highlight = (role==='base'?baseId:matId) || (CARDS.find(selectable)||CARDS[0]).id;
     page=Math.floor(CARDS.findIndex(c=>c.id===highlight)/PER); if(page<0)page=0;
-    $('selTitle').textContent = role==='base'?'本体カードを選ぶ':'素材カードを選ぶ（本体と同じ強化値）';
+    $('selTitle').textContent = role==='base'?'本体カードを選ぶ':'素材カードを選ぶ（本体と同じレアリティ・強化値）';
     $('scrMain').classList.add('hide'); $('scrSelect').classList.remove('hide'); renderSelect();
   }
   function renderSelect(){
@@ -297,24 +381,34 @@
     const slice=CARDS.slice(page*PER,page*PER+PER);
     $('cardList').innerHTML=slice.map(c=>{ const ok=selectable(c);
       return `<div class="cl ${c.id===highlight?'sel':''} ${ok?'':'disabled'}" data-id="${c.id}" data-ok="${ok}">
-      <div class="clThumb">${thumbInner(c)}</div>
-      <div class="clInfo"><div class="clName">${c.name}</div><div class="clBadges">${badges(c)}<span class="badge" style="background:#3a2a40;color:#e7d3ff">${c.rar}</span></div><div class="clStar">${stars(c)}</div></div></div>`;}).join('');
+      <div class="clThumb">${thumbInner(c)}${c.locked?'<span class="lockTag">🔒</span>':''}</div>
+      <div class="clInfo"><div class="clName">${c.name}</div><div class="clBadges">${rarBadge(c)}${badges(c)}</div><div class="clStar">${stars(c)}</div></div>
+      <button class="lockBtn ${c.locked?'on':''}" data-lock="${c.id}" title="ロック切替">${c.locked?'🔒':'🔓'}</button></div>`;}).join('');
     $('cardList').querySelectorAll('.cl').forEach(el=>el.addEventListener('click',()=>{ if(el.dataset.ok!=='true') return; highlight=el.dataset.id; renderSelect(); }));
+    $('cardList').querySelectorAll('.lockBtn').forEach(el=>el.addEventListener('click',(e)=>{ e.stopPropagation(); const c=byId(el.dataset.lock); c.locked=!c.locked; renderSelect(); }));
     $('pInfo').textContent=`${page+1} / ${pages}`; $('pPrev').disabled=page<=0; $('pNext').disabled=page>=pages-1;
     renderRight();
   }
   function renderRight(){ const c=byId(highlight); const ok=selectable(c);
     $('rightCol').innerHTML=`
       <div class="dTop"><div class="dThumb">${thumbInner(c)}</div><div class="dName">${c.name}</div>
-        <div class="dBadges">${badges(c)}<span class="badge" style="background:#3a2a40;color:#e7d3ff">${c.rar}</span></div><div class="dStarRow">${stars(c)}</div></div>
+        <div class="dBadges">${rarBadge(c)}${badges(c)}</div><div class="dStarRow">${stars(c)}</div></div>
       <div class="dStats">
         <div class="dRow"><span class="k">レベル</span><span class="v">Lv ${c.level}</span></div>
         <div class="dRow"><span class="k">強化値</span><span class="v">${stars(c)}</span></div>
         <div class="dRow"><span class="k">戦闘力</span><span class="v">${fmt(c.power)}</span></div>
       </div>
-      <button class="pickBtn" id="pickBtn" ${ok?'':'disabled'}>${ok?'これを選ぶ':'選べません'}</button>`;
-    $('cond').textContent = (pickFor==='mat' && baseId && !ok && c.id!==baseId) ? `素材は本体と同じ強化値（${stars(byId(baseId))}）のカードのみ` : '';
+      <button class="pickBtn" id="pickBtn" ${ok?'':'disabled'}>${ok?'これを選ぶ':'選べません'}</button>
+      <button class="lockToggle ${c.locked?'on':''}" id="lockToggle">${c.locked?'🔒 ロック中（素材にできません）':'🔓 ロックする'}</button>`;
+    // 選べない理由を表示
+    let cond='';
+    if(pickFor==='mat' && baseId && !ok && c.id!==baseId){ const b=byId(baseId);
+      if(c.locked) cond='ロック中のカードは素材にできません（解除すると選べます）';
+      else cond=`素材は本体と同じレアリティ・強化値（${(RAR[b.rar]||{}).t} ／ ${stars(b)}）のカードのみ`;
+    }
+    $('cond').textContent=cond;
     $('pickBtn').addEventListener('click',()=>{ if(!ok) return; if(pickFor==='base') baseId=c.id; else matId=c.id; backToMain(); });
+    $('lockToggle').addEventListener('click',()=>{ c.locked=!c.locked; renderSelect(); });
   }
   function backToMain(){ $('scrSelect').classList.add('hide'); $('scrMain').classList.remove('hide'); refresh(); }
 
