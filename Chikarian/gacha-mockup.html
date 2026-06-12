@@ -34,10 +34,10 @@
   .sub{font-size:11px; color:#cdb488; letter-spacing:2px; margin-top:4px;}
 
   /* カード場 */
-  .stage{flex:1; width:100%; display:flex; align-items:center; justify-content:center; gap:12px;
+  .stage{flex:1; width:100%; display:flex; flex-wrap:wrap; align-items:center; align-content:center; justify-content:center; gap:10px;
          perspective:1200px;}
-  /* 外枠：登場アニメ（下から＋フェード）担当。回転はしない */
-  .card{position:relative; width:30%; max-width:124px; aspect-ratio:5/7;
+  /* 外枠：登場アニメ（下から＋フェード）担当。回転はしない。6枚＝2行×3 */
+  .card{position:relative; width:29%; max-width:108px; aspect-ratio:5/7;
         filter:drop-shadow(0 8px 16px rgba(0,0,0,.55));}
   /* 内側：フリップ担当。初期=0度で裏面が正面。flippedで180度回って表 */
   .cardInner{position:relative; width:100%; height:100%; transform-style:preserve-3d;
@@ -106,8 +106,8 @@
 <div class="wrap">
   <div class="title">チカリアンガチャ</div>
   <div class="balance"><span class="balLabel">所持チカリウム</span><span class="balVal" id="balVal">12,345</span></div>
-  <div class="cost" id="costLine">1回 300 チカリウム ・ 3枚排出</div>
-  <div class="sub" id="sub">3枚を引く</div>
+  <div class="cost" id="costLine">1回 300 チカリウム ・ 6枚排出</div>
+  <div class="sub" id="sub">6枚を引く</div>
 
   <div class="stage" id="stage"><!-- カードはJSで生成 --></div>
 
@@ -123,7 +123,7 @@
 const ASSETS = {
   cardBack: "./images/card_back.png",
   imgDir: "./images/",
-  // 排出プール（全カードのファイル名・拡張子なし）。引くたびに3枚ランダム抽選。
+  // 排出プール（全カードのファイル名・拡張子なし）。引くたびに6枚をレア帯重み付けで抽選。
   pool: [
     "chara_dragon_sp",
     "chara_girl_sp",
@@ -214,12 +214,18 @@ function buildCard(item){
   return card;
 }
 
-// プールからn枚ランダム抽選（重複あり＝同じカードが複数出てもOK）
-function drawRandom(n){
-  const out=[];
-  for(let i=0;i<n;i++){ out.push(ASSETS.pool[Math.floor(Math.random()*ASSETS.pool.length)]); }
-  return out;
-}
+// 排出率＝レア帯の重み付け（balance §1 / apply-spec §2）。まずレア帯を確率で決め、その帯の中から1枚抽選。
+const RARITY_WEIGHT={ n:53.8, r:30, sr:9, sp:5, ssr:2.2 };   // ％（合計100）
+function rarOf(id){ if(id.endsWith('_sp')) return 'sp'; const p=id.split('_'); return p[p.length-1]; }
+const POOL_BY_RAR=(()=>{ const m={n:[],r:[],sr:[],sp:[],ssr:[]};
+  ASSETS.pool.forEach(id=>{ const r=rarOf(id); if(m[r]) m[r].push(id); }); return m; })();
+function pickRarity(){ const order=['n','r','sr','sp','ssr'];
+  const total=order.reduce((a,k)=>a+RARITY_WEIGHT[k],0); let x=Math.random()*total;
+  for(const k of order){ x-=RARITY_WEIGHT[k]; if(x<0) return k; } return 'n'; }
+function drawOne(){ let bucket=POOL_BY_RAR[pickRarity()]; if(!bucket||!bucket.length) bucket=ASSETS.pool;
+  return bucket[Math.floor(Math.random()*bucket.length)]; }
+// n枚抽選（重複あり＝同じカードが複数出てもOK）。各枚レア帯を独立に重み付け抽選。
+function drawRandom(n){ const out=[]; for(let i=0;i<n;i++) out.push(drawOne()); return out; }
 
 let drawing = false;
 function draw(){
@@ -233,9 +239,9 @@ function draw(){
   balVal.classList.remove('spend'); void balVal.offsetWidth; balVal.classList.add('spend');
   sub.textContent = '排出中…';
 
-  // 1) 3枚ランダム抽選して裏向きで整列して登場（時間差）
+  // 1) 6枚抽選（レア帯重み付け）して裏向きで整列して登場（時間差）
   stage.innerHTML = '';
-  const picks = drawRandom(3);
+  const picks = drawRandom(6);
   const cards = picks.map(buildCard);
   cards.forEach((c, i)=>{
     c.classList.add('enter');

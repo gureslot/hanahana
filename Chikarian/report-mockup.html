@@ -56,7 +56,7 @@
   .vs .side{text-align:center; flex:1;} .vs .lab{font-size:10px; color:#cdb488; letter-spacing:1px;}
   .vs .num{font-size:22px; font-weight:800; margin-top:3px;} .vs .num.me{color:#ffe39a;} .vs .num.foe{color:#ff9a8a;}
   .vs .x{font-size:13px; color:#cdb488;}
-  /* 装備パワー表 */
+  /* 武気表 */
   .ptable{width:100%; border-collapse:collapse; font-size:12px;}
   .ptable th{font-size:10px; color:#cdb488; letter-spacing:1px; font-weight:600; padding:5px 4px; border-bottom:1px solid rgba(232,194,90,.3); text-align:right;}
   .ptable th:first-child{text-align:left;}
@@ -130,7 +130,7 @@
       ? `<span class="rw">メダル <b>+${fmt(r.medal)}</b></span><span class="rw">EXP <b>${r.exp}</b></span>${r.rare?`<span class="rw rare">${r.rare}</span>`:''}`
       : `<span class="none">報酬なし（再挑戦できます）</span>`;
     const cards = (r.cards||[]);
-    // §9：戦闘で消耗するのは装備パワーの項のみ。本体戦闘力は無傷。SP（装備なし）は損失対象外。
+    // §9：戦闘で消耗するのは武気の項のみ。本体戦闘力は無傷。SP（装備なし・武気を持たない）は損失対象外。
     const rows = cards.length ? cards.map(c=>{
       const eq = (c.equip!=null ? c.equip : c.pw); // 後方互換（旧記録は総合pwのみ）
       const thumb = `<span class="th"><span class="ph">❖</span><img src="./images/${c.img}.png" onload="this.previousElementSibling.style.display='none'" onerror="this.remove()"></span>`;
@@ -146,9 +146,9 @@
       <div class="sec"><div class="secT">戦闘力</div>
         <div class="vs"><div class="side"><div class="lab">自軍（${r.deck||'―'}）</div><div class="num me">${fmt(r.deckPower||0)}</div></div>
         <div class="x">VS</div><div class="side"><div class="lab">敵軍（${r.name}）</div><div class="num foe">${fmt(r.bossPower||0)}</div></div></div></div>
-      <div class="sec"><div class="secT">装備パワー</div>
+      <div class="sec"><div class="secT">武気</div>
         <table class="ptable"><thead><tr><th>カード</th><th>出撃</th><th>損失</th><th>残存</th></tr></thead><tbody>${rows}</tbody></table>
-        <div style="font-size:11px;color:#9a8c70;margin-top:6px;line-height:1.5;">※ 消耗するのは装備パワーのみ。<b style="color:#9fe0a0;">本体戦闘力は無傷</b>です（鍛冶場で補充）。損失率＝0.5×(敵戦力÷自軍戦力)・最大100%。</div></div>`;
+        <div style="font-size:11px;color:#9a8c70;margin-top:6px;line-height:1.5;">※ 消耗するのは武気のみ。<b style="color:#9fe0a0;">本体戦闘力は無傷</b>です（練気殿で補充）。損失率＝0.5×(敵戦力÷自軍戦力)・下限10%〜上限100%。</div></div>`;
     $('navPrev').disabled = (idx>=log.length-1); // 古い方向
     $('navNext').disabled = (idx<=0);            // 新しい方向
     $('detail').classList.add('show');
@@ -163,7 +163,7 @@
 
   $('dev').addEventListener('click',()=>{
     const log=load();
-    // 装備パワーのみ損失・本体無傷（§9：損失率=clamp(0.5×敵戦力/自軍戦力,0.10,1.00)）。SPは装備なし＝損失なし。
+    // 武気のみ損失・本体無傷（§9：損失率=clamp(0.5×敵戦力/自軍戦力,0.10,1.00)）。SPは装備なし＝損失なし。
     const samples=[
       {name:'ヴェルグラフ', kind:'中ボス', area:'古代樹海界', win:true, deck:'デッキ1', deckPower:19200, bossPower:3000, lossRate:0.10, medal:300, exp:'経験の書（中）×2', rare:'',
        cards:[{img:'chara_hibiscus_hana_ken_ssr',body:2500,equip:7500,loss:750,remain:6750},{img:'chara_hibiscus_ha_tate_sr',body:1200,equip:4000,loss:400,remain:3600},{img:'chara_dragon_sp',body:4000,equip:0,loss:0,remain:0}]},

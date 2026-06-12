@@ -64,7 +64,7 @@ function ChikarianHome() {
   // ゲーム状態（モック値）
   const [chikarium, setChikarium] = useState(12345);
   const [medal] = useState(678900);
-  const DAILY_MAX = 500;                               // 1日のチカリウム獲得上限（設計書§8・連続式）
+  const DAILY_MAX = 1000;                              // 1日のチカリウム獲得上限（設計書§8/Flag F・連続式）
   const [dailyGot, setDailyGot] = useState(0);         // 本日の採取量（チカリウム）
   const [countdown, setCountdown] = useState(msUntilMidnight());
   const [houchiReady] = useState(true);                // 放置報酬あり

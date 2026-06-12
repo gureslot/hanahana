@@ -95,7 +95,7 @@
     <div class="slots" id="slots"></div>
     <div class="summary">
       <div class="pw">デッキ総戦力 <b id="deckPw">0</b></div>
-      <div class="legend">属性 花→芯→葉→花 ／ 装備 剣→盾→杖→剣（SPは無属性・装備なし）</div>
+      <div class="legend">属性 花→芯→葉→花 ／ 装備 剣→盾→杖→剣（SPは無属性・装備なし）<br>※戦力は「魔装・満充填」前提の目安（実戦力は装備の質/武気・ボスで変動）</div>
     </div>
     <div class="hint">編成したい枠（上の3つ）をタップして<br>カードを選んでください</div>
     <button class="back" id="back">‹ 戻る</button>
@@ -122,19 +122,22 @@
   const $=s=>document.getElementById(s); const fmt=n=>n.toLocaleString();
   const ATTR={hana:{lab:'花',cls:'hana'}, ha:{lab:'葉',cls:'ha'}, shin:{lab:'芯',cls:'shin'}};
   const WEAP={ken:'剣', tate:'盾', tsue:'杖'};
-  // ===== カード戦力（戦国IXA式・設計書§2-1〜2-4／×0.63適用後）=====
-  //   総合戦力 = 充填量 × 装備パワー攻撃力 + 本体戦闘力（SPは本体戦闘力のみで戦う）
-  const LVCAP={n:30,r:40,sr:50,ssr:60,SP:50};         // レベル上限（§2-2）
-  const BODY_BASE={n:63,r:158,sr:284,ssr:441,SP:560}; // 本体戦闘力 基礎 Lv1★0（§2-2・×0.63後／SPは独立560）
-  const EQATK={n:7,r:12,sr:20,ssr:30};                // 装備パワー攻撃力 1単位（§2-3・据え置き／SPは持たない）
-  const CAPBASE={n:63,r:95,sr:126,ssr:158};           // 充填量 基礎 Lv1（§2-4・×0.63後）
-  const CAPMAX ={n:189,r:315,sr:441,ssr:630};         // 充填量 MAX Lv上限（§2-4・×0.63後）
-  // 本体戦闘力 = 基礎 ×(1+(Lv-1)×rL)×(1+0.15×★)、rL=2.0/(Lv上限-1)（§2-2）
-  function calcBody(rar, lv, star){ const cap=LVCAP[rar]||30; return Math.floor((BODY_BASE[rar]||63)*(1+(lv-1)*(2.0/(cap-1)))*(1+0.15*star)); }
-  // 充填量 = 基礎 +(MAX-基礎)×(Lv-1)/(Lv上限-1)（§2-4）
-  function calcCapacity(rar, lv){ if(CAPBASE[rar]==null) return 0; const cap=LVCAP[rar]||30; return Math.round(CAPBASE[rar]+(CAPMAX[rar]-CAPBASE[rar])*(lv-1)/(cap-1)); }
-  // カード総合戦力（§2-1）。SPは装備パワーを持たない＝本体戦闘力のみ。
-  function calcPower(c){ const body=calcBody(c.rar, c.level, c.star); return c.sp ? body : calcCapacity(c.rar,c.level)*(EQATK[c.rar]||0)+body; }
+  // ===== カード戦力（戦国IXA式・balance §2-1〜2-4 / apply-spec §3・×0.80世界）=====
+  //   総合戦力 = 装備項 + 本体戦闘力。装備項 = 込めた武気 × 枠攻撃力（装備の質）。
+  //   表示は「魔装（枠攻撃力33）・満充填」を一律前提（8面クリア基準・balance §2-8）。SPは武気を持たない＝本体のみ。
+  const LVCAP={n:30,r:40,sr:50,ssr:60,SP:50};           // レベル上限（balance §2-2）
+  const BODY_BASE={n:80,r:200,sr:360,ssr:560};          // 本体戦闘力 基礎 Lv1★0（×0.80・apply-spec §3）
+  const SP_BASE={dragon:2260, girl:2160, houou:2060};   // SP本体基礎＝3値（確定 08a5f15・Lv上限50）
+  const EQ_ATK=33;                                       // 枠攻撃力＝魔装（満充填一律で表示／装備の質4段は soubi・鍛冶屋）
+  const CAPBASE={n:80,r:120,sr:160,ssr:200};            // 充填量 基礎 Lv1（×0.80・Flag A）
+  const CAPMAX ={n:240,r:400,sr:560,ssr:800};           // 充填量 MAX Lv上限（×0.80）
+  function bodyBase(c){ return c.sp ? (SP_BASE[c.spKey]||2160) : (BODY_BASE[c.rar]||80); }
+  // 本体戦闘力 = 基礎 ×(1+(Lv-1)×rL)×(1+0.15×★)、rL=2.0/(Lv上限-1)（balance §2-2）
+  function calcBody(c){ const cap=LVCAP[c.rar]||30; return Math.floor(bodyBase(c)*(1+(c.level-1)*(2.0/(cap-1)))*(1+0.15*c.star)); }
+  // 充填量 = 基礎 +(MAX-基礎)×(Lv-1)/(Lv上限-1)（balance §2-4）
+  function calcCapacity(c){ if(c.sp||CAPBASE[c.rar]==null) return 0; const cap=LVCAP[c.rar]||30; return Math.round(CAPBASE[c.rar]+(CAPMAX[c.rar]-CAPBASE[c.rar])*(c.level-1)/(cap-1)); }
+  // カード総合戦力（§2-1）。装備項＝充填量(満充填)×枠攻撃力(魔装)。SPは武気なし＝本体のみ。
+  function calcPower(c){ const body=calcBody(c); return c.sp ? body : calcCapacity(c)*EQ_ATK+body; }
   const FAM={hibiscus:'ハイビスカスマン', meshibe:'めしべだけマン'};
   const SPNAME={dragon:'ゴールドドラゴン', girl:'ゴーストガール', houou:'鳳凰'};
   const POOL=["chara_dragon_sp","chara_girl_sp","chara_houou_sp",
@@ -149,13 +152,13 @@
     "chara_hibiscus_shin_tsue_n","chara_hibiscus_shin_tsue_r","chara_hibiscus_shin_tsue_sr","chara_hibiscus_shin_tsue_ssr",
     "chara_meshibe_shin_tsue_sr","chara_meshibe_shin_tsue_ssr"];
   const SKILLS=['一閃','守勢の構え','癒しの風','連撃','貫通','鼓舞'];
-  const SKILLFX={ '一閃':'攻撃 ×1.2（仮）','守勢の構え':'被ダメ ×0.85（仮）','癒しの風':'毎ターン装備パワー回復（仮）','連撃':'攻撃回数 ×1.15（仮）','貫通':'対防御 ×1.25（仮）','鼓舞':'味方全体 攻撃 ×1.1（仮）' };
+  const SKILLFX={ '一閃':'攻撃 ×1.2（仮）','守勢の構え':'被ダメ ×0.85（仮）','癒しの風':'毎ターン武気回復（仮）','連撃':'攻撃回数 ×1.15（仮）','貫通':'対防御 ×1.25（仮）','鼓舞':'味方全体 攻撃 ×1.1（仮）' };
   const fx=n=> n&&SKILLFX[n]?`<span class="fx">${SKILLFX[n]}</span>`:'';
 
   // カード1枚ごとの記録（モック：レア度等から決定的に生成。本番はSupabase/保存値）
   function build(name){
     const p=name.split('_'); let c;
-    if(name.endsWith('_sp')){ c={id:name, sp:true, fam:'SP', attr:null, weap:null, rar:'SP', name:SPNAME[p[1]]||p[1]}; }
+    if(name.endsWith('_sp')){ c={id:name, sp:true, spKey:p[1], fam:'SP', attr:null, weap:null, rar:'SP', name:SPNAME[p[1]]||p[1]}; }
     else { c={id:name, sp:false, fam:p[1], attr:p[2], weap:p[3], rar:p[4],
               name:`${FAM[p[1]]||p[1]}` }; }
     const cap=LVCAP[c.rar]||30;
@@ -223,6 +226,7 @@
         <div class="dRow"><span class="k">レベル</span><span class="v">Lv ${c.level}</span></div>
         <div class="dRow"><span class="k">強化値</span><span class="v">${c.sp?'—':(c.star>0?('★'+c.star):'強化なし')}</span></div>
         <div class="dRow"><span class="k">戦闘力</span><span class="v">${fmt(c.power)}</span></div>
+        <div class="dRow"><span class="k">装備</span><span class="v">${c.sp?'装備なし':('魔装・満充填 '+fmt(calcCapacity(c))+'枠（仮）')}</span></div>
         <div class="dRow"><span class="k">種族</span><span class="v">${c.sp?'SP':(FAM[c.fam]||c.fam)}</span></div>
         <div class="skillBlock"><div class="skillT">スキル（固定1＋空き2）</div>${skillsHtml}</div>
       </div>

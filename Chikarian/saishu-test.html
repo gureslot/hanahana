@@ -128,7 +128,7 @@
 <!-- ===== TUNE-PANEL END ===== -->
 
 <script>
-const DAILY_MAX=500, PER_BLINK=10, MS=50; // DAILY_MAX=1日の獲得上限500・1点滅+10（設計書§8・連続式／点滅約50回・約9秒で上限）。
+const DAILY_MAX=1000, PER_BLINK=10, MS=50; // DAILY_MAX=1日の獲得上限1000・1点滅+10（設計書§8/Flag F・連続式／点滅約100回で上限）。
 // 判定しきい（2段階枠の実測逆算。形・色・部位の違いを全部セットで使う）
 // ===== TUNE: 調整パネル用。確定したらこの値を固定にし、パネル(HTML/CSS/JS)を削除 =====
 const TUNE_DEFAULT={
