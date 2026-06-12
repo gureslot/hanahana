@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>チカリアン｜修練場</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg0:#0b0809; --bg1:#15100f; --panel:#1c1513; --panel2:#241a17;
+    --line:#3a2c22; --gold:#c7a14e; --gold-bright:#ecd28a; --gold-dim:#8c7038;
+    --crim:#7c1118; --crim-bright:#a3162a;
+    --ink:#efe6d5; --ink-dim:#b6a890; --ink-faint:#7d7160;
+    --up:#7fb6ec; --down:#d08a8a; --neu:#b6a890;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0;}
+  body{
+    background:radial-gradient(120% 80% at 50% -10%, #1d1412 0%, var(--bg1) 38%, var(--bg0) 100%);
+    color:var(--ink); font-family:'Shippori Mincho','Yu Mincho','Hiragino Mincho ProN',serif;
+    min-height:100vh; display:flex; justify-content:center; letter-spacing:.02em;
+  }
+  #root{width:100%; max-width:480px; min-height:100vh; position:relative; padding:0 0 30px;}
+  .wrap{padding:0 16px;}
+
+  .hdr{padding:18px 16px 10px; text-align:center; position:relative;}
+  .hdr::after{content:""; display:block; height:1px; margin:14px 6px 0;
+    background:linear-gradient(90deg,transparent,var(--gold-dim) 18%,var(--gold) 50%,var(--gold-dim) 82%,transparent);}
+  .hdr .deco{color:var(--gold); font-size:11px; letter-spacing:.42em; opacity:.8;}
+  .hdr h1{margin:4px 0 0; font-size:21px; font-weight:800; color:var(--gold-bright); text-shadow:0 1px 0 #000, 0 0 18px rgba(199,161,78,.25);}
+  .hdr .note{font-size:11px; color:var(--ink-faint); margin-top:8px; letter-spacing:.04em;}
+
+  /* カカシ */
+  .dummy{margin:18px 0 6px; padding:22px 12px 18px; border-radius:5px; text-align:center; position:relative;
+    border:1px solid var(--line); background:radial-gradient(80% 120% at 50% 0%, #221a16, #140f0d);}
+  .target{width:92px; height:92px; margin:0 auto 10px; border-radius:50%; position:relative;
+    border:2px solid var(--gold-dim);
+    background:repeating-radial-gradient(circle at 50% 50%, rgba(199,161,78,.16) 0 8px, transparent 8px 16px);}
+  .target::after{content:"◎"; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:34px; color:var(--gold-dim);}
+  .dummy .dn{font-size:13px; color:var(--ink-dim); letter-spacing:.08em;}
+  .dummy .ds{font-size:11px; color:var(--ink-faint); margin-top:3px;}
+  .dummy.swing .target{animation:hit 1.5s ease-in-out infinite;}
+  @keyframes hit{0%,100%{transform:translateX(0) rotate(0);}40%{transform:translateX(6px) rotate(3deg);}70%{transform:translateX(-3px) rotate(-1deg);}}
+
+  .seclabel{font-size:11px; letter-spacing:.3em; color:var(--gold); margin:18px 0 9px; opacity:.85;}
+  .chips{display:flex; gap:8px;}
+  .chip{flex:1; padding:12px 0; text-align:center; cursor:pointer; border-radius:4px; transition:.15s;
+    border:1px solid var(--line); background:linear-gradient(180deg,#181210,#120d0c); color:var(--ink-dim); font-size:15px; font-weight:600;}
+  .chip.on{color:#0c0a09; border-color:var(--gold); background:linear-gradient(180deg,var(--gold-bright),var(--gold)); box-shadow:0 0 12px rgba(199,161,78,.3);}
+  .chip:focus-visible{outline:2px solid var(--up); outline-offset:2px;}
+  .chip small{display:block; font-size:9px; letter-spacing:.12em; opacity:.7; margin-top:2px;}
+
+  .cta{display:block; width:100%; margin-top:22px; padding:15px 0; border:none; border-radius:4px; cursor:pointer;
+    font-family:inherit; font-size:17px; font-weight:800; letter-spacing:.22em; color:#0c0a09;
+    background:linear-gradient(180deg,var(--gold-bright),var(--gold)); box-shadow:0 0 16px rgba(199,161,78,.3);}
+  .cta:active{transform:translateY(1px);}
+  .cta.ghost{background:linear-gradient(180deg,#221a14,#181210); color:var(--gold-bright); border:1px solid var(--gold-dim); box-shadow:none;}
+  .cta:focus-visible{outline:2px solid var(--up); outline-offset:2px;}
+
+  /* 溜め演出 */
+  .ov{position:fixed; inset:0; z-index:30; display:flex; flex-direction:column; align-items:center; justify-content:center; background:rgba(6,4,4,.82); backdrop-filter:blur(2px);}
+  .ov .ring{width:84px; height:84px; border-radius:50%; margin-bottom:20px; border:2px solid var(--gold-dim); position:relative;
+    background:repeating-radial-gradient(circle at 50% 50%, rgba(199,161,78,.18) 0 7px, transparent 7px 14px); animation:meas 1.1s ease-in-out infinite;}
+  .ov .ring::after{content:"◎"; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:30px; color:var(--gold);}
+  .ov .lbl{font-size:14px; letter-spacing:.45em; color:var(--gold-bright);}
+  @keyframes meas{0%,100%{transform:scale(1); filter:brightness(1);}50%{transform:scale(1.12); filter:brightness(1.5);}}
+
+  /* 結果 */
+  .rhdr{margin-top:14px; text-align:center; padding:14px 0 12px; border:1px solid var(--line); border-radius:5px 5px 0 0; background:linear-gradient(180deg,var(--panel2),var(--panel)); border-bottom:none;}
+  .rhdr .rt{font-size:12px; letter-spacing:.32em; color:var(--gold);}
+  .rhdr .total{font-size:38px; font-weight:800; color:var(--gold-bright); line-height:1.05; margin-top:4px; text-shadow:0 0 18px rgba(236,210,138,.3); font-variant-numeric:tabular-nums;}
+  .rhdr .tl{font-size:11px; letter-spacing:.18em; color:var(--ink-faint); margin-top:3px;}
+  .rhdr .vs{font-size:12px; color:var(--ink-faint); margin-top:8px;}
+  .rsetting{padding:9px 12px; border:1px solid var(--line); border-top:none; border-bottom:none; background:#140f0d; font-size:11.5px; color:var(--ink-dim); text-align:center; letter-spacing:.06em;}
+  .rsetting b{color:var(--ink);}
+
+  .crow{padding:12px 13px; border:1px solid var(--line); border-top:none; background:#150f0d;}
+  .crow:last-of-type{border-radius:0 0 5px 5px;}
+  .crow .top{display:flex; justify-content:space-between; align-items:baseline;}
+  .crow .cn{font-size:14px; font-weight:700; color:var(--ink);}
+  .crow .tag{font-size:11px; color:var(--ink-faint);}
+  .badge{display:inline-block; font-size:9px; font-weight:800; padding:1px 5px; border-radius:2px; margin-right:5px; vertical-align:middle;}
+  .b-N{background:#3a3a3a; color:#ddd;} .b-R{background:#28527a; color:#cfe6ff;} .b-SR{background:#6a3a8a; color:#f0d9ff;} .b-SP{background:#7a5a20; color:#ffe9b8;}
+  .crow .line{display:flex; justify-content:space-between; font-size:12px; padding:5px 0 0;}
+  .crow .line .k{color:var(--ink-faint);}
+  .crow .line .v{color:var(--ink-dim);}
+  .mult-up{color:var(--up); font-weight:700;} .mult-down{color:var(--down); font-weight:700;} .mult-neu{color:var(--neu);}
+  .skills{font-size:11.5px; color:var(--gold-bright); margin-top:6px; line-height:1.5;}
+  .skills .none{color:var(--ink-faint);}
+  .crow .final{display:flex; justify-content:space-between; align-items:baseline; margin-top:9px; padding-top:8px; border-top:1px solid var(--line);}
+  .crow .final .k{font-size:11px; letter-spacing:.16em; color:var(--gold);}
+  .crow .final .v{font-size:20px; font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums;}
+
+  .sumbar{display:flex; justify-content:space-between; align-items:baseline; margin-top:10px; padding:13px 14px; border-radius:4px; border:1px solid var(--gold-dim); background:linear-gradient(180deg,#1d160e,#15100b);}
+  .sumbar .k{font-size:12px; letter-spacing:.2em; color:var(--gold);}
+  .sumbar .v{font-size:24px; font-weight:800; color:var(--gold-bright); font-variant-numeric:tabular-nums;}
+
+  .actions{display:flex; gap:10px; margin-top:18px;}
+  .actions .cta{margin-top:0; font-size:15px; letter-spacing:.14em;}
+  .foot{text-align:center; font-size:10px; color:var(--ink-faint); margin-top:20px; line-height:1.6; padding:0 8px;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<script type="text/babel">
+const {useState, useEffect} = React;
+const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const CAST_MS = reduceMotion ? 450 : 3000;   // spec §2：約3秒の溜め
+
+/* ===== 三すくみ（balance §2-7・カード単位・確定） ===== */
+const ATTR_CYCLE=['花','芯','葉'];   // 花→芯→葉→花（各が次を喰う）
+const WEAP_CYCLE=['剣','盾','杖'];   // 剣→盾→杖→剣
+function triAttr(atk,def){ if(def==='無属性')return 1.0; if(atk===def)return 1.0; const i=ATTR_CYCLE.indexOf(atk); if(i<0)return 1.0; return ATTR_CYCLE[(i+1)%3]===def?1.5:0.7; }
+function triWeap(atk,def){ if(def==='なし')return 1.0; if(atk===def)return 1.0; const i=WEAP_CYCLE.indexOf(atk); if(i<0)return 1.0; return WEAP_CYCLE[(i+1)%3]===def?1.5:0.7; }
+function mClass(m){ return m>1?'mult-up':(m<1?'mult-down':'mult-neu'); }
+function mStr(m){ return '×'+m.toFixed(1); }
+
+/* ===== デモ編成デッキ（3枚・総合戦力/スキル数値は全て仮） ===== */
+const DECK=[
+  {name:'ハイビスカスマン', attr:'花', weapon:'剣', rare:'SR', power:32000, skills:[
+     {name:'花葉の協奏', rare:'SR', rate:0.42, mult:1.45, group:['花','葉']},
+     {name:'剣の加勢',   rare:'N',  rate:0.50, mult:1.15, group:['剣']},
+  ]},
+  {name:'ハイビスカスマン', attr:'葉', weapon:'盾', rare:'R', power:24500, skills:[
+     {name:'葉の猛攻', rare:'R', rate:0.40, mult:1.28, group:['葉']},
+  ]},
+  {name:'ゴールドドラゴン', attr:'無', weapon:'なし', rare:'SP', power:10500, sp:true, skills:[]},
+];
+
+const ATTRS=['花','葉','芯','無属性'];
+const WEAPONS=['剣','盾','杖','なし'];
+
+/* スキルを一括抽選（確率発動）→ カード単位で実戦闘力を算出（spec §4） */
+function runChallenge(kakashi){
+  const fired=[];
+  DECK.forEach((c)=> c.skills.forEach(s=>{ if(Math.random()<s.rate) fired.push(s); }));
+  const rows=DECK.map(c=>{
+    const ta=c.sp?1.0:triAttr(c.attr,kakashi.attr);
+    const tw=c.sp?1.0:triWeap(c.weapon,kakashi.weapon);
+    const applied=c.sp?[]:fired.filter(s=> s.group.includes(c.attr)||s.group.includes(c.weapon));
+    const skillMult=applied.reduce((a,s)=>a*s.mult,1);
+    const final=Math.round(c.power*ta*tw*skillMult);
+    return {c, ta, tw, applied, skillMult, final};
+  });
+  return {rows, total:rows.reduce((a,r)=>a+r.final,0)};
+}
+
+function App(){
+  const [screen,setScreen]=useState('set');      // 'set' | 'result'
+  const [kakashi,setKakashi]=useState({attr:'芯', weapon:'杖'});
+  const [casting,setCasting]=useState(false);
+  const [result,setResult]=useState(null);
+
+  function challenge(){
+    setCasting(true);
+    setTimeout(()=>{ setResult(runChallenge(kakashi)); setCasting(false); setScreen('result'); }, CAST_MS);
+  }
+
+  return (
+    <div className="wrap">
+      <div className="hdr">
+        <span className="deco">CHIKARIAN</span>
+        <h1>修練場</h1>
+        <div className="note">{screen==='set'
+          ? 'カカシに属性・装備を設定して実戦闘力を測る。強化なし・報酬なし・回数無制限。'
+          : '結果はその場限り（保存しない）。スキルは確率発動＝再挑戦で振れる。'}</div>
+      </div>
+
+      {screen==='set' && <Setup kakashi={kakashi} setKakashi={setKakashi} onChallenge={challenge}/>}
+      {screen==='result' && result &&
+        <Result result={result} kakashi={kakashi}
+          onRetry={challenge} onFinish={()=>{ setScreen('set'); setResult(null); }}/>}
+
+      {casting && <div className="ov"><div className="ring"></div><div className="lbl">測 定 中</div></div>}
+
+      <div className="foot">総合戦力・スキル数値は全て仮（balance §2-6/skills）。<br/>三すくみはカード1枚ごとに適用（balance §2-7）。SPは本体のみ・三すくみ中立。</div>
+    </div>
+  );
+}
+
+function Setup({kakashi,setKakashi,onChallenge}){
+  return (
+    <div>
+      <div className="dummy">
+        <div className="target"></div>
+        <div className="dn">カカシ（練習用の的）</div>
+        <div className="ds">戦力0・必ず当たる／勝敗なし</div>
+      </div>
+
+      <div className="seclabel">カカシの属性</div>
+      <div className="chips">
+        {ATTRS.map(a=>(
+          <div key={a} tabIndex="0" role="button" className={'chip'+(kakashi.attr===a?' on':'')}
+               onClick={()=>setKakashi(k=>({...k,attr:a}))} onKeyDown={e=>e.key==='Enter'&&setKakashi(k=>({...k,attr:a}))}>
+            {a==='無属性'?'無':a}{a==='無属性'&&<small>中立</small>}</div>
+        ))}
+      </div>
+
+      <div className="seclabel">カカシの装備タイプ</div>
+      <div className="chips">
+        {WEAPONS.map(w=>(
+          <div key={w} tabIndex="0" role="button" className={'chip'+(kakashi.weapon===w?' on':'')}
+               onClick={()=>setKakashi(k=>({...k,weapon:w}))} onKeyDown={e=>e.key==='Enter'&&setKakashi(k=>({...k,weapon:w}))}>
+            {w}{w==='なし'&&<small>中立</small>}</div>
+        ))}
+      </div>
+
+      <button className="cta" onClick={onChallenge}>挑 戦</button>
+    </div>
+  );
+}
+
+function Result({result,kakashi,onRetry,onFinish}){
+  const [shown,setShown]=useState(reduceMotion?result.total:0);
+  useEffect(()=>{
+    window.scrollTo(0,0);
+    if(reduceMotion){ setShown(result.total); return; }
+    let cur=0; const inc=result.total/22;
+    const id=setInterval(()=>{ cur+=inc; if(cur>=result.total){ setShown(result.total); clearInterval(id);} else setShown(Math.round(cur)); }, 26);
+    return ()=>clearInterval(id);
+  },[result]);
+
+  return (
+    <div>
+      <div className="rhdr">
+        <div className="rt">修 練 結 果</div>
+        <div className="total">{shown.toLocaleString()}</div>
+        <div className="tl">デッキ合計 実戦闘力</div>
+        <div className="vs">対 カカシ（標的）　0</div>
+      </div>
+      <div className="rsetting">カカシ設定　属性 <b>{kakashi.attr}</b>　／　装備 <b>{kakashi.weapon}</b></div>
+
+      {result.rows.map((r,i)=>(
+        <div key={i} className="crow">
+          <div className="top">
+            <span className="cn"><span className={'badge b-'+r.c.rare}>{r.c.rare}</span>{r.c.name}</span>
+            <span className="tag">{r.c.sp?'無属性・装備なし':(r.c.attr+'・'+r.c.weapon)}</span>
+          </div>
+          <div className="line"><span className="k">素の総合戦力</span><span className="v">{r.c.power.toLocaleString()}</span></div>
+          <div className="line"><span className="k">三すくみ補正</span>
+            <span className="v">
+              属 <span className={mClass(r.ta)}>{mStr(r.ta)}</span>　・　装 <span className={mClass(r.tw)}>{mStr(r.tw)}</span>
+            </span></div>
+          <div className="skills">
+            発動スキル：{r.c.sp ? <span className="none">スキルなし（SP）</span>
+              : (r.applied.length===0 ? <span className="none">なし（不発）</span>
+                 : r.applied.map((s,j)=>(<span key={j}>{j>0?' / ':''}{s.name} ×{s.mult.toFixed(2)}</span>)))}
+          </div>
+          <div className="final"><span className="k">実戦闘力</span><span className="v">{r.final.toLocaleString()}</span></div>
+        </div>
+      ))}
+
+      <div className="sumbar"><span className="k">合計（総ダメージ）</span><span className="v">{result.total.toLocaleString()}</span></div>
+
+      <div className="actions">
+        <button className="cta ghost" onClick={onFinish}>終了する</button>
+        <button className="cta" onClick={onRetry}>同じ設定で再挑戦</button>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

@@ -1,97 +1,275 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<title>チカリアン 建物</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>チカリアン｜建物</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700;800&display=swap" rel="stylesheet" />
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;800&display=swap');
-  :root{ --gold-hi:#fff3c8; --gold:#e8c25a; --panel:rgba(20,11,16,.9); --border:1.5px solid rgba(232,194,90,.5); }
+  :root{
+    --bg0:#0b0809; --bg1:#15100f; --panel:#1c1513; --panel2:#241a17;
+    --line:#3a2c22; --gold:#c7a14e; --gold-bright:#ecd28a; --gold-dim:#8c7038;
+    --ink:#efe6d5; --ink-dim:#b6a890; --ink-faint:#7d7160;
+    --gin:#c9ccd3; --gin-d:#8b9099; --ao:#5a93d6; --ao-d:#2f5e95;
+    --mura:#a274d6; --mura-d:#6f4aa3; --kin:#e6c060; --kin-d:#a07e2a;
+    --ki:#6fb8b0; --ki-d:#3a7a73; --warn:#d99a5a;
+  }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
-  html,body{margin:0; height:100%;}
-  body{font-family:'Shippori Mincho','Yu Mincho',serif; color:var(--gold-hi); background:#070409; overflow:hidden;}
-  img{-webkit-user-drag:none; user-select:none;}
-  .root{position:relative; width:100%; max-width:480px; margin:0 auto; height:100dvh; overflow:hidden;
-        background:#0a0509 radial-gradient(80% 45% at 50% 0%, rgba(120,90,40,.2), transparent 60%); display:flex; flex-direction:column;}
-  .head{flex:none; text-align:center; padding:16px 16px 4px;}
-  .head .t{font-size:19px; font-weight:800; letter-spacing:4px; text-shadow:0 2px 6px #2a1500,0 0 16px rgba(255,170,70,.35);}
-  .head .s{font-size:11px; color:#cdb488; letter-spacing:1px; margin-top:5px;}
-  .res{position:absolute; top:16px; right:14px; background:var(--panel); border:var(--border); border-radius:13px; padding:6px 12px; font-size:12px; z-index:5;} .res b{color:#ffe39a;}
+  html,body{margin:0; padding:0;}
+  body{background:radial-gradient(120% 80% at 50% -10%, #1d1412 0%, var(--bg1) 38%, var(--bg0) 100%);
+    color:var(--ink); font-family:'Shippori Mincho','Yu Mincho','Hiragino Mincho ProN',serif;
+    min-height:100vh; display:flex; justify-content:center; letter-spacing:.02em;}
+  #root{width:100%; max-width:480px; min-height:100vh; padding:0 0 30px;}
+  .wrap{padding:0 16px;}
 
-  .list{flex:1; overflow-y:auto; padding:10px 16px 90px;}
-  .bld{display:flex; gap:13px; background:var(--panel); border:var(--border); border-radius:14px; padding:13px; margin-bottom:12px; box-shadow:0 3px 12px rgba(0,0,0,.4); cursor:pointer;}
-  .bIcon{flex:none; width:66px; height:66px; border-radius:12px; overflow:hidden; border:1px solid rgba(232,194,90,.5); background:#1c1218; position:relative;}
-  .bIcon img{width:100%; height:100%; object-fit:cover;} .bIcon .ph{position:absolute; inset:0; display:grid; place-items:center; font-size:28px; color:#7a5a3a;}
-  .bInfo{flex:1; min-width:0;}
-  .bTop{display:flex; align-items:center; gap:8px;}
-  .bName{font-size:16px; font-weight:800; letter-spacing:1px;}
-  .bLv{font-size:11px; color:#ffd98a; background:rgba(255,210,120,.12); border:1px solid rgba(255,210,120,.4); border-radius:8px; padding:1px 8px;}
-  .bDesc{font-size:12px; color:#cdb488; line-height:1.7; margin-top:6px;}
-  .bEffect{font-size:12px; color:#9fe0a0; margin-top:5px;}
-  .bAct{display:flex; flex-direction:column; gap:7px; margin-top:10px; align-items:flex-start;}
-  .bActRow{display:flex; gap:8px; align-items:center;}
-  .upCost{display:block;}
-  .upBtn{font-family:inherit; font-weight:800; font-size:13px; letter-spacing:1px; color:#2a160a; border:none; padding:8px 16px; border-radius:18px; cursor:pointer; background:linear-gradient(180deg,#ffe49a,#e8b54d 60%,#b9842f);}
-  .upBtn:active{transform:translateY(1px);} .upCost{font-size:11px; color:#cdb488;} .upCost b{color:#ffe39a;}
-  .maxed{font-size:12px; color:#9a8c70;}
-  .enter{font-family:inherit; font-size:12px; color:var(--gold-hi); background:rgba(255,255,255,.05); border:1px solid rgba(232,194,90,.4); border-radius:18px; padding:8px 14px; cursor:pointer;}
+  .hdr{padding:18px 16px 10px; text-align:center; position:relative;}
+  .hdr::after{content:""; display:block; height:1px; margin:14px 6px 0;
+    background:linear-gradient(90deg,transparent,var(--gold-dim) 18%,var(--gold) 50%,var(--gold-dim) 82%,transparent);}
+  .hdr .deco{color:var(--gold); font-size:11px; letter-spacing:.42em; opacity:.8;}
+  .hdr h1{margin:4px 0 0; font-size:21px; font-weight:800; color:var(--gold-bright); text-shadow:0 1px 0 #000, 0 0 18px rgba(199,161,78,.25);}
 
-  .back{position:absolute; z-index:7; left:14px; bottom:14px; font-family:inherit; font-size:14px; letter-spacing:1px; color:var(--gold-hi); background:var(--panel); border:var(--border); border-radius:22px; padding:10px 20px; cursor:pointer;}
-  .toast{position:absolute; z-index:20; left:50%; top:44%; transform:translate(-50%,-50%) scale(.9); background:var(--panel); border:var(--border); border-radius:14px; padding:14px 22px; text-align:center; font-size:13px; opacity:0; pointer-events:none; transition:.25s;}
-  .toast.show{opacity:1; transform:translate(-50%,-50%) scale(1);}
+  .res{display:flex; gap:10px; margin-top:14px;}
+  .res .it{flex:1; padding:10px 12px; border-radius:4px; border:1px solid var(--line); background:#140f0d; text-align:center;}
+  .res .it .k{font-size:10px; color:var(--ink-faint); letter-spacing:.12em;}
+  .res .it b{display:block; font-size:18px; color:var(--gold-bright); font-weight:800; margin-top:2px; font-variant-numeric:tabular-nums;}
+  .res .it small{color:var(--ink-faint); font-weight:400; font-size:12px;}
+
+  .msg{min-height:18px; text-align:center; font-size:12px; color:var(--gold-bright); margin:12px 0 2px; letter-spacing:.04em; line-height:1.5;}
+
+  .fac{margin-top:14px; padding:14px; border-radius:5px; border:1px solid var(--line); background:linear-gradient(180deg,var(--panel2),var(--panel)); position:relative;}
+  .fac.renki{border-color:#274a47;} .fac.kaji{border-color:#4a2c26;}
+  .fhead{display:flex; gap:12px; align-items:flex-start;}
+  .ficon{width:46px; height:46px; flex:none; border-radius:5px; display:flex; align-items:center; justify-content:center;
+    font-size:22px; font-weight:800; color:var(--gold-bright); border:1px solid var(--gold-dim); background:radial-gradient(70% 70% at 50% 30%, #2a2017, #15100d);}
+  .fac.renki .ficon{color:#aee3dd; border-color:var(--ki-d); background:radial-gradient(70% 70% at 50% 30%, #16302d, #0d1a18);}
+  .fac.kaji .ficon{color:#f0b9a0; border-color:#6e3a2c; background:radial-gradient(70% 70% at 50% 30%, #2a1813, #170d0a);}
+  .fn{font-size:17px; font-weight:800;}
+  .flv{font-size:12px; color:var(--gold); font-weight:700; margin-left:6px; letter-spacing:.06em;}
+  .runpill{display:inline-block; font-size:10px; font-weight:700; padding:2px 9px; border-radius:10px; letter-spacing:.08em; vertical-align:middle; margin-left:8px;}
+  .runpill.on{background:rgba(111,184,176,.18); color:#aee3dd; border:1px solid var(--ki-d);}
+  .runpill.off{background:#15100e; color:var(--ink-faint); border:1px solid var(--line);}
+  .fd{font-size:11.5px; color:var(--ink-faint); margin-top:3px; line-height:1.5;}
+
+  .fstat{margin-top:12px; padding-top:11px; border-top:1px solid var(--line);}
+  .st{display:flex; justify-content:space-between; align-items:baseline; padding:4px 0; font-size:13px;}
+  .st .k{color:var(--ink-faint);} .st b{color:var(--ink); font-weight:700; font-variant-numeric:tabular-nums;}
+  .qrow{margin-top:4px;}
+  .q{display:inline-block; font-size:11px; font-weight:700; padding:2px 9px; border-radius:3px; margin:3px 5px 0 0; color:#0c0a09;}
+  .q.gin{background:linear-gradient(135deg,var(--gin),var(--gin-d));}
+  .q.ao{background:linear-gradient(135deg,var(--ao),var(--ao-d)); color:#eaf3ff;}
+  .q.mura{background:linear-gradient(135deg,var(--mura),var(--mura-d)); color:#f3e9ff;}
+  .q.kin{background:linear-gradient(135deg,var(--kin),var(--kin-d));}
+  .q.lock{background:none; border:1px dashed var(--line); color:var(--ink-faint);}
+
+  .invest{margin-top:12px; padding-top:11px; border-top:1px solid var(--line);}
+  .ilab{font-size:11px; color:var(--ink-faint); letter-spacing:.1em; margin-bottom:6px;}
+  .irow{display:flex; gap:8px;}
+  .irow input{flex:1; min-width:0; background:#100c0b; border:1px solid var(--line); border-radius:4px; color:var(--gold-bright);
+    font-family:inherit; font-size:18px; font-weight:700; padding:9px 12px; text-align:right; font-variant-numeric:tabular-nums;}
+  .irow input:focus{outline:none; border-color:var(--ki-d); box-shadow:0 0 0 1px var(--ki-d) inset;}
+  .irow .allbtn{flex:none; padding:0 14px; border:1px solid var(--gold-dim); border-radius:4px; background:#181210; color:var(--gold-bright);
+    font-family:inherit; font-size:12px; font-weight:700; cursor:pointer; letter-spacing:.04em;}
+  .est{margin-top:10px; font-size:12px; line-height:1.75; color:var(--ink-dim);}
+  .est .row2{display:flex; justify-content:space-between;}
+  .est .a{color:#aee3dd; font-weight:700;} .est .b{color:var(--gold-bright); font-weight:700;}
+  .est .note{color:var(--warn); font-size:11px;}
+
+  .fbtns{display:flex; gap:9px; margin-top:12px;}
+  .fb{flex:1; padding:12px 6px; border-radius:4px; cursor:pointer; font-family:inherit; font-size:13px; font-weight:700; letter-spacing:.04em;
+    border:1px solid var(--gold-dim); background:linear-gradient(180deg,#221a14,#181210); color:var(--gold-bright);}
+  .fb.primary{border:none; color:#0c0a09; background:linear-gradient(180deg,#bfeae3,var(--ki)); box-shadow:0 0 12px rgba(111,184,176,.3);}
+  .fb.gold{border:none; color:#0c0a09; background:linear-gradient(180deg,var(--gold-bright),var(--gold)); box-shadow:0 0 12px rgba(199,161,78,.25);}
+  .fb.wide{margin-top:9px;}
+  .fb:active{transform:translateY(1px);}
+  .fb:disabled{opacity:.45; cursor:not-allowed; box-shadow:none;}
+  .fb:focus-visible{outline:2px solid var(--ao); outline-offset:2px;}
+
+  .foot{text-align:center; font-size:10px; color:var(--ink-faint); margin-top:20px; line-height:1.6; padding:0 8px;}
 </style>
-<script src="./cksound.js"></script>
 </head>
 <body>
-<div class="root">
-  <div class="head"><div class="t">建物</div><div class="s">拠点の施設を強化して部隊を支える</div></div>
-  <div class="res">メダル <b id="medal">1,240</b></div>
-  <div class="list" id="list"></div>
-  <button class="back" id="back">‹ 戻る</button>
-  <div class="toast" id="toast"></div>
-</div>
-<script>
-  const $=s=>document.getElementById(s); const fmt=n=>n.toLocaleString();
-  let medal=1240;
-  // 建物4種（確定）。効果文・数値は仮。
-  const BLD=[
-    { key:'shuren', icon:'ic_tatemono_shuren', name:'修練場', lv:3, max:10, noUpgrade:true,
-      desc:'固定の的に対してデッキの威力を試せる。消費なし。結果はその場限りで残らない。', effect:()=>'効果：なし（威力試験）', enter:true },
-    { key:'kaji', icon:'ic_tatemono_kaji', name:'鍛冶場', lv:2, max:10,
-      desc:'装備パワーを生産する。レベルが上がるほど生産量と速度が上がる。', effect:(lv)=>`効果：生産量 +${lv*5}％ ／ 速度 +${lv*4}％（仮）` },
-    { key:'kenkyu', icon:'ic_tatemono_kenkyu', name:'研究塔', lv:1, max:10,
-      desc:'生産できる装備パワーの上級ランクを研究で解放する。', effect:(lv)=>`効果：解放ランク 〜${['—','Ⅰ','Ⅱ','Ⅲ','Ⅳ','Ⅴ','Ⅵ','Ⅶ','Ⅷ','Ⅸ','Ⅹ'][lv]}（仮）` },
-    { key:'souko', icon:'ic_tatemono_souko', name:'倉庫', lv:4, max:10,
-      desc:'報酬・装備パワーの保管上限を増やす。', effect:(lv)=>`効果：保管上限 ${fmt(10000+lv*5000)}（仮）` },
-  ];
-  function cost(b){ return 300 + b.lv*250; } // 強化費（仮）
+<div id="root"></div>
 
-  function render(){
-    $('medal').textContent=fmt(medal);
-    $('list').innerHTML=BLD.map((b,i)=>`
-      <div class="bld" data-i="${i}">
-        <div class="bIcon"><div class="ph">🏛</div><img src="./images/${b.icon}.png" alt="" onload="this.previousElementSibling.style.display='none'" onerror="this.remove()"></div>
-        <div class="bInfo">
-          <div class="bTop"><span class="bName">${b.name}</span>${b.noUpgrade?'':`<span class="bLv">Lv ${b.lv}${b.lv>=b.max?'（最大）':''}</span>`}</div>
-          <div class="bDesc">${b.desc}</div>
-          <div class="bEffect">${b.effect(b.lv)}</div>
-          <div class="bAct">
-            ${b.noUpgrade
-              ? (b.enter?'<div class="bActRow"><button class="enter" data-enter="'+i+'">入る</button></div>':'')
-              : (b.lv>=b.max ? '<span class="maxed">レベル最大</span>'
-                : `<div class="bActRow"><button class="upBtn" data-up="${i}">強化</button>${b.enter?'<button class="enter" data-enter="'+i+'">入る</button>':''}</div><span class="upCost">消費 <b>${fmt(cost(b))}</b> メダル → Lv ${b.lv+1}</span>`)}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<script type="text/babel">
+const {useState, useEffect} = React;
+const n=x=>x.toLocaleString();
+function fmtDur(s){
+  s=Math.round(s); if(s<=0) return '0秒';
+  if(s<60) return s+'秒';
+  if(s<3600){ const m=Math.floor(s/60), r=s%60; return m+'分'+(r?r+'秒':''); }
+  const h=Math.floor(s/3600), m=Math.round((s%3600)/60); return h+'時間'+(m?m+'分':'');
+}
+
+/* ===== 仮の数値・曲線（全て仮） ===== */
+const QUAL=[{nm:'粗製',k:'gin'},{nm:'精製',k:'ao'},{nm:'魔装',k:'mura'},{nm:'聖装',k:'kin'}];
+const K_TIME = 20;                  // 時間生産の単価（武気1＝メダル20・安い）
+const K_INST = 60;                  // 即生産の単価（武気1＝メダル60・割高＝3倍）
+const RATE   = lv=>0.1*lv;          // 練成レート（武気/秒）：じっくり。Lvで増加（Lv5＝0.5/秒）
+const renkiCap = lv=>1000+(lv-1)*1500;
+const renkiUp  = lv=>8000*lv;
+const kajiyaUp = lv=>15000*lv;
+
+function App(){
+  const [medal,setMedal]=useState(80000);                 // メダル（=メダルの呼称）
+  const [renki,setRenki]=useState({buki:1800, fuel:0});   // 武気・投資中のメダル（未消費＝燃料）
+  const [renkiLv,setRenkiLv]=useState(5);
+  const [kajiyaLv,setKajiyaLv]=useState(3);
+  const [amtStr,setAmtStr]=useState('50000');             // 自由入力（投資するメダル）
+  const [msg,setMsg]=useState('メダルを入力して投資すると、毎秒ずつ武気を練る。急ぐ分は即生産。');
+
+  const cap=renkiCap(renkiLv), rate=RATE(renkiLv);
+  const bukiInt=Math.floor(renki.buki);
+  const room=Math.max(0, cap-bukiInt);
+  const running = renki.fuel>0 && renki.buki<cap;
+  const renkiUpCost=renkiUp(renkiLv);
+  const kajiyaMax=kajiyaLv>=4, kajiyaUpCost=kajiyaUp(kajiyaLv);
+
+  // 毎秒生産：投資したメダルが尽きるまで rate 個/秒。Lv強化・追加投資は即反映。
+  useEffect(()=>{
+    if(!running) return;
+    const id=setInterval(()=>{
+      setRenki(s=>{
+        const cap2=renkiCap(renkiLv);
+        if(s.fuel<=0 || s.buki>=cap2) return s;
+        const r=RATE(renkiLv);
+        const produce=Math.min(r, s.fuel/K_TIME, cap2-s.buki);
+        if(produce<=0) return s;
+        return {buki:s.buki+produce, fuel:s.fuel-produce*K_TIME};
+      });
+    },1000);
+    return ()=>clearInterval(id);
+  },[running, renkiLv]);
+
+  const A=parseInt(amtStr,10)||0;
+  const estTimeBuki=Math.floor(A/K_TIME);
+  const estTimeSec=rate>0? estTimeBuki/rate : 0;
+  const estInstBuki=Math.min(Math.floor(A/K_INST), room);
+  // 投資中の残り
+  const remainBuki=Math.min(Math.floor(renki.fuel/K_TIME), room);
+  const remainSec=rate>0? remainBuki/rate : 0;
+
+  function investTime(){
+    if(A<=0) return setMsg('投資するメダルを入力してください。');
+    if(A>medal) return setMsg('メダルが足りません（所持 '+n(medal)+'）');
+    if(renki.buki>=cap) return setMsg('武気が保管上限です。練気殿を強化して上限を上げる。');
+    setMedal(m=>m-A); setRenki(s=>({...s, fuel:s.fuel+A}));
+    setMsg('メダル '+n(A)+' を投資。毎秒 '+rate+' ずつ武気を練り始めた。');
+  }
+  function instant(){
+    if(A<=0) return setMsg('メダルを入力してください。');
+    if(room<=0) return setMsg('武気が保管上限です。');
+    let gain=Math.floor(A/K_INST);
+    if(gain<=0) return setMsg('即生産には最低 '+n(K_INST)+' メダル（武気1個ぶん）必要です。');
+    if(gain>room) gain=room;
+    const cost=gain*K_INST;
+    if(cost>medal) return setMsg('メダルが足りません。');
+    setMedal(m=>m-cost); setRenki(s=>({...s, buki:s.buki+gain}));
+    setMsg('即生産：武気 '+n(gain)+' を入手（メダル '+n(cost)+'）。');
+  }
+  function upRenki(){
+    if(medal<renkiUpCost) return setMsg('メダルが足りません（練気殿の強化に '+n(renkiUpCost)+'）');
+    setMedal(m=>m-renkiUpCost); setRenkiLv(l=>l+1);
+    setMsg('練気殿を Lv'+(renkiLv+1)+' へ。毎秒レートと保管上限が上昇。投資中の分にも即適用。');
+  }
+  function upKajiya(){
+    if(kajiyaMax) return;
+    if(medal<kajiyaUpCost) return setMsg('メダルが足りません（鍛冶屋の強化に '+n(kajiyaUpCost)+'）');
+    const newQ=QUAL[kajiyaLv].nm;
+    setMedal(m=>m-kajiyaUpCost); setKajiyaLv(l=>l+1);
+    setMsg('鍛冶屋を Lv'+(kajiyaLv+1)+' へ。「'+newQ+'」の装備が作れるようになった。');
+  }
+
+  return (
+    <div className="wrap">
+      <div className="hdr"><span className="deco">CHIKARIAN</span><h1>建物</h1></div>
+
+      <div className="res">
+        <div className="it"><span className="k">メダル</span><b>{n(medal)}</b></div>
+        <div className="it"><span className="k">武気</span><b>{n(bukiInt)} <small>/ {n(cap)}</small></b></div>
+      </div>
+      <div className="msg">{msg}</div>
+
+      {/* 練気殿（毎秒・時間生産＋即生産） */}
+      <div className="fac renki">
+        <div className="fhead">
+          <div className="ficon">練</div>
+          <div><div className="fn">練気殿<span className="flv">Lv {renkiLv}</span>
+            <span className={'runpill '+(running?'on':'off')}>{running?'稼働中':'停止'}</span></div>
+            <div className="fd">メダルを投資すると、毎秒ずつ武気を練る。離れていても進む。急ぐ分は即生産。</div></div>
+        </div>
+        <div className="fstat">
+          <div className="st"><span className="k">武気</span><b>{n(bukiInt)} / {n(cap)}</b></div>
+          <div className="st"><span className="k">練成レート</span><b>毎秒 {rate}（時間 武気1＝メダル{K_TIME}）</b></div>
+          <div className="st"><span className="k">投資中のメダル</span><b>{n(Math.round(renki.fuel))}{renki.fuel>0?'　→ 残り 約'+fmtDur(remainSec)+'・武気'+n(remainBuki)+'個':''}</b></div>
+        </div>
+
+        <div className="invest">
+          <div className="ilab">投資するメダル（自由入力）</div>
+          <div className="irow">
+            <input type="text" inputMode="numeric" value={amtStr}
+              onChange={e=>setAmtStr(e.target.value.replace(/[^0-9]/g,''))} />
+            <button className="allbtn" onClick={()=>setAmtStr(String(medal))}>全額</button>
+          </div>
+          <div className="est">
+            <div className="row2"><span>投資</span><span><span className="a">武気 {n(estTimeBuki)}</span> ／ 約{fmtDur(estTimeSec)}</span></div>
+            {estTimeBuki>room && <div className="note">※保管上限 {n(cap)} で一時停止（空けば再開）。</div>}
+            <div className="row2"><span>即生産（メダル{K_INST}/個）</span><span><span className="b">武気 {n(estInstBuki)}</span> ／ 即時</span></div>
+          </div>
+          <div className="fbtns">
+            <button className="fb primary" disabled={A<=0||A>medal||renki.buki>=cap} onClick={investTime}>投資して練る</button>
+            <button className="fb gold" disabled={A<=0||room<=0||estInstBuki<=0} onClick={instant}>即生産</button>
           </div>
         </div>
-      </div>`).join('');
-    $('list').querySelectorAll('[data-up]').forEach(el=>el.addEventListener('click',(e)=>{ e.stopPropagation(); up(+el.dataset.up); }));
-    $('list').querySelectorAll('[data-enter]').forEach(el=>el.addEventListener('click',(e)=>{ e.stopPropagation(); toast(BLD[+el.dataset.enter].name+'（試験場は後日実装）'); }));
-  }
-  function up(i){ const b=BLD[i]; const c=cost(b); if(b.lv>=b.max) return;
-    if(medal<c){ toast('メダルが足りません'); return; }
-    medal-=c; b.lv++; render(); toast(b.name+' を Lv'+b.lv+' に強化しました'); }
-  function toast(t){ $('toast').textContent=t; const el=$('toast'); el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),1500); }
-  render();
-  $('back').addEventListener('click',()=>{ location.href='./home-mockup.html'; });
+
+        <button className="fb wide" disabled={medal<renkiUpCost} onClick={upRenki}>練気殿を強化（メダル{n(renkiUpCost)}）</button>
+      </div>
+
+      {/* 鍛冶屋 */}
+      <div className="fac kaji">
+        <div className="fhead">
+          <div className="ficon">鍛</div>
+          <div><div className="fn">鍛冶屋<span className="flv">Lv {kajiyaLv}</span></div>
+            <div className="fd">武具を鍛え、装備の「質」を作る・解放する。質が上がるほど枠あたりの攻撃力が増す。</div></div>
+        </div>
+        <div className="fstat">
+          <div className="st"><span className="k">解放済みの質</span><span></span></div>
+          <div className="qrow">
+            {QUAL.map((q,i)=>(<span key={q.k} className={'q '+(i<kajiyaLv?q.k:'lock')}>{q.nm}</span>))}
+          </div>
+          <div className="st" style={{marginTop:'8px'}}>
+            <span className="k">次に解放</span>
+            <b>{kajiyaMax?'—（全て解放済み）':QUAL[kajiyaLv].nm+'（Lv'+(kajiyaLv+1)+'）'}</b>
+          </div>
+        </div>
+        <div className="fbtns">
+          {kajiyaMax
+            ? <button className="fb" disabled>全ての質を解放済み</button>
+            : <button className="fb gold" disabled={medal<kajiyaUpCost} onClick={upKajiya}>強化＝「{QUAL[kajiyaLv].nm}」を解放（メダル{n(kajiyaUpCost)}）</button>}
+        </div>
+      </div>
+
+      {/* 修練場 */}
+      <div className="fac">
+        <div className="fhead">
+          <div className="ficon">修</div>
+          <div><div className="fn">修練場</div>
+            <div className="fd">カカシを叩いてデッキの実戦闘力を測る。強化なし・報酬なし・回数無制限。</div></div>
+        </div>
+        <div className="fbtns">
+          <button className="fb" onClick={()=>setMsg('修練場へ（別画面・shurenjo-mockup）。本実装で遷移。')}>入る</button>
+        </div>
+      </div>
+
+      <div className="foot">数値・曲線は全て仮。練気殿＝メダルを自由額投資して毎秒ずつ武気を練成（離れても進む想定／本実装は時刻計算）。即生産はメダル3倍。装備の質は鍛冶屋で解放。倉庫は廃止＝保管は練気殿に統合。<br/>※home「建物」から開く想定。★強化（カード合成）は別画面。</div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 </script>
 </body>
 </html>

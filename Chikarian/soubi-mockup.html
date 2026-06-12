@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>チカリアン｜装備（充填）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg0:#0b0809; --bg1:#15100f; --panel:#1c1513; --panel2:#241a17;
+    --line:#3a2c22; --gold:#c7a14e; --gold-bright:#ecd28a; --gold-dim:#8c7038;
+    --ink:#efe6d5; --ink-dim:#b6a890; --ink-faint:#7d7160;
+    --gin:#c9ccd3; --gin-d:#8b9099; --ao:#5a93d6; --ao-d:#2f5e95;
+    --mura:#a274d6; --mura-d:#6f4aa3; --kin:#e6c060; --kin-d:#a07e2a;
+    --warn:#d99a5a;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0;}
+  body{background:radial-gradient(120% 80% at 50% -10%, #1d1412 0%, var(--bg1) 38%, var(--bg0) 100%);
+    color:var(--ink); font-family:'Shippori Mincho','Yu Mincho','Hiragino Mincho ProN',serif;
+    min-height:100vh; display:flex; justify-content:center; letter-spacing:.02em;}
+  #root{width:100%; max-width:480px; min-height:100vh; padding:0 0 30px;}
+  .wrap{padding:0 16px;}
+
+  .hdr{padding:18px 16px 10px; text-align:center; position:relative;}
+  .hdr::after{content:""; display:block; height:1px; margin:14px 6px 0;
+    background:linear-gradient(90deg,transparent,var(--gold-dim) 18%,var(--gold) 50%,var(--gold-dim) 82%,transparent);}
+  .hdr .deco{color:var(--gold); font-size:11px; letter-spacing:.42em; opacity:.8;}
+  .hdr h1{margin:4px 0 0; font-size:21px; font-weight:800; color:var(--gold-bright); text-shadow:0 1px 0 #000, 0 0 18px rgba(199,161,78,.25);}
+  .hdr .note{font-size:11px; color:var(--ink-faint); margin-top:8px; line-height:1.5;}
+
+  .card{display:flex; gap:12px; padding:13px; margin-top:14px; border-radius:4px; border:1px solid var(--line); background:linear-gradient(180deg,var(--panel2),var(--panel));}
+  .art{width:64px; height:90px; flex:none; border-radius:3px; position:relative; border:1px solid var(--gold-dim);
+    background:repeating-linear-gradient(135deg,#241a16,#241a16 6px,#1d1512 6px,#1d1512 12px); display:flex; align-items:center; justify-content:center;}
+  .art .g{font-size:26px; color:var(--gold-dim);} .art .rare{position:absolute; top:-1px; right:-1px; font-size:10px; font-weight:800; padding:2px 6px; color:#0c0a09; background:var(--gold); border-radius:0 3px 0 6px;}
+  .cmeta{flex:1; min-width:0;}
+  .cname{font-size:16px; font-weight:700;} .ctag{font-size:11px; color:var(--ink-faint); margin-top:1px;}
+  .cstat{display:flex; gap:16px; margin-top:9px;}
+  .cstat .it{font-size:11px; color:var(--ink-faint);} .cstat .it b{display:block; font-size:15px; color:var(--ink); font-weight:700; margin-top:1px; font-variant-numeric:tabular-nums;}
+
+  .pool{display:flex; justify-content:space-between; align-items:center; margin-top:12px; padding:12px 14px; border-radius:4px; border:1px solid var(--line); background:#140f0d;}
+  .pool .lab{font-size:11px; color:var(--ink-faint); letter-spacing:.1em;}
+  .pool .lab .src{display:block; font-size:10px; margin-top:3px; opacity:.85;}
+  .pool .amt{text-align:right;} .pool .amt b{font-size:20px; color:var(--gold-bright); font-weight:800; font-variant-numeric:tabular-nums;}
+  .pool .amt .max{display:block; font-size:10px; color:var(--ink-faint); margin-top:2px;}
+
+  .seclabel{font-size:11px; letter-spacing:.3em; color:var(--gold); margin:18px 0 9px; opacity:.85;}
+  .ranks{display:flex; gap:7px;}
+  .rk{flex:1; padding:11px 2px 9px; text-align:center; cursor:pointer; border-radius:4px; transition:.15s; border:1px solid var(--line); background:#100c0b;}
+  .rk .dot{width:18px; height:18px; margin:0 auto 5px; transform:rotate(45deg); border-radius:4px;}
+  .rk.gin .dot{background:linear-gradient(135deg,var(--gin),var(--gin-d));}
+  .rk.ao .dot{background:linear-gradient(135deg,var(--ao),var(--ao-d));}
+  .rk.mura .dot{background:linear-gradient(135deg,var(--mura),var(--mura-d));}
+  .rk.kin .dot{background:linear-gradient(135deg,var(--kin),var(--kin-d));}
+  .rk .nm{font-size:14px; font-weight:700;} .rk .sub{font-size:9.5px; color:var(--ink-faint); margin-top:3px; line-height:1.3;}
+  .rk.on{border-color:var(--gold); background:#171210; box-shadow:0 0 12px rgba(199,161,78,.28);}
+  .rk.lock{opacity:.5; cursor:not-allowed;} .rk.lock .nm{color:var(--ink-faint);}
+  .rk .lk{font-size:9px; color:var(--warn); margin-top:3px;}
+  .rk:focus-visible{outline:2px solid var(--ao); outline-offset:2px;}
+
+  .panel{margin-top:16px; padding:15px; border-radius:4px; border:1px solid var(--line); background:linear-gradient(180deg,var(--panel2),var(--panel));}
+  .panel .ph{display:flex; justify-content:space-between; align-items:baseline; padding-bottom:10px; border-bottom:1px solid var(--line);}
+  .panel .ph .rkname{font-size:16px; font-weight:800;}
+  .panel .ph .spec{font-size:12px; color:var(--ink-dim);}
+  .panel .ph .spec b{color:var(--gold-bright);}
+
+  .barwrap{margin-top:13px;}
+  .barlab{display:flex; justify-content:space-between; font-size:12px; color:var(--ink-dim); margin-bottom:6px;}
+  .barlab b{color:var(--ink); font-variant-numeric:tabular-nums;}
+  .bar{height:15px; border-radius:8px; background:#120d0c; border:1px solid var(--line); overflow:hidden;}
+  .bar > i{display:block; height:100%; transition:width .3s;}
+  .bar.gin > i{background:linear-gradient(90deg,var(--gin-d),var(--gin));}
+  .bar.ao > i{background:linear-gradient(90deg,var(--ao-d),var(--ao));}
+  .bar.mura > i{background:linear-gradient(90deg,var(--mura-d),var(--mura));}
+  .bar.kin > i{background:linear-gradient(90deg,var(--kin-d),var(--kin));}
+
+  .calc{margin-top:14px;}
+  .calc .row{display:flex; justify-content:space-between; align-items:baseline; padding:6px 0; border-top:1px solid var(--line); font-size:13px;}
+  .calc .row:first-child{border-top:none;}
+  .calc .row .k{color:var(--ink-faint);} .calc .row .v{color:var(--ink); font-weight:600; font-variant-numeric:tabular-nums;}
+  .calc .row .v .mul{color:var(--ink-faint); font-weight:400; font-size:12px;}
+  .total{display:flex; justify-content:space-between; align-items:baseline; margin-top:10px; padding:13px 14px; border-radius:4px; border:1px solid var(--gold-dim); background:linear-gradient(180deg,#1d160e,#15100b);}
+  .total .k{font-size:12px; letter-spacing:.16em; color:var(--gold);} .total .v{font-size:24px; font-weight:800; color:var(--gold-bright); font-variant-numeric:tabular-nums;}
+
+  .warn{margin-top:12px; padding:10px 12px; border-radius:4px; border:1px solid var(--warn); background:rgba(217,154,90,.08); font-size:11.5px; color:var(--warn); line-height:1.55;}
+  .foot{text-align:center; font-size:10px; color:var(--ink-faint); margin-top:20px; line-height:1.6; padding:0 8px;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<script type="text/babel">
+const {useState} = React;
+
+/* ===== デモ（×0.80世界・balance §2-1/§2-2/§12・全て仮） ===== */
+const CARD={name:'ハイビスカスマン', attr:'花', weapon:'剣', rare:'SR', lv:50, star:12, hontai:3024, fill:560};
+const POOL=1800;          // 手持ち武気（練気殿で練成・デモ値）
+const STORE_MAX=7000;     // 練気殿の保管上限（デモ値）
+
+// 装備の質4段（枠攻撃力は据え置き＝×0.80対象外・balance §12）
+const RANKS=[
+  {key:'gin', name:'粗製', cost:1, atk:7,  stage:'序盤 1-3面',        unlocked:true,  tlv:1},
+  {key:'ao',  name:'精製', cost:2, atk:15, stage:'中盤 4-5面',        unlocked:true,  tlv:2},
+  {key:'mura',name:'魔装', cost:4, atk:33, stage:'終盤 6-8面・クリア基準', unlocked:true,  tlv:3},
+  {key:'kin', name:'聖装', cost:8, atk:73, stage:'クリア後・2周目',      unlocked:false, tlv:4},
+];
+function calc(r){
+  const loaded=Math.min(CARD.fill, Math.floor(POOL/r.cost));
+  const used=loaded*r.cost;
+  const eqp=loaded*r.atk;
+  const total=eqp+CARD.hontai;
+  const full=loaded>=CARD.fill;
+  const needFull=CARD.fill*r.cost;
+  const shortBy=Math.max(0, needFull-POOL);
+  return {loaded, used, eqp, total, full, needFull, shortBy};
+}
+const n=x=>x.toLocaleString();
+
+function App(){
+  const [rk,setRk]=useState('mura');                 // 既定＝紫（解放最上位・クリア基準）
+  const rank=RANKS.find(r=>r.key===rk);
+  const c=calc(rank);
+  const pct=Math.round(c.loaded/CARD.fill*100);
+
+  return (
+    <div className="wrap">
+      <div className="hdr">
+        <span className="deco">CHIKARIAN</span>
+        <h1>装備（充填）</h1>
+        <div className="note">充填枠に武気を込める。<br/>装備の質で「枠コスト」と「枠攻撃力」が変わる。</div>
+      </div>
+
+      <div className="card">
+        <div className="art"><span className="g">❖</span><span className="rare">{CARD.rare}</span></div>
+        <div className="cmeta">
+          <div className="cname">{CARD.name}</div>
+          <div className="ctag">{CARD.attr}・{CARD.weapon}　Lv {CARD.lv}／★{CARD.star}</div>
+          <div className="cstat">
+            <div className="it">本体戦闘力<b>{n(CARD.hontai)}</b></div>
+            <div className="it">充填量（枠）<b>{n(CARD.fill)}</b></div>
+          </div>
+        </div>
+      </div>
+
+      <div className="pool">
+        <div className="lab">手持ち 武気<span className="src">練気殿で練成（金貨）</span></div>
+        <div className="amt"><b>{n(POOL)}</b><span className="max">保管上限 {n(STORE_MAX)}</span></div>
+      </div>
+
+      <div className="seclabel">装備の質（鍛冶屋で作成・解放）</div>
+      <div className="ranks">
+        {RANKS.map(r=>(
+          <div key={r.key} tabIndex={r.unlocked?0:-1} role="button"
+               className={'rk '+r.key+(rk===r.key?' on':'')+(r.unlocked?'':' lock')}
+               onClick={()=>r.unlocked&&setRk(r.key)} onKeyDown={e=>e.key==='Enter'&&r.unlocked&&setRk(r.key)}>
+            <div className="dot"></div>
+            <div className="nm">{r.name}</div>
+            {r.unlocked
+              ? <div className="sub">攻 {r.atk}<br/>コスト {r.cost}</div>
+              : <div className="lk">未作成<br/>鍛冶屋Lv{r.tlv}</div>}
+          </div>
+        ))}
+      </div>
+
+      <div className="panel">
+        <div className="ph">
+          <span className="rkname">{rank.name}</span>
+          <span className="spec">枠攻撃力 <b>{rank.atk}</b>　／　枠コスト <b>{rank.cost}</b>（武気/枠）</span>
+        </div>
+
+        <div className="barwrap">
+          <div className="barlab"><span>込めた武気</span><span><b>{n(c.loaded)}</b> / {n(CARD.fill)} 枠（{pct}%）</span></div>
+          <div className={'bar '+rank.key}><i style={{width:pct+'%'}}></i></div>
+        </div>
+
+        <div className="calc">
+          <div className="row"><span className="k">込めた武気</span><span className="v">{n(c.loaded)}　<span className="mul">＝ min(充填{n(CARD.fill)}, 武気{n(POOL)}÷{rank.cost})</span></span></div>
+          <div className="row"><span className="k">消費 武気</span><span className="v">{n(c.used)}</span></div>
+          <div className="row"><span className="k">装備項</span><span className="v">{n(c.eqp)}　<span className="mul">＝ {n(c.loaded)} × {rank.atk}</span></span></div>
+          <div className="row"><span className="k">本体戦闘力</span><span className="v">{n(CARD.hontai)}</span></div>
+        </div>
+
+        <div className="total"><span className="k">カード総合戦力</span><span className="v">{n(c.total)}</span></div>
+
+        {!c.full &&
+          <div className="warn">武気不足で枠が埋まっていません（{n(c.loaded)}/{n(CARD.fill)}）。満タンには合計 {n(c.needFull)} 必要で、あと <b>{n(c.shortBy)}</b> 練成すると満枠になります。上位の質ほど枠コストが高く、同じ武気では埋まりにくくなります。</div>}
+      </div>
+
+      <div className="foot">数値は全て仮（balance §2-1／本体は×0.80・枠攻撃力は据え置き）。武気は練気殿で練成・保管（金貨）。装備の質は鍛冶屋で作成・解放（粗製→精製→魔装→聖装）。<br/>※カード詳細／デッキ編成から開く想定。</div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

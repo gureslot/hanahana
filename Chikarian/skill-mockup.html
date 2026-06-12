@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>チカリアン｜スキル錬成・転移</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg0:#0b0809; --bg1:#15100f; --panel:#1c1513; --panel2:#241a17;
+    --line:#3a2c22; --gold:#c7a14e; --gold-bright:#ecd28a; --gold-dim:#8c7038;
+    --crim:#7c1118; --crim-bright:#a3162a;
+    --ao:#3a78b8; --ao-bright:#7fb6ec; --aka:#b83b4d; --aka-bright:#e87f8f;
+    --ink:#efe6d5; --ink-dim:#b6a890; --ink-faint:#7d7160;
+    --ok:#5fae6b; --ng:#c45a5a;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0;}
+  body{
+    background:radial-gradient(120% 80% at 50% -10%, #1d1412 0%, var(--bg1) 38%, var(--bg0) 100%);
+    color:var(--ink);
+    font-family:'Shippori Mincho','Yu Mincho','Hiragino Mincho ProN',serif;
+    min-height:100vh; display:flex; justify-content:center;
+    letter-spacing:.02em;
+  }
+  #root{width:100%; max-width:480px; min-height:100vh; position:relative; padding:0 0 28px;}
+  .wrap{padding:0 16px;}
+
+  /* header */
+  .hdr{padding:18px 16px 10px; text-align:center; position:relative;}
+  .hdr::after{content:""; display:block; height:1px; margin:14px 6px 0;
+    background:linear-gradient(90deg,transparent,var(--gold-dim) 18%,var(--gold) 50%,var(--gold-dim) 82%,transparent);}
+  .hdr .deco{color:var(--gold); font-size:11px; letter-spacing:.42em; opacity:.8;}
+  .hdr h1{margin:4px 0 0; font-size:21px; font-weight:800; color:var(--gold-bright);
+    text-shadow:0 1px 0 #000, 0 0 18px rgba(199,161,78,.25);}
+
+  /* mode toggle */
+  .modes{display:flex; gap:8px; padding:14px 0 6px;}
+  .mode{flex:1; padding:11px 0; text-align:center; cursor:pointer; border-radius:3px;
+    border:1px solid var(--line); background:linear-gradient(180deg,#181210,#120d0c);
+    color:var(--ink-dim); font-size:14px; font-weight:600; transition:.18s;}
+  .mode .sub{display:block; font-size:9px; letter-spacing:.2em; margin-top:2px; opacity:.7;}
+  .mode.on{color:#0c0a09; border-color:var(--gold);
+    background:linear-gradient(180deg,var(--gold-bright),var(--gold));
+    box-shadow:0 0 14px rgba(199,161,78,.35);}
+  .mode.on.tr{background:linear-gradient(180deg,var(--gold-bright),var(--gold));}
+  .mode:focus-visible{outline:2px solid var(--ao-bright); outline-offset:2px;}
+
+  /* card */
+  .card{display:flex; gap:12px; padding:13px; margin-top:12px; border-radius:4px;
+    border:1px solid var(--line); background:linear-gradient(180deg,var(--panel2),var(--panel));}
+  .art{width:74px; height:104px; flex:none; border-radius:3px; position:relative;
+    border:1px solid var(--gold-dim);
+    background:repeating-linear-gradient(135deg,#241a16,#241a16 6px,#1d1512 6px,#1d1512 12px);
+    display:flex; align-items:center; justify-content:center;}
+  .art .glyph{font-size:30px; color:var(--gold-dim);}
+  .art .rare{position:absolute; top:-1px; right:-1px; font-size:10px; font-weight:800;
+    padding:2px 6px; color:#0c0a09; background:var(--gold); border-radius:0 3px 0 6px; letter-spacing:.06em;}
+  .cmeta{flex:1; min-width:0;}
+  .cname{font-size:16px; font-weight:700; color:var(--ink);}
+  .ctag{font-size:11px; color:var(--ink-faint); margin-top:1px;}
+  .clv{font-size:11px; color:var(--gold); margin-top:7px; letter-spacing:.08em;}
+
+  /* slots */
+  .seclabel{font-size:11px; letter-spacing:.3em; color:var(--gold); margin:18px 0 8px; opacity:.85;}
+  .slot{padding:11px 12px; border-radius:4px; margin-bottom:8px; cursor:pointer; transition:.16s;
+    border:1px solid var(--line); background:#150f0d; position:relative;}
+  .slot.sel{border-color:var(--ao); background:#101820; box-shadow:0 0 0 1px var(--ao) inset, 0 0 12px rgba(58,120,184,.25);}
+  .slot.tgt.sel{border-color:var(--gold); background:#1a140d; box-shadow:0 0 0 1px var(--gold) inset;}
+  .slot.empty{border-style:dashed; color:var(--ink-faint); cursor:default; text-align:center; font-size:13px;}
+  .slot.empty.pickable{cursor:pointer; color:var(--gold); border-color:var(--gold-dim);}
+  .slot.locked{opacity:.92;}
+  .slot .pin{position:absolute; top:9px; right:11px; font-size:9px; letter-spacing:.15em; color:var(--gold-dim);}
+  .sk-name{font-size:14px; font-weight:700; color:var(--ink);}
+  .sk-eff{font-size:12px; color:var(--ink-dim); margin-top:3px;}
+  .sk-meta{font-size:10px; color:var(--ink-faint); margin-top:4px;}
+  .badge{display:inline-block; font-size:9px; font-weight:800; padding:1px 5px; border-radius:2px; margin-right:5px; vertical-align:middle;}
+  .b-N{background:#3a3a3a; color:#ddd;} .b-R{background:#28527a; color:#cfe6ff;} .b-SR{background:#6a3a8a; color:#f0d9ff;}
+
+  /* enhance panel */
+  .panel{margin-top:16px; padding:14px; border-radius:4px; border:1px solid var(--line);
+    background:linear-gradient(180deg,#13191f,#101316);}
+  .panel.tr{background:linear-gradient(180deg,#1a140d,#141009);}
+  .row{display:flex; justify-content:space-between; align-items:baseline; padding:4px 0;}
+  .row .k{font-size:12px; color:var(--ink-faint);}
+  .row .v{font-size:14px; color:var(--ink); font-weight:600;}
+  .row .v.up{color:var(--ao-bright);}
+  .row .v.cost{color:var(--gold-bright); font-size:16px; font-weight:800;}
+  .hint{font-size:11px; color:var(--ink-faint); margin:6px 0 2px; line-height:1.5;}
+
+  /* crystals */
+  .crys{display:flex; gap:8px; margin-top:12px;}
+  .cry{flex:1; padding:10px 4px 9px; text-align:center; cursor:pointer; border-radius:4px; transition:.16s;
+    border:1px solid var(--line); background:#0f0c0b;}
+  .cry .gem{width:26px; height:26px; margin:0 auto 5px; transform:rotate(45deg); border-radius:5px;
+    box-shadow:0 0 10px rgba(255,255,255,.12) inset;}
+  .cry.ao .gem{background:linear-gradient(135deg,var(--ao-bright),var(--ao)); box-shadow:0 0 12px rgba(58,120,184,.5);}
+  .cry.aka .gem{background:linear-gradient(135deg,var(--aka-bright),var(--aka)); box-shadow:0 0 12px rgba(184,59,77,.5);}
+  .cry.niji .gem{background:conic-gradient(from 0deg,#e87f8f,#ecd28a,#7fb6ec,#a78fd6,#e87f8f); box-shadow:0 0 14px rgba(255,255,255,.45);}
+  .cry .nm{font-size:11px; font-weight:600; color:var(--ink-dim); letter-spacing:.2em; margin-top:1px;}
+  .cry .rate{font-size:27px; font-weight:800; line-height:1.02; margin-top:5px; letter-spacing:-.01em;}
+  .cry .rate .pct{font-size:15px; font-weight:700; margin-left:1px;}
+  .cry .rate-lbl{font-size:9px; letter-spacing:.24em; color:var(--ink-faint); margin-top:2px;}
+  .cry.ao   .rate{color:var(--ao-bright);   text-shadow:0 0 13px rgba(127,182,236,.55);}
+  .cry.aka  .rate{color:var(--aka-bright);  text-shadow:0 0 13px rgba(232,127,143,.55);}
+  .cry.niji .rate{color:var(--gold-bright); text-shadow:0 0 15px rgba(236,210,138,.6);}
+  .cry .hold{font-size:11px; color:var(--ink-dim); margin-top:7px; letter-spacing:.05em; padding-top:6px; border-top:1px solid var(--line);}
+  .cry.lack{opacity:.4;}
+  .cry.lack .hold{color:var(--ng);}
+  .cry.on{border-color:var(--gold); background:#171210; box-shadow:0 0 12px rgba(199,161,78,.3);}
+  .cry:focus-visible{outline:2px solid var(--ao-bright); outline-offset:2px;}
+
+  /* button */
+  .cta{display:block; width:100%; margin-top:16px; padding:14px 0; border:none; border-radius:4px; cursor:pointer;
+    font-family:inherit; font-size:16px; font-weight:800; letter-spacing:.16em; color:#0c0a09;
+    background:linear-gradient(180deg,var(--gold-bright),var(--gold)); box-shadow:0 0 16px rgba(199,161,78,.3);}
+  .cta.tr{background:linear-gradient(180deg,var(--gold-bright),var(--gold));}
+  .cta:active{transform:translateY(1px);}
+  .cta:disabled{background:linear-gradient(180deg,#3a322a,#2a241e); color:#6a5f50; box-shadow:none; cursor:not-allowed;}
+  .cta:focus-visible{outline:2px solid var(--ao-bright); outline-offset:2px;}
+  .submsg{text-align:center; font-size:11px; color:var(--ink-faint); margin-top:8px; min-height:14px;}
+
+  /* topbar resource */
+  .res{display:flex; justify-content:flex-end; gap:14px; padding:0 2px 2px; font-size:12px;}
+  .res .it{color:var(--ink-dim);} .res .it b{color:var(--gold-bright); font-weight:700;}
+
+  /* casting overlay */
+  .ov{position:fixed; inset:0; z-index:30; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background:rgba(6,4,4,.78); backdrop-filter:blur(2px);}
+  .ov .big{width:64px; height:64px; transform:rotate(45deg); border-radius:12px; margin-bottom:18px;
+    background:conic-gradient(from 0deg,#7fb6ec,#ecd28a,#a78fd6,#7fb6ec);
+    animation:spin 1.1s linear infinite, pulse 1.1s ease-in-out infinite;}
+  .ov.tr .big{background:linear-gradient(135deg,var(--gold-bright),var(--gold));}
+  .ov .lbl{font-size:14px; letter-spacing:.4em; color:var(--gold-bright);}
+  @keyframes spin{to{transform:rotate(405deg);}}
+  @keyframes pulse{50%{filter:brightness(1.5); box-shadow:0 0 30px rgba(255,255,255,.5);}}
+
+  /* result */
+  .ov.res-ov{background:rgba(6,4,4,.84);}
+  .resbox{width:84%; max-width:340px; padding:24px 20px; text-align:center; border-radius:5px;
+    border:1px solid var(--gold-dim); background:linear-gradient(180deg,var(--panel2),#120d0c);}
+  .resbox .ttl{font-size:13px; letter-spacing:.3em; color:var(--gold);}
+  .resbox .main{font-size:24px; font-weight:800; margin:10px 0 4px;}
+  .resbox .main.ok{color:var(--ao-bright);} .resbox .main.ng{color:var(--ng);} .resbox .main.tr{color:var(--gold-bright);}
+  .resbox .det{font-size:13px; color:var(--ink-dim); margin-top:6px; line-height:1.6;}
+  .resbox button{margin-top:18px; padding:11px 30px; border:1px solid var(--gold-dim); border-radius:4px; cursor:pointer;
+    font-family:inherit; font-size:14px; font-weight:700; letter-spacing:.18em; color:var(--gold-bright); background:#1a140e;}
+
+  /* confirm modal (transfer) */
+  .modal{position:fixed; inset:0; z-index:25; display:flex; align-items:center; justify-content:center; background:rgba(6,4,4,.8);}
+  .mbox{width:86%; max-width:360px; padding:22px 20px; border-radius:5px;
+    border:1px solid var(--gold-dim); background:linear-gradient(180deg,var(--panel2),#120d0c);}
+  .mbox h3{margin:0 0 6px; font-size:16px; color:var(--gold-bright); text-align:center; letter-spacing:.1em;}
+  .mbox .warn{font-size:12.5px; color:var(--aka-bright); text-align:center; line-height:1.6; margin:8px 0 14px;}
+  .mbox .line{display:flex; justify-content:space-between; font-size:13px; padding:5px 0; border-top:1px solid var(--line);}
+  .mbox .line .k{color:var(--ink-faint);} .mbox .line .v{color:var(--ink); font-weight:600;}
+  .mbtns{display:flex; gap:10px; margin-top:18px;}
+  .mbtns button{flex:1; padding:12px 0; border-radius:4px; cursor:pointer; font-family:inherit; font-size:14px; font-weight:700; letter-spacing:.12em;}
+  .mb-cancel{border:1px solid var(--line); background:#15100e; color:var(--ink-dim);}
+  .mb-go{border:none; background:linear-gradient(180deg,var(--gold-bright),var(--gold)); color:#0c0a09;}
+
+  .mat{padding:11px 12px; border-radius:4px; margin-bottom:8px; cursor:pointer; transition:.16s;
+    border:1px solid var(--line); background:#150f0d; display:flex; gap:10px; align-items:center;}
+  .mat.sel{border-color:var(--gold); background:#1a140d;}
+  .mat .mart{width:34px; height:48px; flex:none; border-radius:2px; border:1px solid var(--gold-dim);
+    background:repeating-linear-gradient(135deg,#241a16,#241a16 4px,#1d1512 4px,#1d1512 8px);
+    display:flex; align-items:center; justify-content:center; color:var(--gold-dim); font-size:16px;}
+  .mat .mi{flex:1; min-width:0;}
+  .mat .mn{font-size:13px; font-weight:700;}
+  .mat .mt{font-size:10px; color:var(--ink-faint); margin-top:1px;}
+  .mat .mc{font-size:10px; color:var(--ink-dim); margin-top:3px;}
+  .stepnote{font-size:11px; color:var(--gold); letter-spacing:.1em; margin:14px 0 8px; opacity:.85;}
+  .foot{text-align:center; font-size:10px; color:var(--ink-faint); margin-top:22px; line-height:1.6; padding:0 8px;}
+  .back{display:inline-block; margin:10px 0 0; font-size:12px; color:var(--ink-dim); cursor:pointer; letter-spacing:.1em;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<script type="text/babel">
+const {useState, useMemo} = React;
+
+/* ===== spec §1：必要個数カーブ・レア倍率（全て仮） ===== */
+const RARE_MULT = {N:1, R:2, SR:4};
+function baseCost(lv){           // lv→lv+1 の基礎個数
+  if(lv<=2)return 1; if(lv<=4)return 2; if(lv<=6)return 3; if(lv<=8)return 4;
+  if(lv<=10)return 5; if(lv<=13)return 7; if(lv<=16)return 10; if(lv<=19)return 14;
+  if(lv<=24)return 20; if(lv<=29)return 28; if(lv<=39)return 40;
+  return Math.round(40*Math.pow(1.4, lv-39));   // 40+ は青天井（仮）
+}
+function reqCount(skill){ return baseCost(skill.lv) * (RARE_MULT[skill.rare]||1); }
+
+/* ===== 効果量（skills §0-A・Lvで効果量のみ伸びる／発動率固定） ===== */
+const MULT_BASE={N:1.15,R:1.28,SR:1.45}, MULT_STEP={N:0.03,R:0.07,SR:0.12};
+function effLabel(s){
+  if(s.kind==='mult'){ const v=MULT_BASE[s.rare]+(s.lv-1)*MULT_STEP[s.rare]; return '総合 ×'+v.toFixed(2); }
+  if(s.kind==='hontai'){ const v=60+(s.lv-1)*6; return '本体 +'+v+'%'; }
+  if(s.kind==='soubi'){ const v=50+(s.lv-1)*7; return '装備 +'+v+'%'; }
+  return s.special||'';
+}
+function effLabelAt(s,lv){ return effLabel({...s,lv}); }
+
+const COLORS=[
+  {key:'ao',  name:'青', rate:0.10},
+  {key:'aka', name:'赤', rate:0.33},
+  {key:'niji',name:'虹', rate:1.00},
+];
+
+const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const CAST_MS = reduceMotion ? 200 : 1500;
+
+/* ===== デモ初期データ（保存しない・その場限り） ===== */
+const initCard = ()=>({
+  name:'ハイビスカスマン', attr:'花', weapon:'剣', rare:'SR',
+  slots:[
+    {fixed:true,  skill:{name:'花葉の協奏', rare:'SR', kind:'mult',   group:'花葉', lv:3}},
+    {fixed:false, skill:{name:'花の猛攻',   rare:'R',  kind:'mult',   group:'花',   lv:1}},
+    {fixed:false, skill:null},   // 空き
+  ],
+});
+const initMaterials = ()=>([
+  {id:'m1', name:'めしべだけマン', attr:'芯', weapon:'杖', rare:'SR',
+   skills:[{name:'葉芯の協奏', rare:'SR', kind:'mult', group:'葉芯', lv:2},
+           {name:'三色の采配', rare:'SR', kind:'special', special:'花葉芯すべて ×1.20', lv:1}]},
+  {id:'m2', name:'ハイビスカスマン', attr:'芯', weapon:'杖', rare:'R',
+   skills:[{name:'杖の鍛武', rare:'R', kind:'soubi', group:'杖', lv:1},
+           {name:'芯の猛攻', rare:'R', kind:'mult', group:'芯', lv:1}]},
+  {id:'m3', name:'ハイビスカスマン', attr:'葉', weapon:'盾', rare:'N',
+   skills:[{name:'盾の守護', rare:'N', kind:'hontai', group:'盾', lv:1}]},
+]);
+
+function App(){
+  const [mode,setMode]=useState('enhance');           // 'enhance' | 'transfer'
+  const [card,setCard]=useState(initCard);
+  const [materials,setMaterials]=useState(initMaterials);
+  const [crystals,setCrystals]=useState({ao:120,aka:30,niji:4});
+  const [medal,setMedal]=useState(48200);
+
+  return (
+    <div className="wrap">
+      <div className="hdr">
+        <span className="deco">CHIKARIAN</span>
+        <h1>{mode==='enhance'?'スキル錬成':'スキル転移'}</h1>
+      </div>
+
+      <div className="res">
+        {mode==='enhance'
+          ? <><span className="it">青 <b>{crystals.ao}</b></span><span className="it">赤 <b>{crystals.aka}</b></span><span className="it">虹 <b>{crystals.niji}</b></span></>
+          : <span className="it">メダル <b>{medal.toLocaleString()}</b></span>}
+      </div>
+
+      <div className="modes">
+        <div className={'mode'+(mode==='enhance'?' on':'')} tabIndex="0" role="button"
+             onClick={()=>setMode('enhance')} onKeyDown={e=>e.key==='Enter'&&setMode('enhance')}>
+          錬成<span className="sub">スキルLvを上げる</span></div>
+        <div className={'mode tr'+(mode==='transfer'?' on':'')} tabIndex="0" role="button"
+             onClick={()=>setMode('transfer')} onKeyDown={e=>e.key==='Enter'&&setMode('transfer')}>
+          転移<span className="sub">スキルを移す</span></div>
+      </div>
+
+      {mode==='enhance'
+        ? <Enhance card={card} setCard={setCard} crystals={crystals} setCrystals={setCrystals}/>
+        : <Transfer card={card} setCard={setCard} materials={materials} setMaterials={setMaterials} medal={medal} setMedal={setMedal}/>}
+
+      <div className="foot">数値・必要個数・コストは全て仮（spec §1/§2）。<br/>★強化（カード合成）とは別画面・別物。</div>
+    </div>
+  );
+}
+
+/* ============ 錬成（クリスタル方式） ============ */
+function Enhance({card,setCard,crystals,setCrystals}){
+  const [sel,setSel]=useState(0);            // 選択スロット index
+  const [color,setColor]=useState(null);
+  const [ov,setOv]=useState(null);           // null|'cast'
+  const [result,setResult]=useState(null);   // {ok, before, after, color, used}
+  const [msg,setMsg]=useState('');
+
+  const slot=card.slots[sel];
+  const skill=slot && slot.skill;
+  const need = skill ? reqCount(skill) : 0;
+  const canTry = skill && color!=null && crystals[color]>=need && !ov;
+  const selColor = color!=null ? COLORS.find(x=>x.key===color) : null;
+
+  function pick(i){ if(card.slots[i].skill){ setSel(i); setColor(null); setMsg(''); } }
+  function chooseColor(c){
+    if(!skill) return;
+    if(crystals[c.key] < need){ setMsg('「'+c.name+'」が足りません（必要 '+need+'）'); return; }
+    setColor(c.key); setMsg('');
+  }
+  function challenge(){
+    if(!canTry) return;
+    const c=COLORS.find(x=>x.key===color);
+    const before=skill.lv;
+    setCrystals(p=>({...p,[color]:p[color]-need}));   // 成否に関わらず消費
+    setOv('cast');
+    setTimeout(()=>{
+      const ok=Math.random()<c.rate;
+      if(ok){
+        setCard(p=>{ const s=p.slots.map((sl,i)=> i===sel?{...sl,skill:{...sl.skill,lv:sl.skill.lv+1}}:sl); return {...p,slots:s}; });
+      }
+      setOv(null);
+      setResult({ok, before, after:before+(ok?1:0), color:c.name, used:need});
+      setColor(null);
+    }, CAST_MS);
+  }
+
+  return (
+    <div>
+      <CardHead card={card}/>
+      <div className="seclabel">スキル（固定1 ＋ 空き2）</div>
+      {card.slots.map((sl,i)=>(
+        <SkillSlot key={i} sl={sl} on={i===sel} pickable={!!sl.skill} onClick={()=>pick(i)} theme="ao"/>
+      ))}
+
+      {skill &&
+      <div className="panel">
+        <div className="row"><span className="k">スキル</span><span className="v">{skill.name}</span></div>
+        <div className="row"><span className="k">現在</span><span className="v">Lv {skill.lv}　{effLabel(skill)}</span></div>
+        <div className="row"><span className="k">次のLv</span><span className="v up">Lv {skill.lv+1}　{effLabelAt(skill,skill.lv+1)}</span></div>
+        <div className="row"><span className="k">今回 必要個数</span><span className="v cost">{need} 個</span></div>
+        <div className="hint">1回の挑戦で、選んだ色のクリスタルを {need} 個消費（混色不可）。失敗してもLvは下がらない。</div>
+
+        <div className="crys">
+          {COLORS.map(c=>{
+            const lack=crystals[c.key]<need;
+            return (
+              <div key={c.key} tabIndex="0" role="button"
+                   className={'cry '+c.key+(color===c.key?' on':'')+(lack?' lack':'')}
+                   onClick={()=>chooseColor(c)} onKeyDown={e=>e.key==='Enter'&&chooseColor(c)}>
+                <div className="gem"></div>
+                <div className="nm">{c.name}</div>
+                <div className="rate">{Math.round(c.rate*100)}<span className="pct">%</span></div>
+                <div className="rate-lbl">成功率</div>
+                <div className="hold">所持 {crystals[c.key]}</div>
+              </div>
+            );
+          })}
+        </div>
+
+        <button className="cta" disabled={!canTry} onClick={challenge}>錬 成 す る</button>
+        <div className="submsg">{msg || (selColor? ('「'+selColor.name+'」で錬成　成功 '+Math.round(selColor.rate*100)+'%　・　'+need+'個') : 'クリスタルの色を選択')}</div>
+      </div>}
+
+      {ov==='cast' && <div className="ov"><div className="big"></div><div className="lbl">錬 成 中</div></div>}
+
+      {result &&
+      <div className="ov res-ov">
+        <div className="resbox">
+          <div className="ttl">{result.ok?'錬 成 成 功':'錬 成 失 敗'}</div>
+          <div className={'main '+(result.ok?'ok':'ng')}>{result.ok?('Lv '+result.after+' へ'):'Lv '+result.before+' のまま'}</div>
+          <div className="det">
+            {skill.name}<br/>
+            {result.ok ? (effLabelAt(skill,result.before)+' → '+effLabelAt(skill,result.after))
+                       : '効果量は変わらない'}<br/>
+            {result.color}クリスタル {result.used} 個を消費
+          </div>
+          <button onClick={()=>setResult(null)}>閉じる</button>
+        </div>
+      </div>}
+    </div>
+  );
+}
+
+/* ============ 転移（移動・1回1スキル・失敗なし） ============ */
+function Transfer({card,setCard,materials,setMaterials,medal,setMedal}){
+  const COST=3000;                       // メダル（仮）
+  const [matId,setMatId]=useState(null);
+  const [skIdx,setSkIdx]=useState(null);
+  const [slotIdx,setSlotIdx]=useState(null);
+  const [confirm,setConfirm]=useState(false);
+  const [done,setDone]=useState(null);   // {skill}
+
+  const mat = materials.find(m=>m.id===matId);
+  const emptySlots = card.slots.map((s,i)=>({s,i})).filter(x=>!x.s.skill && !x.s.fixed);
+  const chosenSkill = mat && skIdx!=null ? mat.skills[skIdx] : null;
+
+  function execute(){
+    if(!mat || skIdx==null || slotIdx==null) return;
+    const moved={...mat.skills[skIdx]};
+    setCard(p=>{ const s=p.slots.map((sl,i)=> i===slotIdx?{...sl,skill:moved}:sl); return {...p,slots:s}; });
+    setMaterials(p=>p.filter(m=>m.id!==matId));   // 素材は消滅
+    setMedal(m=>m-COST);
+    setConfirm(false); setDone({skill:moved});
+    setMatId(null); setSkIdx(null); setSlotIdx(null);
+  }
+
+  if(emptySlots.length===0 && !done){
+    return (<div><CardHead card={card}/>
+      <div className="panel tr"><div className="hint" style={{color:'var(--ink-dim)'}}>
+        受け取る側カードに空きスロットがありません。先に錬成側で確認するか、別カードを対象にしてください（プレビューでは固定1＋既存1で2枠が埋まっています）。
+      </div></div></div>);
+  }
+
+  return (
+    <div>
+      <div className="seclabel">受け取る側（空きスロットへ移す）</div>
+      <CardHead card={card}/>
+      {card.slots.map((sl,i)=>{
+        const isEmpty=!sl.skill;
+        const pickable = isEmpty && skIdx!=null;
+        return <SkillSlot key={i} sl={sl} tgt
+                 on={slotIdx===i}
+                 emptyPickable={pickable}
+                 onClick={()=> pickable ? setSlotIdx(i) : null}/>;
+      })}
+
+      <div className="stepnote">① 素材カードを選ぶ</div>
+      {materials.length===0
+        ? <div className="hint">素材にできるカードがありません。</div>
+        : materials.map(m=>(
+        <div key={m.id} className={'mat'+(matId===m.id?' sel':'')}
+             onClick={()=>{setMatId(m.id); setSkIdx(null); setSlotIdx(null);}}>
+          <div className="mart">❖</div>
+          <div className="mi">
+            <div className="mn">{m.name} <span className={'badge b-'+m.rare}>{m.rare}</span></div>
+            <div className="mt">{m.attr}・{m.weapon}</div>
+            <div className="mc">スキル {m.skills.length}（固定含む）</div>
+          </div>
+        </div>
+      ))}
+
+      {mat &&
+      <div>
+        <div className="stepnote">② 移すスキルを1つ選ぶ（固定・追加どちらでも可）</div>
+        {mat.skills.map((s,i)=>(
+          <div key={i} className={'slot'+(skIdx===i?' sel':'')} onClick={()=>{setSkIdx(i); setSlotIdx(null);}}>
+            <div className="sk-name"><span className={'badge b-'+s.rare}>{s.rare}</span>{s.name}</div>
+            <div className="sk-eff">{effLabel(s)}　<span style={{color:'var(--ink-faint)'}}>Lv {s.lv}</span></div>
+            <div className="pin">{i===0?'固定':'追加'}</div>
+          </div>
+        ))}
+      </div>}
+
+      {chosenSkill &&
+      <div>
+        <div className="stepnote">③ 受け取る側の空きスロットを選ぶ {slotIdx==null && <span style={{color:'var(--ink-faint)'}}>（上のカードの点線枠をタップ）</span>}</div>
+      </div>}
+
+      <button className="cta tr" disabled={!(mat && skIdx!=null && slotIdx!=null && medal>=COST)}
+              onClick={()=>setConfirm(true)}>転 移 す る</button>
+      <div className="submsg">
+        {medal<COST ? 'メダルが不足しています'
+          : !mat ? '素材カードを選択'
+          : skIdx==null ? '移すスキルを選択'
+          : slotIdx==null ? '行き先の空きスロットを選択'
+          : '「'+chosenSkill.name+'」を移します（メダル '+COST.toLocaleString()+'）'}
+      </div>
+
+      {confirm &&
+      <div className="modal">
+        <div className="mbox">
+          <h3>転移の確認</h3>
+          <div className="warn">素材カードと、選ばなかったスキルは失われます。</div>
+          <div className="line"><span className="k">移すスキル</span><span className="v">{chosenSkill.name}（Lv {chosenSkill.lv}）</span></div>
+          <div className="line"><span className="k">素材</span><span className="v">{mat.name}・{mat.rare}（消滅）</span></div>
+          <div className="line"><span className="k">消費メダル</span><span className="v">{COST.toLocaleString()}</span></div>
+          <div className="mbtns">
+            <button className="mb-cancel" onClick={()=>setConfirm(false)}>やめる</button>
+            <button className="mb-go" onClick={execute}>移す</button>
+          </div>
+        </div>
+      </div>}
+
+      {done &&
+      <div className="ov res-ov tr">
+        <div className="resbox">
+          <div className="ttl">転 移 完 了</div>
+          <div className="main tr">{done.skill.name}</div>
+          <div className="det">{effLabel(done.skill)}（Lv {done.skill.lv}）を<br/>空きスロットへ移した</div>
+          <button onClick={()=>setDone(null)}>閉じる</button>
+        </div>
+      </div>}
+    </div>
+  );
+}
+
+/* ============ 共通パーツ ============ */
+function CardHead({card}){
+  return (
+    <div className="card">
+      <div className="art"><span className="glyph">❖</span><span className="rare">{card.rare}</span></div>
+      <div className="cmeta">
+        <div className="cname">{card.name}</div>
+        <div className="ctag">{card.attr}・{card.weapon}</div>
+        <div className="clv">Lv 48 ／ 強化 ★12</div>
+      </div>
+    </div>
+  );
+}
+function SkillSlot({sl,on,pickable,emptyPickable,onClick,tgt,theme}){
+  if(!sl.skill){
+    return <div className={'slot empty'+(emptyPickable?' pickable':'')+(on?' sel'+(tgt?' tgt':''):'')}
+                onClick={emptyPickable?onClick:undefined}>
+             {emptyPickable? 'ここへ移す（空きスロット）' : '空きスロット'}</div>;
+  }
+  const s=sl.skill;
+  return (
+    <div className={'slot'+(sl.fixed?' locked':'')+(on?(' sel'+(tgt?' tgt':'')):'')+(pickable&&!on?'':'')}
+         onClick={pickable?onClick:undefined} style={pickable?{}:{cursor:'default'}}>
+      <div className="sk-name"><span className={'badge b-'+s.rare}>{s.rare}</span>{s.name}</div>
+      <div className="sk-eff">{effLabel(s)}</div>
+      <div className="sk-meta">Lv {s.lv}{sl.fixed?'　／　固定スキル（変更不可）':''}</div>
+      {sl.fixed && <div className="pin">固定</div>}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
