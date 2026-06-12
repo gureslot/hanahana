@@ -88,11 +88,13 @@
 
 <div class="panel">
   <h2><span class="num">3</span>答え合わせ：叩いた譜面を曲に重ねる</h2>
-  <p class="hint">曲を再生すると、<b>譜面化（マス吸収後）したメロ</b>がクリック音で重なって鳴ります。全体が前後にズレている場合は「全体シフト」で一括補正（叩いた生データは変えずに譜面だけ動く）。</p>
+  <p class="hint">曲を再生すると、<b>譜面化（マス吸収後）したメロ</b>がクリック音で重なって鳴ります。<b>スマート補正</b>は、フレーズごとの早め/遅めの流れを自動で打ち消し、前後の間隔と拍の格まで見てマスを決めるので、わずかなズレで隣の16分に落ちる「タタッ」を抑えます（はっきり16分で叩けば16分のまま残ります）。残った全体ズレは「全体シフト」で。</p>
   <div class="row">
     <button id="overlay" class="primary">♪ 譜面を重ねて鳴らす：OFF</button>
     <span class="small muted">グリッド</span>
     <select id="quant"><option value="16">16分</option><option value="8">8分</option></select>
+    <span class="seg" id="smartseg"><button data-sm="1" class="on">スマート補正</button><button data-sm="0">単純吸着</button></span>
+    <select id="g16"><option value="1">16分の出やすさ：普通</option><option value="2">16分：出にくい</option><option value="0.4">16分：出やすい</option></select>
   </div>
   <div class="row" style="margin-top:10px">
     <span class="small muted">全体シフト</span>
@@ -170,11 +172,59 @@ const spb = () => 60 / bpm;
 
 /* ---- quantization (single source of truth for chart & overlay) ---- */
 function qpb(){ return quant === 16 ? 4 : 2; }
+let smartQ = true, grid16W = 1.0;   // 16分の出やすさ: 2.0=出にくい / 1.0=普通 / 0.4=出やすい
+const QP = { tDen: 34, wi: 1.5, off16: 2.2, off8: 0.25 };
+function _viterbi(raw, q, slotMs){
+  const Wt = 1/(QP.tDen*QP.tDen), Wi = QP.wi/(30*30), INF = 1e15;
+  const gPen = n => { const p = ((n % q)+q)%q;
+    return q===4 ? (p===0?0:(p===2?QP.off8:QP.off16*grid16W)) : (p===0?0:QP.off8); };
+  const cands = raw.map(x => { const n0 = Math.round(x); return [n0-1, n0, n0+1]; });
+  const N = raw.length, K = 3;
+  const cost = Array.from({length:N},()=>[INF,INF,INF]);
+  const from = Array.from({length:N},()=>[0,0,0]);
+  for(let k=0;k<K;k++){ const n=cands[0][k]; cost[0][k]=Wt*Math.pow((raw[0]-n)*slotMs,2)+gPen(n); }
+  for(let i=1;i<N;i++){
+    const ioi = raw[i]-raw[i-1], brk = ioi > 2*q;
+    for(let k=0;k<K;k++){
+      const n = cands[i][k], base = Wt*Math.pow((raw[i]-n)*slotMs,2)+gPen(n);
+      for(let j=0;j<K;j++){
+        if(cost[i-1][j] >= INF) continue;
+        const d = n - cands[i-1][j]; let tr;
+        if(d < 0) continue;
+        else if(d === 0) tr = (ioi < 0.5) ? 1.2 : INF;       // ほぼ同時の二度叩きのみ同マス併合
+        else tr = brk ? 0 : Wi*Math.pow((d-ioi)*slotMs,2);   // 間隔の整合
+        if(tr >= INF) continue;
+        const c = cost[i-1][j] + base + tr;
+        if(c < cost[i][k]){ cost[i][k]=c; from[i][k]=j; }
+      }
+    }
+    if(Math.min(...cost[i]) >= INF){                          // 保険
+      for(let k=0;k<K;k++){ const n=cands[i][k];
+        cost[i][k]=Wt*Math.pow((raw[i]-n)*slotMs,2)+gPen(n); from[i][k]=0; }
+    }
+  }
+  let k = 0; for(let t=1;t<K;t++) if(cost[N-1][t] < cost[N-1][k]) k = t;
+  const out = new Array(N);
+  for(let i=N-1;i>=0;i--){ out[i]=cands[i][k]; k=from[i][k]; }
+  return out;
+}
 function quantizedSlots(){            // -> sorted unique global slot indices (can be negative)
-  const s = spb(), q = qpb(), sh = shiftMs/1000;
-  const set = new Set();
-  for(const tp of melodyTaps) set.add(Math.round((tp + sh - phase)/s * q));
-  return [...set].sort((a,b)=>a-b);
+  const s = spb(), q = qpb(), slotDur = s/q, slotMs = slotDur*1000, sh = shiftMs/1000;
+  if(!melodyTaps.length) return [];
+  const raw = melodyTaps.map(tp => (tp + sh - phase)/slotDur).sort((a,b)=>a-b);
+  if(!smartQ) return [...new Set(raw.map(x=>Math.round(x)))].sort((a,b)=>a-b);
+  // フレーズ分割(2拍以上の間) → フレーズごと中央値オフセットで自動センタリング → Viterbi吸着
+  const phrases = [[raw[0]]];
+  for(let i=1;i<raw.length;i++){
+    if(raw[i]-raw[i-1] > 2*q) phrases.push([raw[i]]); else phrases[phrases.length-1].push(raw[i]);
+  }
+  const out = [];
+  for(const ph of phrases){
+    const fr = ph.map(x => x - Math.round(x)).sort((a,b)=>a-b);
+    const med = fr[Math.floor(fr.length/2)];
+    out.push(..._viterbi(ph.map(x => x - med), q, slotMs));
+  }
+  return [...new Set(out)].sort((a,b)=>a-b);
 }
 const slotTime = gs => phase + gs * spb()/qpb();   // global slot -> audio time
 
@@ -256,26 +306,49 @@ function tap(){
   else { melodyTaps.push(t); $("melCount").textContent = melodyTaps.length; if(overlayOn) anchor(); }
   flashTap();
 }
-/* BPM from median interval; phase = median of taps' offsets within one beat.
-   Circular median via complex mean is enough at our precision. */
+/* Least-squares line fit: tap_k ~= phase0 + k * beatLen.
+   Beat indices k are assigned per contiguous run (gap>1.8x median splits runs),
+   rounding gaps to whole beats so missed taps don't corrupt the count.
+   This anchors the grid to WHERE you tapped and refines BPM over the whole span. */
 function fitTempo(){
   $("tapinfo").textContent = "タップ " + tempoTaps.length + "回";
   if(tempoTaps.length < 2) return;
+  const T = [...tempoTaps].sort((a,b)=>a-b);
+  // initial beat length from median of plausible intervals
   const iv = [];
-  for(let i=1;i<tempoTaps.length;i++){
-    const d = tempoTaps[i]-tempoTaps[i-1];
-    if(d > 0.15 && d < 3) iv.push(d);            // ignore pauses/double-hits
-  }
+  for(let i=1;i<T.length;i++){ const d=T[i]-T[i-1]; if(d>0.15 && d<3) iv.push(d); }
   if(!iv.length) return;
   iv.sort((a,b)=>a-b);
-  const med = iv[Math.floor(iv.length/2)];
-  bpm = Math.round(60/med*10)/10;
-  // phase: average position of taps inside the beat cycle (circular mean)
-  const s = 60/bpm;
-  let sx=0, sy=0;
-  for(const t of tempoTaps){ const a = 2*Math.PI*((t % s)/s); sx += Math.cos(a); sy += Math.sin(a); }
-  const ang = Math.atan2(sy, sx);
-  phase = ((ang/(2*Math.PI))*s % s + s) % s;     // a reference beat time in [0,s)
+  let beat = iv[Math.floor(iv.length/2)];
+  // assign integer beat index to each tap (gaps rounded to whole beats)
+  const ks = [0];
+  for(let i=1;i<T.length;i++){
+    const d = T[i]-T[i-1];
+    let steps = Math.round(d/beat);
+    if(steps < 1) steps = 1;                  // double-hit safety
+    ks.push(ks[i-1] + steps);
+  }
+  // two refinement passes: fit line, recompute beat, reassign, refit
+  let phase0 = T[0];
+  for(let pass=0; pass<2; pass++){
+    const n = T.length;
+    let sk=0, st=0, skk=0, skt=0;
+    for(let i=0;i<n;i++){ sk+=ks[i]; st+=T[i]; skk+=ks[i]*ks[i]; skt+=ks[i]*T[i]; }
+    const denom = n*skk - sk*sk;
+    if(denom <= 0) break;
+    beat   = (n*skt - sk*st) / denom;
+    phase0 = (st - beat*sk) / n;
+    if(pass === 0){
+      for(let i=1;i<T.length;i++){
+        let steps = Math.round((T[i]-T[i-1])/beat);
+        if(steps < 1) steps = 1;
+        ks[i] = ks[i-1] + steps;
+      }
+    }
+  }
+  if(beat < 0.15 || beat > 3) return;          // sanity
+  bpm = Math.round((60/beat)*10)/10;
+  phase = phase0;                               // grid anchored at first tap (least-squares adjusted)
   $("bpmShow").textContent = bpm; $("bpmField").value = bpm;
   visualSync(); anchor();
 }
@@ -292,7 +365,7 @@ function buildChart(){
   const keys = Object.keys(bars).map(Number);
   if(!keys.length){ $("out").value=""; $("tablewrap").innerHTML='<p class="muted small">譜面化できるタップがありません。</p>'; return; }
   const maxBar = Math.max(...keys);
-  const head = ["=== 作詞リズム譜面 ===", `BPM ${bpm} / 4/4 / ${maxBar+1}小節 / ${quant}分グリッド / 全体シフト ${shiftMs}ms`,
+  const head = ["=== 作詞リズム譜面 ===", `BPM ${bpm} / 4/4 / ${maxBar+1}小節 / ${quant}分グリッド / 全体シフト ${shiftMs}ms / 吸着 ${smartQ?"スマート":"単純"}`,
     "●=メロの音 ・=無音 / 各拍を" + q + "分割 / 音数=その小節のモーラ上限目安 / 強=拍頭に音がある拍", ""];
   let html = "<table><tr><th>小節</th><th>パターン</th><th>音数</th><th>強拍</th><th>最長拍</th></tr>";
   const rows = [];
@@ -344,6 +417,9 @@ $("modeseg").addEventListener("click", e=>{ const m=e.target.dataset.m; if(!m) r
   [...$("modeseg").children].forEach(b=>b.classList.toggle("on", b.dataset.m===m));
   $("modetag").textContent = "いまは " + (m==="tempo"?"拍":"メロ") + " を叩いています"; });
 $("quant").addEventListener("change", ()=>{ quant=parseInt($("quant").value); anchor(); });
+$("smartseg").addEventListener("click", e=>{ const v=e.target.dataset.sm; if(v==null) return; smartQ = (v==="1");
+  [...$("smartseg").children].forEach(b=>b.classList.toggle("on", b.dataset.sm===v)); anchor(); });
+$("g16").addEventListener("change", ()=>{ grid16W = parseFloat($("g16").value); anchor(); });
 $("shift").addEventListener("input", ()=>{ shiftMs=parseInt($("shift").value); $("shiftShow").textContent=shiftMs+" ms"; anchor(); });
 $("shiftZero").addEventListener("click", ()=>{ shiftMs=0; $("shift").value=0; $("shiftShow").textContent="0 ms"; anchor(); });
 $("ovol").addEventListener("input", ()=>{ clickVol = parseInt($("ovol").value)/100; $("ovolShow").textContent = $("ovol").value + "%"; });
