@@ -41,8 +41,10 @@
   .fac{margin-top:14px; padding:14px; border-radius:5px; border:1px solid var(--line); background:linear-gradient(180deg,var(--panel2),var(--panel)); position:relative;}
   .fac.renki{border-color:#274a47;} .fac.kaji{border-color:#4a2c26;}
   .fhead{display:flex; gap:12px; align-items:flex-start;}
-  .ficon{width:46px; height:46px; flex:none; border-radius:5px; display:flex; align-items:center; justify-content:center;
+  .ficon{position:relative; width:46px; height:46px; flex:none; border-radius:5px; display:flex; align-items:center; justify-content:center;
     font-size:22px; font-weight:800; color:var(--gold-bright); border:1px solid var(--gold-dim); background:radial-gradient(70% 70% at 50% 30%, #2a2017, #15100d);}
+  .ficon .ficonImg{position:absolute; inset:3px; width:calc(100% - 6px); height:calc(100% - 6px); object-fit:contain;}
+  .ficon.hasimg{font-size:0;}
   .fac.renki .ficon{color:#aee3dd; border-color:var(--ki-d); background:radial-gradient(70% 70% at 50% 30%, #16302d, #0d1a18);}
   .fac.kaji .ficon{color:#f0b9a0; border-color:#6e3a2c; background:radial-gradient(70% 70% at 50% 30%, #2a1813, #170d0a);}
   .fn{font-size:17px; font-weight:800;}
@@ -199,7 +201,7 @@ function App(){
       {/* 練気殿（毎秒・時間生産＋即生産） */}
       <div className="fac renki">
         <div className="fhead">
-          <div className="ficon">練</div>
+          <div className="ficon"><img className="ficonImg" src="./images/ic_tatemono_renkiden.png" alt="" onLoad={e=>e.target.parentNode.classList.add('hasimg')} onError={e=>e.target.remove()} />練</div>
           <div><div className="fn">練気殿<span className="flv">Lv {renkiLv}</span>
             <span className={'runpill '+(running?'on':'off')}>{running?'稼働中':'停止'}</span></div>
             <div className="fd">メダルを投資すると、毎秒ずつ武気を練る。離れていても進む。急ぐ分は即生産。</div></div>
@@ -234,7 +236,7 @@ function App(){
       {/* 鍛冶屋 */}
       <div className="fac kaji">
         <div className="fhead">
-          <div className="ficon">鍛</div>
+          <div className="ficon"><img className="ficonImg" src="./images/ic_tatemono_kaji.png" alt="" onLoad={e=>e.target.parentNode.classList.add('hasimg')} onError={e=>e.target.remove()} />鍛</div>
           <div><div className="fn">鍛冶屋<span className="flv">Lv {kajiyaLv}</span></div>
             <div className="fd">武具を鍛え、装備の「質」を作る・解放する。質が上がるほど枠あたりの攻撃力が増す。</div></div>
         </div>
@@ -258,7 +260,7 @@ function App(){
       {/* 修練場 */}
       <div className="fac">
         <div className="fhead">
-          <div className="ficon">修</div>
+          <div className="ficon"><img className="ficonImg" src="./images/ic_tatemono_shuren.png" alt="" onLoad={e=>e.target.parentNode.classList.add('hasimg')} onError={e=>e.target.remove()} />修</div>
           <div><div className="fn">修練場</div>
             <div className="fd">カカシを叩いてデッキの実戦闘力を測る。強化なし・報酬なし・回数無制限。</div></div>
         </div>
