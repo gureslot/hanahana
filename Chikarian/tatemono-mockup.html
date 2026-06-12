@@ -109,8 +109,8 @@ function fmtDur(s){
 
 /* ===== 仮の数値・曲線（全て仮） ===== */
 const QUAL=[{nm:'粗製',k:'gin'},{nm:'精製',k:'ao'},{nm:'魔装',k:'mura'},{nm:'聖装',k:'kin'}];
-const K_TIME = 20;                  // 時間生産の単価（武気1＝メダル20・安い）
-const K_INST = 60;                  // 即生産の単価（武気1＝メダル60・割高＝3倍）
+const K_TIME = 5;                   // 時間生産の単価（武気1＝メダル5・確定2・安い）
+const K_INST = 15;                  // 即生産の単価（武気1＝メダル15・割高＝3倍）
 const RATE   = lv=>0.1*lv;          // 練成レート（武気/秒）：じっくり。Lvで増加（Lv5＝0.5/秒）
 const renkiCap = lv=>1000+(lv-1)*1500;
 const renkiUp  = lv=>8000*lv;

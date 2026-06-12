@@ -146,7 +146,9 @@
   // SP専用固定スキル（特殊枠・錬成/転移の対象外・全て仮／cards §3・skills §3末尾）
   const SP_SKILL={ dragon:{name:'竜気覚醒', fx:'発動5%／デッキ全体 総合×1.90（仮）'},
                    girl:{name:'呪詛の眼', fx:'発動5%／敵 実戦闘力×0.40（仮）'},
-                   houou:{name:'不死鳥の加護', fx:'常時／敗北時 このデッキの武気損失0（仮）'} };
+                   houou:{name:'不死鳥の加護', fx:'発動40%／敗北時 このデッキの武気損失0（仮）'} };
+  // SP固定スキルの共通ルール（脚注用）：発動すると当日デッキ離脱・0時復帰／修練場は対象外（balance §2-3）。
+  const SP_RULE='※発動すると当日デッキ離脱（0時復帰）。修練場は対象外。';
   const POOL=["chara_dragon_sp","chara_girl_sp","chara_houou_sp",
     "chara_hibiscus_ha_ken_n","chara_hibiscus_ha_ken_r","chara_hibiscus_ha_ken_sr","chara_hibiscus_ha_ken_ssr",
     "chara_hibiscus_ha_tate_n","chara_hibiscus_ha_tate_r","chara_hibiscus_ha_tate_sr","chara_hibiscus_ha_tate_ssr",
@@ -221,7 +223,7 @@
   function renderDetail(){ const c=byId(highlight); const equipped = DECKS[curDeck].slots.includes(c.id); const isCur = DECKS[curDeck].slots[selSlot]===c.id;
     const sps=SP_SKILL[c.spKey]||{name:'—',fx:''};
     const skillsHtml = c.sp
-      ? `<div class="skill">SP固定：${sps.name}<span class="fx">${sps.fx}</span></div>`
+      ? `<div class="skill">SP固定：${sps.name}<span class="fx">${sps.fx}</span></div><div class="skill empty" style="border:none;color:#9a8c70">${SP_RULE}</div>`
       : `<div class="skill">固定：${c.skillFixed}${fx(c.skillFixed)}</div>` + c.skillSlots.map(s=> s?`<div class="skill">習得：${s}${fx(s)}</div>`:`<div class="skill empty">空きスロット</div>`).join('');
     $('rightCol').innerHTML=`
       <div class="dTop">

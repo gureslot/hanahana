@@ -98,7 +98,9 @@
   // SP専用固定スキル（特殊枠・錬成/転移の対象外・全て仮／cards §3）
   const SP_SKILL={ dragon:{name:'竜気覚醒', fx:'発動5%／デッキ全体 総合×1.90（仮）'},
                    girl:{name:'呪詛の眼', fx:'発動5%／敵 実戦闘力×0.40（仮）'},
-                   houou:{name:'不死鳥の加護', fx:'常時／敗北時 このデッキの武気損失0（仮）'} };
+                   houou:{name:'不死鳥の加護', fx:'発動40%／敗北時 このデッキの武気損失0（仮）'} };
+  // SP固定スキルの共通ルール（発動すると当日デッキ離脱・0時復帰／修練場は対象外・balance §2-3）
+  const SP_RULE='※発動すると当日デッキ離脱（0時復帰）。修練場は対象外。';
   const RARRANK={n:'N',r:'R',sr:'S',ssr:'A',SP:'SP'}; // 表示用ランク章（仮）
   // ===== カード戦力（戦国IXA式・balance §2-1〜2-4 / apply-spec §3・×0.80世界・図鑑はLv1基準で表示）=====
   //   総合戦力 = 装備項 + 本体戦闘力。表示は「魔装（枠攻撃力33）・満充填」を一律前提。SPは武気なし＝本体のみ。
@@ -168,7 +170,8 @@
         <div class="dRow"><span class="k">装備</span><span class="v">${c.sp?'装備なし':('魔装・満充填 '+fmt(calcCapacity(c))+'枠')}</span></div>
         <div class="dRow"><span class="k">種族</span><span class="v">${c.sp?'SP':(FAM[c.fam]||c.fam)}</span></div>
         ${c.sp?`<div class="dRow"><span class="k">SP固定スキル</span><span class="v">${(SP_SKILL[c.spKey]||{}).name||'—'}</span></div>
-        <div class="dRow"><span class="k">効果（仮）</span><span class="v" style="font-size:11px">${(SP_SKILL[c.spKey]||{}).fx||''}</span></div>`:''}
+        <div class="dRow"><span class="k">効果（仮）</span><span class="v" style="font-size:11px">${(SP_SKILL[c.spKey]||{}).fx||''}</span></div>
+        <div class="dRow"><span class="k"></span><span class="v" style="font-size:10px;color:#9a8c70;font-weight:400">${SP_RULE}</span></div>`:''}
       </div>
       <div class="zActions">
         <button class="zaBtn" id="zToSkill">スキル錬成・転移</button>
