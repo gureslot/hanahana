@@ -11,36 +11,19 @@
   *{box-sizing:border-box}
   html,body{margin:0}
   body{
-    background:
-      radial-gradient(120% 80% at 50% -10%, #2a1410 0%, var(--bg) 55%) fixed,
-      var(--bg);
+    background:radial-gradient(120% 80% at 50% -10%, #2a1410 0%, var(--bg) 55%) fixed, var(--bg);
     color:var(--ink);
     font-family:system-ui,-apple-system,"Segoe UI","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
-    line-height:1.5; padding:18px; max-width:880px; margin:0 auto;
-    -webkit-font-smoothing:antialiased;
+    line-height:1.5; padding:18px; max-width:880px; margin:0 auto; -webkit-font-smoothing:antialiased;
   }
-  h1{
-    font-family:"Shippori Mincho","Hiragino Mincho ProN","Yu Mincho",serif;
-    font-weight:600; font-size:1.5rem; margin:0 0 2px; letter-spacing:.04em;
-    color:var(--ink);
-  }
+  h1{font-family:"Shippori Mincho","Hiragino Mincho ProN","Yu Mincho",serif;font-weight:600;font-size:1.5rem;margin:0 0 2px;letter-spacing:.04em}
   h1 .acc{color:var(--gold)}
-  .sub{color:var(--muted); font-size:.86rem; margin:0 0 14px}
-  .rule{height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.5;margin:14px 0}
-  .panel{
-    background:linear-gradient(180deg,var(--panel),#1a120f);
-    border:1px solid var(--border); border-radius:10px; padding:14px; margin:12px 0;
-  }
+  .sub{color:var(--muted);font-size:.86rem;margin:0 0 14px}
+  .panel{background:linear-gradient(180deg,var(--panel),#1a120f);border:1px solid var(--border);border-radius:10px;padding:14px;margin:12px 0}
   .panel h2{font-size:.95rem;margin:0 0 10px;display:flex;align-items:center;gap:8px;font-weight:600}
-  .num{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;
-    background:var(--crimson-deep);color:#fff;font-size:.8rem;font-weight:700;flex:none;
-    border:1px solid var(--crimson)}
+  .num{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--crimson-deep);color:#fff;font-size:.8rem;font-weight:700;flex:none;border:1px solid var(--crimson)}
   .hint{color:var(--muted);font-size:.82rem;margin:.3em 0 .6em}
-  button{
-    font:inherit; cursor:pointer; color:var(--ink); background:var(--panel2);
-    border:1px solid var(--border); border-radius:8px; padding:9px 13px; min-height:42px;
-    transition:.12s border-color,.12s background;
-  }
+  button{font:inherit;cursor:pointer;color:var(--ink);background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:9px 13px;min-height:42px;transition:.12s border-color,.12s background}
   button:hover{border-color:var(--gold)}
   button:active{transform:translateY(1px)}
   button:disabled{opacity:.4;cursor:not-allowed}
@@ -51,32 +34,25 @@
   .seg button{border:0;border-radius:0;min-height:40px}
   .seg button + button{border-left:1px solid var(--border)}
   input[type=range]{accent-color:var(--crimson);width:100%}
-  input[type=number]{font:inherit;width:88px;background:var(--bg);color:var(--ink);
-    border:1px solid var(--border);border-radius:6px;padding:7px 8px}
+  input[type=number]{font:inherit;width:88px;background:var(--bg);color:var(--ink);border:1px solid var(--border);border-radius:6px;padding:7px 8px}
   select{font:inherit;background:var(--bg);color:var(--ink);border:1px solid var(--border);border-radius:6px;padding:8px;min-height:42px}
-  .file{display:inline-block}
   input[type=file]{display:none}
-  .filelbl{display:inline-block;background:linear-gradient(180deg,var(--crimson),var(--crimson-deep));
-    color:#fff;border:1px solid var(--crimson);border-radius:8px;padding:11px 16px;cursor:pointer;font-weight:600}
-  .big{font-family:"Shippori Mincho",serif;font-variant-numeric:tabular-nums}
-  .bpmbox{font-size:2.4rem;color:var(--gold);line-height:1;font-weight:600}
-  .pos{font-size:1.05rem;color:var(--ink);font-variant-numeric:tabular-nums}
+  .filelbl{display:inline-block;background:linear-gradient(180deg,var(--crimson),var(--crimson-deep));color:#fff;border:1px solid var(--crimson);border-radius:8px;padding:11px 16px;cursor:pointer;font-weight:600}
+  .bpmbox{font-family:"Shippori Mincho",serif;font-size:2.4rem;color:var(--gold);line-height:1;font-weight:600;font-variant-numeric:tabular-nums}
+  .pos{font-size:1.05rem;font-variant-numeric:tabular-nums}
   .dot{width:14px;height:14px;border-radius:50%;background:var(--gold);opacity:.18;transition:opacity .04s}
-  .tapbtn{width:100%;min-height:96px;font-size:1.15rem;font-weight:700;
-    background:linear-gradient(180deg,#2c1a15,#1c1310);border:1px dashed var(--gold);color:var(--gold)}
+  .tapbtn{width:100%;min-height:96px;font-size:1.15rem;font-weight:700;background:linear-gradient(180deg,#2c1a15,#1c1310);border:1px dashed var(--gold);color:var(--gold)}
   .tapbtn:active,.tapbtn.flash{background:var(--crimson-deep);color:#fff;border-style:solid}
-  .kbd{font:600 .78rem ui-monospace,monospace;background:#0d0908;border:1px solid var(--border);
-    border-radius:5px;padding:1px 6px;color:var(--gold)}
+  .kbd{font:600 .78rem ui-monospace,monospace;background:#0d0908;border:1px solid var(--border);border-radius:5px;padding:1px 6px;color:var(--gold)}
   table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:.82rem}
   th,td{border:1px solid var(--border);padding:5px 7px;text-align:left;white-space:nowrap}
   th{background:var(--panel2);color:var(--muted);font-weight:600}
-  .pat{font:600 .95rem ui-monospace,"SFMono-Regular",monospace;letter-spacing:.06em}
-  textarea{width:100%;min-height:160px;background:#0d0908;color:var(--ink);border:1px solid var(--border);
-    border-radius:8px;padding:10px;font:.8rem ui-monospace,monospace;resize:vertical}
+  .pat{font:600 .95rem ui-monospace,monospace;letter-spacing:.06em}
+  textarea{width:100%;min-height:160px;background:#0d0908;color:var(--ink);border:1px solid var(--border);border-radius:8px;padding:10px;font:.8rem ui-monospace,monospace;resize:vertical}
   .muted{color:var(--muted)} .small{font-size:.8rem}
   .tag{font-size:.72rem;color:var(--gold);border:1px solid var(--gold-soft);border-radius:999px;padding:2px 9px}
-  @media (max-width:560px){ body{padding:12px} .bpmbox{font-size:2rem} }
-  @media (prefers-reduced-motion:reduce){ .dot,.tapbtn{transition:none} }
+  @media (max-width:560px){body{padding:12px}.bpmbox{font-size:2rem}}
+  @media (prefers-reduced-motion:reduce){.dot,.tapbtn{transition:none}}
 </style>
 
 <h1>リズム叩き<span class="acc">採譜</span></h1>
@@ -96,9 +72,7 @@
   <div style="margin-top:10px"><input id="seek" type="range" min="0" max="1000" value="0" disabled></div>
   <div class="row" style="margin-top:8px">
     <span class="small muted">速度</span>
-    <span class="seg" id="speed">
-      <button data-r="0.5">0.5x</button><button data-r="0.75">0.75x</button><button data-r="1" class="on">1x</button>
-    </span>
+    <span class="seg" id="speed"><button data-r="0.5">0.5x</button><button data-r="0.75">0.75x</button><button data-r="1" class="on">1x</button></span>
     <button id="metro" class="on small">メトロノーム ♪</button>
     <button id="echo" class="small">タップ確認音</button>
     <span class="row" style="gap:6px;margin-left:auto"><span class="small muted">拍</span><span id="dot" class="dot"></span><span id="pos" class="pos">—</span></span>
@@ -107,33 +81,30 @@
 
 <div class="panel">
   <h2><span class="num">1</span>BPMを測る</h2>
-  <p class="hint">再生しながら、4分音符のリズムでスペースを叩き続けてください。最初のタップが「1小節目の頭」になります。メトロノームが曲に合うまで調整。</p>
+  <p class="hint">再生しながら、4分音符のリズムでスペースを叩き続ける。BPMが出たらメトロノームを鳴らし、曲とズレないか耳で確認（手動で微調整）。速い曲は半分の速さで叩くと倍取りを避けられます。</p>
   <div class="row" style="align-items:flex-end">
     <div><div class="small muted">測定BPM</div><div id="bpmShow" class="bpmbox">—</div></div>
-    <div style="margin-left:8px">
-      <div class="small muted">手動調整</div>
-      <input id="bpmField" type="number" step="0.1" min="30" max="320" value="120">
-    </div>
-    <div>
-      <div class="small muted">頭の位置(秒)</div>
-      <div class="row" style="gap:4px">
-        <button data-d="-0.01" class="off">−</button>
-        <span id="offShow" class="pos">0.000</span>
-        <button data-d="0.01" class="off">＋</button>
-      </div>
-    </div>
+    <div style="margin-left:8px"><div class="small muted">手動調整</div><input id="bpmField" type="number" step="0.1" min="30" max="320" value="120"></div>
     <button id="clrTempo" class="small">タップやり直し</button>
   </div>
 </div>
 
 <div class="panel">
-  <h2><span class="num">2</span>メロのリズムを叩く</h2>
-  <p class="hint">スペースの入力先を「メロ入力」に切替えてから、メロディの音符のタイミングでスペース（または下のボタン）を叩く。</p>
+  <h2><span class="num">2</span>小節1の開始位置を決める</h2>
+  <p class="hint">「小節1」がどこから始まるかを決めます。<b>既定は曲の先頭(0:00)</b>。シークバーで小節1にしたい位置（曲頭／メロの出だしなど）へ動かし「ここに設定」。先頭を0:00のままにすれば、イントロは先頭の空小節として譜面に反映されます。</p>
+  <div class="row" style="align-items:flex-end">
+    <button id="setbar">▶ 再生位置を小節1に設定</button>
+    <div><div class="small muted">小節1の位置(秒)</div>
+      <div class="row" style="gap:4px"><button data-d="-0.01">−</button><span id="offShow" class="pos">0.000</span><button data-d="0.01">＋</button></div></div>
+  </div>
+</div>
+
+<div class="panel">
+  <h2><span class="num">3</span>メロのリズムを叩く</h2>
+  <p class="hint">入力先を「メロ入力」に切替え、メロディの音符のタイミングでスペース（または下のボタン）を叩く。タップは16分（または8分）の最寄りに自動で丸められます。</p>
   <div class="row">
     <span class="small muted">スペースキーの入力先：</span>
-    <span class="seg" id="modeseg">
-      <button data-m="tempo" class="on">① BPM測定</button><button data-m="melody">② メロ入力</button>
-    </span>
+    <span class="seg" id="modeseg"><button data-m="tempo" class="on">① BPM測定</button><button data-m="melody">② メロ入力</button></span>
     <span id="modetag" class="tag">いまは BPM測定 を叩いています</span>
   </div>
   <div class="row" style="margin:10px 0">
@@ -152,7 +123,7 @@
 </div>
 
 <div class="panel">
-  <h2><span class="num">3</span>譜面を作る</h2>
+  <h2><span class="num">4</span>譜面を作る</h2>
   <div class="row">
     <button id="gen" class="primary">譜面を生成</button>
     <button id="copy" class="small">テキストをコピー</button>
@@ -173,47 +144,75 @@ let ac = null;
 let bpm = 120, offset = 0, latency = 0, rate = 1, quant = 16;
 let metroOn = true, echoOn = false, mode = "tempo";
 let tempoTaps = [], melodyTaps = [];
-let lastBeat = -1, lastT = 0, raf = null, loaded = false;
+let raf = null, loaded = false;
+let lastBeatVis = -1, lastT = 0;                 // for visual dot only
+let schedTimer = null, nextBeatIdx = 0, echoWM = 0;   // lookahead scheduler
+const LOOKAHEAD = 0.12, SCHED_MS = 25;
 
 function ensureAC(){
   if(!ac){ try{ ac = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
   if(ac && ac.state === "suspended") ac.resume();
 }
-function click(accent, melody){
+// gentle click; `when` = precise AudioContext time
+function click(accent, melody, when){
   if(!ac) return;
-  const t = ac.currentTime;
+  const t = (when != null) ? when : ac.currentTime;
   const o = ac.createOscillator(), g = ac.createGain();
-  o.type = melody ? "triangle" : "square";
-  o.frequency.value = melody ? 880 : (accent ? 1850 : 1200);
-  const peak = melody ? 0.5 : (accent ? 0.5 : 0.28);
+  o.type = "sine";
+  o.frequency.value = melody ? 1320 : (accent ? 1500 : 1000);
+  const peak = melody ? 0.32 : (accent ? 0.34 : 0.20);
   g.gain.setValueAtTime(0.0001, t);
-  g.gain.exponentialRampToValueAtTime(peak, t + 0.001);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.06);
+  g.gain.exponentialRampToValueAtTime(peak, t + 0.002);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.045);
   o.connect(g); g.connect(ac.destination);
-  o.start(t); o.stop(t + 0.07);
+  o.start(t); o.stop(t + 0.06);
 }
 const spb = () => 60 / bpm;
-function syncBeat(){ lastBeat = Math.floor((audio.currentTime - offset) / spb()); lastT = audio.currentTime; }
 
+// re-anchor the scheduler to current audio position (after play/seek/bpm/offset change)
+function resync(){
+  nextBeatIdx = Math.ceil((audio.currentTime - offset) / spb());
+  echoWM = audio.currentTime;
+}
+function startSched(){ if(!schedTimer) schedTimer = setInterval(schedule, SCHED_MS); }
+function stopSched(){ if(schedTimer){ clearInterval(schedTimer); schedTimer = null; } }
+
+// schedule clicks AHEAD on the precise AudioContext clock -> steady, no frame jitter
+function schedule(){
+  if(!ac || audio.paused) return;
+  const aNow = audio.currentTime, acNow = ac.currentTime, s = spb(), r = rate || 1;
+  const horizon = aNow + LOOKAHEAD * r;   // how far ahead (in audio time) to fill
+  if(metroOn && bpm > 0){
+    const curIdx = Math.ceil((aNow - offset) / s);
+    if(nextBeatIdx < curIdx) nextBeatIdx = curIdx;   // never fall behind
+    while(true){
+      const bT = offset + nextBeatIdx * s;
+      if(bT > horizon) break;
+      const acT = acNow + (bT - aNow) / r;
+      if(acT >= acNow && nextBeatIdx >= 0) click(((nextBeatIdx % 4) + 4) % 4 === 0, false, acT);
+      nextBeatIdx++;
+    }
+  }
+  if(echoOn && melodyTaps.length){
+    if(echoWM < aNow - 0.2) echoWM = aNow;
+    for(const tp of melodyTaps){
+      if(tp > echoWM && tp <= horizon){
+        const acT = acNow + (tp - aNow) / r;
+        if(acT >= acNow) click(false, true, acT);
+      }
+    }
+    if(horizon > echoWM) echoWM = horizon;
+  }
+}
+
+// visual-only loop (dot flash, readout, seek bar) — jitter here is harmless
 function tick(){
   if(audio.paused){ raf = null; return; }
   const t = audio.currentTime, s = spb();
-  if(t < lastT - 0.05){ syncBeat(); }           // seek backward
-  // metronome on each crossed beat
-  if(metroOn && bpm > 0){
-    const bIdx = Math.floor((t - offset) / s);
-    if(bIdx > lastBeat){
-      for(let k = lastBeat + 1; k <= bIdx; k++) if(k >= 0) click(((k % 4)+4)%4 === 0, false);
-      lastBeat = bIdx;
-      flashDot();
-    }
-  }
-  // echo of recorded melody taps
-  if(echoOn){
-    for(const tp of melodyTaps) if(tp > lastT && tp <= t) click(false, true);
-  }
+  if(t < lastT - 0.05) lastBeatVis = Math.floor((t - offset) / s);   // seek backward
+  const bIdx = Math.floor((t - offset) / s);
+  if(bIdx > lastBeatVis){ if(bIdx >= 0) flashDot(); lastBeatVis = bIdx; }
   lastT = t;
-  // readout
   const b = (t - offset) / s;
   $("pos").textContent = b >= 0 ? `小節 ${Math.floor(b/4)+1} ・ 拍 ${Math.floor(((b%4)+4)%4)+1}` : "(頭の前)";
   if(audio.duration){
@@ -226,10 +225,15 @@ let dotTimer = null;
 function flashDot(){ const d = $("dot"); d.style.opacity = "1"; clearTimeout(dotTimer); dotTimer = setTimeout(()=>d.style.opacity=".18", 90); }
 function flashTap(){ const b = $("tapbtn"); b.classList.add("flash"); setTimeout(()=>b.classList.remove("flash"), 70); }
 function fmt(x){ x = Math.max(0,x|0); return (x/60|0) + ":" + String(x%60).padStart(2,"0"); }
+function visualSync(){ lastBeatVis = Math.floor((audio.currentTime - offset)/spb()); lastT = audio.currentTime; }
 
 function startLoop(){ if(!raf) raf = requestAnimationFrame(tick); }
-function togglePlay(){ if(!loaded) return; ensureAC(); if(audio.paused){ syncBeat(); audio.play().catch(()=>{}); startLoop(); } else audio.pause(); }
-function restart(){ if(!loaded) return; audio.currentTime = 0; syncBeat(); if(audio.paused) togglePlay(); }
+function togglePlay(){
+  if(!loaded) return; ensureAC();
+  if(audio.paused){ visualSync(); resync(); audio.play().catch(()=>{}); startLoop(); startSched(); }
+  else audio.pause();
+}
+function restart(){ if(!loaded) return; audio.currentTime = 0; visualSync(); resync(); if(audio.paused) togglePlay(); }
 
 function tap(){
   if(!loaded || isNaN(audio.duration)) return;
@@ -239,24 +243,20 @@ function tap(){
   else { melodyTaps.push(t); $("melCount").textContent = melodyTaps.length; }
   flashTap();
 }
-function recomputeBPM(){
+function recomputeBPM(){     // BPM only — bar-1 position is set separately
   if(tempoTaps.length < 2) return;
-  offset = tempoTaps[0];
   const iv = [];
   for(let i=1;i<tempoTaps.length;i++) iv.push(tempoTaps[i]-tempoTaps[i-1]);
   iv.sort((a,b)=>a-b);
   const med = iv[Math.floor(iv.length/2)];
-  if(med > 0){ bpm = Math.round(60/med*10)/10; $("bpmField").value = bpm; $("bpmShow").textContent = bpm; }
-  $("offShow").textContent = offset.toFixed(3);
-  syncBeat();
+  if(med > 0){ bpm = Math.round(60/med*10)/10; $("bpmField").value = bpm; $("bpmShow").textContent = bpm; resync(); }
 }
 
 // ---- chart ----
 function qpb(){ return quant === 16 ? 4 : 2; }
 function buildChart(){
-  if(melodyTaps.length === 0){ $("out").value = ""; $("tablewrap").innerHTML = '<p class="muted small">先に②でメロを叩いてください。</p>'; return; }
-  const s = spb(), q = qpb(), per = q*4;
-  const bars = {};
+  if(melodyTaps.length === 0){ $("out").value = ""; $("tablewrap").innerHTML = '<p class="muted small">先に③でメロを叩いてください。</p>'; return; }
+  const s = spb(), q = qpb(), per = q*4, bars = {};
   for(const tp of melodyTaps){
     const b = (tp - offset)/s; if(b < -0.5) continue;
     const ts = Math.round(b*q); if(ts < 0) continue;
@@ -264,34 +264,24 @@ function buildChart(){
     (bars[bar] = bars[bar] || new Set()).add(slot);
   }
   const maxBar = Math.max(0, ...Object.keys(bars).map(Number));
-  const rows = [];
   const head = ["=== 作詞リズム譜面 ===",
     `BPM ${bpm} / 4/4 / ${maxBar+1}小節 / ${quant}分グリッド`,
-    "●=メロの音 ・=無音 / 各拍を" + q + "分割 / 音数=その小節のモーラ上限目安 / 強=拍頭に音がある拍",
-    ""];
+    "●=メロの音 ・=無音 / 各拍を" + q + "分割 / 音数=その小節のモーラ上限目安 / 強=拍頭に音がある拍", ""];
   let html = "<table><tr><th>小節</th><th>パターン</th><th>音数</th><th>強拍</th><th>最長拍</th></tr>";
+  const rows = [];
   for(let m=0; m<=maxBar; m++){
     const set = bars[m] || new Set();
     const slots = [...set].sort((a,b)=>a-b);
-    // pattern grouped by beat
     let parts = [];
-    for(let beat=0; beat<4; beat++){
-      let g = "";
-      for(let j=0;j<q;j++) g += set.has(beat*q+j) ? "●" : "・";
-      parts.push(g);
-    }
+    for(let beat=0; beat<4; beat++){ let g=""; for(let j=0;j<q;j++) g += set.has(beat*q+j) ? "●" : "・"; parts.push(g); }
     const pat = parts.join(" ");
     const n = set.size;
     const strong = [];
     for(let beat=0;beat<4;beat++) if(set.has(beat*q)) strong.push(beat+1);
-    // longest = largest gap to next onset (within bar)
     let longest = "-";
     if(slots.length){
-      let best = -1, bestSlot = slots[0];
-      for(let i=0;i<slots.length;i++){
-        const next = (i+1<slots.length) ? slots[i+1] : per;
-        if(next - slots[i] > best){ best = next - slots[i]; bestSlot = slots[i]; }
-      }
+      let best=-1, bestSlot=slots[0];
+      for(let i=0;i<slots.length;i++){ const next=(i+1<slots.length)?slots[i+1]:per; if(next-slots[i]>best){best=next-slots[i];bestSlot=slots[i];} }
       longest = Math.floor(bestSlot/q)+1;
     }
     const st = strong.length ? strong.join(",") : "-";
@@ -316,15 +306,18 @@ $("file").addEventListener("change", e=>{
     audio.playbackRate = rate;
   }, {once:true});
 });
+audio.addEventListener("pause", stopSched);
+audio.addEventListener("ended", ()=>{ stopSched(); });
 $("play").addEventListener("click", togglePlay);
 $("restart").addEventListener("click", restart);
-$("seek").addEventListener("input", ()=>{ if(audio.duration){ audio.currentTime = $("seek").value/1000*audio.duration; syncBeat(); } });
+$("seek").addEventListener("input", ()=>{ if(audio.duration){ audio.currentTime = $("seek").value/1000*audio.duration; visualSync(); resync(); } });
 $("speed").addEventListener("click", e=>{ const r=e.target.dataset.r; if(!r) return; rate=parseFloat(r); audio.playbackRate=rate;
-  [...$("speed").children].forEach(b=>b.classList.toggle("on", b.dataset.r===r)); });
-$("metro").addEventListener("click", ()=>{ metroOn=!metroOn; $("metro").classList.toggle("on",metroOn); });
-$("echo").addEventListener("click", ()=>{ echoOn=!echoOn; $("echo").classList.toggle("on",echoOn); });
-$("bpmField").addEventListener("change", ()=>{ const v=parseFloat($("bpmField").value); if(v>0){ bpm=v; $("bpmShow").textContent=v; syncBeat(); } });
-document.querySelectorAll("[data-d]").forEach(b=> b.addEventListener("click", ()=>{ offset=Math.max(0, offset+parseFloat(b.dataset.d)); $("offShow").textContent=offset.toFixed(3); syncBeat(); }));
+  [...$("speed").children].forEach(b=>b.classList.toggle("on", b.dataset.r===r)); resync(); });
+$("metro").addEventListener("click", ()=>{ metroOn=!metroOn; $("metro").classList.toggle("on",metroOn); resync(); });
+$("echo").addEventListener("click", ()=>{ echoOn=!echoOn; $("echo").classList.toggle("on",echoOn); echoWM=audio.currentTime; });
+$("bpmField").addEventListener("change", ()=>{ const v=parseFloat($("bpmField").value); if(v>0){ bpm=v; $("bpmShow").textContent=v; resync(); } });
+$("setbar").addEventListener("click", ()=>{ offset=audio.currentTime; $("offShow").textContent=offset.toFixed(3); visualSync(); resync(); });
+document.querySelectorAll("[data-d]").forEach(b=> b.addEventListener("click", ()=>{ offset=Math.max(0, offset+parseFloat(b.dataset.d)); $("offShow").textContent=offset.toFixed(3); visualSync(); resync(); }));
 $("clrTempo").addEventListener("click", ()=>{ tempoTaps=[]; $("bpmShow").textContent="—"; });
 $("modeseg").addEventListener("click", e=>{ const m=e.target.dataset.m; if(!m) return; mode=m;
   [...$("modeseg").children].forEach(b=>b.classList.toggle("on", b.dataset.m===m));
