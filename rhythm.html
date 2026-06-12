@@ -100,6 +100,14 @@
     <span id="shiftShow" class="small">0 ms</span>
     <button id="shiftZero" class="small">0に戻す</button>
   </div>
+  <div class="row" style="margin-top:10px">
+    <span class="small muted">重ね音の音量</span>
+    <input id="ovol" type="range" min="50" max="300" value="160" step="10" style="max-width:200px">
+    <span id="ovolShow" class="small">160%</span>
+    <span class="small muted">曲の音量</span>
+    <input id="svol" type="range" min="10" max="100" value="100" step="5" style="max-width:200px">
+    <span id="svolShow" class="small">100%</span>
+  </div>
 </div>
 
 <div class="panel">
@@ -127,18 +135,36 @@ function ensureAC(){
   if(!ac){ try{ ac = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
   if(ac && ac.state === "suspended") ac.resume();
 }
+let clickGainNode = null, clickVol = 1.6;   // melody-overlay master volume (slider)
+function clickBus(){
+  if(!clickGainNode && ac){ clickGainNode = ac.createGain(); clickGainNode.gain.value = 1; clickGainNode.connect(ac.destination); }
+  return clickGainNode;
+}
 function click(kind, when){ // kind: 'beat' | 'accent' | 'melody'
   if(!ac) return;
+  const bus = clickBus();
   const t = (when != null) ? when : ac.currentTime;
-  const o = ac.createOscillator(), g = ac.createGain();
-  o.type = "sine";
-  o.frequency.value = kind === "melody" ? 1700 : (kind === "accent" ? 1100 : 800);
-  const peak = kind === "melody" ? 0.4 : (kind === "accent" ? 0.3 : 0.18);
-  g.gain.setValueAtTime(0.0001, t);
-  g.gain.exponentialRampToValueAtTime(peak, t + 0.002);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.045);
-  o.connect(g); g.connect(ac.destination);
-  o.start(t); o.stop(t + 0.06);
+  if(kind === "melody"){
+    // bright woodblock-ish: two detuned squares + fast decay, scaled by clickVol
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(Math.min(1.5, 0.55*clickVol), t + 0.0015);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
+    const o1 = ac.createOscillator(); o1.type = "square";  o1.frequency.value = 2100;
+    const o2 = ac.createOscillator(); o2.type = "triangle"; o2.frequency.value = 1050;
+    o1.connect(g); o2.connect(g); g.connect(bus);
+    o1.start(t); o2.start(t); o1.stop(t + 0.08); o2.stop(t + 0.08);
+  } else {
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = "sine";
+    o.frequency.value = (kind === "accent" ? 1100 : 800);
+    const peak = (kind === "accent" ? 0.3 : 0.18);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(peak, t + 0.002);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.045);
+    o.connect(g); g.connect(bus);
+    o.start(t); o.stop(t + 0.06);
+  }
 }
 const spb = () => 60 / bpm;
 
@@ -320,6 +346,8 @@ $("modeseg").addEventListener("click", e=>{ const m=e.target.dataset.m; if(!m) r
 $("quant").addEventListener("change", ()=>{ quant=parseInt($("quant").value); anchor(); });
 $("shift").addEventListener("input", ()=>{ shiftMs=parseInt($("shift").value); $("shiftShow").textContent=shiftMs+" ms"; anchor(); });
 $("shiftZero").addEventListener("click", ()=>{ shiftMs=0; $("shift").value=0; $("shiftShow").textContent="0 ms"; anchor(); });
+$("ovol").addEventListener("input", ()=>{ clickVol = parseInt($("ovol").value)/100; $("ovolShow").textContent = $("ovol").value + "%"; });
+$("svol").addEventListener("input", ()=>{ audio.volume = parseInt($("svol").value)/100; $("svolShow").textContent = $("svol").value + "%"; });
 $("tapbtn").addEventListener("click", tap);
 $("undo").addEventListener("click", ()=>{ melodyTaps.pop(); $("melCount").textContent=melodyTaps.length; if(overlayOn) anchor(); });
 $("clrMel").addEventListener("click", ()=>{ melodyTaps=[]; $("melCount").textContent=0; if(overlayOn) anchor(); });
