@@ -64,11 +64,15 @@
 
 <div class="panel">
   <h2><span class="num">1</span>拍を叩く（BPMと拍の位置を自動推測）</h2>
-  <p class="hint">再生しながら4分音符でスペースを叩き続ける。<b>間隔からBPM、叩いた時刻から拍の位置</b>を出して曲全体に当てます。多く叩くほど安定。「拍クリック ♪」をオンにすると推測した拍が曲に重なって鳴るので、合っているか耳で確認できます。</p>
+  <p class="hint">再生しながら4分音符でスペースを叩き続ける。<b>間隔からBPM、叩いた時刻から拍の位置</b>を出して曲全体に当てます。多く叩くほど安定。「拍クリック ♪」で耳確認。<b>メロの出だしが小節1の頭に食い込む（本当は前小節の裏拍から始まる）ときは「小節線の調整」で半拍/1拍ずらす</b>——譜面と重ね音に即反映されます。</p>
   <div class="row" style="align-items:flex-end">
     <div><div class="small muted">BPM</div><div id="bpmShow" class="bpmbox">—</div></div>
     <div style="margin-left:8px"><div class="small muted">手動調整</div><input id="bpmField" type="number" step="0.1" min="30" max="400" value="120"></div>
-    <div><div class="small muted">拍位置の微調整</div><div class="row" style="gap:4px"><button data-d="-0.01">−10ms</button><button data-d="0.01">＋10ms</button></div></div>
+    <div><div class="small muted">小節線の調整</div><div class="row" style="gap:4px">
+      <button data-b="-1">◀ 1拍</button><button data-b="-0.5">◀ 半拍</button>
+      <button data-d="-0.01">−10ms</button><button data-d="0.01">＋10ms</button>
+      <button data-b="0.5">半拍 ▶</button><button data-b="1">1拍 ▶</button>
+      <span class="small" id="blShow" style="min-width:4em">±0拍</span></div></div>
     <span class="small muted" id="tapinfo">タップ 0回</span>
     <button id="clrTempo" class="small">タップやり直し</button>
   </div>
@@ -172,7 +176,7 @@ const spb = () => 60 / bpm;
 
 /* ---- quantization (single source of truth for chart & overlay) ---- */
 function qpb(){ return quant === 16 ? 4 : 2; }
-let smartQ = true, grid16W = 1.0;   // 16分の出やすさ: 2.0=出にくい / 1.0=普通 / 0.4=出やすい
+let smartQ = true, grid16W = 1.0, barShiftBeats = 0, chartStartBar = 0;   // 16分の出やすさ: 2.0=出にくい / 1.0=普通 / 0.4=出やすい
 const QP = { tDen: 34, wi: 1.5, off16: 2.2, off8: 0.25 };
 function _viterbi(raw, q, slotMs){
   const Wt = 1/(QP.tDen*QP.tDen), Wi = QP.wi/(30*30), INF = 1e15;
@@ -276,7 +280,7 @@ function tick(){
   if(bIdx > lastBeatVis){ flashDot(); lastBeatVis = bIdx; }
   lastT = t;
   const b = (t - phase) / s;
-  $("pos").textContent = `小節 ${Math.floor(b/4)+1} ・ 拍 ${((Math.floor(b)%4)+4)%4+1}`;
+  $("pos").textContent = `小節 ${Math.floor(b/4)+1-chartStartBar} ・ 拍 ${((Math.floor(b)%4)+4)%4+1}`;
   if(audio.duration){
     if(document.activeElement !== $("seek")) $("seek").value = Math.round(t/audio.duration*1000);
     $("time").textContent = fmt(t) + " / " + fmt(audio.duration);
@@ -358,18 +362,20 @@ function buildChart(){
   if(melodyTaps.length === 0){ $("out").value = ""; $("tablewrap").innerHTML = '<p class="muted small">先に②でメロを叩いてください。</p>'; return; }
   const q = qpb(), per = q*4, slots = quantizedSlots(), bars = {};
   for(const gs of slots){
-    if(gs < 0) continue;
-    const bar = Math.floor(gs/per);
+    const bar = Math.floor(gs/per);                      // 負の小節(アウフタクト)も保持
     (bars[bar] = bars[bar] || new Set()).add(gs - bar*per);
   }
   const keys = Object.keys(bars).map(Number);
   if(!keys.length){ $("out").value=""; $("tablewrap").innerHTML='<p class="muted small">譜面化できるタップがありません。</p>'; return; }
   const maxBar = Math.max(...keys);
-  const head = ["=== 作詞リズム譜面 ===", `BPM ${bpm} / 4/4 / ${maxBar+1}小節 / ${quant}分グリッド / 全体シフト ${shiftMs}ms / 吸着 ${smartQ?"スマート":"単純"}`,
+  const startBar = Math.min(0, Math.min(...keys));       // 拍タップより前の音は前小節として先頭に追加
+  chartStartBar = startBar;
+  const bl = (barShiftBeats>0?"+":"") + barShiftBeats;
+  const head = ["=== 作詞リズム譜面 ===", `BPM ${bpm} / 4/4 / ${maxBar-startBar+1}小節 / ${quant}分グリッド / 全体シフト ${shiftMs}ms / 小節線 ${bl}拍 / 吸着 ${smartQ?"スマート":"単純"}`,
     "●=メロの音 ・=無音 / 各拍を" + q + "分割 / 音数=その小節のモーラ上限目安 / 強=拍頭に音がある拍", ""];
   let html = "<table><tr><th>小節</th><th>パターン</th><th>音数</th><th>強拍</th><th>最長拍</th></tr>";
   const rows = [];
-  for(let m=0; m<=maxBar; m++){
+  for(let m=startBar; m<=maxBar; m++){
     const set = bars[m] || new Set();
     const sl = [...set].sort((a,b)=>a-b);
     let parts = [];
@@ -383,13 +389,16 @@ function buildChart(){
       longest = Math.floor(bestSlot/q)+1;
     }
     const st = strong.length ? strong.join(",") : "-";
-    html += `<tr><td>${m+1}</td><td class="pat">${pat}</td><td>${n}音</td><td>${st==="-"?"<span class='muted'>-</span>":"強"+st}</td><td>${longest==="-"?"<span class='muted'>-</span>":"拍"+longest}</td></tr>`;
-    rows.push(`小節${String(m+1).padStart(2)} | ${pat} | ${n}音 | 強${st} | 最長${longest}`);
+    const disp = m - startBar + 1;
+    html += `<tr><td>${disp}</td><td class="pat">${pat}</td><td>${n}音</td><td>${st==="-"?"<span class='muted'>-</span>":"強"+st}</td><td>${longest==="-"?"<span class='muted'>-</span>":"拍"+longest}</td></tr>`;
+    rows.push(`小節${String(disp).padStart(2)} | ${pat} | ${n}音 | 強${st} | 最長${longest}`);
   }
   html += "</table>"; $("tablewrap").innerHTML = html;
   const tail = ["", "作詞指示の例: 各小節の「音数」ぶんのモーラ（拍）で日本語を当て、「強」の拍に意味の強い語、「最長」の拍は母音を伸ばせる語にして、〔テーマ〕で作詞してください。音数は超えないこと。"];
   $("out").value = head.concat(rows, tail).join("\n");
 }
+
+function regen(){ if(melodyTaps.length && $("out").value) buildChart(); }
 
 /* ---- wiring ---- */
 $("file").addEventListener("change", e=>{
@@ -411,21 +420,25 @@ $("metro").addEventListener("click", ()=>{ metroOn=!metroOn; $("metro").classLis
 $("overlay").addEventListener("click", ()=>{ overlayOn=!overlayOn; $("overlay").classList.toggle("on",overlayOn);
   $("overlay").textContent = "♪ 譜面を重ねて鳴らす：" + (overlayOn?"ON":"OFF"); if(overlayOn) anchor(); });
 $("bpmField").addEventListener("change", ()=>{ const v=parseFloat($("bpmField").value); if(v>0){ bpm=v; $("bpmShow").textContent=v; visualSync(); anchor(); } });
-document.querySelectorAll("[data-d]").forEach(b=> b.addEventListener("click", ()=>{ phase += parseFloat(b.dataset.d); visualSync(); anchor(); }));
+document.querySelectorAll("[data-d]").forEach(b=> b.addEventListener("click", ()=>{ phase += parseFloat(b.dataset.d); visualSync(); anchor(); regen(); }));
+document.querySelectorAll("[data-b]").forEach(b=> b.addEventListener("click", ()=>{ const v=parseFloat(b.dataset.b);
+  phase += v*spb(); barShiftBeats = Math.round((barShiftBeats+v)*2)/2;
+  $("blShow").textContent = (barShiftBeats>0?"+":(barShiftBeats===0?"±":"")) + barShiftBeats + "拍";
+  visualSync(); anchor(); regen(); }));
 $("clrTempo").addEventListener("click", ()=>{ tempoTaps=[]; $("bpmShow").textContent="—"; $("tapinfo").textContent="タップ 0回"; });
 $("modeseg").addEventListener("click", e=>{ const m=e.target.dataset.m; if(!m) return; mode=m;
   [...$("modeseg").children].forEach(b=>b.classList.toggle("on", b.dataset.m===m));
   $("modetag").textContent = "いまは " + (m==="tempo"?"拍":"メロ") + " を叩いています"; });
-$("quant").addEventListener("change", ()=>{ quant=parseInt($("quant").value); anchor(); });
+$("quant").addEventListener("change", ()=>{ quant=parseInt($("quant").value); anchor(); regen(); });
 $("smartseg").addEventListener("click", e=>{ const v=e.target.dataset.sm; if(v==null) return; smartQ = (v==="1");
-  [...$("smartseg").children].forEach(b=>b.classList.toggle("on", b.dataset.sm===v)); anchor(); });
-$("g16").addEventListener("change", ()=>{ grid16W = parseFloat($("g16").value); anchor(); });
-$("shift").addEventListener("input", ()=>{ shiftMs=parseInt($("shift").value); $("shiftShow").textContent=shiftMs+" ms"; anchor(); });
-$("shiftZero").addEventListener("click", ()=>{ shiftMs=0; $("shift").value=0; $("shiftShow").textContent="0 ms"; anchor(); });
+  [...$("smartseg").children].forEach(b=>b.classList.toggle("on", b.dataset.sm===v)); anchor(); regen(); });
+$("g16").addEventListener("change", ()=>{ grid16W = parseFloat($("g16").value); anchor(); regen(); });
+$("shift").addEventListener("input", ()=>{ shiftMs=parseInt($("shift").value); $("shiftShow").textContent=shiftMs+" ms"; anchor(); regen(); });
+$("shiftZero").addEventListener("click", ()=>{ shiftMs=0; $("shift").value=0; $("shiftShow").textContent="0 ms"; anchor(); regen(); });
 $("ovol").addEventListener("input", ()=>{ clickVol = parseInt($("ovol").value)/100; $("ovolShow").textContent = $("ovol").value + "%"; });
 $("svol").addEventListener("input", ()=>{ audio.volume = parseInt($("svol").value)/100; $("svolShow").textContent = $("svol").value + "%"; });
 $("tapbtn").addEventListener("click", tap);
-$("undo").addEventListener("click", ()=>{ melodyTaps.pop(); $("melCount").textContent=melodyTaps.length; if(overlayOn) anchor(); });
+$("undo").addEventListener("click", ()=>{ melodyTaps.pop(); $("melCount").textContent=melodyTaps.length; anchor(); regen(); });
 $("clrMel").addEventListener("click", ()=>{ melodyTaps=[]; $("melCount").textContent=0; if(overlayOn) anchor(); });
 $("gen").addEventListener("click", buildChart);
 $("copy").addEventListener("click", ()=>{ const t=$("out"); if(!t.value) return; t.select();
