@@ -53,11 +53,6 @@
   .brow .v.plus{color:#9fe0a0;}
 
   .assist{margin:10px 0 4px;} .assistT{font-size:11px; color:#cdb488; letter-spacing:2px; border-left:3px solid var(--gold); padding-left:8px; margin-bottom:7px;}
-  .achips{display:flex; gap:7px; flex-wrap:wrap;}
-  .achip{display:flex; align-items:center; gap:6px; font-size:12px; background:rgba(255,235,180,.05); border:1px solid rgba(232,194,90,.4); border-radius:10px; padding:6px 10px; cursor:pointer;}
-  .achip.on{background:linear-gradient(180deg,rgba(255,228,154,.26),rgba(232,181,77,.14)); box-shadow:0 0 10px rgba(255,200,90,.3); border-color:#ffd98a;}
-  .achip .ct{font-size:10px; color:#9a8c70;}
-  .achip.sp .nm{color:#ffe39a;}
   /* 確率保証石 個数カウンター */
   .ensCtrl{display:flex; align-items:center; gap:8px; flex-wrap:wrap; background:rgba(255,235,180,.05); border:1px solid rgba(232,194,90,.4); border-radius:10px; padding:7px 11px; margin-bottom:7px;}
   .ensCtrl.active{background:linear-gradient(180deg,rgba(255,228,154,.22),rgba(232,181,77,.12)); border-color:#ffd98a;}
@@ -155,11 +150,10 @@
       <div class="assist">
         <div class="assistT">補助素材</div>
         <div id="ensWrap"></div>
-        <div class="achips" id="achips"></div>
       </div>
 
       <div class="cost"><span class="k">消費メダル</span><span class="v" id="costVal">—</span></div>
-      <div class="note">・成功で強化値+1。失敗すると素材カードは消滅します（保護石で防止可）。<br>・成功率＝max(30, 90−5×現在の強化値)。確率保証石1個ごとに+10%（上限100%）、SP素材で+40%。<br>・メダル消費＝500×(現在の強化値+1)。素材のスキルは合成で消滅します（スキル転移は別機能）。</div>
+      <div class="note">・成功で強化値+1。失敗しても強化値は下がりませんが、素材カードは消滅します。<br>・成功率＝max(30, 90−5×現在の強化値)。確率保証石1個ごとに+10%（上限100%）。<br>・メダル消費＝500×(現在の強化値+1)。素材のスキルは合成で消滅します（スキル転移は別機能）。</div>
     </div>
     <div class="doBtn"><button id="doKyoka" disabled>カードを選んでください</button></div>
   </div>
@@ -242,11 +236,8 @@
   function rarBadge(c){ const r=RAR[c.rar]||RAR.n; return `<span class="rb" style="background:${r.c}">${r.t}</span>`; }
   function starMini(c){ return c.sp?'':('★'+c.star); }   // カード左上：強化値の★だけ
 
-  // 補助素材（モック所持数）。確率保証石は個数を入れられる別UI（ENSURE）として分離
-  const ASSIST={ protect:{name:'保護石', ct:5, on:false},
-                dragon:{name:'ゴールドドラゴン(SP)', sp:true, ct:1, on:false},  // 成功率UP
-                houou:{name:'鳳凰(SP)', sp:true, ct:1, on:false},               // 失敗時保護
-                girl:{name:'ゴーストガール(SP)', sp:true, ct:1, on:false} };     // 強化値ボーナス
+  // 補助素材は確率保証石（成功率+10%/個・上限100%）の1種のみ。
+  // ※SP（ドラゴン/ガール/鳳凰）は戦闘専用カードになり、★強化の素材・素材効果は全廃（旧 成功率UP/強化値ボーナス/保護は削除）。
   const ENSURE={ name:'確率保証石', ct:3, use:0 };   // ct=所持数, use=投入数（1個ごと+10%）
 
   let baseId=null, matId=null, pickFor=null, page=0, highlight=null;
@@ -267,13 +258,11 @@
   }
 
   // 確率保証石を除いた成功率（保証石の投入可能数を判定するのに使う）
-  function rateBeforeEnsure(){ const b=byId(baseId); let r=Math.max(30, 90 - 5*b.star); if(ASSIST.dragon.on) r+=40; return Math.min(100,r); }
+  function rateBeforeEnsure(){ const b=byId(baseId); let r=Math.max(30, 90 - 5*b.star); return Math.min(100,r); }
   function calcRate(){ if(!baseId||!matId) return null;
     const b=byId(baseId), m=byId(matId);
     let rate=Math.max(30, 90 - 5*b.star);    // 成功率 = max(30, 90−5×現在の★)
     rate += ENSURE.use*10;                    // 確率保証石＝1個ごとに+10%
-    if(ASSIST.dragon.on) rate += 40;          // SP素材（ドラゴン）＝成功率+40%
-    // 保護石／鳳凰(SP)は率ではなく「失敗しても素材が残る」効果
     rate=Math.min(100,rate);                  // 上限100%
     return {rate, b, m};
   }
@@ -291,10 +280,7 @@
       <div class="brow"><span class="k">本体</span><span class="v">${r.b.name}（${stars(r.b)}）</span></div>
       <div class="brow"><span class="k">素材</span><span class="v">${r.m.name}（${stars(r.m)}）</span></div>
       <div class="brow"><span class="k">成功で</span><span class="v plus">強化値 +1（★${r.b.star} → ★${r.b.star+1}）</span></div>
-      ${ENSURE.use>0?`<div class="brow"><span class="k">確率保証石 ×${ENSURE.use}</span><span class="v plus">成功率 +${ENSURE.use*10}%</span></div>`:''}
-      ${ASSIST.dragon.on?'<div class="brow"><span class="k">SP素材（ドラゴン）</span><span class="v plus">成功率 +40%</span></div>':''}
-      ${ASSIST.protect.on?'<div class="brow"><span class="k">保護石</span><span class="v plus">失敗しても素材が残る</span></div>':''}
-      ${ASSIST.girl.on?'<div class="brow"><span class="k">ゴーストガール</span><span class="v plus">成功時に強化値ボーナス</span></div>':''}`;
+      ${ENSURE.use>0?`<div class="brow"><span class="k">確率保証石 ×${ENSURE.use}</span><span class="v plus">成功率 +${ENSURE.use*10}%</span></div>`:''}`;
     $('costVal').textContent=fmt(calcCost())+' メダル';
     $('doKyoka').disabled=false; $('doKyoka').textContent='強化する';
     renderAssist();
@@ -315,9 +301,6 @@
       if(el.dataset.act==='inc') ENSURE.use++; else if(ENSURE.use>0) ENSURE.use--;
       refresh();
     }));
-    // その他の補助素材はオン/オフのチップ
-    $('achips').innerHTML=Object.entries(ASSIST).map(([k,a])=>`<div class="achip ${a.on?'on':''} ${a.sp?'sp':''}" data-k="${k}"><span class="nm">${a.name}</span><span class="ct">×${a.ct}</span></div>`).join('');
-    $('achips').querySelectorAll('.achip').forEach(el=>el.addEventListener('click',()=>{ const k=el.dataset.k; ASSIST[k].on=!ASSIST[k].on; refresh(); }));
   }
 
   // 確認ポップアップ（Promiseで「はい/いいえ」を返す）
@@ -337,26 +320,24 @@
       if(!ok) return;
     }
     const success = (Math.random()*100 < r.rate);
-    const protect = ASSIST.protect.on || ASSIST.houou.on;
-    if(success){ b.star += 1 + (ASSIST.girl.on?1:0);
+    if(success){ b.star += 1;
       b.power=calcPower(b);   // ★更新後の戦力を再計算（★は本体戦闘力に乗る・設計書§2-1）
     }
-    // 素材消滅（成功時は常に消費。失敗時は保護なら残る）
-    const matLost = success ? true : !protect;
-    showResult(success, b, m, matLost);
+    // 素材は成功・失敗いずれも消滅（失敗しても★は下がらない）
+    showResult(success, b, m);
     // 補助素材リセット（モック）
-    Object.values(ASSIST).forEach(a=>a.on=false); ENSURE.use=0;
+    ENSURE.use=0;
     matId=null; // 素材は消費/リセット
   });
 
-  function showResult(ok, b, m, matLost){
+  function showResult(ok, b, m){
     if(window.CKSound) CKSound.play(ok?'se_enhance_success':'se_enhance_fail');
     $('resBig').textContent = ok?'強化成功':'強化失敗';
     $('resBig').className='big '+(ok?'ok':'ng');
     $('resCard').innerHTML=thumbInner(b);
     $('resSub').innerHTML = ok
       ? `${b.name}<br>強化値 ★${b.star} ／ 戦闘力 ${fmt(b.power)}<br><span style="color:#9a8c70">素材「${m.name}」は消費されました</span>`
-      : `強化に失敗しました…<br><span style="color:${matLost?'#ff9a8a':'#9fe0a0'}">素材「${m.name}」は${matLost?'消滅しました':'保護され残りました'}</span>`;
+      : `強化に失敗しました…（強化値は下がりません）<br><span style="color:#ff9a8a">素材「${m.name}」は消滅しました</span>`;
     $('result').classList.add('show');
   }
   $('resClose').addEventListener('click',()=>{ $('result').classList.remove('show'); refresh(); });
@@ -364,16 +345,20 @@
   /* ===== カード選択（流用） ===== */
   $('baseBox').addEventListener('click',(e)=>{ if(e.target.dataset.rm!==undefined) return; openSelect('base'); });
   $('matBox').addEventListener('click',(e)=>{ if(e.target.dataset.rm!==undefined) return; openSelect('mat'); });
-  function selectable(c){ // 素材は本体と同じレアリティ・同じ強化値、かつロックされていないカードのみ
+  function selectable(c){ // 素材＝本体と同レア・同★・未ロック。SPは加えて「同名のみ」
     if(pickFor==='base'){ return c.id!==matId; }
     if(pickFor==='mat'){ if(!baseId) return false; const b=byId(baseId);
-      return c.id!==baseId && !c.locked && c.rar===b.rar && c.star===b.star; }
+      if(c.id===baseId || c.locked) return false;
+      // 本体がSP：素材は同名（ドラゴン/ガール/鳳凰が一致）かつ同★のSPのみ。別名SPは不可。
+      if(b.sp){ return c.sp && c.name===b.name && c.star===b.star; }
+      // 本体が通常カード：SPは素材に使えない。同レア・同★のみ。
+      return !c.sp && c.rar===b.rar && c.star===b.star; }
     return true;
   }
   function openSelect(role){ pickFor=role; const list=CARDS.filter(()=>true);
     highlight = (role==='base'?baseId:matId) || (CARDS.find(selectable)||CARDS[0]).id;
     page=Math.floor(CARDS.findIndex(c=>c.id===highlight)/PER); if(page<0)page=0;
-    $('selTitle').textContent = role==='base'?'本体カードを選ぶ':'素材カードを選ぶ（本体と同じレアリティ・強化値）';
+    $('selTitle').textContent = role==='base'?'本体カードを選ぶ':((baseId&&byId(baseId).sp)?'素材カードを選ぶ（同名・同じ強化値のSPのみ）':'素材カードを選ぶ（本体と同じレアリティ・強化値）');
     $('scrMain').classList.add('hide'); $('scrSelect').classList.remove('hide'); renderSelect();
   }
   function renderSelect(){
@@ -404,6 +389,8 @@
     let cond='';
     if(pickFor==='mat' && baseId && !ok && c.id!==baseId){ const b=byId(baseId);
       if(c.locked) cond='ロック中のカードは素材にできません（解除すると選べます）';
+      else if(b.sp) cond=`SPの素材は同名・同じ強化値のSPのみ（${b.name} ／ ${stars(b)}）`;
+      else if(c.sp) cond='SPは通常カードの素材にできません';
       else cond=`素材は本体と同じレアリティ・強化値（${(RAR[b.rar]||{}).t} ／ ${stars(b)}）のカードのみ`;
     }
     $('cond').textContent=cond;
