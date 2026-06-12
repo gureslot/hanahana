@@ -117,12 +117,15 @@ const RATE   = lv=>0.1*lv;          // 練成レート（武気/秒）：じっ�
 const renkiCap = lv=>1000+(lv-1)*1500;
 const renkiUp  = lv=>8000*lv;
 const kajiyaUp = lv=>15000*lv;
+const DEMO_SPEED = 600;             // mock演出：実時間をこの倍率で加速（24h→2.4分）。表示は実時間表記のまま
+const CRAFT_H = [0, 24, 36, 48];    // 質解放の作業時間(h・仮)：粗製0(初期)/精製24/魔装36/聖装48
 
 function App(){
   const [medal,setMedal]=useState(80000);                 // メダル（=メダルの呼称）
   const [renki,setRenki]=useState({buki:1800, fuel:0});   // 武気・投資中のメダル（未消費＝燃料）
   const [renkiLv,setRenkiLv]=useState(5);
   const [kajiyaLv,setKajiyaLv]=useState(3);
+  const [craft,setCraft]=useState(null);                  // 鍛冶屋の依頼中：{idx,remainSec}（nullなら依頼なし・1件ずつ）
   const [amtStr,setAmtStr]=useState('50000');             // 自由入力（投資するメダル）
   const [msg,setMsg]=useState('メダルを入力して投資すると、毎秒ずつ武気を練る。急ぐ分は即生産。');
 
@@ -148,6 +151,20 @@ function App(){
     },1000);
     return ()=>clearInterval(id);
   },[running, renkiLv]);
+
+  // 鍛冶屋の依頼：作業時間の経過で完成→解放（mockはDEMO_SPEED倍で加速。離席中も進む想定＝本実装は時刻計算）。
+  useEffect(()=>{
+    if(!craft) return;
+    const id=setInterval(()=>{
+      setCraft(c=>{
+        if(!c) return c;
+        const r=c.remainSec-DEMO_SPEED;
+        if(r<=0){ const nm=QUAL[c.idx].nm; setKajiyaLv(l=> l<=c.idx ? c.idx+1 : l); setMsg('「'+nm+'」の装備が完成した。'); return null; }
+        return {...c, remainSec:r};
+      });
+    },1000);
+    return ()=>clearInterval(id);
+  },[craft ? craft.idx : -1]);
 
   const A=parseInt(amtStr,10)||0;
   const estTimeBuki=Math.floor(A/K_TIME);
@@ -180,12 +197,14 @@ function App(){
     setMedal(m=>m-renkiUpCost); setRenkiLv(l=>l+1);
     setMsg('練気殿を Lv'+(renkiLv+1)+' へ。毎秒レートと保管上限が上昇。投資中の分にも即適用。');
   }
-  function upKajiya(){
-    if(kajiyaMax) return;
-    if(medal<kajiyaUpCost) return setMsg('メダルが足りません（鍛冶屋の強化に '+n(kajiyaUpCost)+'）');
-    const newQ=QUAL[kajiyaLv].nm;
-    setMedal(m=>m-kajiyaUpCost); setKajiyaLv(l=>l+1);
-    setMsg('鍛冶屋を Lv'+(kajiyaLv+1)+' へ。「'+newQ+'」の装備が作れるようになった。');
+  // 鍛冶屋の強化＝次の質の解放を「依頼」する：メダル払う→作業時間→完成（1件ずつ・キャンセル不可）。
+  function placeCraftOrder(){
+    if(kajiyaMax || craft) return;
+    if(medal<kajiyaUpCost) return setMsg('メダルが足りません（鍛冶屋の依頼に '+n(kajiyaUpCost)+'）');
+    const idx=kajiyaLv, nm=QUAL[idx].nm;
+    setMedal(m=>m-kajiyaUpCost);
+    setCraft({idx, remainSec: CRAFT_H[idx]*3600});
+    setMsg('「'+nm+'」の鍛造を依頼した（作業 '+CRAFT_H[idx]+'時間・完成まで待つ）。');
   }
 
   return (
@@ -238,7 +257,7 @@ function App(){
         <div className="fhead">
           <div className="ficon"><img className="ficonImg" src="./images/ic_tatemono_kaji.png" alt="" onLoad={e=>e.target.parentNode.classList.add('hasimg')} onError={e=>e.target.remove()} />鍛</div>
           <div><div className="fn">鍛冶屋<span className="flv">Lv {kajiyaLv}</span></div>
-            <div className="fd">武具を鍛え、装備の「質」を作る・解放する。質が上がるほど枠あたりの攻撃力が増す。</div></div>
+            <div className="fd">武具を鍛え、装備の「質」を作る・解放する。解放は依頼制（メダル→作業時間→完成・1件ずつ）。質が上がるほど枠攻撃力が増す。</div></div>
         </div>
         <div className="fstat">
           <div className="st"><span className="k">解放済みの質</span><span></span></div>
@@ -247,13 +266,16 @@ function App(){
           </div>
           <div className="st" style={{marginTop:'8px'}}>
             <span className="k">次に解放</span>
-            <b>{kajiyaMax?'—（全て解放済み）':QUAL[kajiyaLv].nm+'（Lv'+(kajiyaLv+1)+'）'}</b>
+            <b>{kajiyaMax?'—（全て解放済み）':QUAL[kajiyaLv].nm+'（Lv'+(kajiyaLv+1)+'・作業'+CRAFT_H[kajiyaLv]+'h）'}</b>
           </div>
+          {craft && <div className="st"><span className="k">依頼中</span><b style={{color:'#f0b9a0'}}>{QUAL[craft.idx].nm}（残り {fmtDur(craft.remainSec)}）</b></div>}
         </div>
         <div className="fbtns">
           {kajiyaMax
             ? <button className="fb" disabled>全ての質を解放済み</button>
-            : <button className="fb gold" disabled={medal<kajiyaUpCost} onClick={upKajiya}>強化＝「{QUAL[kajiyaLv].nm}」を解放（メダル{n(kajiyaUpCost)}）</button>}
+            : craft
+              ? <button className="fb" disabled>依頼中：{QUAL[craft.idx].nm}（残り {fmtDur(craft.remainSec)}）</button>
+              : <button className="fb gold" disabled={medal<kajiyaUpCost} onClick={placeCraftOrder}>強化＝「{QUAL[kajiyaLv].nm}」を鍛造依頼（メダル{n(kajiyaUpCost)}・作業{CRAFT_H[kajiyaLv]}h）</button>}
         </div>
       </div>
 
