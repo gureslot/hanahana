@@ -1,7 +1,7 @@
 # チカリアン 引き継ぎ書（2026-06-12 完全版）
 > 前版 hikitsugi-chikarian-2026-06-10-1745 ＋ 06-11セッション差分を統合した完全版。**新スレッドはこれを正とする。**
-> 添付canon：balance(06-10-1730)・skills(06-09-2125)・cards(06-10-0150)・shurenjo-spec(06-10-0900)・skill-kyoka-tenni-spec(06-11)・balance-apply-spec(06-11)・mission-spec(06-11)。
-> ※balance本体(1730)には旧語（装備パワー/研究塔/倉庫/色ランク）が残る。**本書と balance-apply-spec が優先**。balance本体の改稿はPC側タスク。
+> 添付canon：balance(06-12・新canon／1730は履歴)・skills(06-09-2125)・cards(06-10-0150)・shurenjo-spec(06-10-0900)・skill-kyoka-tenni-spec(06-11)・balance-apply-spec(06-11)・mission-spec(06-11)。
+> ※balance は **balance-chikarian-2026-06-12（新canon・新語/×0.80で改稿済み）** が正。1730版は旧語・×0.63の履歴（無編集で保存）。改稿はPC側で完了。
 
 ## 0. プロジェクト概要
 - ブラウザ型アイドルRPG「チカリアン」。React/Babel単一HTMLのmockup群 → 本実装でSPA＋Supabase。GitHub Pages（gureslot/hanahana）。
@@ -98,7 +98,7 @@
 - カカシ画像：プロンプト作成済（黒漆＋金線細工＋深紅の木人型・胴に金縁標的紋・1:1・文字なし）。生成時は**ボス画像1枚を画風参照に添付**。
 
 ## 8. canonドキュメント
-balance-chikarian-2026-06-10-1730（※旧語残り・本書優先）／skills-chikarian-2026-06-09-2125／cards-chikarian-2026-06-10-0150／shurenjo-spec-2026-06-10-0900／skill-kyoka-tenni-spec-2026-06-11-1248／balance-apply-spec-2026-06-11（数値反映の実装指示・Flag表）／mission-spec-2026-06-11。
+balance-chikarian-2026-06-12（**新canon・新語/×0.80で改稿済み**）／balance-chikarian-2026-06-10-1730（履歴・旧語/×0.63・無編集保存）／skills-chikarian-2026-06-09-2125／cards-chikarian-2026-06-10-0150／shurenjo-spec-2026-06-10-0900／skill-kyoka-tenni-spec-2026-06-11-1248／balance-apply-spec-2026-06-11（数値反映の実装指示・Flag表）／mission-spec-2026-06-11。
 
 ## 9. Flag状態（balance-apply-spec §9）
 | # | 項目 | 状態 |
@@ -114,10 +114,11 @@ balance-chikarian-2026-06-10-1730（※旧語残り・本書優先）／skills-c
 C〜Fは balance-apply-spec をClaude Codeに貼れば実行可能（判断不要）。
 
 ## 10. 残タスク
-**PC（Claude Code）**：①③★強化改修の実行（既存指示書・未実行）／②プレビュー4点の本体統合（既存CSSとカード選択=deck流用に寄せる）／③数値本反映＝balance-apply-spec適用（C〜F含む）／④balance本体の改稿（武気/3施設/質の正式名/§10所持枠/旧枠攻撃力）／⑤装備表示を正式名へ差し替え。
-**画像生成**：カカシ（プロンプト済）／2面以降マップ。
-**本実装（最後）**：SPA化（BGM途切れ解消）＋Supabase（カード/通貨/進行の保存・練気殿の時刻計算）。
-**適用順序**（数値）：採取→質/充填/本体→★→報酬/コスト/EXP→損失と練気殿。最後に必ず「最大育成デッキ vs 1周目8面(12万)」を再確認。
+**PC（Claude Code）＝完了（2026-06-12）**：①③★強化改修／②プレビュー4点の本体統合（配線＋戻る導線・値整合）／③数値本反映＝balance-apply-spec適用（C〜F含む）／④balance本体の改稿（→balance-chikarian-2026-06-12 新canon作成・1730は履歴）／⑤装備表示を正式名（粗製/精製/魔装/聖装）へ差し替え。
+**残・画像生成**：カカシ（プロンプト済）／2面以降マップ。
+**残・本実装（最後）**：SPA化（BGM途切れ解消）＋Supabase（カード/通貨/進行の保存・練気殿の時刻計算）。
+**残・設計（数値検証フェーズ）**：balance §2-8末尾の検算TODO2件（(1) 竜気覚醒5%×1.90 当たり時に上限179%超えないか／(2) 鳳凰「敗北時 武気損失0」が§13経済を壊さないか）＋§13メダル経済の均衡（ミッション量/建物費/損失率＝現状は仮で収入超過の但し書きあり）。
+**適用順序**（数値・参考）：採取→質/充填/本体→★→報酬/コスト/EXP→損失と練気殿。1か所動かしたら必ず「最大育成デッキ vs 1周目8面(12万)」を再確認。
 
 ## 11. 運用ルール（不変）
 - 停止指示（〜するな等）は即時・完全に従う。分析回答は表・数値のみ。
