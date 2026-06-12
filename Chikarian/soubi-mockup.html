@@ -86,6 +86,8 @@
 
   .warn{margin-top:12px; padding:10px 12px; border-radius:4px; border:1px solid var(--warn); background:rgba(217,154,90,.08); font-size:11.5px; color:var(--warn); line-height:1.55;}
   .foot{text-align:center; font-size:10px; color:var(--ink-faint); margin-top:20px; line-height:1.6; padding:0 8px;}
+  .backlink{display:block; text-align:center; margin-top:18px; font-size:12px; color:var(--ink-dim); cursor:pointer; letter-spacing:.08em;}
+  .backlink:active{transform:translateY(1px);}
 </style>
 </head>
 <body>
@@ -191,6 +193,7 @@ function App(){
           <div className="warn">武気不足で枠が埋まっていません（{n(c.loaded)}/{n(CARD.fill)}）。満タンには合計 {n(c.needFull)} 必要で、あと <b>{n(c.shortBy)}</b> 練成すると満枠になります。上位の質ほど枠コストが高く、同じ武気では埋まりにくくなります。</div>}
       </div>
 
+      <div className="backlink" onClick={()=>{ if(history.length>1) history.back(); else location.href='./deck-mockup.html'; }}>‹ 戻る</div>
       <div className="foot">数値は全て仮（balance §2-1／本体は×0.80・枠攻撃力は据え置き）。武気は練気殿で練成・保管（メダル）。装備の質は鍛冶屋で作成・解放（粗製→精製→魔装→聖装）。<br/>※カード詳細／デッキ編成から開く想定。</div>
     </div>
   );

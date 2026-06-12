@@ -193,17 +193,19 @@
   const $=s=>document.getElementById(s); const fmt=n=>n.toLocaleString();
   const ATTR={hana:{lab:'花',cls:'hana'}, ha:{lab:'葉',cls:'ha'}, shin:{lab:'芯',cls:'shin'}};
   const WEAP={ken:'剣', tate:'盾', tsue:'杖'};
-  // ===== カード戦力（戦国IXA式・設計書§2-1〜2-4／×0.63適用後）=====
-  //   総合戦力 = 充填量 × 装備パワー攻撃力 + 本体戦闘力（SPは本体戦闘力のみ。★は本体に乗る）
-  const LVCAP={n:30,r:40,sr:50,ssr:60,SP:50};         // レベル上限（§2-2）
-  const BODY_BASE={n:63,r:158,sr:284,ssr:441,SP:560}; // 本体戦闘力 基礎（§2-2・×0.63後／SPは独立560）
-  const EQATK={n:7,r:12,sr:20,ssr:30};                // 装備パワー攻撃力 1単位（§2-3／SPは持たない）
-  const CAPBASE={n:63,r:95,sr:126,ssr:158};           // 充填量 基礎 Lv1（§2-4・×0.63後）
-  const CAPMAX ={n:189,r:315,sr:441,ssr:630};         // 充填量 MAX（§2-4・×0.63後）
-  function calcBody(rar, lv, star){ const cap=LVCAP[rar]||30; return Math.floor((BODY_BASE[rar]||63)*(1+(lv-1)*(2.0/(cap-1)))*(1+0.15*star)); }
-  function calcCapacity(rar, lv){ if(CAPBASE[rar]==null) return 0; const cap=LVCAP[rar]||30; return Math.round(CAPBASE[rar]+(CAPMAX[rar]-CAPBASE[rar])*(lv-1)/(cap-1)); }
-  // 総合戦力（§2-1）。SPは装備パワーを持たない＝本体戦闘力のみ。
-  function calcPower(c){ const body=calcBody(c.rar, c.level, c.star); return c.sp ? body : calcCapacity(c.rar,c.level)*(EQATK[c.rar]||0)+body; }
+  // ===== カード戦力（×0.80世界・apply-spec §3／deck・zukan と同一前提＝魔装満充填一律）=====
+  //   表示戦力のみ×0.80へ整合。★強化の成功率/メダル/+15%/★の式は別途（下の calcRate/calcCost）で不変。
+  const LVCAP={n:30,r:40,sr:50,ssr:60,SP:50};           // レベル上限（§2-2）
+  const BODY_BASE={n:80,r:200,sr:360,ssr:560};          // 本体戦闘力 基礎 Lv1★0（×0.80）
+  const SP_BASE={dragon:2260, girl:2160, houou:2060};   // SP本体基礎＝3値（確定 08a5f15）
+  const EQ_ATK=33;                                       // 枠攻撃力＝魔装（満充填一律で表示）
+  const CAPBASE={n:80,r:120,sr:160,ssr:200};            // 充填量 基礎 Lv1（×0.80）
+  const CAPMAX ={n:240,r:400,sr:560,ssr:800};           // 充填量 MAX（×0.80）
+  function bodyBase(c){ return c.sp ? (SP_BASE[c.spKey]||2160) : (BODY_BASE[c.rar]||80); }
+  function calcBody(c){ const cap=LVCAP[c.rar]||30; return Math.floor(bodyBase(c)*(1+(c.level-1)*(2.0/(cap-1)))*(1+0.15*c.star)); }
+  function calcCapacity(c){ if(c.sp||CAPBASE[c.rar]==null) return 0; const cap=LVCAP[c.rar]||30; return Math.round(CAPBASE[c.rar]+(CAPMAX[c.rar]-CAPBASE[c.rar])*(c.level-1)/(cap-1)); }
+  // 表示戦力（§2-1）。装備項＝充填量(満充填)×枠攻撃力(魔装)。SPは武気なし＝本体のみ（★は本体に乗る）。
+  function calcPower(c){ const body=calcBody(c); return c.sp ? body : calcCapacity(c)*EQ_ATK+body; }
   const FAM={hibiscus:'ハイビスカスマン', meshibe:'めしべだけマン'};
   const SPNAME={dragon:'ゴールドドラゴン', girl:'ゴーストガール', houou:'鳳凰'};
   const POOL=["chara_dragon_sp","chara_girl_sp","chara_houou_sp",
@@ -220,7 +222,7 @@
 
   function build(name){
     const p=name.split('_'); let c;
-    if(name.endsWith('_sp')){ c={id:name, sp:true, attr:null, weap:null, rar:'SP', name:SPNAME[p[1]]||p[1]}; }
+    if(name.endsWith('_sp')){ c={id:name, sp:true, spKey:p[1], attr:null, weap:null, rar:'SP', name:SPNAME[p[1]]||p[1]}; }
     else { c={id:name, sp:false, fam:p[1], attr:p[2], weap:p[3], rar:p[4], name:`${FAM[p[1]]||p[1]}・${ATTR[p[2]].lab}${WEAP[p[3]]}`}; }
     const rb={n:1,r:2,sr:3,ssr:4,SP:3}[c.rar]||1;
     const cap=LVCAP[c.rar]||30;

@@ -83,6 +83,9 @@
   .skill .fx{color:#cdb488; font-size:11px; margin-left:6px;}
   .equip{flex:none; margin-top:10px; width:100%; font-family:inherit; font-weight:800; font-size:15px; letter-spacing:2px; color:#2a160a; border:none; padding:12px; border-radius:24px; cursor:pointer; background:linear-gradient(180deg,#ffe49a,#e8b54d 60%,#b9842f);}
   .equip:active{transform:translateY(2px);} .equip.cur{filter:grayscale(.4) brightness(.85);}
+  .cardActions{flex:none; display:flex; gap:8px; margin-top:8px;}
+  .caBtn{flex:1; font-family:inherit; font-weight:700; font-size:12px; letter-spacing:1px; color:var(--gold-hi); background:rgba(255,235,180,.06); border:1px solid rgba(232,194,90,.45); border-radius:18px; padding:9px 4px; cursor:pointer;}
+  .caBtn:active{transform:translateY(1px);}
 </style>
 <script src="./cksound.js"></script>
 </head>
@@ -140,6 +143,10 @@
   function calcPower(c){ const body=calcBody(c); return c.sp ? body : calcCapacity(c)*EQ_ATK+body; }
   const FAM={hibiscus:'ハイビスカスマン', meshibe:'めしべだけマン'};
   const SPNAME={dragon:'ゴールドドラゴン', girl:'ゴーストガール', houou:'鳳凰'};
+  // SP専用固定スキル（特殊枠・錬成/転移の対象外・全て仮／cards §3・skills §3末尾）
+  const SP_SKILL={ dragon:{name:'竜気覚醒', fx:'発動5%／デッキ全体 総合×1.90（仮）'},
+                   girl:{name:'呪詛の眼', fx:'発動5%／敵 実戦闘力×0.40（仮）'},
+                   houou:{name:'不死鳥の加護', fx:'常時／敗北時 このデッキの武気損失0（仮）'} };
   const POOL=["chara_dragon_sp","chara_girl_sp","chara_houou_sp",
     "chara_hibiscus_ha_ken_n","chara_hibiscus_ha_ken_r","chara_hibiscus_ha_ken_sr","chara_hibiscus_ha_ken_ssr",
     "chara_hibiscus_ha_tate_n","chara_hibiscus_ha_tate_r","chara_hibiscus_ha_tate_sr","chara_hibiscus_ha_tate_ssr",
@@ -212,8 +219,9 @@
     renderDetail();
   }
   function renderDetail(){ const c=byId(highlight); const equipped = DECKS[curDeck].slots.includes(c.id); const isCur = DECKS[curDeck].slots[selSlot]===c.id;
+    const sps=SP_SKILL[c.spKey]||{name:'—',fx:''};
     const skillsHtml = c.sp
-      ? `<div class="skill empty">SPカードはスキルを持ちません</div>`
+      ? `<div class="skill">SP固定：${sps.name}<span class="fx">${sps.fx}</span></div>`
       : `<div class="skill">固定：${c.skillFixed}${fx(c.skillFixed)}</div>` + c.skillSlots.map(s=> s?`<div class="skill">習得：${s}${fx(s)}</div>`:`<div class="skill empty">空きスロット</div>`).join('');
     $('rightCol').innerHTML=`
       <div class="dTop">
@@ -228,13 +236,20 @@
         <div class="dRow"><span class="k">戦闘力</span><span class="v">${fmt(c.power)}</span></div>
         <div class="dRow"><span class="k">装備</span><span class="v">${c.sp?'装備なし':('魔装・満充填 '+fmt(calcCapacity(c))+'枠（仮）')}</span></div>
         <div class="dRow"><span class="k">種族</span><span class="v">${c.sp?'SP':(FAM[c.fam]||c.fam)}</span></div>
-        <div class="skillBlock"><div class="skillT">スキル（固定1＋空き2）</div>${skillsHtml}</div>
+        <div class="skillBlock"><div class="skillT">${c.sp?'SP専用スキル（固定1・錬成/転移の対象外）':'スキル（固定1＋空き2）'}</div>${skillsHtml}</div>
       </div>
-      <button class="equip ${isCur?'cur':''}" id="equipBtn">${isCur?'この枠に編成済み':(equipped?'別の枠から移して編成':'この枠に編成')}</button>`;
+      <button class="equip ${isCur?'cur':''}" id="equipBtn">${isCur?'この枠に編成済み':(equipped?'別の枠から移して編成':'この枠に編成')}</button>
+      <div class="cardActions">
+        <button class="caBtn" id="toSkill">スキル錬成・転移</button>
+        ${c.sp?'':`<button class="caBtn" id="toSoubi">装備（充填）</button>`}
+      </div>`;
     $('equipBtn').addEventListener('click',()=>{ const d=DECKS[curDeck];
       // 既に別枠にいれば外してから
       const at=d.slots.indexOf(c.id); if(at>=0 && at!==selSlot) d.slots[at]=null;
       d.slots[selSlot]=c.id; backToDeck(); });
+    // カード詳細からスキル錬成・転移／装備（充填）へ。SPは充填なし＝装備ボタンを出さない。
+    $('toSkill').addEventListener('click',()=>{ location.href='./skill-mockup.html'; });
+    const ts=$('toSoubi'); if(ts) ts.addEventListener('click',()=>{ location.href='./soubi-mockup.html'; });
   }
   function backToDeck(){ $('scrSelect').classList.add('hide'); $('scrDeck').classList.remove('hide'); renderDeck(); }
 
