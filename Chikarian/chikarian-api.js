@@ -69,6 +69,7 @@
   const getKajiyaOrders  = ()        => selectOwn('kajiya_orders');
   const getTansaku       = ()        => selectOwn('tansaku_states');
   const getZukan         = ()        => selectOwn('zukan');
+  const getSpStates      = ()        => selectOwn('sp_states');                  // SP離脱中の表示用（RLSで自分の行のみ）
   const getMissions      = ()        => selectOwn('missions');
   const getMissionMaster = ()        => selectOwn('mission_master');           // 全員読取り可
   const getExchangeRates = ()        => selectOwn('crystal_exchange_master');  // 全員読取り可
@@ -110,7 +111,7 @@
     init, client, rpc, auth,
     // reads
     getProfile, getCards, getCardSkills, getDecks, getRenkiden, getKajiyaOrders,
-    getTansaku, getZukan, getMissions, getMissionMaster, getExchangeRates, getSkillMaster,
+    getTansaku, getZukan, getSpStates, getMissions, getMissionMaster, getExchangeRates, getSkillMaster,
     // writes (existing)
     claimSaishu, doGacha, updateDeck, doBossBattle,
     // writes (0012-0021)

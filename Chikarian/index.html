@@ -82,7 +82,14 @@ const ERR_JA = {
 };
 function errMsg(e) {
   const m = (e && e.message) ? e.message : String(e);
-  return ERR_JA[m] || ('エラー: ' + m);
+  if (ERR_JA[m]) return ERR_JA[m];
+  // 部分一致（update_deck 等は RAISE の % 置換で実値が入るため substring で判定）
+  if (m.includes('not unlocked')) return 'このデッキはまだ解放されていません';
+  if (m.includes('duplicate card')) return '同じカードを複数の枠に入れられません';
+  if (m.includes('SP-unavailable')) return 'SPカードが本日離脱中のため編成できません';
+  if (m.includes('exceeds limit')) return 'デッキの合計コストが上限（11）を超えています';
+  if (m.includes('not owned') || m.includes('not found')) return '所持していないカードが含まれています';
+  return 'エラー: ' + m;
 }
 
 // ===== JST 当日（採取日次リセットの表示用）=====
@@ -190,6 +197,7 @@ function App() {
     else if (screen === 'saishu') body = <Saishu profile={profile} onExit={async () => { await refreshProfile(); setScreen('home'); }} flash={flash} />;
     else if (screen === 'gacha') body = <Gacha profile={profile} onRefresh={refreshAll} back={() => setScreen('home')} flash={flash} />;
     else if (screen === 'zukan') body = <ZukanScreen cards={cards} back={() => setScreen('home')} flash={flash} />;
+    else if (screen === 'deck') body = <DeckScreen profile={profile} cards={cards} back={() => setScreen('home')} flash={flash} />;
     else body = <Placeholder name={screen} back={() => setScreen('home')} logout={logout} />;
   }
 
@@ -871,6 +879,154 @@ const dS = {
   op: { fontSize: 13, fontWeight: 700, color: GOLD_HI, background: 'rgba(20,10,16,.9)', border: BORDER, borderRadius: 10, padding: '11px 8px', cursor: 'pointer' },
   opOff: { opacity: .4, cursor: 'not-allowed' },
 };
+
+/* =================================================================== 編成 */
+// 可否(コスト上限11・本数・SP離脱・重複)の最終判定はサーバ(update_deck)。ここは目安表示のみ。
+const COST_BY_RAR = { n: 1, r: 2, sr: 3, ssr: 5 };   // design-updates 2026-06-13（確定）。SPは未確定。
+
+function DeckScreen({ profile, cards, back, flash }) {
+  const maxDecks = Math.min(2 + Math.floor(((profile && profile.cleared_stage) || 0) / 2), 6); // balance §10
+  const [decks, setDecks] = useState(null);
+  const [spSet, setSpSet] = useState(null);     // {card_id:true} 本日離脱中
+  const [deckNo, setDeckNo] = useState(1);
+  const [draft, setDraft] = useState([null, null, null]);
+  const [picking, setPicking] = useState(null); // 編集中の枠 index or null
+  const [saving, setSaving] = useState(false);
+
+  const cardById = {}; (cards || []).forEach(c => { cardById[c.id] = c; });
+
+  async function loadDecks() { try { const d = await ChikarianAPI.getDecks(); setDecks(d || []); return d || []; } catch (e) { flash(errMsg(e)); setDecks([]); return []; } }
+  useEffect(() => {
+    (async () => {
+      await loadDecks();
+      try { const sp = await ChikarianAPI.getSpStates(); const t = jstToday(); const s = {}; (sp || []).forEach(x => { if (x.unavailable_until >= t) s[x.card_id] = true; }); setSpSet(s); }
+      catch (e) { setSpSet({}); }   // 読めなければバッジ無し（最終判定はサーバ拒否で対応）
+    })();
+  }, []);
+  useEffect(() => {
+    if (!decks) return;
+    const row = decks.find(x => x.deck_no === deckNo);
+    setDraft(row ? [row.slot1_card_id || null, row.slot2_card_id || null, row.slot3_card_id || null] : [null, null, null]);
+    setPicking(null);
+  }, [deckNo, decks]);
+
+  function costInfo() {
+    let known = 0, hasSP = false;
+    draft.forEach(id => { const c = cardById[id]; if (!c) return; if (c.card_key.endsWith('_sp')) hasSP = true; else known += COST_BY_RAR[parseCardKey(c.card_key).rarity] || 0; });
+    return { known, hasSP };
+  }
+  const curSlots = (() => { if (!decks) return [null, null, null]; const row = decks.find(x => x.deck_no === deckNo); return row ? [row.slot1_card_id || null, row.slot2_card_id || null, row.slot3_card_id || null] : [null, null, null]; })();
+  const isDirty = JSON.stringify(curSlots) !== JSON.stringify(draft);
+
+  function assign(slot, id) { setDraft(d => { const n = d.slice(); n[slot] = id; return n; }); setPicking(null); }
+  function removeAt(slot) { setDraft(d => { const n = d.slice(); n[slot] = null; return n; }); }
+  function reset() { setDraft(curSlots.slice()); }
+
+  async function save() {
+    if (saving) return; setSaving(true);
+    try {
+      await ChikarianAPI.updateDeck(deckNo, draft[0], draft[1], draft[2]);  // 空き枠は null
+      flash('編成を保存しました');
+      await loadDecks();   // サーバ値で反映（最終結果に従う）
+    } catch (e) { flash(errMsg(e)); }
+    finally { setSaving(false); }
+  }
+
+  if (decks === null) return <Booting />;
+  const ci = costInfo();
+
+  // カード選択パネル
+  if (picking !== null) {
+    const usedElsewhere = new Set(draft.filter((id, i) => id && i !== picking));
+    const list = (cards || []);
+    return (
+      <div style={S.root}>
+        <div style={S.bg} /><div style={S.vignette} />
+        <div style={{ position: 'relative', zIndex: 2, minHeight: '100dvh', display: 'flex', flexDirection: 'column', padding: '14px 12px 18px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <button onClick={() => setPicking(null)} style={{ ...S.lineBtn, padding: '6px 14px' }}>‹ 戻る</button>
+            <div style={{ fontSize: 15, color: GOLD_HI, fontWeight: 700 }}>枠 {picking + 1} に入れるカード</div>
+          </div>
+          <div style={{ flex: 1, overflowY: 'auto', marginTop: 12 }}>
+            {list.length === 0
+              ? <div style={{ textAlign: 'center', color: '#cdb488', marginTop: 30 }}>所持カードがありません</div>
+              : <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 6 }}>
+                  {list.map(c => {
+                    const dup = usedElsewhere.has(c.id);
+                    const sp = spSet && spSet[c.id];
+                    const disabled = dup || sp;
+                    return (
+                      <div key={c.id} style={{ position: 'relative', opacity: disabled ? .4 : 1 }}>
+                        <CardThumb card={c} small onClick={disabled ? undefined : () => assign(picking, c.id)} />
+                        {sp && <div style={badge('#ff6a7a')}>離脱中</div>}
+                        {!sp && dup && <div style={badge('#888')}>編成中</div>}
+                      </div>
+                    );
+                  })}
+                </div>}
+          </div>
+          <button onClick={() => { removeAt(picking); }} style={{ ...S.lineBtn, marginTop: 10, alignSelf: 'center' }}>この枠を空にする</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={S.root}>
+      <div style={S.bg} /><div style={S.vignette} />
+      <div style={{ position: 'relative', zIndex: 2, minHeight: '100dvh', display: 'flex', flexDirection: 'column', padding: '14px 12px 18px' }}>
+        <div style={{ textAlign: 'center', fontSize: 20, fontWeight: 800, letterSpacing: 3, color: GOLD_HI }}>デッキ編成</div>
+        <div style={{ textAlign: 'center', fontSize: 11, color: '#cdb488', marginTop: 2 }}>解放 {maxDecks} 本（2＋クリア面/2・上限6）</div>
+
+        {/* デッキ番号タブ */}
+        <div style={{ display: 'flex', gap: 6, justifyContent: 'center', flexWrap: 'wrap', margin: '12px 0' }}>
+          {Array.from({ length: maxDecks }, (_, i) => i + 1).map(n => (
+            <button key={n} onClick={() => setDeckNo(n)} style={{ ...S.sideSwitch, padding: '6px 16px', ...(n === deckNo ? S.sideSwitchOn : {}) }}>デッキ{n}</button>
+          ))}
+        </div>
+
+        {/* 3枠 */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8 }}>
+          {[0, 1, 2].map(slot => {
+            const id = draft[slot]; const c = id ? cardById[id] : null;
+            const sp = c && spSet && spSet[c.id];
+            return (
+              <div key={slot} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div style={{ fontSize: 10, color: '#cdb488', textAlign: 'center' }}>枠{slot + 1}</div>
+                {c
+                  ? <div style={{ position: 'relative' }}>
+                      <CardThumb card={c} onClick={() => setPicking(slot)} />
+                      {sp && <div style={badge('#ff6a7a')}>離脱中</div>}
+                    </div>
+                  : <button onClick={() => setPicking(slot)} style={{ width: '100%', aspectRatio: '5/7', borderRadius: 10, border: '1.5px dashed rgba(232,194,90,.4)', background: 'rgba(0,0,0,.3)', color: '#cdb488', fontSize: 13, cursor: 'pointer' }}>＋ 追加</button>}
+                {c && <button onClick={() => removeAt(slot)} style={{ fontSize: 11, color: '#cdb488', background: 'none', border: 'none', cursor: 'pointer' }}>外す</button>}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* コスト目安 */}
+        <div style={{ marginTop: 14, padding: '8px 12px', background: PANEL, border: BORDER, borderRadius: 8 }}>
+          <div style={{ fontSize: 12, color: GOLD_HI, fontWeight: 700 }}>
+            合計コスト目安 {ci.known}{ci.hasSP ? ' ＋ SP（未確定）' : ''} / 11
+          </div>
+          {ci.hasSP && <div style={{ fontSize: 10, color: '#a98f66', marginTop: 3 }}>※ SP のコストは未確定。SP を含む合計の可否は最終的にサーバが判定します。</div>}
+          <div style={{ fontSize: 10, color: '#a98f66', marginTop: 3 }}>コスト N1 / R2 / SR3 / SSR5（確定）。三すくみ 有利×1.2・不利×0.8（balance 2026-06-14）。</div>
+          <div style={{ fontSize: 10, color: '#a98f66', marginTop: 1 }}>可否（コスト上限11・本数・SP離脱・重複）はサーバ判定です。</div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 16 }}>
+          <button onClick={save} disabled={!isDirty || saving} style={{ ...S.bigBtn, ...((!isDirty || saving) ? { opacity: .45, cursor: 'not-allowed' } : {}) }}>{saving ? '保存中…' : '保存（確定）'}</button>
+          <button onClick={reset} disabled={!isDirty || saving} style={{ ...S.lineBtn, ...((!isDirty || saving) ? { opacity: .45, cursor: 'not-allowed' } : {}) }}>リセット</button>
+        </div>
+        <button onClick={back} style={{ ...S.lineBtn, marginTop: 14, alignSelf: 'center' }}>ホームに戻る</button>
+      </div>
+    </div>
+  );
+}
+function badge(col) {
+  return { position: 'absolute', top: 3, left: '50%', transform: 'translateX(-50%)', fontSize: 9, fontWeight: 700, color: '#1a0f06', background: col, borderRadius: 5, padding: '0 6px', whiteSpace: 'nowrap' };
+}
 
 /* =================================================================== styles */
 const S = {
