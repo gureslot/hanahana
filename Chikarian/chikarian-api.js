@@ -75,6 +75,10 @@
   const getExchangeRates = ()        => selectOwn('crystal_exchange_master');  // 全員読取り可
   const getSkillMaster   = ()        => selectOwn('skill_master');             // 全員読取り可
   const getBossMaster    = ()        => selectOwn('boss_master');              // 全員読取り可（boss_key/stage/role/base_power/attrs/weapons）
+  const getBattleLogs    = async (limit = 30) => {                             // 戦闘履歴（RLSで自分の行のみ・SELECTのみ）
+    const { data, error } = await client().from('battle_logs').select('*').order('fought_at', { ascending: false }).limit(limit);
+    if (error) throw error; return data;                                       // 0001の並び列は fought_at（created_atではない）
+  };
 
   // ============================================================
   // 書き込み（資産が動く＝全てRPC）
@@ -112,7 +116,7 @@
     init, client, rpc, auth,
     // reads
     getProfile, getCards, getCardSkills, getDecks, getRenkiden, getKajiyaOrders,
-    getTansaku, getZukan, getSpStates, getMissions, getMissionMaster, getExchangeRates, getSkillMaster, getBossMaster,
+    getTansaku, getZukan, getSpStates, getMissions, getMissionMaster, getExchangeRates, getSkillMaster, getBossMaster, getBattleLogs,
     // writes (existing)
     claimSaishu, doGacha, updateDeck, doBossBattle,
     // writes (0012-0021)

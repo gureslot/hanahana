@@ -257,6 +257,7 @@ function App() {
     else if (screen === 'tansaku') body = <TansakuScreen profile={profile} refreshAll={refreshAll} back={() => setScreen('home')} flash={flash} />;
     else if (screen === 'houchi') body = <HouchiScreen profile={profile} refreshAll={refreshAll} back={() => setScreen('home')} flash={flash} />;
     else if (screen === 'mission') body = <MissionScreen profile={profile} cards={cards} refreshAll={refreshAll} back={() => setScreen('home')} flash={flash} />;
+    else if (screen === 'report') body = <BattleLogView back={() => setScreen('home')} flash={flash} />;
     else body = <Placeholder name={screen} back={() => setScreen('home')} logout={logout} />;
   }
 
@@ -2141,6 +2142,93 @@ function MissionScreen({ profile, cards, refreshAll, back, flash }) {
             );
           })}
         </div>
+        <button onClick={back} style={{ ...S.lineBtn, marginTop: 12, alignSelf: 'center' }}>ホームに戻る</button>
+      </div>
+    </div>
+  );
+}
+
+/* =================================================================== 報告書 */
+// 表示のみ。battle_logs は書き換えない。数値はログ保存値をそのまま表示（再計算・推定しない）。
+function parseBossKey(k) {
+  const m = /^boss_([1-8])_(a|b|boss)(?:_r([0-9]+))?$/.exec(k || '');
+  if (!m) return null;
+  return { stage: +m[1], role: m[2], round: m[3] ? +m[3] : 1 };
+}
+function BattleLogView({ back, flash }) {
+  const [logs, setLogs] = useState(null);
+  const [err, setErr] = useState(null);
+  const [skillMap, setSkillMap] = useState({});
+  const [sel, setSel] = useState(null);
+  useEffect(() => {
+    (async () => {
+      try { setLogs(await ChikarianAPI.getBattleLogs(30) || []); }
+      catch (e) { setErr((e && e.message) || String(e)); setLogs([]); }
+      try { const sm = await ChikarianAPI.getSkillMaster(); const m = {}; (sm || []).forEach(s => { m[s.skill_key] = s; }); setSkillMap(m); } catch (e) {}
+    })();
+  }, []);
+  const skName = k => (skillMap[k] && skillMap[k].display_name) || k;
+  const fmtDt = ts => { try { return new Date(ts).toLocaleString('ja-JP'); } catch (e) { return ts; } };
+  const bossLabel = k => { const b = parseBossKey(k); return b ? `${WORLD_NAMES[b.stage] || (b.stage + '面')}・${ROLE_JA[b.role]}${b.round > 1 ? `(${b.round}周)` : ''}` : k; };
+
+  if (logs === null) return <Booting />;
+
+  // 詳細
+  if (sel) {
+    const deck = Array.isArray(sel.deck) ? sel.deck : [];
+    const fired = Array.isArray(sel.fired_skills) ? sel.fired_skills : [];
+    const rw = sel.rewards || {};
+    return (
+      <div style={S.root}><div style={S.bg} /><div style={S.vignette} />
+        <div style={{ position: 'relative', zIndex: 2, minHeight: '100dvh', display: 'flex', flexDirection: 'column', padding: '14px 14px 18px', overflowY: 'auto' }}>
+          <button onClick={() => setSel(null)} style={{ ...S.lineBtn, alignSelf: 'flex-start', padding: '6px 16px' }}>‹ 一覧へ</button>
+          <div style={{ textAlign: 'center', fontSize: 12, color: '#cdb488', marginTop: 8 }}>{fmtDt(sel.fought_at)}</div>
+          <div style={{ textAlign: 'center', fontSize: 16, color: GOLD_HI, fontWeight: 700, marginTop: 2 }}>{bossLabel(sel.boss_key)}</div>
+          <div style={{ textAlign: 'center', fontSize: 24, fontWeight: 800, marginTop: 8, color: sel.win ? '#ffe28a' : '#ff8aa0' }}>{sel.win ? '勝利' : '敗北'}</div>
+
+          {sel.loss_rate != null && <div style={{ textAlign: 'center', fontSize: 12, color: '#e7d3a6', marginTop: 6 }}>武気損失率 {Math.round(sel.loss_rate * 100)}%</div>}
+
+          <div style={{ marginTop: 12, padding: '8px 12px', background: PANEL, border: BORDER, borderRadius: 8 }}>
+            <div style={{ fontSize: 11, color: GOLD, fontWeight: 700, marginBottom: 4 }}>発動スキル</div>
+            {fired.length === 0 ? <div style={{ fontSize: 11, color: '#a98f66' }}>記録なし</div>
+              : <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>{fired.map((f, i) => <span key={i} style={{ fontSize: 11, color: '#fff3c8', background: 'rgba(232,194,90,.15)', border: '1px solid rgba(232,194,90,.4)', borderRadius: 10, padding: '2px 8px' }}>{skName(f.skill_key)}</span>)}</div>}
+          </div>
+
+          {deck.length > 0 && <div style={{ marginTop: 10, padding: '8px 12px', background: PANEL, border: BORDER, borderRadius: 8 }}>
+            <div style={{ fontSize: 11, color: GOLD, fontWeight: 700, marginBottom: 4 }}>デッキ（記録）</div>
+            {deck.map((c, i) => <div key={i} style={{ fontSize: 11, color: '#e7d3a6' }}>{c.is_sp ? 'SP' : 'カード'}{c.sougou != null ? `：総合 ${Number(c.sougou).toLocaleString()}` : ''}{c.sukumi != null ? `／三すくみ×${c.sukumi}` : ''}</div>)}
+          </div>}
+
+          <div style={{ marginTop: 10, padding: '8px 12px', background: PANEL, border: BORDER, borderRadius: 8, fontSize: 12, color: '#e7d3a6' }}>
+            <div style={{ fontSize: 11, color: GOLD, fontWeight: 700, marginBottom: 4 }}>報酬</div>
+            {sel.win
+              ? <div>メダル +{Number(rw.medal || 0).toLocaleString()}{rw.exp_count ? `／経験の書（${EXPRANK_JA[rw.exp_rank] || rw.exp_rank}）×${rw.exp_count}` : ''}</div>
+              : <div style={{ color: '#cdb488' }}>なし（敗北）</div>}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 一覧
+  return (
+    <div style={S.root}><div style={S.bg} /><div style={S.vignette} />
+      <div style={{ position: 'relative', zIndex: 2, minHeight: '100dvh', display: 'flex', flexDirection: 'column', padding: '14px 12px 18px', overflowY: 'auto' }}>
+        <div style={{ textAlign: 'center', fontSize: 20, fontWeight: 800, letterSpacing: 3, color: GOLD_HI }}>報告書</div>
+        {err && <div style={{ fontSize: 11, color: '#ff9aa8', textAlign: 'center', marginTop: 8 }}>記録を表示できません：{err}</div>}
+        {logs.length === 0 && !err
+          ? <div style={{ textAlign: 'center', color: '#cdb488', marginTop: 40, fontSize: 13 }}>まだ戦闘記録がありません</div>
+          : <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
+              {logs.map(lg => (
+                <button key={lg.id} onClick={() => setSel(lg)} style={{ textAlign: 'left', padding: '10px 12px', background: PANEL, border: BORDER, borderRadius: 8, cursor: 'pointer' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                    <span style={{ fontSize: 13, color: GOLD_HI, fontWeight: 700 }}>{bossLabel(lg.boss_key)}</span>
+                    <span style={{ fontSize: 13, fontWeight: 800, color: lg.win ? '#ffe28a' : '#ff8aa0' }}>{lg.win ? '勝利' : '敗北'}</span>
+                  </div>
+                  <div style={{ fontSize: 10, color: '#a98f66', marginTop: 3 }}>{fmtDt(lg.fought_at)}{lg.loss_rate != null ? `　損失${Math.round(lg.loss_rate * 100)}%` : ''}{lg.win && lg.rewards && lg.rewards.medal ? `　メダル+${Number(lg.rewards.medal).toLocaleString()}` : ''}</div>
+                </button>
+              ))}
+            </div>}
         <button onClick={back} style={{ ...S.lineBtn, marginTop: 12, alignSelf: 'center' }}>ホームに戻る</button>
       </div>
     </div>
