@@ -174,6 +174,8 @@ function App() {
   const [cards, setCards] = useState([]);          // 所持カード（サーバ値）
   const [screen, setScreen] = useState('home');
   const [toast, setToast] = useState(null);
+  const [bgmOn, setBgmOn] = useState(true);     // BGM音声状態（単一ソース・設定画面と共有）
+  const [volume, setVolume] = useState(0.45);   // 0..1（セッション内のみ・localStorage不使用）
   const audioRef = useRef(null);
   const bgmStarted = useRef(false);
 
@@ -229,14 +231,15 @@ function App() {
   useEffect(() => {
     const start = () => {
       if (bgmStarted.current) return; bgmStarted.current = true;
-      const soundOn = window.CKSound ? CKSound.isOn() : true;
       const a = audioRef.current;
-      if (a && soundOn) { a.volume = 0.45; const p = a.play(); if (p && p.catch) p.catch(() => {}); }
+      if (a) { a.volume = volume; a.muted = !bgmOn; const p = a.play(); if (p && p.catch) p.catch(() => {}); }
       window.removeEventListener('pointerdown', start);
     };
     window.addEventListener('pointerdown', start);
     return () => window.removeEventListener('pointerdown', start);
   }, []);
+  // 音設定の反映（muted/volume）。再生位置はそのまま（停止せずミュートのみ）。
+  useEffect(() => { const a = audioRef.current; if (a) { a.muted = !bgmOn; a.volume = volume; } }, [bgmOn, volume]);
 
   async function logout() {
     try { await ChikarianAPI.auth.signOut(); } catch (e) { flash(errMsg(e)); }
@@ -258,13 +261,14 @@ function App() {
     else if (screen === 'houchi') body = <HouchiScreen profile={profile} refreshAll={refreshAll} back={() => setScreen('home')} flash={flash} />;
     else if (screen === 'mission') body = <MissionScreen profile={profile} cards={cards} refreshAll={refreshAll} back={() => setScreen('home')} flash={flash} />;
     else if (screen === 'report') body = <BattleLogView back={() => setScreen('home')} flash={flash} />;
+    else if (screen === 'settings') body = <SettingsScreen bgmOn={bgmOn} setBgmOn={setBgmOn} volume={volume} setVolume={setVolume} logout={logout} back={() => setScreen('home')} />;
     else body = <Placeholder name={screen} back={() => setScreen('home')} logout={logout} />;
   }
 
   return (
     <div style={{ position: 'relative', width: '100%', maxWidth: 480, margin: '0 auto', minHeight: '100dvh', overflow: 'hidden', background: '#0a0509' }}>
       {/* 常駐 BGM（絶対にアンマウントしない） */}
-      <audio ref={audioRef} src="sounds/bgm_home.mp3" loop preload="auto" />
+      <audio ref={audioRef} src="sounds/bgm_home.mp3" loop preload="auto" muted={!bgmOn} />
       {body}
       {toast && <div style={S.toast}>{toast}</div>}
     </div>
@@ -2309,6 +2313,76 @@ function ShurenjoView({ profile, cards, flash }) {
         報酬はありません（戦力確認用・何度でもノーリスク）。表示は発動前の素の戦力＝balance確定式のみ。
         スキル発動による上振れ・本判定はボス戦（サーバ）で反映されます（ここは参考）。
       </div>
+    </div>
+  );
+}
+
+/* =================================================================== 設定 */
+// サーバを呼ばない＝資産不変。実際に効く項目のみ（捏造UI禁止）。音設定はセッション内state（localStorage不使用）。
+function Toggle({ on, onToggle, label }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px dotted rgba(232,194,90,.2)' }}>
+      <span style={{ fontSize: 14, color: GOLD_HI }}>{label}</span>
+      <button onClick={onToggle} style={{ width: 52, height: 28, borderRadius: 14, border: BORDER, background: on ? 'linear-gradient(90deg,#caa23e,#f0d36a)' : 'rgba(20,10,16,.9)', position: 'relative', cursor: 'pointer', padding: 0 }}>
+        <span style={{ position: 'absolute', top: 2, left: on ? 26 : 2, width: 22, height: 22, borderRadius: '50%', background: on ? '#1a0f06' : '#cdb488', transition: 'left .15s' }} />
+      </button>
+    </div>
+  );
+}
+function SettingsScreen({ bgmOn, setBgmOn, volume, setVolume, logout, back }) {
+  const seAvail = !!window.CKSound;   // SE は cksound.js が担当（無ければ項目を出さない）
+  const [seOn, setSeOn] = useState(seAvail ? CKSound.isOn() : true);
+  const [email, setEmail] = useState(null);
+  const [confirm, setConfirm] = useState(false);
+  useEffect(() => { (async () => { try { const u = await ChikarianAPI.auth.getUser(); setEmail(u && (u.email || u.id)); } catch (e) {} })(); }, []);
+  const toggleSe = () => { const n = !seOn; setSeOn(n); if (window.CKSound) CKSound.setOn(n); };
+
+  return (
+    <div style={S.root}><div style={S.bg} /><div style={S.vignette} />
+      <div style={{ position: 'relative', zIndex: 2, minHeight: '100dvh', display: 'flex', flexDirection: 'column', padding: '14px 16px 18px', overflowY: 'auto' }}>
+        <div style={{ textAlign: 'center', fontSize: 20, fontWeight: 800, letterSpacing: 3, color: GOLD_HI }}>設定</div>
+
+        {/* 音 */}
+        <div style={{ marginTop: 14, padding: '4px 14px', background: PANEL, border: BORDER, borderRadius: 10 }}>
+          <Toggle on={bgmOn} onToggle={() => setBgmOn(v => !v)} label="BGM" />
+          <div style={{ padding: '12px 0', borderBottom: seAvail ? '1px dotted rgba(232,194,90,.2)' : 'none' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: bgmOn ? GOLD_HI : '#7a6848' }}>
+              <span>音量</span><span>{Math.round(volume * 100)}%</span>
+            </div>
+            <input type="range" min="0" max="100" value={Math.round(volume * 100)} disabled={!bgmOn}
+              onChange={e => setVolume(parseInt(e.target.value, 10) / 100)} style={{ width: '100%', marginTop: 6, opacity: bgmOn ? 1 : .4 }} />
+          </div>
+          {seAvail && <Toggle on={seOn} onToggle={toggleSe} label="効果音" />}
+        </div>
+
+        {/* アカウント */}
+        <div style={{ marginTop: 14, padding: '12px 14px', background: PANEL, border: BORDER, borderRadius: 10 }}>
+          <div style={{ fontSize: 10, color: '#cdb488', letterSpacing: 1 }}>ログイン中アカウント</div>
+          <div style={{ fontSize: 13, color: GOLD_HI, marginTop: 4, wordBreak: 'break-all' }}>{email || '取得中…'}</div>
+        </div>
+
+        {/* ログアウト */}
+        <button onClick={() => setConfirm(true)} style={{ ...S.lineBtn, marginTop: 18, alignSelf: 'center' }}>ログアウト</button>
+
+        {/* バージョン */}
+        <div style={{ marginTop: 'auto', paddingTop: 24, textAlign: 'center', fontSize: 10, color: '#7a6848', lineHeight: 1.8 }}>
+          チカリアン（開発版）<br />© Chikarian
+        </div>
+
+        <button onClick={back} style={{ ...S.lineBtn, marginTop: 14, alignSelf: 'center' }}>ホームに戻る</button>
+      </div>
+
+      {confirm && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.7)', display: 'grid', placeItems: 'center', zIndex: 60, padding: 24 }}>
+          <div style={{ maxWidth: 340, background: '#160a13', border: BORDER, borderRadius: 12, padding: 18, textAlign: 'center' }}>
+            <div style={{ fontSize: 14, color: GOLD_HI, fontWeight: 700 }}>ログアウトしますか？</div>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 16 }}>
+              <button onClick={() => { setConfirm(false); logout(); }} style={S.bigBtn}>ログアウト</button>
+              <button onClick={() => setConfirm(false)} style={S.lineBtn}>やめる</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
