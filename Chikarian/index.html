@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>チカリアン</title>
+<!--
+  チカリアン SPA（本実装・段階構築）
+  フェーズ1: 認証ゲート＋home＋採取（ログイン→home→採取→残量がサーバ値で更新）。
+  以降のフェーズで ガチャ/編成/図鑑/ボス/報告書/強化/探索/放置/ミッション/スキル/修練場/装備/建物 を追加。
+
+  方針:
+   - 画面遷移は URL でなく state（screen）で切替＝1枚もの。最上位の <audio> は絶対にアンマウントしない。
+   - データは window.ChikarianAPI（chikarian-api.js）経由。資産が動く操作はサーバRPC（不正対策C）。
+   - レイアウト/配色は既存 mockup を踏襲（縦480px・Shippori Mincho・深紅/漆黒/金・物理描写語のみ）。
+
+  ★ OAuth リダイレクト URL を Supabase に登録すること（dev は Live Server）:
+     http://127.0.0.1:5500/index.html   （本番は GitHub Pages の URL も）
+-->
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;800&display=swap');
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;background:#0a0509;font-family:'Shippori Mincho','Yu Mincho',serif;color:#fff3c8;}
+  img{-webkit-user-drag:none;user-select:none;}
+  button{font-family:inherit;}
+  @keyframes whiteFadeOut{from{opacity:1;}to{opacity:0;}}
+  @keyframes saishuPulse{0%,100%{filter:drop-shadow(0 0 12px rgba(255,160,60,.5));}50%{filter:drop-shadow(0 0 26px rgba(255,180,70,.85));}}
+  .saishu-glow{animation:saishuPulse 2.4s ease-in-out infinite;}
+  .saishu-glow:active{transform:scale(.97);}
+  button:active{filter:brightness(1.08);}
+  .spin{width:34px;height:34px;border:3px solid rgba(232,194,90,.3);border-top-color:#e8c25a;border-radius:50%;animation:rot 1s linear infinite;}
+  @keyframes rot{to{transform:rotate(360deg);}}
+</style>
+
+<!-- 読み込み順: supabase-js → chikarian-api → React/ReactDOM/Babel → cksound -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./chikarian-api.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<script src="./cksound.js"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef, useCallback } = React;
+
+// ===== Supabase 設定（anon は公開可・dev/console.html と同じ）=====
+const SUPABASE_URL = "https://ufqnxpljakrzvivfgenk.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_mjEggLBf6A3HjR8UqiEDOw_cJeam2aK";
+
+// ===== 色・共通スタイル =====
+const GOLD = "#e8c25a", GOLD_HI = "#fff3c8";
+const PANEL = "rgba(20,10,16,.72)", BORDER = "1.5px solid rgba(232,194,90,.55)";
+const DAILY_MAX = 1000;
+
+// ===== エラーコード→和文 =====
+const ERR_JA = {
+  'not authenticated': 'ログインが必要です',
+  'profile not initialized': 'プロフィールが未初期化です',
+  'not enough chikarium': 'チカリウムが足りません',
+  'not enough card space': 'カードの所持枠が一杯です',
+  'invalid blink count': '採取量が不正です',
+  'boss daily limit reached (3/day)': '本日のボス挑戦は上限（3回）です',
+  'INSUFFICIENT_MEDAL': 'メダルが足りません',
+  'EXCEEDS_CAP': '上限を超えています',
+  'DECK_LOCKED': 'このデッキは出撃中です',
+  'ALREADY_CLAIMED': 'すでに受け取り済みです',
+  'NOT_READY': 'まだ完了していません',
+};
+function errMsg(e) {
+  const m = (e && e.message) ? e.message : String(e);
+  return ERR_JA[m] || ('エラー: ' + m);
+}
+
+// ===== JST 当日（採取日次リセットの表示用）=====
+function jstToday() {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Tokyo' }); // YYYY-MM-DD
+}
+// profile から「本日の採取量」を算出（保存日付が古ければ0表示）
+function dailyGotOf(profile) {
+  if (!profile) return 0;
+  if (profile.saishu_date && profile.saishu_date < jstToday()) return 0;
+  return profile.saishu_today || 0;
+}
+function fmtClock(ms) {
+  if (ms < 0) ms = 0;
+  const s = Math.floor(ms / 1000);
+  const h = String(Math.floor(s / 3600)).padStart(2, "0");
+  const m = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
+  const ss = String(s % 60).padStart(2, "0");
+  return `${h}:${m}:${ss}`;
+}
+function msUntilMidnight() {
+  const now = new Date(); const next = new Date(now); next.setHours(24, 0, 0, 0); return next - now;
+}
+
+/* =================================================================== App */
+function App() {
+  const [phase, setPhase] = useState('booting');   // booting | login | app
+  const [profile, setProfile] = useState(null);
+  const [screen, setScreen] = useState('home');
+  const [toast, setToast] = useState(null);
+  const audioRef = useRef(null);
+  const bgmStarted = useRef(false);
+
+  const flash = useCallback((msg) => { setToast(msg); setTimeout(() => setToast(null), 1800); }, []);
+
+  // 初期化＋認証監視
+  useEffect(() => {
+    ChikarianAPI.init(SUPABASE_URL, SUPABASE_ANON_KEY);
+    let sub = null;
+    (async () => {
+      try {
+        const session = await ChikarianAPI.auth.getSession();
+        if (session) await boot(); else setPhase('login');
+      } catch (e) { setPhase('login'); }
+    })();
+    sub = ChikarianAPI.auth.onChange((session) => {
+      if (session) { boot(); }
+      else { setProfile(null); setScreen('home'); setPhase('login'); }
+    });
+    return () => {
+      // onChange は supabase-js の {data:{subscription}} 形を返す（実装差を吸収）
+      const s = sub && (sub.unsubscribe ? sub : (sub.subscription || (sub.data && sub.data.subscription)));
+      if (s && s.unsubscribe) s.unsubscribe();
+    };
+  }, []);
+
+  async function boot() {
+    try {
+      await ChikarianAPI.rpc('initialize_profile');   // get-or-create
+      const p = await ChikarianAPI.getProfile();
+      setProfile(p);
+      // OAuth 戻りで URL にハッシュが残っていれば掃除
+      if (window.location.hash) history.replaceState(null, "", window.location.pathname);
+      setPhase('app');
+    } catch (e) { flash(errMsg(e)); setPhase('login'); }
+  }
+
+  const refreshProfile = useCallback(async () => {
+    try { const p = await ChikarianAPI.getProfile(); setProfile(p); return p; }
+    catch (e) { flash(errMsg(e)); }
+  }, [flash]);
+
+  // BGM: 最初のユーザー操作で再生開始（自動再生制限対策）。<audio>は常駐＝アンマウントしない。
+  useEffect(() => {
+    const start = () => {
+      if (bgmStarted.current) return; bgmStarted.current = true;
+      const soundOn = window.CKSound ? CKSound.isOn() : true;
+      const a = audioRef.current;
+      if (a && soundOn) { a.volume = 0.45; const p = a.play(); if (p && p.catch) p.catch(() => {}); }
+      window.removeEventListener('pointerdown', start);
+    };
+    window.addEventListener('pointerdown', start);
+    return () => window.removeEventListener('pointerdown', start);
+  }, []);
+
+  async function logout() {
+    try { await ChikarianAPI.auth.signOut(); } catch (e) { flash(errMsg(e)); }
+  }
+
+  let body;
+  if (phase === 'booting') body = <Booting />;
+  else if (phase === 'login') body = <Login flash={flash} />;
+  else {
+    if (screen === 'home') body = <Home profile={profile} go={setScreen} flash={flash} />;
+    else if (screen === 'saishu') body = <Saishu profile={profile} onExit={async () => { await refreshProfile(); setScreen('home'); }} flash={flash} />;
+    else body = <Placeholder name={screen} back={() => setScreen('home')} logout={logout} />;
+  }
+
+  return (
+    <div style={{ position: 'relative', width: '100%', maxWidth: 480, margin: '0 auto', minHeight: '100dvh', overflow: 'hidden', background: '#0a0509' }}>
+      {/* 常駐 BGM（絶対にアンマウントしない） */}
+      <audio ref={audioRef} src="sounds/bgm_home.mp3" loop preload="auto" />
+      {body}
+      {toast && <div style={S.toast}>{toast}</div>}
+    </div>
+  );
+}
+
+/* =================================================================== 起動中 */
+function Booting() {
+  return <div style={S.centerFull}><div className="spin" /><div style={{ marginTop: 14, color: GOLD, letterSpacing: 2 }}>読み込み中…</div></div>;
+}
+
+/* =================================================================== ログイン */
+function Login({ flash }) {
+  const [busy, setBusy] = useState(false);
+  const onLogin = async () => {
+    setBusy(true);
+    try {
+      const r = await ChikarianAPI.auth.signInWithGoogle();  // 成功時はGoogleへリダイレクト
+      if (r && r.error) throw r.error;                       // データ層が例外でなく{error}を返す形に対応
+    }
+    catch (e) { flash(errMsg(e)); setBusy(false); }
+  };
+  return (
+    <div style={{ ...S.bg, ...S.centerFull }}>
+      <div style={{ fontSize: 30, fontWeight: 800, color: GOLD_HI, letterSpacing: 6, textShadow: '0 2px 10px rgba(255,180,80,.5)' }}>チカリアン</div>
+      <div style={{ fontSize: 13, color: '#cdb488', marginTop: 8, marginBottom: 36, letterSpacing: 2 }}>光を集め、花を継ぐ者</div>
+      <button onClick={onLogin} disabled={busy} style={S.bigBtn}>
+        {busy ? 'ログイン中…' : 'Google でログイン'}
+      </button>
+      <div style={{ fontSize: 11, color: '#8a7250', marginTop: 18, textAlign: 'center', lineHeight: 1.7 }}>
+        ログインすると進行データがクラウドに保存されます
+      </div>
+    </div>
+  );
+}
+
+/* =================================================================== ホーム */
+function Home({ profile, go, flash }) {
+  const chikarium = profile ? (profile.chikarium || 0) : 0;
+  const medal = profile ? (profile.medal || 0) : 0;
+  const dailyGot = dailyGotOf(profile);
+  const reachedCap = dailyGot >= DAILY_MAX;
+  const pct = Math.min(100, dailyGot / DAILY_MAX * 100);
+  const [countdown, setCountdown] = useState(msUntilMidnight());
+  useEffect(() => { const t = setInterval(() => setCountdown(msUntilMidnight()), 1000); return () => clearInterval(t); }, []);
+
+  return (
+    <div style={S.root}>
+      <div style={S.bg} /><div style={S.vignette} />
+      <div style={S.frame}>
+        {/* 上部リソース */}
+        <header style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+          <div style={S.resPanel}>
+            <span style={S.icBig}>◈</span>
+            <div style={S.resCol}>
+              <div style={S.resLabel}>チカリウム</div>
+              <div style={S.resVal}>{chikarium.toLocaleString()}</div>
+              <div style={{ marginTop: 3 }}>
+                <div style={S.gaugeText}>本日 {dailyGot.toLocaleString()}/{DAILY_MAX.toLocaleString()}</div>
+                <div style={S.gaugeBar}><div style={{ ...S.gaugeFill, width: `${pct}%` }} /></div>
+              </div>
+            </div>
+          </div>
+          <div style={S.resPanelSm}>
+            <span style={S.ic}>◉</span>
+            <div style={S.resCol}><div style={S.resLabel}>メダル</div><div style={S.resVal}>{medal.toLocaleString()}</div></div>
+          </div>
+        </header>
+
+        {/* 右側 小アイコン */}
+        <div style={S.sideIcons}>
+          <SideIcon fb="📜" label="ミッション" onClick={() => go('mission')} />
+          <SideIcon fb="🗎" label="報告書" onClick={() => go('report')} />
+          <SideIcon fb="❖" label="図鑑" onClick={() => go('zukan')} />
+          <SideIcon fb="⚙" label="設定" onClick={() => go('settings')} />
+        </div>
+
+        {/* 中央：採取 */}
+        <main style={S.center}>
+          <button style={{ ...S.saishuBtn, ...(reachedCap ? S.saishuOff : {}) }} className={reachedCap ? "" : "saishu-glow"}
+            onClick={() => { if (reachedCap) { flash('本日分の採取は完了しています（0時にリセット）'); return; } go('saishu'); }}>
+            <div style={S.saishuInner}><div style={{ fontSize: 46 }}>📷</div><div style={S.saishuTitle}>チカリウム<br />採取</div></div>
+          </button>
+          <div style={S.saishuDesc}>{reachedCap ? '本日分の採取は完了しています' : '赤い光にかざして採取'}</div>
+          <div style={S.timer}>
+            <div style={S.timerLabel}>{reachedCap ? '次の採取まで' : '採取できます'}</div>
+            <div style={S.timerVal}>{reachedCap ? fmtClock(countdown) : '00:00:00'}</div>
+            <div style={S.timerSub}>0時にリセット</div>
+          </div>
+        </main>
+
+        {/* 6ボタン（確定配置・増やさない） */}
+        <nav style={S.grid}>
+          <CardBtn label="探索" color="#2fa86a" fb="🧭" onClick={() => go('tansaku')} />
+          <CardBtn label="ボス戦" color="#9b3bd6" fb="⚔" onClick={() => go('boss')} />
+          <CardBtn label="デッキ編成" color="#3b6fd6" fb="🃏" onClick={() => go('deck')} />
+          <CardBtn label="チカリアンガチャ" color="#d6433b" fb="🎁" onClick={() => go('gacha')} />
+          <CardBtn label="建物" color="#b07b32" fb="🏛" onClick={() => go('tatemono')} />
+          <CardBtn label="強化合成" color="#c8632e" fb="⚒" onClick={() => go('kyoka')} />
+        </nav>
+
+        <button style={S.houchi} onClick={() => go('houchi')}>
+          <span style={{ fontSize: 34 }}>🧰</span>
+          <div style={S.houchiLabel}>放置報酬</div>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function SideIcon({ fb, label, onClick }) {
+  return (
+    <button style={S.sideIcon} onClick={onClick}>
+      <div style={S.sideIconCircle}><span style={{ fontSize: 20, color: '#f0dcb0' }}>{fb}</span></div>
+      <span style={S.sideIconLabel}>{label}</span>
+    </button>
+  );
+}
+function CardBtn({ label, color, fb, onClick }) {
+  return (
+    <button style={S.card} onClick={onClick}>
+      <div style={{ ...S.cardArt, background: `radial-gradient(circle at 50% 40%, ${color}55, #120a14 80%)` }}>
+        <span style={{ fontSize: 34 }}>{fb}</span>
+        <div style={S.cardLabel}>{label}</div>
+      </div>
+    </button>
+  );
+}
+
+/* =================================================================== 準備中（他画面） */
+function Placeholder({ name, back, logout }) {
+  const LABELS = { tansaku: '探索', boss: 'ボス戦', deck: 'デッキ編成', gacha: 'ガチャ', tatemono: '建物', kyoka: '強化合成', houchi: '放置報酬', mission: 'ミッション', report: '報告書', zukan: '図鑑', settings: '設定' };
+  return (
+    <div style={{ ...S.bg, ...S.centerFull }}>
+      <div style={{ fontSize: 22, color: GOLD_HI, fontWeight: 800, letterSpacing: 2 }}>{LABELS[name] || name}</div>
+      <div style={{ fontSize: 13, color: '#cdb488', marginTop: 10 }}>この画面は準備中です（次のフェーズで実装）</div>
+      <button onClick={back} style={{ ...S.bigBtn, marginTop: 30 }}>ホームに戻る</button>
+      {name === 'settings' && <button onClick={logout} style={{ ...S.lineBtn, marginTop: 14 }}>ログアウト</button>}
+    </div>
+  );
+}
+
+/* =================================================================== 採取（カメラ） */
+// saishu-test.html の検出ロジックを移植。検出した点滅数を blinksRef に貯め、
+// 退出時に claimSaishu(blinks) でサーバ確定（日次1000上限はサーバがクランプ）。
+const TUNE = { U_DIFF_MIN: 39, COLORGAP_MIN: 25, PETAL_H: 60, LEAF_H_LO: 15, LOCK_WIN: 20, LOCK_RATE: 0.60, HZ_LO: 5.5, HZ_HI: 12.0, HZ_WIN: 20, PEAK_WIN: 10 };
+const OUTER_L = {
+  stamen: { x: 0.564, y: 0.075, w: 0.219, h: 0.280, c: '#ffd60a' },
+  petal: { x: 0.171, y: 0.180, w: 0.588, h: 0.670, c: '#ff2d55' },
+  leaf1: { x: 0.144, y: 0.595, w: 0.231, h: 0.288, c: '#32d74b' },
+  leaf2: { x: 0.652, y: 0.446, w: 0.188, h: 0.280, c: '#32d74b' },
+};
+const INNER_L = {
+  stamen: { x: 0.646, y: 0.178, w: 0.055, h: 0.073 },
+  petal: { x: 0.304, y: 0.292, w: 0.278, h: 0.279 },
+  leaf1: { x: 0.203, y: 0.658, w: 0.098, h: 0.119 },
+  leaf2: { x: 0.721, y: 0.553, w: 0.050, h: 0.065 },
+};
+function mirror(r) { return { x: 1 - r.x - r.w, y: r.y, w: r.w, h: r.h, c: r.c }; }
+function regionsFor(side) {
+  if (side === 'L') return { outer: OUTER_L, inner: INNER_L };
+  const o = {}, inn = {};
+  for (const k in OUTER_L) o[k] = mirror(OUTER_L[k]);
+  for (const k in INNER_L) inn[k] = mirror(INNER_L[k]);
+  return { outer: { stamen: o.stamen, petal: o.petal, leaf1: o.leaf2, leaf2: o.leaf1 },
+           inner: { stamen: inn.stamen, petal: inn.petal, leaf1: inn.leaf2, leaf2: inn.leaf1 } };
+}
+function avgRect(img, W, H, x0, y0, x1, y1) {
+  x0 = Math.max(0, Math.floor(x0)); y0 = Math.max(0, Math.floor(y0)); x1 = Math.min(W, Math.floor(x1)); y1 = Math.min(H, Math.floor(y1));
+  let R = 0, G = 0, B = 0, n = 0;
+  for (let y = y0; y < y1; y += 2) for (let x = x0; x < x1; x += 2) { const i = (y * W + x) * 4; R += img[i]; G += img[i + 1]; B += img[i + 2]; n++; }
+  if (!n) return { r: 0, g: 0, b: 0, br: 0 }; R /= n; G /= n; B /= n; return { r: R, g: G, b: B, br: (R + G + B) / 3 };
+}
+function unionInOut(img, W, H, outers) {
+  const boxes = Object.values(outers).map(r => ({ x0: r.x * W, y0: r.y * H, x1: (r.x + r.w) * W, y1: (r.y + r.h) * H }));
+  let inSum = 0, inN = 0, outSum = 0, outN = 0;
+  for (let y = 0; y < H; y += 2) for (let x = 0; x < W; x += 2) {
+    let inside = false;
+    for (const b of boxes) { if (x >= b.x0 && x < b.x1 && y >= b.y0 && y < b.y1) { inside = true; break; } }
+    const i = (y * W + x) * 4, br = (img[i] + img[i + 1] + img[i + 2]) / 3;
+    if (inside) { inSum += br; inN++; } else { outSum += br; outN++; }
+  }
+  return { diff: (inN ? inSum / inN : 0) - (outN ? outSum / outN : 0) };
+}
+function measure(img, W, H, inner) {
+  const inn = avgRect(img, W, H, inner.x * W, inner.y * H, (inner.x + inner.w) * W, (inner.y + inner.h) * H);
+  const mx = Math.max(inn.r, inn.g, inn.b), mn = Math.min(inn.r, inn.g, inn.b), dd = mx - mn;
+  let h = 0; if (dd) { if (mx === inn.r) h = ((inn.g - inn.b) / dd) % 6; else if (mx === inn.g) h = (inn.b - inn.r) / dd + 2; else h = (inn.r - inn.g) / dd + 4; h *= 60; if (h < 0) h += 360; }
+  return { r: inn.r, g: inn.g, b: inn.b, br: inn.br, h };
+}
+
+function Saishu({ profile, onExit, flash }) {
+  const videoRef = useRef(null), cvRef = useRef(null);
+  const [side, setSide] = useState('L');
+  const [sessionGain, setSessionGain] = useState(0);
+  const [locked, setLocked] = useState(false);
+  const [camErr, setCamErr] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const blinksRef = useRef(0);
+  const sideRef = useRef('L');
+  const runningRef = useRef(false);
+  const streamRef = useRef(null);
+  const stateRef = useRef({ brBuf: [], tBuf: [], udBuf: [], okBuf: [], prevBr: 0, rising: false, lastSpawn: 0, locked: false });
+
+  useEffect(() => { sideRef.current = side; stateRef.current.okBuf = []; }, [side]);
+
+  const serverDaily = dailyGotOf(profile);
+  const remaining = Math.max(0, DAILY_MAX - serverDaily);
+
+  useEffect(() => {
+    let tid = null;
+    const video = videoRef.current, cv = cvRef.current;
+    const ctx = cv.getContext('2d', { willReadFrequently: true });
+
+    function dominantHz() {
+      const st = stateRef.current; const n = st.brBuf.length; if (n < TUNE.HZ_WIN) return 0;
+      const v = st.brBuf.slice(-TUNE.HZ_WIN), t = st.tBuf.slice(-TUNE.HZ_WIN), m = v.length;
+      const dur = (t[m - 1] - t[0]) / 1000; if (dur < 0.4) return 0;
+      const mean = v.reduce((a, b) => a + b, 0) / m;
+      const w = v.map((x, i) => (x - mean) * (0.5 - 0.5 * Math.cos(2 * Math.PI * i / (m - 1))));
+      let best = 0, bm = -1;
+      for (let f = 1; f <= 12; f += 0.1) { let re = 0, im = 0; for (let i = 0; i < m; i++) { const ph = -2 * Math.PI * f * (t[i] - t[0]) / 1000; re += w[i] * Math.cos(ph); im += w[i] * Math.sin(ph); } const mag = re * re + im * im; if (mag > bm) { bm = mag; best = f; } }
+      return best;
+    }
+    function onPeak() {
+      blinksRef.current += 1;
+      setSessionGain(g => g + 10);
+    }
+    function analyze() {
+      if (!video.videoWidth) return;
+      ctx.drawImage(video, 0, 0, 320, 240);
+      const img = ctx.getImageData(0, 0, 320, 240).data, W = 320, H = 240;
+      const rs = regionsFor(sideRef.current);
+      const P = measure(img, W, H, rs.inner.petal);
+      const L1 = measure(img, W, H, rs.inner.leaf1);
+      const L2 = measure(img, W, H, rs.inner.leaf2);
+      const Sm = measure(img, W, H, rs.inner.stamen);
+      const U = unionInOut(img, W, H, rs.outer);
+      const st = stateRef.current;
+      st.brBuf.push(P.br); st.tBuf.push(Date.now());
+      if (st.brBuf.length > TUNE.HZ_WIN) { st.brBuf.shift(); st.tBuf.shift(); }
+      const hz = dominantHz(); const hzOK = hz >= TUNE.HZ_LO && hz <= TUNE.HZ_HI;
+      st.udBuf.push(U.diff); if (st.udBuf.length > TUNE.PEAK_WIN) st.udBuf.shift();
+      const shapeOK = Math.max.apply(null, st.udBuf) > TUNE.U_DIFF_MIN;
+      const petalRed = (P.h < TUNE.PETAL_H || P.h > 340);
+      const colorGap = (Math.abs(P.r - Sm.r) + Math.abs(P.g - Sm.g) + Math.abs(P.b - Sm.b)) / 3 > TUNE.COLORGAP_MIN;
+      const leafGreen = (L1.h >= TUNE.LEAF_H_LO && L2.h >= TUNE.LEAF_H_LO);
+      const frameOK = shapeOK && petalRed && colorGap && leafGreen && hzOK;
+      st.okBuf.push(frameOK ? 1 : 0); if (st.okBuf.length > TUNE.LOCK_WIN) st.okBuf.shift();
+      const rate = st.okBuf.reduce((a, b) => a + b, 0) / st.okBuf.length;
+      const isLocked = st.okBuf.length >= TUNE.LOCK_WIN && rate >= TUNE.LOCK_RATE;
+      if (isLocked !== st.locked) { st.locked = isLocked; setLocked(isLocked); }
+      // ピーク検出（明るさの立ち上がり→下降で1点滅）
+      if (isLocked) {
+        const cur = P.br;
+        if (cur > st.prevBr) st.rising = true;
+        else if (st.rising && cur < st.prevBr) { st.rising = false; const now = Date.now(); if (now - st.lastSpawn > 80) { onPeak(); st.lastSpawn = now; } }
+        st.prevBr = cur;
+      } else { st.rising = false; st.prevBr = P.br; }
+    }
+
+    (async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } } });
+        streamRef.current = stream; video.srcObject = stream; await video.play();
+        cv.width = 320; cv.height = 240;
+        // 露出を下げる（点滅を捉えやすく）
+        try {
+          const track = stream.getVideoTracks()[0];
+          if (track && track.getCapabilities) {
+            const cap = track.getCapabilities(); const adv = [];
+            if (cap.exposureMode && cap.exposureMode.includes('manual')) adv.push({ exposureMode: 'manual' });
+            if (cap.exposureCompensation) adv.push({ exposureCompensation: Math.max(cap.exposureCompensation.min, -2) });
+            if (cap.iso) adv.push({ iso: cap.iso.min });
+            if (adv.length) await track.applyConstraints({ advanced: adv });
+          }
+        } catch (e) {}
+        runningRef.current = true; tid = setInterval(analyze, 50);
+      } catch (e) { setCamErr(e.message || String(e)); }
+    })();
+
+    return () => {
+      runningRef.current = false;
+      if (tid) clearInterval(tid);
+      if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
+    };
+  }, []);
+
+  async function handleBack() {
+    if (submitting) return;
+    setSubmitting(true);
+    const blinks = blinksRef.current;
+    try {
+      if (blinks > 0) {
+        const res = await ChikarianAPI.claimSaishu(blinks);
+        const granted = res && res.granted != null ? res.granted : 0;
+        flash(`チカリウム +${granted.toLocaleString()}（本日 ${res ? res.saishu_today : ''}/${DAILY_MAX}）`);
+      }
+    } catch (e) { flash(errMsg(e)); }
+    finally { onExit(); }   // profile 再取得→home
+  }
+
+  const rs = regionsFor(side);
+  const optimistic = Math.min(remaining, sessionGain);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100dvh', background: '#0a0509' }}>
+      <div style={{ position: 'relative', width: '100%', aspectRatio: '4/3', background: '#000', overflow: 'hidden' }}>
+        <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+        <canvas ref={cvRef} style={{ display: 'none' }} />
+        {/* 枠ガイド */}
+        {Object.keys(rs.outer).map(k => { const r = rs.outer[k]; return <div key={'o' + k} style={{ position: 'absolute', left: `${r.x * 100}%`, top: `${r.y * 100}%`, width: `${r.w * 100}%`, height: `${r.h * 100}%`, border: `2px solid ${r.c}`, borderRadius: 3 }} />; })}
+        {Object.keys(rs.inner).map(k => { const r = rs.inner[k]; return <div key={'i' + k} style={{ position: 'absolute', left: `${r.x * 100}%`, top: `${r.y * 100}%`, width: `${r.w * 100}%`, height: `${r.h * 100}%`, border: `1px dashed ${rs.outer[k].c}`, opacity: .7 }} />; })}
+        {camErr && <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: '#ff8', fontSize: 13, padding: 20, textAlign: 'center' }}>カメラを起動できません<br />{camErr}</div>}
+      </div>
+
+      <div style={{ flex: 1, background: 'linear-gradient(180deg,#140913,#0a0509)', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '14px 16px', gap: 10, overflowY: 'auto' }}>
+        <div style={{ fontSize: 15, letterSpacing: 3, color: GOLD }}>チカリウム採取</div>
+        <div style={{ fontSize: 40, fontWeight: 800, color: GOLD_HI, textShadow: '0 0 16px rgba(255,200,90,.6)' }}>
+          +{optimistic.toLocaleString()}<span style={{ fontSize: 16, color: '#cdb488' }}> / 残 {remaining.toLocaleString()}</span>
+        </div>
+        <div style={{ width: 220, height: 6, background: 'rgba(0,0,0,.6)', border: '1px solid rgba(232,194,90,.5)', borderRadius: 4, overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${Math.min(100, (serverDaily + optimistic) / DAILY_MAX * 100)}%`, background: 'linear-gradient(90deg,#ffb84d,#ffe28a)', transition: 'width .25s' }} />
+        </div>
+        <div style={{ fontSize: 13, color: '#e7d3a6' }}>所持 {(profile ? (profile.chikarium || 0) : 0).toLocaleString()}</div>
+
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={() => setSide('L')} style={{ ...S.sideSwitch, ...(side === 'L' ? S.sideSwitchOn : {}) }}>◀ 左</button>
+          <button onClick={() => setSide('R')} style={{ ...S.sideSwitch, ...(side === 'R' ? S.sideSwitchOn : {}) }}>右 ▶</button>
+        </div>
+
+        <div style={{ fontSize: 13, letterSpacing: 1, color: locked ? '#3fe08a' : GOLD }}>
+          {locked ? '採取中' : '光を探しています…'}
+        </div>
+        <div style={{ fontSize: 11, color: '#a98f66', textAlign: 'center', lineHeight: 1.6 }}>
+          赤い光（一部に緑・黄）が、決まった速さで<br />点滅する光に全体をかざしてください
+        </div>
+
+        <button onClick={handleBack} disabled={submitting} style={{ ...S.bigBtn, marginTop: 6 }}>
+          {submitting ? '記録中…' : 'ホームに戻る'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* =================================================================== styles */
+const S = {
+  root: { position: 'relative', width: '100%', maxWidth: 480, margin: '0 auto', minHeight: '100dvh', overflow: 'hidden', color: GOLD_HI },
+  bg: { position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(120% 90% at 50% 18%, #5a1f3a 0%, #2a1024 38%, #140913 68%, #090509 100%)' },
+  vignette: { position: 'absolute', inset: 0, background: 'radial-gradient(80% 60% at 50% 30%, rgba(255,180,90,.18), transparent 60%), linear-gradient(180deg, rgba(0,0,0,.35), rgba(0,0,0,.1) 30%, rgba(0,0,0,.55))', pointerEvents: 'none' },
+  frame: { position: 'relative', display: 'flex', flexDirection: 'column', minHeight: '100dvh', padding: '10px 12px 16px' },
+  centerFull: { position: 'relative', minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20 },
+
+  resPanel: { display: 'flex', gap: 8, alignItems: 'center', background: PANEL, border: BORDER, borderRadius: 10, padding: '6px 10px' },
+  resPanelSm: { display: 'flex', gap: 6, alignItems: 'center', background: PANEL, border: BORDER, borderRadius: 10, padding: '6px 10px' },
+  resCol: { display: 'flex', flexDirection: 'column', lineHeight: 1.1 },
+  resLabel: { fontSize: 10, color: '#cdb488', letterSpacing: 1 },
+  resVal: { fontSize: 20, fontWeight: 700, color: GOLD_HI, textShadow: '0 0 8px rgba(255,200,90,.5)' },
+  icBig: { fontSize: 34, color: '#ffd86b', filter: 'drop-shadow(0 0 6px rgba(255,200,80,.6))' },
+  ic: { fontSize: 22, color: '#ffcf5a' },
+  gaugeText: { fontSize: 9, color: '#cdb488' },
+  gaugeBar: { width: 110, height: 5, background: 'rgba(0,0,0,.5)', borderRadius: 3, overflow: 'hidden', border: '1px solid rgba(232,194,90,.4)' },
+  gaugeFill: { height: '100%', background: 'linear-gradient(90deg,#ffb84d,#ffe28a)', transition: 'width .4s' },
+
+  sideIcons: { position: 'absolute', right: 8, top: 76, display: 'flex', flexDirection: 'column', gap: 10, zIndex: 4 },
+  sideIcon: { background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 },
+  sideIconCircle: { width: 40, height: 40, borderRadius: '50%', display: 'grid', placeItems: 'center' },
+  sideIconLabel: { fontSize: 10, color: '#e7d3a6', textShadow: '0 1px 2px #000' },
+
+  center: { position: 'relative', flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', minHeight: 260, paddingTop: 6 },
+  saishuBtn: { position: 'relative', width: 230, height: 200, border: 'none', cursor: 'pointer', padding: 0, background: 'none', marginBottom: -18 },
+  saishuOff: { filter: 'grayscale(.85) brightness(.5)', cursor: 'not-allowed' },
+  saishuInner: { position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  saishuTitle: { fontSize: 26, fontWeight: 800, textAlign: 'center', lineHeight: 1.15, color: GOLD_HI, textShadow: '0 2px 4px #3a0010, 0 0 14px rgba(255,180,80,.7)' },
+  saishuDesc: { fontSize: 15, color: '#e7d3a6', textAlign: 'center', letterSpacing: 1, fontWeight: 700, textShadow: '0 1px 3px #000' },
+  timer: { display: 'flex', flexDirection: 'column', alignItems: 'center', background: PANEL, border: BORDER, borderRadius: 12, padding: '5px 22px', marginTop: 2 },
+  timerLabel: { fontSize: 11, color: '#cdb488', letterSpacing: 2 },
+  timerVal: { fontSize: 21, fontWeight: 700, color: GOLD_HI, letterSpacing: 2 },
+  timerSub: { fontSize: 9, color: '#a98f66', letterSpacing: 1 },
+
+  grid: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginTop: 4 },
+  card: { background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' },
+  cardArt: { width: '100%', aspectRatio: '4/3', borderRadius: 10, border: BORDER, display: 'grid', placeItems: 'center', boxShadow: 'inset 0 0 14px rgba(0,0,0,.6)', position: 'relative', overflow: 'hidden' },
+  cardLabel: { position: 'absolute', left: 0, right: 0, bottom: 0, padding: '10px 4px 5px', fontSize: 14, fontWeight: 700, color: GOLD_HI, textAlign: 'center', textShadow: '0 1px 3px #000', background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.75) 100%)' },
+
+  houchi: { position: 'relative', marginTop: 10, width: '100%', aspectRatio: '5/2', borderRadius: 12, border: BORDER, cursor: 'pointer', overflow: 'hidden', background: 'linear-gradient(180deg, rgba(60,30,55,.85), rgba(30,12,25,.9))', display: 'grid', placeItems: 'center' },
+  houchiLabel: { position: 'absolute', left: 0, right: 0, bottom: 0, padding: '14px 4px 8px', fontSize: 18, fontWeight: 800, color: GOLD_HI, textAlign: 'center', background: 'linear-gradient(0deg, rgba(0,0,0,.7) 0%, transparent 100%)' },
+
+  bigBtn: { fontSize: 16, fontWeight: 800, color: '#1a0f06', background: 'linear-gradient(180deg,#f0d36a,#c89a2c)', border: '1.5px solid ' + GOLD, borderRadius: 12, padding: '12px 30px', cursor: 'pointer', letterSpacing: 1 },
+  lineBtn: { fontSize: 14, fontWeight: 700, color: GOLD_HI, background: 'rgba(20,10,16,.9)', border: BORDER, borderRadius: 10, padding: '9px 22px', cursor: 'pointer' },
+  sideSwitch: { padding: '6px 22px', fontSize: 13, color: '#cdb488', background: 'rgba(20,10,16,.8)', border: '1.5px solid rgba(232,194,90,.4)', borderRadius: 10, cursor: 'pointer' },
+  sideSwitchOn: { color: GOLD_HI, borderColor: GOLD, boxShadow: '0 0 8px rgba(255,200,90,.3)' },
+
+  toast: { position: 'fixed', left: '50%', bottom: 90, transform: 'translateX(-50%)', background: 'rgba(0,0,0,.85)', border: BORDER, color: GOLD_HI, padding: '8px 18px', borderRadius: 20, fontSize: 13, zIndex: 50, whiteSpace: 'nowrap', maxWidth: '90%' },
+};
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
