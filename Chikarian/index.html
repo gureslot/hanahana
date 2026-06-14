@@ -30,6 +30,17 @@
   button:active{filter:brightness(1.08);}
   .spin{width:34px;height:34px;border:3px solid rgba(232,194,90,.3);border-top-color:#e8c25a;border-radius:50%;animation:rot 1s linear infinite;}
   @keyframes rot{to{transform:rotate(360deg);}}
+  /* ガチャ演出 */
+  .gstage{display:flex;flex-wrap:wrap;justify-content:center;align-content:center;gap:10px;perspective:1200px;width:100%;}
+  .gcard{position:relative;width:29%;max-width:108px;aspect-ratio:5/7;filter:drop-shadow(0 8px 16px rgba(0,0,0,.55));}
+  .gcardInner{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform .55s cubic-bezier(.2,.7,.25,1);transform:rotateY(0deg);}
+  .gcard.flipped .gcardInner{transform:rotateY(180deg);}
+  .gface{position:absolute;inset:0;border-radius:12px;overflow:hidden;backface-visibility:hidden;-webkit-backface-visibility:hidden;border:1.5px solid rgba(232,194,90,.55);box-shadow:inset 0 0 14px rgba(0,0,0,.5);}
+  .gface img{width:100%;height:100%;object-fit:cover;display:block;}
+  .gfront{transform:rotateY(180deg);}
+  .gback{background:radial-gradient(60% 45% at 50% 38%, rgba(255,200,110,.25), transparent 70%),linear-gradient(160deg,#2a1430,#160a1c 60%,#0d0612);display:grid;place-items:center;}
+  .genter{animation:cardEnter .45s cubic-bezier(.2,.8,.25,1) both;}
+  @keyframes cardEnter{from{opacity:0;transform:translateY(26px);}to{opacity:1;transform:translateY(0);}}
 </style>
 
 <!-- 読み込み順: supabase-js → chikarian-api → React/ReactDOM/Babel → cksound -->
@@ -100,6 +111,7 @@ function msUntilMidnight() {
 function App() {
   const [phase, setPhase] = useState('booting');   // booting | login | app
   const [profile, setProfile] = useState(null);
+  const [cards, setCards] = useState([]);          // 所持カード（サーバ値）
   const [screen, setScreen] = useState('home');
   const [toast, setToast] = useState(null);
   const audioRef = useRef(null);
@@ -133,6 +145,7 @@ function App() {
       await ChikarianAPI.rpc('initialize_profile');   // get-or-create
       const p = await ChikarianAPI.getProfile();
       setProfile(p);
+      try { setCards(await ChikarianAPI.getCards() || []); } catch (e) {}
       // OAuth 戻りで URL にハッシュが残っていれば掃除
       if (window.location.hash) history.replaceState(null, "", window.location.pathname);
       setPhase('app');
@@ -142,6 +155,14 @@ function App() {
   const refreshProfile = useCallback(async () => {
     try { const p = await ChikarianAPI.getProfile(); setProfile(p); return p; }
     catch (e) { flash(errMsg(e)); }
+  }, [flash]);
+
+  // ガチャ等の後: profile と所持カードをサーバ値で再取得
+  const refreshAll = useCallback(async () => {
+    try {
+      const p = await ChikarianAPI.getProfile(); setProfile(p);
+      const c = await ChikarianAPI.getCards(); setCards(c || []);
+    } catch (e) { flash(errMsg(e)); }
   }, [flash]);
 
   // BGM: 最初のユーザー操作で再生開始（自動再生制限対策）。<audio>は常駐＝アンマウントしない。
@@ -167,6 +188,7 @@ function App() {
   else {
     if (screen === 'home') body = <Home profile={profile} go={setScreen} flash={flash} />;
     else if (screen === 'saishu') body = <Saishu profile={profile} onExit={async () => { await refreshProfile(); setScreen('home'); }} flash={flash} />;
+    else if (screen === 'gacha') body = <Gacha profile={profile} onRefresh={refreshAll} back={() => setScreen('home')} flash={flash} />;
     else body = <Placeholder name={screen} back={() => setScreen('home')} logout={logout} />;
   }
 
@@ -515,6 +537,108 @@ function Saishu({ profile, onExit, flash }) {
         <button onClick={handleBack} disabled={submitting} style={{ ...S.bigBtn, marginTop: 6 }}>
           {submitting ? '記録中…' : 'ホームに戻る'}
         </button>
+      </div>
+    </div>
+  );
+}
+
+/* =================================================================== ガチャ */
+// 抽選・確率・固定スキル付与は全てサーバ(do_gacha)。ここは返り値の演出表示のみ（不正対策C）。
+const GACHA_COST = 300;                 // balance §1（確定）
+const RAR_COL = { n: '#b9b2a6', r: '#6fa8ff', sr: '#c98bff', ssr: '#ffd24d', sp: '#ff6a7a' };
+const RAR_LABEL = { n: 'N', r: 'R', sr: 'SR', ssr: 'SSR', sp: 'SP' };
+const ATTR_JA = { hana: '花', ha: '葉', shin: '芯' };
+const WEAP_JA = { ken: '剣', tate: '盾', tsue: '杖' };
+function parseCardKey(key) {
+  if (key.endsWith('_sp')) {
+    const n = { chara_dragon_sp: 'ゴールドドラゴン', chara_girl_sp: 'ゴーストガール', chara_houou_sp: '鳳凰' }[key] || 'SP';
+    return { rarity: 'sp', name: n, attr: '', weap: '' };
+  }
+  const p = key.split('_');
+  const rar = p[p.length - 1];
+  const isMeshibe = p[1] === 'meshibe';
+  return { rarity: rar, name: isMeshibe ? 'めしべだけマン' : 'ハイビスカスマン', attr: ATTR_JA[p[2]] || '', weap: WEAP_JA[p[3]] || '' };
+}
+
+function GCard({ data, flipped, skillName }) {
+  const [imgErr, setImgErr] = useState(false);
+  const info = parseCardKey(data.card_key);
+  const col = RAR_COL[data.rarity] || '#b9b2a6';
+  return (
+    <div className={'gcard genter' + (flipped ? ' flipped' : '')}>
+      <div className="gcardInner">
+        <div className="gface gback"><span style={{ fontSize: 30, color: 'rgba(232,194,90,.85)' }}>❖</span></div>
+        <div className="gface gfront" style={{ borderColor: col, boxShadow: `inset 0 0 14px rgba(0,0,0,.5), 0 0 10px ${col}55` }}>
+          {imgErr
+            ? <div style={{ width: '100%', height: '100%', background: 'linear-gradient(165deg,#3a2418,#1c1018)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 4, textAlign: 'center' }}>
+                <div style={{ fontSize: 20 }}>❖</div>
+                <div style={{ fontSize: 10, color: '#e7d3a6', marginTop: 2 }}>{info.name}</div>
+                {(info.attr || info.weap) && <div style={{ fontSize: 10, color: '#cdb488' }}>{info.attr}{info.weap}</div>}
+              </div>
+            : <img src={'./images/' + data.card_key + '.png'} alt="" onError={() => setImgErr(true)} />}
+          {/* レア帯バッジ */}
+          <div style={{ position: 'absolute', top: 4, left: 4, fontSize: 10, fontWeight: 800, color: '#1a0f06', background: col, borderRadius: 5, padding: '1px 6px' }}>{RAR_LABEL[data.rarity] || data.rarity}</div>
+          {/* 付与された固定スキル（サーバ抽選結果） */}
+          {skillName && <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '6px 3px 4px', fontSize: 9, textAlign: 'center', color: '#fff3c8', background: 'linear-gradient(0deg, rgba(0,0,0,.82), transparent)' }}>{skillName}</div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Gacha({ profile, onRefresh, back, flash }) {
+  const [drawing, setDrawing] = useState(false);
+  const [results, setResults] = useState(null);   // [{id, card_key, rarity, skill_key}]
+  const [flipped, setFlipped] = useState([]);
+  const [skillMap, setSkillMap] = useState({});
+  const chikarium = profile ? (profile.chikarium || 0) : 0;
+
+  useEffect(() => {
+    (async () => {
+      try { const sm = await ChikarianAPI.getSkillMaster(); const m = {}; (sm || []).forEach(s => { m[s.skill_key] = s.display_name; }); setSkillMap(m); }
+      catch (e) {}
+    })();
+  }, []);
+
+  async function draw() {
+    if (drawing) return;
+    if (chikarium < GACHA_COST) { flash('チカリウムが足りません'); return; }
+    setDrawing(true); setResults(null); setFlipped([]);
+    try {
+      const res = await ChikarianAPI.doGacha();      // ★抽選はサーバ。返り値を表示するだけ
+      const drawn = (res && res.cards) ? res.cards : [];
+      setResults(drawn);
+      setFlipped(drawn.map(() => false));
+      // 登場→順次めくる演出
+      drawn.forEach((_, i) => setTimeout(() => {
+        setFlipped(f => { const n = f.slice(); n[i] = true; return n; });
+        if (window.CKSound) CKSound.play('se_card_flip');
+      }, 700 + i * 180));
+      // 演出後に所持カード・残チカリウムをサーバ値で再取得
+      const total = 700 + (drawn.length - 1) * 180 + 700;
+      setTimeout(async () => { await onRefresh(); setDrawing(false); }, total);
+    } catch (e) { flash(errMsg(e)); setDrawing(false); }
+  }
+
+  return (
+    <div style={S.root}>
+      <div style={S.bg} /><div style={S.vignette} />
+      <div style={{ position: 'relative', zIndex: 2, minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '18px 16px 22px' }}>
+        <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: 3, color: GOLD_HI, textShadow: '0 2px 6px #3a0010, 0 0 16px rgba(255,180,80,.5)' }}>チカリアンガチャ</div>
+        <div style={{ ...S.resPanelSm, marginTop: 8 }}>
+          <span style={S.ic}>◈</span>
+          <div style={S.resCol}><div style={S.resLabel}>所持チカリウム</div><div style={S.resVal}>{chikarium.toLocaleString()}</div></div>
+        </div>
+        <div style={{ fontSize: 11, color: '#cdb488', letterSpacing: 1, marginTop: 6 }}>1回 {GACHA_COST} チカリウム ・ 6枚排出</div>
+        {/* 排出率（balance §1 確定値） */}
+        <div style={{ fontSize: 10, color: '#a98f66', marginTop: 2 }}>排出率 N55.45 / R31.65 / SR9 / SP1.7 / SSR2.2 ％</div>
+
+        <div className="gstage" style={{ flex: 1, marginTop: 14, marginBottom: 14, minHeight: 220 }}>
+          {results && results.map((c, i) => <GCard key={c.id} data={c} flipped={flipped[i]} skillName={skillMap[c.skill_key]} />)}
+        </div>
+
+        <button onClick={draw} disabled={drawing} style={S.bigBtn}>{drawing ? '排出中…' : '引く（300）'}</button>
+        <button onClick={back} disabled={drawing} style={{ ...S.lineBtn, marginTop: 16 }}>ホームに戻る</button>
       </div>
     </div>
   );
