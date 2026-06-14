@@ -107,6 +107,20 @@ const ERR_JA = {
   'PREREQUISITE_MISSING': '前段階の質が未解放です',
   'INVALID_QUALITY': '対象外の質です',
   'ORDER_NOT_FOUND': '依頼が見つかりません',
+  // スキル錬成（do_skill_rensei・0021）
+  'CARD_NOT_OWNED': '自分のカードではありません',
+  'SKILL_NOT_FOUND': 'スキルが見つかりません',
+  'NOT_UPGRADABLE': 'このスキルは強化できません',
+  'RARITY_NOT_SUPPORTED': 'このレアは錬成の対象外です',
+  'INSUFFICIENT_CRYSTAL': 'クリスタルが足りません',
+  'INVALID_COLOR': 'クリスタルの色が不正です',
+  // スキル転移（do_skill_teni）※RPCはrepo外＝タスク記載のコードに対応
+  'DST_SLOT_INVALID': '空き枠（1/2）を指定してください',
+  'SP_NOT_TRANSFERABLE': 'SPのスキルは転移できません',
+  'SP_NO_SLOT': 'SPには空き枠がありません',
+  'SRC_LOCKED': '素材カードがロック中です',
+  'SRC_SKILL_NOT_FOUND': '素材のスキルが見つかりません',
+  'DST_SLOT_OCCUPIED': '指定した空き枠は埋まっています',
 };
 function errMsg(e) {
   const m = (e && e.message) ? e.message : String(e);
@@ -823,6 +837,7 @@ function CardDetail({ card, cards, profile, skillMap, refreshAll, back, flash })
 
   if (mode === 'kyoka') return <KyokaView base={card} cards={cards} profile={profile} refreshAll={refreshAll} onBack={() => setMode(null)} flash={flash} />;
   if (mode === 'equip') return <EquipView base={card} refreshAll={refreshAll} onBack={() => setMode(null)} flash={flash} />;
+  if (mode === 'skill') return <SkillView base={card} cards={cards} profile={profile} skillMap={skillMap} refreshAll={refreshAll} onBack={() => setMode(null)} flash={flash} />;
 
   const st = computeStats(card);
   const info = st.info;
@@ -905,7 +920,7 @@ function CardDetail({ card, cards, profile, skillMap, refreshAll, back, flash })
           <div style={{ fontSize: 11, color: '#a98f66', marginBottom: 6 }}>操作（カード詳細が共通入口）</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
             <button style={{ ...dS.op, ...(card.locked ? dS.opOff : {}) }} disabled={!!card.locked} onClick={() => setMode('kyoka')}>★強化</button>
-            <button style={dS.op} onClick={op('スキル強化/転移')}>スキル強化/転移</button>
+            <button style={{ ...dS.op, ...(st.isSp ? dS.opOff : {}) }} disabled={st.isSp} onClick={() => setMode('skill')}>スキル強化/転移{st.isSp ? '（SP不可）' : ''}</button>
             <button style={{ ...dS.op, ...(st.isSp ? dS.opOff : {}) }} disabled={st.isSp} onClick={() => setMode('equip')}>装備（充填）{st.isSp ? '（SP不可）' : ''}</button>
             <button style={{ ...dS.op, ...(card.locked ? dS.opOff : {}) }} disabled={!!card.locked} onClick={op('交換所')}>交換所</button>
             <button style={{ ...dS.op, ...(LOCK_RPC_AVAILABLE ? {} : dS.opOff), gridColumn: '1 / -1' }} disabled={!LOCK_RPC_AVAILABLE}
@@ -1773,6 +1788,161 @@ function EquipView({ base, refreshAll, onBack, flash }) {
 
         <button onClick={equip} disabled={busy} style={{ ...S.bigBtn, marginTop: 16, ...(busy ? { opacity: .45 } : {}) }}>{busy ? '装備中…' : (amount === 0 ? 'アンロード（全返却）' : '装備する')}</button>
       </div>
+    </div>
+  );
+}
+
+/* =================================================================== スキル錬成/転移 */
+// 抽選・成否・消費・移動は全てサーバ(do_skill_rensei / do_skill_teni)。クライアントは結果表示のみ。
+const RENSEI_RATE = { blue: 10, red: 33, rainbow: 100 };   // 確定（青10/赤33/虹100）
+const COLOR_JA = { blue: '青', red: '赤', rainbow: '虹' };
+const TENI_COST = 3000;   // メダル（確定）
+
+function SkillView({ base, cards, profile, skillMap, refreshAll, onBack, flash }) {
+  const [tab, setTab] = useState('rensei');
+  const [skills, setSkills] = useState(null);   // base のスキル
+  const [busy, setBusy] = useState(false);
+  // 錬成
+  const [color, setColor] = useState('blue');
+  const [selSlot, setSelSlot] = useState(null);
+  const [rResult, setRResult] = useState(null);
+  // 転移
+  const [srcId, setSrcId] = useState(null);
+  const [srcSkills, setSrcSkills] = useState(null);
+  const [srcSlot, setSrcSlot] = useState(null);
+  const [dstSlot, setDstSlot] = useState(null);
+  const [confirm, setConfirm] = useState(false);
+  const [tResult, setTResult] = useState(null);
+
+  async function loadBase() { try { setSkills(await ChikarianAPI.getCardSkills(base.id) || []); } catch (e) { flash(errMsg(e)); setSkills([]); } }
+  useEffect(() => { loadBase(); }, [base.id]);
+
+  const skName = k => (skillMap[k] && skillMap[k].display_name) || k;
+  const skUpg = k => skillMap[k] ? skillMap[k].lv_upgradable : true;
+
+  async function rensei() {
+    if (busy || selSlot == null) return; setBusy(true);
+    try { const res = await ChikarianAPI.doSkillRensei(base.id, selSlot, color); setRResult(res); await loadBase(); await refreshAll(); }
+    catch (e) { flash(errMsg(e)); } finally { setBusy(false); }
+  }
+  async function pickSrc(id) { setSrcId(id); setSrcSlot(null); setSrcSkills(null); try { setSrcSkills(await ChikarianAPI.getCardSkills(id) || []); } catch (e) { flash(errMsg(e)); setSrcSkills([]); } }
+  async function teni() {
+    if (busy || srcId == null || srcSlot == null || dstSlot == null) return; setBusy(true);
+    try {
+      const res = await ChikarianAPI.doSkillTeni(srcId, srcSlot, base.id, dstSlot);
+      setTResult(res); setConfirm(false);
+      setSrcId(null); setSrcSkills(null); setSrcSlot(null); setDstSlot(null);
+      await loadBase(); await refreshAll();
+    } catch (e) { flash(errMsg(e)); setConfirm(false); } finally { setBusy(false); }
+  }
+
+  if (!skills) return <Booting />;
+  const bySlot = {}; skills.forEach(s => { bySlot[s.slot] = s; });
+  const emptySlots = [1, 2].filter(s => !bySlot[s]);
+
+  return (
+    <div style={S.root}><div style={S.bg} /><div style={S.vignette} />
+      <div style={{ position: 'relative', zIndex: 2, minHeight: '100dvh', display: 'flex', flexDirection: 'column', padding: '14px 14px 18px', overflowY: 'auto' }}>
+        <button onClick={onBack} style={{ ...S.lineBtn, alignSelf: 'flex-start', padding: '6px 16px' }}>‹ 戻る</button>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'center', margin: '10px 0' }}>
+          <button onClick={() => setTab('rensei')} style={{ ...S.sideSwitch, ...(tab === 'rensei' ? S.sideSwitchOn : {}) }}>錬成（強化）</button>
+          <button onClick={() => setTab('teni')} style={{ ...S.sideSwitch, ...(tab === 'teni' ? S.sideSwitchOn : {}) }}>転移</button>
+        </div>
+
+        {/* ===== 錬成 ===== */}
+        {tab === 'rensei' && <>
+          {rResult && <div style={{ padding: '8px 12px', marginBottom: 10, borderRadius: 8, border: '1px solid rgba(232,194,90,.4)', background: 'rgba(40,30,20,.4)', fontSize: 12, color: rResult.success ? '#ffe28a' : '#ff9aa8' }}>
+            {rResult.success ? '成功' : '失敗'}：{skName(rResult.skill_key)} Lv{rResult.old_lv}→{rResult.new_lv}（{COLOR_JA[rResult.color]} 消費{rResult.cost}・残{rResult.crystal_remaining}）
+          </div>}
+          <div style={{ fontSize: 11, color: '#cdb488', marginBottom: 6 }}>強化するスキル枠を選択（lv_upgradable=false は不可）</div>
+          {[0, 1, 2].map(slot => {
+            const row = bySlot[slot];
+            const upg = row ? skUpg(row.skill_key) : false;
+            const sel = selSlot === slot;
+            return (
+              <button key={slot} onClick={() => row && upg && setSelSlot(slot)} disabled={!row || !upg}
+                style={{ display: 'block', width: '100%', textAlign: 'left', marginBottom: 6, padding: '8px 12px', borderRadius: 8, cursor: (row && upg) ? 'pointer' : 'default', background: sel ? 'rgba(232,194,90,.18)' : PANEL, border: sel ? '1.5px solid ' + GOLD : BORDER, opacity: (row && !upg) ? .5 : 1 }}>
+                <div style={{ fontSize: 10, color: '#cdb488' }}>{slot === 0 ? '固定スキル' : '空きスロット' + slot}</div>
+                {row
+                  ? <div style={{ fontSize: 13, color: GOLD_HI, fontWeight: 700 }}>{skName(row.skill_key)} <span style={{ fontSize: 11, color: '#cdb488' }}>Lv{row.skill_lv}{!upg ? '・強化不可' : ''}</span>
+                      {skillMap[row.skill_key] && skillMap[row.skill_key].notes && <span style={{ display: 'block', fontSize: 10, color: '#a98f66', fontWeight: 400 }}>{skillMap[row.skill_key].notes}</span>}
+                    </div>
+                  : <div style={{ fontSize: 12, color: '#a98f66' }}>空き</div>}
+              </button>
+            );
+          })}
+
+          <div style={{ fontSize: 11, color: '#cdb488', margin: '10px 0 6px' }}>クリスタル色（成功率）</div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {['blue', 'red', 'rainbow'].map(c => {
+              const have = profile ? (profile['crystal_' + c] || 0) : 0;
+              return (
+                <button key={c} onClick={() => setColor(c)} style={{ ...S.sideSwitch, flex: 1, padding: '8px 2px', flexDirection: 'column', display: 'flex', ...(c === color ? S.sideSwitchOn : {}) }}>
+                  <span style={{ fontSize: 13, fontWeight: 700 }}>{COLOR_JA[c]} {RENSEI_RATE[c]}%</span>
+                  <span style={{ fontSize: 9, color: '#cdb488' }}>所持 {have}</span>
+                </button>
+              );
+            })}
+          </div>
+          <div style={{ fontSize: 10, color: '#a98f66', marginTop: 6 }}>消費クリスタル数はサーバ算出（カーブ×レア倍率）。成功＝Lv+1／失敗＝消費のみ・Lv据置。</div>
+          <button onClick={rensei} disabled={busy || selSlot == null} style={{ ...S.bigBtn, marginTop: 14, ...((busy || selSlot == null) ? { opacity: .45 } : {}) }}>{busy ? '錬成中…' : '錬成する'}</button>
+        </>}
+
+        {/* ===== 転移 ===== */}
+        {tab === 'teni' && <>
+          {tResult && <div style={{ padding: '8px 12px', marginBottom: 10, borderRadius: 8, border: '1px solid rgba(120,220,140,.4)', background: 'rgba(30,60,40,.3)', fontSize: 12, color: '#bff0cf' }}>
+            転移成功：{skName(tResult.moved_skill)} Lv{tResult.moved_lv} を 枠{tResult.dst_slot} へ（メダル −{Number(tResult.medal_spent || TENI_COST).toLocaleString()}／残 {Number(tResult.medal_remaining || 0).toLocaleString()}）
+          </div>}
+          <div style={{ fontSize: 12, color: '#e7d3a6' }}>受け側：{parseCardKey(base.card_key).name}（空き枠 {emptySlots.length ? emptySlots.join('・') : 'なし'}）</div>
+          {emptySlots.length === 0
+            ? <div style={{ fontSize: 12, color: '#ff9aa8', marginTop: 10 }}>空き枠がありません（転移先なし）</div>
+            : <>
+                <div style={{ fontSize: 11, color: '#cdb488', margin: '10px 0 6px' }}>素材カードを選ぶ（同名/別カード可・ロック/SPは不可。素材は消滅）</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 6, maxHeight: 220, overflowY: 'auto' }}>
+                  {(cards || []).filter(c => c.id !== base.id && !c.locked && !c.card_key.endsWith('_sp')).map(c => (
+                    <div key={c.id} style={{ outline: srcId === c.id ? '2px solid ' + GOLD : 'none', borderRadius: 10 }}>
+                      <CardThumb card={c} small onClick={() => pickSrc(c.id)} />
+                    </div>
+                  ))}
+                </div>
+
+                {srcId && (srcSkills === null ? <div style={{ marginTop: 10 }}><div className="spin" /></div>
+                  : <>
+                      <div style={{ fontSize: 11, color: '#cdb488', margin: '10px 0 6px' }}>移すスキルを1つ選ぶ</div>
+                      {srcSkills.length === 0 ? <div style={{ fontSize: 11, color: '#a98f66' }}>スキルがありません</div>
+                        : srcSkills.map(s => (
+                          <button key={s.slot} onClick={() => setSrcSlot(s.slot)} style={{ display: 'block', width: '100%', textAlign: 'left', marginBottom: 6, padding: '8px 12px', borderRadius: 8, cursor: 'pointer', background: srcSlot === s.slot ? 'rgba(232,194,90,.18)' : PANEL, border: srcSlot === s.slot ? '1.5px solid ' + GOLD : BORDER }}>
+                            <span style={{ fontSize: 13, color: GOLD_HI, fontWeight: 700 }}>{skName(s.skill_key)}</span> <span style={{ fontSize: 11, color: '#cdb488' }}>Lv{s.skill_lv}（{s.slot === 0 ? '固定' : '空き' + s.slot}）</span>
+                          </button>
+                        ))}
+                    </>)}
+
+                {srcId && srcSlot != null && <>
+                  <div style={{ fontSize: 11, color: '#cdb488', margin: '10px 0 6px' }}>受け側の空き枠</div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {emptySlots.map(s => <button key={s} onClick={() => setDstSlot(s)} style={{ ...S.sideSwitch, flex: 1, ...(dstSlot === s ? S.sideSwitchOn : {}) }}>枠{s}</button>)}
+                  </div>
+                </>}
+
+                <button onClick={() => setConfirm(true)} disabled={busy || srcId == null || srcSlot == null || dstSlot == null}
+                  style={{ ...S.bigBtn, marginTop: 14, ...((busy || srcId == null || srcSlot == null || dstSlot == null) ? { opacity: .45 } : {}) }}>転移する（メダル{TENI_COST.toLocaleString()}）</button>
+              </>}
+        </>}
+      </div>
+
+      {/* 転移 確認ポップアップ */}
+      {confirm && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.7)', display: 'grid', placeItems: 'center', zIndex: 60, padding: 24 }}>
+          <div style={{ maxWidth: 360, background: '#160a13', border: BORDER, borderRadius: 12, padding: 18, textAlign: 'center' }}>
+            <div style={{ fontSize: 14, color: GOLD_HI, fontWeight: 700, marginBottom: 8 }}>転移の確認</div>
+            <div style={{ fontSize: 12, color: '#e7d3a6', lineHeight: 1.8 }}>素材カードと、<b>選ばなかったスキルも失われます</b>。<br />メダル {TENI_COST.toLocaleString()} を消費します。よろしいですか？</div>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 16 }}>
+              <button onClick={teni} disabled={busy} style={S.bigBtn}>{busy ? '転移中…' : '実行する'}</button>
+              <button onClick={() => setConfirm(false)} disabled={busy} style={S.lineBtn}>やめる</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
