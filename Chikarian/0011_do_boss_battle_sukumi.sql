@@ -59,9 +59,9 @@ declare
   cid       uuid;
   vc        public.cards;
   parts     text[];
-  is_sp     boolean;
-  attr      text;
-  weap      text;
+  v_is_sp   boolean;
+  v_attr    text;
+  v_weap    text;
   rare      text;
   base      numeric;
   lvcap     int;
@@ -151,9 +151,9 @@ begin
       raise exception 'card % is SP-unavailable today', cid;
     end if;
 
-    is_sp := vc.card_key like 'chara\_%\_sp' escape '\';
+    v_is_sp := vc.card_key like 'chara\_%\_sp' escape '\';
 
-    if is_sp then
+    if v_is_sp then
       -- SP: 本体のみ・装備項0・三すくみ常に中立(1.0)
       base := case vc.card_key when 'chara_dragon_sp' then 2260
                                when 'chara_girl_sp'   then 2160
@@ -165,8 +165,8 @@ begin
       values (i, cid, true, null, null, base, 0, 0, 1.0);
     else
       parts := string_to_array(vc.card_key, '_');
-      if parts[2] = 'meshibe' then attr := 'shin'; weap := 'tsue'; rare := parts[5];
-      else attr := parts[3]; weap := parts[4]; rare := parts[5]; end if;
+      if parts[2] = 'meshibe' then v_attr := 'shin'; v_weap := 'tsue'; rare := parts[5];
+      else v_attr := parts[3]; v_weap := parts[4]; rare := parts[5]; end if;
 
       case rare
         when 'n'   then base := 80;  lvcap := 30;
@@ -181,11 +181,11 @@ begin
 
       -- 三すくみ係数＝属性係数×武器係数（敵の各属性/武器を全乗算・§2-B方式）
       v_sukumi := 1.0;
-      foreach ea in array v_boss.attrs   loop v_sukumi := v_sukumi * public.sukumi_factor(attr, ea); end loop;
-      foreach ew in array v_boss.weapons loop v_sukumi := v_sukumi * public.sukumi_factor(weap, ew); end loop;
+      foreach ea in array v_boss.attrs   loop v_sukumi := v_sukumi * public.sukumi_factor(v_attr, ea); end loop;
+      foreach ew in array v_boss.weapons loop v_sukumi := v_sukumi * public.sukumi_factor(v_weap, ew); end loop;
 
       insert into _bc(idx, card_id, is_sp, attr, weap, body, equip, sougou, sukumi)
-      values (i, cid, false, attr, weap, base, vc.loaded_buki * qatk, 0, v_sukumi);
+      values (i, cid, false, v_attr, v_weap, base, vc.loaded_buki * qatk, 0, v_sukumi);
     end if;
 
     -- スキル候補（Lv効果量を確定して格納）
