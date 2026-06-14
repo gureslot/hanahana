@@ -92,6 +92,12 @@ const ERR_JA = {
   'INVALID_HOSHOU': '保証石の指定が不正です',
   'BASE_NOT_FOUND': '本体カードが見つかりません',
   'MATERIAL_NOT_FOUND': '素材カードが見つかりません',
+  // 鍛冶屋（place_kajiya_order / claim_kajiya）※RPCはrepo外＝タスク記載のコードに対応
+  'ORDER_IN_PROGRESS': '他の依頼が進行中です（1件ずつ）',
+  'ALREADY_UNLOCKED': 'すでに解放済みです',
+  'PREREQUISITE_MISSING': '前段階の質が未解放です',
+  'INVALID_QUALITY': '対象外の質です',
+  'ORDER_NOT_FOUND': '依頼が見つかりません',
 };
 function errMsg(e) {
   const m = (e && e.message) ? e.message : String(e);
@@ -217,6 +223,7 @@ function App() {
     else if (screen === 'deck') body = <DeckScreen profile={profile} cards={cards} back={() => setScreen('home')} flash={flash} />;
     else if (screen === 'boss') body = <BossScreen profile={profile} onRefresh={refreshAll} back={() => setScreen('home')} flash={flash} />;
     else if (screen === 'kyoka') body = <ZukanScreen cards={cards} profile={profile} refreshAll={refreshAll} initialTab="owned" back={() => setScreen('home')} flash={flash} />;
+    else if (screen === 'tatemono') body = <TatemonoScreen profile={profile} refreshAll={refreshAll} back={() => setScreen('home')} flash={flash} />;
     else body = <Placeholder name={screen} back={() => setScreen('home')} logout={logout} />;
   }
 
@@ -1322,6 +1329,189 @@ function KyokaView({ base, cards, profile, refreshAll, onBack, flash }) {
   );
 }
 const kS = { step: { width: 34, height: 34, borderRadius: 8, border: BORDER, background: 'rgba(20,10,16,.9)', color: GOLD_HI, fontSize: 18, cursor: 'pointer' } };
+
+/* =================================================================== 建物ハブ */
+// 練成量・解放・時刻判定は全てサーバ(renkiden系/kajiya系RPC)。クライアントは表示と入力のみ。
+// ※ renkiden/kajiya のRPC定義は repo 未配置（0012-0019外）。返り値/コードはタスク記載に従い防御的に扱う。
+const Q_COST = { crude: 1, refined: 2, enchanted: 4, holy: 8 };   // 枠コスト（balance §2-1）
+const Q_LV = { crude: 1, refined: 2, enchanted: 3, holy: 4 };
+const KAJIYA_HOURS = { refined: 24, enchanted: 36, holy: 48 };    // 作業時間（balance §11）
+const Q_ORDER = ['crude', 'refined', 'enchanted', 'holy'];
+
+function normalizeRk(r) {
+  if (!r) return null;
+  const g = (a, b) => (r[a] != null ? r[a] : (r[b] != null ? r[b] : null));
+  const lv = g('lv') != null ? g('lv') : 1;
+  const buki = g('buki_stored', 'buki') != null ? g('buki_stored', 'buki') : 0;
+  const fuel = g('fuel_medal', 'fuel') != null ? g('fuel_medal', 'fuel') : 0;
+  const cap = r.cap != null ? r.cap : (1000 + 1500 * (lv - 1));     // 確定式（balance §11）
+  const rate = r.rate_per_sec != null ? r.rate_per_sec : (0.1 * lv); // 確定式
+  return { lv, buki, fuel, cap, rate };
+}
+function fmtRemain(ms) {
+  if (ms <= 0) return '完成';
+  const s = Math.floor(ms / 1000), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+  return (h > 0 ? h + '時間' : '') + m + '分';
+}
+
+function TatemonoScreen({ profile, refreshAll, back, flash }) {
+  const [tab, setTab] = useState('renkiden');
+  return (
+    <div style={S.root}>
+      <div style={S.bg} /><div style={S.vignette} />
+      <div style={{ position: 'relative', zIndex: 2, minHeight: '100dvh', display: 'flex', flexDirection: 'column', padding: '14px 12px 18px', overflowY: 'auto' }}>
+        <div style={{ textAlign: 'center', fontSize: 20, fontWeight: 800, letterSpacing: 3, color: GOLD_HI }}>建物</div>
+        <div style={{ display: 'flex', gap: 6, justifyContent: 'center', margin: '12px 0' }}>
+          {[['renkiden', '練気殿'], ['kajiya', '鍛冶屋'], ['shurenjo', '修練場']].map(([k, label]) => (
+            <button key={k} onClick={() => setTab(k)} style={{ ...S.sideSwitch, padding: '6px 14px', ...(tab === k ? S.sideSwitchOn : {}) }}>{label}</button>
+          ))}
+        </div>
+        <div style={{ flex: 1 }}>
+          {tab === 'renkiden' && <RenkidenTab profile={profile} refreshAll={refreshAll} flash={flash} />}
+          {tab === 'kajiya' && <KajiyaTab profile={profile} refreshAll={refreshAll} flash={flash} />}
+          {tab === 'shurenjo' && (
+            <div style={{ textAlign: 'center', color: '#cdb488', marginTop: 40, fontSize: 13, lineHeight: 1.9 }}>
+              修練場（威力試験）<br /><span style={{ fontSize: 12, color: '#a98f66' }}>準備中（次フェーズ）。報酬なし・ローカル計算で実装予定。</span>
+            </div>
+          )}
+        </div>
+        <button onClick={back} style={{ ...S.lineBtn, marginTop: 12, alignSelf: 'center' }}>ホームに戻る</button>
+      </div>
+    </div>
+  );
+}
+
+function RenkidenTab({ profile, refreshAll, flash }) {
+  const [rk, setRk] = useState(null);
+  const [investAmt, setInvestAmt] = useState('');
+  const [instantN, setInstantN] = useState('');
+  const [busy, setBusy] = useState(false);
+  const medal = profile ? (profile.medal || 0) : 0;
+
+  async function load() {
+    // 表示の正＝collect の返り値（時刻計算済み）。行が無ければ collect が作成する想定。
+    try { setRk(normalizeRk(await ChikarianAPI.collectRenkiden())); }
+    catch (e) { try { setRk(normalizeRk(await ChikarianAPI.getRenkiden())); } catch (e2) { flash(errMsg(e)); } }
+  }
+  useEffect(() => { load(); }, []);
+
+  async function run(fn, okMsg) {
+    if (busy) return; setBusy(true);
+    try { await fn(); if (okMsg) flash(okMsg); await load(); await refreshAll(); }
+    catch (e) { flash(errMsg(e)); }
+    finally { setBusy(false); }
+  }
+  const invest = () => { const m = parseInt(investAmt, 10); if (!(m > 0)) { flash('投資額を入力してください'); return; } run(() => ChikarianAPI.investRenkiden(m), 'メダルを投資しました'); setInvestAmt(''); };
+  const instant = () => { const n = parseInt(instantN, 10); if (!(n > 0)) { flash('生産量を入力してください'); return; } run(() => ChikarianAPI.instantRenkiden(n), '即時生産しました'); setInstantN(''); };
+  const collect = () => run(() => ChikarianAPI.collectRenkiden(), '武気を回収しました');
+  const upgrade = () => run(() => ChikarianAPI.upgradeRenkiden(), '練気殿をLvアップ');
+
+  if (!rk) return <Booting />;
+  const upFee = 8000 * rk.lv;   // balance §11
+  const pct = rk.cap > 0 ? Math.min(100, rk.buki / rk.cap * 100) : 0;
+
+  return (
+    <div style={{ padding: '4px 2px' }}>
+      <div style={{ padding: '10px 12px', background: PANEL, border: BORDER, borderRadius: 8 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+          <span style={{ fontSize: 12, color: GOLD, fontWeight: 700 }}>練気殿 Lv{rk.lv}</span>
+          <span style={{ fontSize: 11, color: '#cdb488' }}>レート {rk.rate}/秒</span>
+        </div>
+        <div style={{ fontSize: 20, fontWeight: 800, color: GOLD_HI, marginTop: 4 }}>武気 {Math.floor(rk.buki).toLocaleString()} <span style={{ fontSize: 12, color: '#cdb488' }}>/ {rk.cap.toLocaleString()}</span></div>
+        <div style={{ height: 6, background: 'rgba(0,0,0,.5)', borderRadius: 3, overflow: 'hidden', border: '1px solid rgba(232,194,90,.4)', marginTop: 4 }}><div style={{ height: '100%', width: pct + '%', background: 'linear-gradient(90deg,#7fd0ff,#bfeaff)' }} /></div>
+        <div style={{ fontSize: 11, color: '#cdb488', marginTop: 6 }}>投資残メダル {rk.fuel.toLocaleString()}（尽きるまで毎秒練成）</div>
+        <div style={{ fontSize: 10, color: '#a98f66', marginTop: 2 }}>単価 武気1=メダル5（時間）／即生産 武気1=メダル15。所持メダル {medal.toLocaleString()}</div>
+      </div>
+
+      {/* 投資 */}
+      <div style={{ marginTop: 12, display: 'flex', gap: 8, alignItems: 'center' }}>
+        <input type="number" min="1" value={investAmt} onChange={e => setInvestAmt(e.target.value)} placeholder="投資メダル" style={tIn} />
+        <button onClick={invest} disabled={busy} style={{ ...S.lineBtn, flex: 1 }}>投資する</button>
+      </div>
+      {/* 即生産 */}
+      <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
+        <input type="number" min="1" value={instantN} onChange={e => setInstantN(e.target.value)} placeholder="即生産する武気" style={tIn} />
+        <button onClick={instant} disabled={busy} style={{ ...S.lineBtn, flex: 1 }}>即生産（×15）</button>
+      </div>
+      {instantN && parseInt(instantN, 10) > 0 && <div style={{ fontSize: 10, color: '#a98f66', marginTop: 3 }}>必要メダル 目安 {(parseInt(instantN, 10) * 15).toLocaleString()}（上限超過はサーバが拒否）</div>}
+
+      <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+        <button onClick={collect} disabled={busy} style={{ ...S.lineBtn, flex: 1 }}>回収/更新</button>
+        <button onClick={upgrade} disabled={busy} style={{ ...S.lineBtn, flex: 1 }}>強化 Lv{rk.lv}→{rk.lv + 1}（{upFee.toLocaleString()}）</button>
+      </div>
+      <div style={{ fontSize: 10, color: '#a98f66', marginTop: 8 }}>練成量・残量はサーバ確定値（開くたび/操作後に最新化）。</div>
+    </div>
+  );
+}
+
+function KajiyaTab({ profile, refreshAll, flash }) {
+  const [orders, setOrders] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [now, setNow] = useState(Date.now());
+  const medal = profile ? (profile.medal || 0) : 0;
+
+  async function load() { try { setOrders(await ChikarianAPI.getKajiyaOrders() || []); } catch (e) { flash(errMsg(e)); setOrders([]); } }
+  useEffect(() => { load(); const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
+
+  async function run(fn, okMsg) {
+    if (busy) return; setBusy(true);
+    try { await fn(); if (okMsg) flash(okMsg); await load(); await refreshAll(); }
+    catch (e) { flash(errMsg(e)); }
+    finally { setBusy(false); }
+  }
+
+  if (!orders) return <Booting />;
+  const claimedLv = orders.filter(o => o.claimed).reduce((mx, o) => Math.max(mx, Q_LV[o.quality] || 0), 1); // crude=1既定
+  const inProgress = orders.find(o => !o.claimed) || null;
+  const nextQ = Q_ORDER[claimedLv]; // claimedLv(1..)→次の質。4(holy)なら undefined
+  const fee = 15000 * claimedLv;    // balance §11
+
+  return (
+    <div style={{ padding: '4px 2px' }}>
+      <div style={{ padding: '10px 12px', background: PANEL, border: BORDER, borderRadius: 8 }}>
+        <div style={{ fontSize: 12, color: GOLD, fontWeight: 700 }}>鍛冶屋 Lv{claimedLv}（{QUALITY_JA[Q_ORDER[claimedLv - 1]]}まで解放）</div>
+        <div style={{ fontSize: 10, color: '#a98f66', marginTop: 2 }}>所持メダル {medal.toLocaleString()}</div>
+        <div style={{ marginTop: 8, display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 6 }}>
+          {Q_ORDER.map(q => {
+            const unlocked = Q_LV[q] <= claimedLv;
+            return (
+              <div key={q} style={{ padding: '6px 4px', borderRadius: 8, border: BORDER, textAlign: 'center', opacity: unlocked ? 1 : .4, background: 'rgba(0,0,0,.25)' }}>
+                <div style={{ fontSize: 12, color: GOLD_HI, fontWeight: 700 }}>{QUALITY_JA[q]}</div>
+                <div style={{ fontSize: 9, color: '#cdb488' }}>コスト{Q_COST[q]}/攻{QATK[q]}</div>
+                <div style={{ fontSize: 9, color: unlocked ? '#7fd39a' : '#a98f66' }}>{unlocked ? '解放済' : '未解放'}</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 進行中 or 次の依頼 */}
+      <div style={{ marginTop: 12, padding: '10px 12px', background: PANEL, border: BORDER, borderRadius: 8 }}>
+        {inProgress
+          ? (() => {
+              const ms = new Date(inProgress.done_at).getTime() - now;
+              const ready = ms <= 0;
+              return (
+                <div>
+                  <div style={{ fontSize: 12, color: GOLD_HI, fontWeight: 700 }}>依頼中：{QUALITY_JA[inProgress.quality]}</div>
+                  <div style={{ fontSize: 11, color: '#cdb488', marginTop: 3 }}>{ready ? '完成しました' : `完成まで 約${fmtRemain(ms)}（${new Date(inProgress.done_at).toLocaleString('ja-JP')}）`}</div>
+                  <button onClick={() => run(() => ChikarianAPI.claimKajiya(inProgress.id), '解放しました')} disabled={busy || !ready} style={{ ...S.bigBtn, marginTop: 10, width: '100%', ...((busy || !ready) ? { opacity: .45, cursor: 'not-allowed' } : {}) }}>受け取る（解放）</button>
+                </div>
+              );
+            })()
+          : nextQ
+            ? <div>
+                <div style={{ fontSize: 12, color: GOLD_HI, fontWeight: 700 }}>次の解放：{QUALITY_JA[nextQ]}</div>
+                <div style={{ fontSize: 11, color: '#cdb488', marginTop: 3 }}>費用 {fee.toLocaleString()} メダル／作業 {KAJIYA_HOURS[nextQ]}時間（1件ずつ）</div>
+                <button onClick={() => run(() => ChikarianAPI.placeKajiyaOrder(nextQ), '依頼しました')} disabled={busy} style={{ ...S.bigBtn, marginTop: 10, width: '100%', ...(busy ? { opacity: .45 } : {}) }}>依頼する</button>
+              </div>
+            : <div style={{ fontSize: 12, color: '#7fd39a', textAlign: 'center' }}>全ての質を解放済みです</div>}
+      </div>
+      <div style={{ fontSize: 10, color: '#a98f66', marginTop: 8 }}>解放・時刻判定はサーバ確定（残り時間は表示の目安）。</div>
+    </div>
+  );
+}
+const tIn = { width: 130, fontSize: 14, background: '#0a0509', color: GOLD_HI, border: BORDER, borderRadius: 8, padding: '8px 10px', textAlign: 'right' };
 
 /* =================================================================== styles */
 const S = {
