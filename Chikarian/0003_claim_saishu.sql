@@ -61,6 +61,11 @@ begin
          saishu_date  = today
    where id = uid;
 
+  -- ミッション配線: 週ミッション「採取累計5000」等のカウンタへ実増分を加算（migration 0020）。
+  -- granted は日次1000上限でクランプ後の実増分（要求値 n ではない）。0なら0加算で実害なし。
+  -- _chikarian_mission_bump は security definer 専用＝本RPCが security definer のため呼べる。
+  perform public._chikarian_mission_bump(uid, 'saishu', granted);
+
   return jsonb_build_object(
     'granted',         granted,            -- 今回付与（上限到達時は0）
     'chikarium',       new_chikarium,      -- 付与後の総チカリウム
