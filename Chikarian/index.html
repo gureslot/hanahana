@@ -882,7 +882,7 @@ const dS = {
 
 /* =================================================================== 編成 */
 // 可否(コスト上限11・本数・SP離脱・重複)の最終判定はサーバ(update_deck)。ここは目安表示のみ。
-const COST_BY_RAR = { n: 1, r: 2, sr: 3, ssr: 5 };   // design-updates 2026-06-13（確定）。SPは未確定。
+const COST_BY_RAR = { n: 1, r: 2, sr: 3, ssr: 5, sp: 4 };   // N1/R2/SR3/SSR5/SP4（サーバ0005と一致・確定）。レア判定は card_key 末尾。
 
 function DeckScreen({ profile, cards, back, flash }) {
   const maxDecks = Math.min(2 + Math.floor(((profile && profile.cleared_stage) || 0) / 2), 6); // balance §10
@@ -911,9 +911,9 @@ function DeckScreen({ profile, cards, back, flash }) {
   }, [deckNo, decks]);
 
   function costInfo() {
-    let known = 0, hasSP = false;
-    draft.forEach(id => { const c = cardById[id]; if (!c) return; if (c.card_key.endsWith('_sp')) hasSP = true; else known += COST_BY_RAR[parseCardKey(c.card_key).rarity] || 0; });
-    return { known, hasSP };
+    let total = 0;
+    draft.forEach(id => { const c = cardById[id]; if (!c) return; total += COST_BY_RAR[parseCardKey(c.card_key).rarity] || 0; });  // SP=4 を算入
+    return { total };
   }
   const curSlots = (() => { if (!decks) return [null, null, null]; const row = decks.find(x => x.deck_no === deckNo); return row ? [row.slot1_card_id || null, row.slot2_card_id || null, row.slot3_card_id || null] : [null, null, null]; })();
   const isDirty = JSON.stringify(curSlots) !== JSON.stringify(draft);
@@ -1007,11 +1007,10 @@ function DeckScreen({ profile, cards, back, flash }) {
 
         {/* コスト目安 */}
         <div style={{ marginTop: 14, padding: '8px 12px', background: PANEL, border: BORDER, borderRadius: 8 }}>
-          <div style={{ fontSize: 12, color: GOLD_HI, fontWeight: 700 }}>
-            合計コスト目安 {ci.known}{ci.hasSP ? ' ＋ SP（未確定）' : ''} / 11
+          <div style={{ fontSize: 12, fontWeight: 700, color: ci.total > 11 ? '#ff6a7a' : GOLD_HI }}>
+            合計コスト目安 {ci.total} / 11{ci.total > 11 ? '（上限超過）' : ''}
           </div>
-          {ci.hasSP && <div style={{ fontSize: 10, color: '#a98f66', marginTop: 3 }}>※ SP のコストは未確定。SP を含む合計の可否は最終的にサーバが判定します。</div>}
-          <div style={{ fontSize: 10, color: '#a98f66', marginTop: 3 }}>コスト N1 / R2 / SR3 / SSR5（確定）。三すくみ 有利×1.2・不利×0.8（balance 2026-06-14）。</div>
+          <div style={{ fontSize: 10, color: '#a98f66', marginTop: 3 }}>コスト N1 / R2 / SR3 / SSR5 / SP4（確定）。三すくみ 有利×1.2・不利×0.8（balance 2026-06-14）。</div>
           <div style={{ fontSize: 10, color: '#a98f66', marginTop: 1 }}>可否（コスト上限11・本数・SP離脱・重複）はサーバ判定です。</div>
         </div>
 
