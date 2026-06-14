@@ -121,6 +121,9 @@ const ERR_JA = {
   'SRC_LOCKED': '素材カードがロック中です',
   'SRC_SKILL_NOT_FOUND': '素材のスキルが見つかりません',
   'DST_SLOT_OCCUPIED': '指定した空き枠は埋まっています',
+  // 交換所（do_card_exchange）※RPCはrepo外＝タスク記載のコードに対応
+  'CARD_LOCKED': 'ロック中は交換できません',
+  'RARITY_NOT_EXCHANGEABLE': 'このカードは交換の対象外です',
 };
 function errMsg(e) {
   const m = (e && e.message) ? e.message : String(e);
@@ -838,6 +841,7 @@ function CardDetail({ card, cards, profile, skillMap, refreshAll, back, flash })
   if (mode === 'kyoka') return <KyokaView base={card} cards={cards} profile={profile} refreshAll={refreshAll} onBack={() => setMode(null)} flash={flash} />;
   if (mode === 'equip') return <EquipView base={card} refreshAll={refreshAll} onBack={() => setMode(null)} flash={flash} />;
   if (mode === 'skill') return <SkillView base={card} cards={cards} profile={profile} skillMap={skillMap} refreshAll={refreshAll} onBack={() => setMode(null)} flash={flash} />;
+  if (mode === 'exchange') return <ExchangeView base={card} refreshAll={refreshAll} onBack={() => setMode(null)} flash={flash} />;
 
   const st = computeStats(card);
   const info = st.info;
@@ -922,7 +926,7 @@ function CardDetail({ card, cards, profile, skillMap, refreshAll, back, flash })
             <button style={{ ...dS.op, ...(card.locked ? dS.opOff : {}) }} disabled={!!card.locked} onClick={() => setMode('kyoka')}>★強化</button>
             <button style={{ ...dS.op, ...(st.isSp ? dS.opOff : {}) }} disabled={st.isSp} onClick={() => setMode('skill')}>スキル強化/転移{st.isSp ? '（SP不可）' : ''}</button>
             <button style={{ ...dS.op, ...(st.isSp ? dS.opOff : {}) }} disabled={st.isSp} onClick={() => setMode('equip')}>装備（充填）{st.isSp ? '（SP不可）' : ''}</button>
-            <button style={{ ...dS.op, ...(card.locked ? dS.opOff : {}) }} disabled={!!card.locked} onClick={op('交換所')}>交換所</button>
+            <button style={{ ...dS.op, ...(card.locked ? dS.opOff : {}) }} disabled={!!card.locked} onClick={() => setMode('exchange')}>交換所</button>
             <button style={{ ...dS.op, ...(LOCK_RPC_AVAILABLE ? {} : dS.opOff), gridColumn: '1 / -1' }} disabled={!LOCK_RPC_AVAILABLE}
               onClick={() => flash('ロック切替には専用RPCが必要です（cardsの直接更新はRLS/不正対策Cで不可）')}>
               {card.locked ? 'ロック解除' : 'ロックする'}（専用RPC待ち）
@@ -1943,6 +1947,74 @@ function SkillView({ base, cards, profile, skillMap, refreshAll, onBack, flash }
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/* =================================================================== 交換所 */
+// 交換個数・種類・カード消滅・クリスタル付与は全てサーバ(do_card_exchange)。クライアントは見込みと結果表示のみ。
+// 見込み = round(base_value_blue × (1 + star_coeff×★) ÷ divisor)（crystal_exchange_master・確定はサーバ）。
+function ExchangeView({ base, refreshAll, onBack, flash }) {
+  const info = parseCardKey(base.card_key);
+  const [rates, setRates] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState(null);
+
+  useEffect(() => { (async () => { try { setRates(await ChikarianAPI.getExchangeRates() || []); } catch (e) { setRates([]); } })(); }, []);
+
+  const rate = (rates || []).find(r => r.rarity === info.rarity) || null;
+  const est = rate ? { color: rate.crystal_color, count: Math.round(rate.base_value_blue * (1 + (rate.star_coeff || 0) * (base.star || 0)) / (rate.divisor || 1)) } : null;
+
+  async function exchange() {
+    if (busy) return; setBusy(true);
+    try { const res = await ChikarianAPI.doCardExchange(base.id); setResult(res); }  // 成功時はここでは再取得しない（結果表示を残す）
+    catch (e) { flash(errMsg(e)); }
+    finally { setBusy(false); }
+  }
+  async function done() { await refreshAll(); }  // カード消滅を親が検知→詳細を閉じて一覧へ（sel同期）
+
+  if (rates === null) return <Booting />;
+
+  if (result) {
+    return (
+      <div style={S.root}><div style={S.bg} /><div style={S.vignette} />
+        <div style={{ position: 'relative', zIndex: 2, minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ fontSize: 22, fontWeight: 800, color: GOLD_HI }}>交換しました</div>
+          <div style={{ fontSize: 14, color: '#e7d3a6', marginTop: 14, lineHeight: 2, textAlign: 'center' }}>
+            {COLOR_JA[result.crystal_color] || result.crystal_color}クリスタル ×{Number(result.crystal_count || 0).toLocaleString()} 獲得<br />
+            <span style={{ fontSize: 12, color: '#cdb488' }}>
+              所持 青{Number(result.crystal_blue || 0).toLocaleString()}／赤{Number(result.crystal_red || 0).toLocaleString()}／虹{Number(result.crystal_rainbow || 0).toLocaleString()}
+            </span>
+          </div>
+          <button onClick={done} style={{ ...S.bigBtn, marginTop: 22 }}>完了</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={S.root}><div style={S.bg} /><div style={S.vignette} />
+      <div style={{ position: 'relative', zIndex: 2, minHeight: '100dvh', display: 'flex', flexDirection: 'column', padding: '14px 14px 18px' }}>
+        <button onClick={onBack} style={{ ...S.lineBtn, alignSelf: 'flex-start', padding: '6px 16px' }}>‹ 戻る</button>
+        <div style={{ textAlign: 'center', fontSize: 18, fontWeight: 800, letterSpacing: 2, color: GOLD_HI, marginTop: 6 }}>交換所</div>
+
+        <div style={{ display: 'flex', gap: 12, marginTop: 14, alignItems: 'center' }}>
+          <div style={{ width: 80 }}><CardThumb card={base} small /></div>
+          <div style={{ fontSize: 13, color: '#e7d3a6', lineHeight: 1.8 }}>
+            {info.name}<br />レア {RAR_LABEL[info.rarity]}　★{base.star || 0}
+          </div>
+        </div>
+
+        <div style={{ marginTop: 16, padding: '12px 14px', background: PANEL, border: BORDER, borderRadius: 8, textAlign: 'center' }}>
+          {est
+            ? <div style={{ fontSize: 14, color: GOLD_HI }}>見込み：{COLOR_JA[est.color] || est.color}クリスタル ×{est.count}</div>
+            : <div style={{ fontSize: 12, color: '#ff9aa8' }}>このレアの交換レートが見つかりません（最終判定はサーバ）</div>}
+          <div style={{ fontSize: 11, color: '#ff9aa8', marginTop: 8, fontWeight: 700 }}>このカードは消滅します。元に戻せません。</div>
+          <div style={{ fontSize: 10, color: '#a98f66', marginTop: 4 }}>個数・種類はサーバ確定（マスタ計算）。手計算との丸め差±1は仕様内。図鑑の収集記録は消えません。</div>
+        </div>
+
+        <button onClick={exchange} disabled={busy} style={{ ...S.bigBtn, marginTop: 18, ...(busy ? { opacity: .45 } : {}) }}>{busy ? '交換中…' : '交換する（不可逆）'}</button>
+      </div>
     </div>
   );
 }
