@@ -76,9 +76,13 @@ const ERR_JA = {
   'boss daily limit reached (3/day)': '本日のボス挑戦は上限（3回）です',
   'INSUFFICIENT_MEDAL': 'メダルが足りません',
   'EXCEEDS_CAP': '上限を超えています',
-  'DECK_LOCKED': 'このデッキは出撃中です',
+  'DECK_LOCKED': 'このデッキは使用できません（未解放/出撃中）',
   'ALREADY_CLAIMED': 'すでに受け取り済みです',
   'NOT_READY': 'まだ完了していません',
+  // 探索（start_tansaku / collect_tansaku）※RPCはrepo外＝タスク記載のコードに対応
+  'NOT_EXPLORING': 'このデッキは探索していません',
+  'INVALID_DEPTH': '探索の深さが不正です',
+  'INVALID_AREA': 'エリア指定が不正です',
   // do_kyoka（★強化・0021）
   'NOT_AUTHENTICATED': 'ログインが必要です',
   'SAME_CARD': '本体と素材が同じカードです',
@@ -224,6 +228,8 @@ function App() {
     else if (screen === 'boss') body = <BossScreen profile={profile} onRefresh={refreshAll} back={() => setScreen('home')} flash={flash} />;
     else if (screen === 'kyoka') body = <ZukanScreen cards={cards} profile={profile} refreshAll={refreshAll} initialTab="owned" back={() => setScreen('home')} flash={flash} />;
     else if (screen === 'tatemono') body = <TatemonoScreen profile={profile} refreshAll={refreshAll} back={() => setScreen('home')} flash={flash} />;
+    else if (screen === 'tansaku') body = <TansakuScreen profile={profile} refreshAll={refreshAll} back={() => setScreen('home')} flash={flash} />;
+    else if (screen === 'houchi') body = <HouchiScreen profile={profile} refreshAll={refreshAll} back={() => setScreen('home')} flash={flash} />;
     else body = <Placeholder name={screen} back={() => setScreen('home')} logout={logout} />;
   }
 
@@ -1512,6 +1518,144 @@ function KajiyaTab({ profile, refreshAll, flash }) {
   );
 }
 const tIn = { width: 130, fontSize: 14, background: '#0a0509', color: GOLD_HI, border: BORDER, borderRadius: 8, padding: '8px 10px', textAlign: 'right' };
+
+/* =================================================================== 探索/放置 */
+// メダル/EXP増・時刻計算・Lv反映は全てサーバ(start/collect_tansaku)。クライアントは目安表示と入力のみ。
+// ※ tansaku系RPCは repo 未配置（0012-0019外）。返り値/コードはタスク記載に従い防御的に扱う。
+const DEPTHS = [   // balance §7（確定・毎分）
+  { key: 'shallow', n: 1, label: '浅域', medal: 2, exp: 0.5 },
+  { key: 'mid', n: 2, label: '中域', medal: 5, exp: 1.2 },
+  { key: 'deep', n: 3, label: '深域', medal: 10, exp: 2.5 },
+];
+function depthInfo(d) { return DEPTHS.find(x => x.key === d || x.n === d) || null; }   // 文字列/整数どちらでも解決
+function tansakuEstimate(row, now) {
+  if (!row) return null;
+  const di = depthInfo(row.depth); if (!di || !row.last_collect_at) return null;
+  const min = Math.max(0, (now - new Date(row.last_collect_at).getTime()) / 60000);
+  return { di, min, medal: Math.floor(min * di.medal), exp: +(min * di.exp).toFixed(1) };
+}
+
+function TansakuScreen({ profile, refreshAll, back, flash }) {
+  const maxDecks = Math.min(2 + Math.floor(((profile && profile.cleared_stage) || 0) / 2), 6);
+  const [states, setStates] = useState(null);
+  const [deckNo, setDeckNo] = useState(1);
+  const [depth, setDepth] = useState('shallow');
+  const [busy, setBusy] = useState(false);
+  const [now, setNow] = useState(Date.now());
+  const [result, setResult] = useState(null);
+
+  async function load() { try { setStates(await ChikarianAPI.getTansaku() || []); } catch (e) { flash(errMsg(e)); setStates([]); } }
+  useEffect(() => { load(); const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
+
+  async function run(fn, okMsg, keepResult) {
+    if (busy) return; setBusy(true);
+    try { const r = await fn(); if (okMsg) flash(okMsg); if (!keepResult) setResult(null); await load(); await refreshAll(); return r; }
+    catch (e) { flash(errMsg(e)); }
+    finally { setBusy(false); }
+  }
+  const start = () => run(() => ChikarianAPI.startTansaku(deckNo, 1, depth), '探索を開始しました');  // area=1固定（面別解放は未確定）
+  const collect = async () => { const r = await run(() => ChikarianAPI.collectTansaku(deckNo), null, true); if (r) setResult(r); };
+
+  if (!states) return <Booting />;
+  const cur = states.find(s => s.deck_no === deckNo) || null;
+  const est = tansakuEstimate(cur, now);
+
+  return (
+    <div style={S.root}>
+      <div style={S.bg} /><div style={S.vignette} />
+      <div style={{ position: 'relative', zIndex: 2, minHeight: '100dvh', display: 'flex', flexDirection: 'column', padding: '14px 12px 18px', overflowY: 'auto' }}>
+        <div style={{ textAlign: 'center', fontSize: 20, fontWeight: 800, letterSpacing: 3, color: GOLD_HI }}>探索</div>
+
+        {/* デッキ */}
+        <div style={{ fontSize: 12, color: GOLD, fontWeight: 700, marginTop: 14, marginBottom: 6 }}>出撃デッキ</div>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {Array.from({ length: maxDecks }, (_, i) => i + 1).map(n => (
+            <button key={n} onClick={() => { setDeckNo(n); setResult(null); }} style={{ ...S.sideSwitch, padding: '6px 14px', ...(n === deckNo ? S.sideSwitchOn : {}) }}>デッキ{n}</button>
+          ))}
+        </div>
+
+        {/* 現在の探索状態 */}
+        <div style={{ marginTop: 12, padding: '10px 12px', background: PANEL, border: BORDER, borderRadius: 8 }}>
+          {cur && depthInfo(cur.depth)
+            ? <div>
+                <div style={{ fontSize: 12, color: GOLD_HI, fontWeight: 700 }}>探索中：{depthInfo(cur.depth).label}（area {cur.area}）</div>
+                {est && <div style={{ fontSize: 12, color: '#e7d3a6', marginTop: 4 }}>経過 約{Math.floor(est.min)}分 ／ 見込み メダル+{est.medal.toLocaleString()}・各カードEXP+{est.exp}<span style={{ color: '#a98f66' }}>（目安）</span></div>}
+                <button onClick={collect} disabled={busy} style={{ ...S.bigBtn, marginTop: 10, width: '100%' }}>回収する</button>
+              </div>
+            : <div style={{ fontSize: 12, color: '#cdb488' }}>このデッキは探索していません。下で深さを選んで開始してください。</div>}
+        </div>
+
+        {/* 回収結果 */}
+        {result && <div style={{ marginTop: 10, padding: '8px 12px', background: 'rgba(30,60,40,.3)', border: '1px solid rgba(120,220,140,.4)', borderRadius: 8, fontSize: 12, color: '#bff0cf' }}>
+          回収：メダル +{Number(result.medal_gain || 0).toLocaleString()}{result.exp_gain_per_card != null ? `／各カードEXP +${result.exp_gain_per_card}` : ''}{result.elapsed_min != null ? `（${Math.floor(result.elapsed_min)}分ぶん）` : ''}
+        </div>}
+
+        {/* 深さ選択→開始 */}
+        <div style={{ fontSize: 12, color: GOLD, fontWeight: 700, marginTop: 14, marginBottom: 6 }}>ノードの深さ</div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {DEPTHS.map(d => (
+            <button key={d.key} onClick={() => setDepth(d.key)} style={{ ...S.sideSwitch, flex: 1, padding: '8px 4px', flexDirection: 'column', display: 'flex', ...(d.key === depth ? S.sideSwitchOn : {}) }}>
+              <span style={{ fontSize: 13, fontWeight: 700 }}>{d.label}</span>
+              <span style={{ fontSize: 9, color: '#cdb488' }}>{d.medal}メダル/{d.exp}EXP・分</span>
+            </button>
+          ))}
+        </div>
+        <button onClick={start} disabled={busy} style={{ ...S.bigBtn, marginTop: 14 }}>{cur ? '深さを変えて開始（既存分は自動回収）' : '探索を開始'}</button>
+        <div style={{ fontSize: 10, color: '#a98f66', marginTop: 8 }}>レートは balance §7 の確定値。増減・時刻計算・Lv反映はサーバ。area は当面1固定（面別解放は未確定）。</div>
+        <button onClick={back} style={{ ...S.lineBtn, marginTop: 14, alignSelf: 'center' }}>ホームに戻る</button>
+      </div>
+    </div>
+  );
+}
+
+function HouchiScreen({ profile, refreshAll, back, flash }) {
+  const maxDecks = Math.min(2 + Math.floor(((profile && profile.cleared_stage) || 0) / 2), 6);
+  const [states, setStates] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [now, setNow] = useState(Date.now());
+
+  async function load() { try { setStates(await ChikarianAPI.getTansaku() || []); } catch (e) { flash(errMsg(e)); setStates([]); } }
+  useEffect(() => { load(); const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
+  async function run(fn, okMsg) {
+    if (busy) return; setBusy(true);
+    try { await fn(); if (okMsg) flash(okMsg); await load(); await refreshAll(); }
+    catch (e) { flash(errMsg(e)); }
+    finally { setBusy(false); }
+  }
+
+  if (!states) return <Booting />;
+  const byDeck = {}; states.forEach(s => { byDeck[s.deck_no] = s; });
+
+  return (
+    <div style={S.root}>
+      <div style={S.bg} /><div style={S.vignette} />
+      <div style={{ position: 'relative', zIndex: 2, minHeight: '100dvh', display: 'flex', flexDirection: 'column', padding: '14px 12px 18px', overflowY: 'auto' }}>
+        <div style={{ textAlign: 'center', fontSize: 20, fontWeight: 800, letterSpacing: 3, color: GOLD_HI }}>放置報酬</div>
+        <div style={{ textAlign: 'center', fontSize: 11, color: '#cdb488', marginTop: 2 }}>放置＝浅域での探索（貯まった分を回収）</div>
+
+        <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {Array.from({ length: maxDecks }, (_, i) => i + 1).map(n => {
+            const row = byDeck[n]; const est = tansakuEstimate(row, now); const di = row && depthInfo(row.depth);
+            return (
+              <div key={n} style={{ padding: '10px 12px', background: PANEL, border: BORDER, borderRadius: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                  <span style={{ fontSize: 13, color: GOLD_HI, fontWeight: 700 }}>デッキ{n}</span>
+                  <span style={{ fontSize: 11, color: '#cdb488' }}>{di ? di.label + '探索中' : '未探索'}</span>
+                </div>
+                {est && <div style={{ fontSize: 11, color: '#e7d3a6', marginTop: 3 }}>見込み メダル+{est.medal.toLocaleString()}・各カードEXP+{est.exp}（{Math.floor(est.min)}分・目安）</div>}
+                <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                  <button onClick={() => run(() => ChikarianAPI.collectTansaku(n), '回収しました')} disabled={busy || !row} style={{ ...S.lineBtn, flex: 1, ...((busy || !row) ? { opacity: .45 } : {}) }}>回収</button>
+                  <button onClick={() => run(() => ChikarianAPI.startTansaku(n, 1, 'shallow'), '浅域で放置開始')} disabled={busy} style={{ ...S.lineBtn, flex: 1 }}>浅域で放置開始</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <button onClick={back} style={{ ...S.lineBtn, marginTop: 16, alignSelf: 'center' }}>ホームに戻る</button>
+      </div>
+    </div>
+  );
+}
 
 /* =================================================================== styles */
 const S = {
