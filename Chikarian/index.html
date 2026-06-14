@@ -124,6 +124,10 @@ const ERR_JA = {
   // 交換所（do_card_exchange）※RPCはrepo外＝タスク記載のコードに対応
   'CARD_LOCKED': 'ロック中は交換できません',
   'RARITY_NOT_EXCHANGEABLE': 'このカードは交換の対象外です',
+  // ミッション（claim_mission・0020）
+  'MISSION_NOT_FOUND': 'ミッションがありません',
+  'NOT_COMPLETE': '条件を満たしていません',
+  'UNKNOWN_CONDITION': '未知の条件です（要報告）',
 };
 function errMsg(e) {
   const m = (e && e.message) ? e.message : String(e);
@@ -252,6 +256,7 @@ function App() {
     else if (screen === 'tatemono') body = <TatemonoScreen profile={profile} refreshAll={refreshAll} back={() => setScreen('home')} flash={flash} />;
     else if (screen === 'tansaku') body = <TansakuScreen profile={profile} refreshAll={refreshAll} back={() => setScreen('home')} flash={flash} />;
     else if (screen === 'houchi') body = <HouchiScreen profile={profile} refreshAll={refreshAll} back={() => setScreen('home')} flash={flash} />;
+    else if (screen === 'mission') body = <MissionScreen profile={profile} cards={cards} refreshAll={refreshAll} back={() => setScreen('home')} flash={flash} />;
     else body = <Placeholder name={screen} back={() => setScreen('home')} logout={logout} />;
   }
 
@@ -2014,6 +2019,129 @@ function ExchangeView({ base, refreshAll, onBack, flash }) {
         </div>
 
         <button onClick={exchange} disabled={busy} style={{ ...S.bigBtn, marginTop: 18, ...(busy ? { opacity: .45 } : {}) }}>{busy ? '交換中…' : '交換する（不可逆）'}</button>
+      </div>
+    </div>
+  );
+}
+
+/* =================================================================== ミッション */
+// 達成判定・報酬付与は全てサーバ(claim_mission)。クライアントは表示と受取ボタンのみ。
+// 進捗はクライアント目安（導出可能なもののみ）。最終判定はサーバ。報酬は mission_master.reward / 返り値のみ。
+const REWARD_LABEL = { medal: 'メダル', chikarium: 'チカリウム', buki: '武気', c_blue: '青', c_red: '赤', c_rainbow: '虹', hoshou: '保証石' };
+const CAT_JA = { daily: 'デイリー', weekly: 'ウィークリー', achievement: '達成' };
+const CAT_RESET = { daily: '毎日0時(JST)にリセット', weekly: '毎週月曜0時(JST)にリセット', achievement: '恒常（1回限り）' };
+function jstWeekStart() {
+  const d = new Date(jstToday() + 'T00:00:00Z');
+  const wd = d.getUTCDay();            // 0=日..6=土
+  d.setUTCDate(d.getUTCDate() - (wd === 0 ? 6 : wd - 1));  // 月曜起点（PG date_trunc('week')と一致）
+  return d.toISOString().slice(0, 10);
+}
+function rewardChips(reward) {
+  if (!reward) return null;
+  return Object.keys(reward).map(k => REWARD_LABEL[k] ? <span key={k} style={{ fontSize: 11, color: '#fff3c8', background: 'rgba(232,194,90,.15)', border: '1px solid rgba(232,194,90,.4)', borderRadius: 10, padding: '2px 8px', marginRight: 4 }}>{REWARD_LABEL[k]}×{reward[k]}</span> : null);
+}
+
+function MissionScreen({ profile, cards, refreshAll, back, flash }) {
+  const [tab, setTab] = useState('daily');
+  const [master, setMaster] = useState(null);
+  const [missions, setMissions] = useState(null);
+  const [zukan, setZukan] = useState(null);
+  const [kajiyaLv, setKajiyaLv] = useState(1);
+  const [tansaku, setTansaku] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  async function loadMissions() { try { setMissions(await ChikarianAPI.getMissions() || []); } catch (e) { setMissions([]); } }
+  useEffect(() => {
+    (async () => {
+      try { setMaster(await ChikarianAPI.getMissionMaster() || []); } catch (e) { flash(errMsg(e)); setMaster([]); }
+      await loadMissions();
+      try { setZukan(await ChikarianAPI.getZukan() || []); } catch (e) {}
+      try { setTansaku(await ChikarianAPI.getTansaku() || []); } catch (e) {}
+      try { const os = await ChikarianAPI.getKajiyaOrders() || []; setKajiyaLv(os.filter(o => o.claimed).reduce((mx, o) => Math.max(mx, Q_LV[o.quality] || 0), 1)); } catch (e) {}
+    })();
+  }, []);
+
+  if (!master || !missions) return <Booting />;
+
+  const periodOf = cat => cat === 'daily' ? jstToday() : (cat === 'weekly' ? jstWeekStart() : '1970-01-01');
+  const masterByKey = {}; master.forEach(m => { masterByKey[m.mission_key] = m; });
+  const rowOf = mm => missions.find(r => r.mission_key === mm.mission_key && r.period_start === periodOf(mm.category)) || null;
+  const dayStartMs = new Date(jstToday() + 'T00:00:00+09:00').getTime();
+
+  function claimedCount(cat) {
+    const p = periodOf(cat);
+    return missions.filter(r => r.period_start === p && r.claimed && masterByKey[r.mission_key] && masterByKey[r.mission_key].category === cat && masterByKey[r.mission_key].condition_type !== ('all_' + cat)).length;
+  }
+
+  function estProgress(mm, row) {
+    switch (mm.condition_type) {
+      case 'saishu_today': return (profile && profile.saishu_date === jstToday()) ? (profile.saishu_today || 0) : 0;
+      case 'boss_attempt_today': return (profile && profile.boss_date === jstToday()) ? (profile.boss_count_today || 0) : 0;
+      case 'gacha_today': return (cards || []).filter(c => c.obtained_at && new Date(c.obtained_at).getTime() >= dayStartMs).length;
+      case 'tansaku_collect_today': return tansaku ? tansaku.filter(t => t.last_collect_at && new Date(t.last_collect_at).getTime() >= dayStartMs).length : null;
+      case 'cleared_stage': return profile ? (profile.cleared_stage || 0) : 0;
+      case 'zukan_count': return zukan ? zukan.length : null;
+      case 'kajiya_lv': return kajiyaLv;
+      case 'all_daily': return claimedCount('daily');
+      case 'all_weekly': return claimedCount('weekly');
+      case 'cnt_kyoka': case 'cnt_rensei': case 'cnt_saishu_week': return row ? (row.progress || 0) : 0;
+      default: return null;  // boss_win_week / max_skill_lv / deck_power はサーバ判定
+    }
+  }
+
+  async function claim(mm) {
+    if (busy) return; setBusy(true);
+    try {
+      const res = await ChikarianAPI.claimMission(mm.mission_key);
+      const r = res && res.reward ? res.reward : {};
+      const parts = Object.keys(r).map(k => (REWARD_LABEL[k] || k) + '×' + r[k]);
+      flash('受け取りました：' + (parts.join('・') || 'なし'));
+      await loadMissions(); await refreshAll();
+    } catch (e) { flash(errMsg(e)); }
+    finally { setBusy(false); }
+  }
+
+  const list = master.filter(m => m.category === tab).sort((a, b) => (a.tier - b.tier) || a.mission_key.localeCompare(b.mission_key));
+
+  return (
+    <div style={S.root}><div style={S.bg} /><div style={S.vignette} />
+      <div style={{ position: 'relative', zIndex: 2, minHeight: '100dvh', display: 'flex', flexDirection: 'column', padding: '14px 12px 18px', overflowY: 'auto' }}>
+        <div style={{ textAlign: 'center', fontSize: 20, fontWeight: 800, letterSpacing: 3, color: GOLD_HI }}>ミッション</div>
+        <div style={{ display: 'flex', gap: 6, justifyContent: 'center', margin: '12px 0' }}>
+          {['daily', 'weekly', 'achievement'].map(c => (
+            <button key={c} onClick={() => setTab(c)} style={{ ...S.sideSwitch, padding: '6px 14px', ...(c === tab ? S.sideSwitchOn : {}) }}>{CAT_JA[c]}</button>
+          ))}
+        </div>
+        <div style={{ textAlign: 'center', fontSize: 10, color: '#a98f66', marginBottom: 8 }}>{CAT_RESET[tab]}</div>
+
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {list.map(mm => {
+            const row = rowOf(mm);
+            const claimed = row ? row.claimed : false;
+            const est = estProgress(mm, row);
+            const isBonus = mm.condition_type === 'all_daily' || mm.condition_type === 'all_weekly';
+            const met = est == null ? null : est >= Number(mm.threshold);
+            const claimable = !claimed && (met === null || met === true);
+            return (
+              <div key={mm.mission_key} style={{ padding: '10px 12px', background: PANEL, border: BORDER, borderRadius: 8, opacity: claimed ? .6 : 1 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                  <span style={{ fontSize: 14, color: GOLD_HI, fontWeight: 700 }}>{mm.title}</span>
+                  <span style={{ fontSize: 11, color: met === false ? '#cdb488' : '#7fd39a' }}>{est == null ? '？' : Math.floor(est)} / {Number(mm.threshold).toLocaleString()}</span>
+                </div>
+                <div style={{ marginTop: 6 }}>{rewardChips(mm.reward)}</div>
+                <div style={{ marginTop: 8 }}>
+                  {claimed
+                    ? <button disabled style={{ ...S.lineBtn, opacity: .5, width: '100%' }}>受取済</button>
+                    : claimable
+                      ? <button onClick={() => claim(mm)} disabled={busy} style={{ ...S.bigBtn, width: '100%', padding: '9px' }}>受け取る</button>
+                      : <button disabled style={{ ...S.lineBtn, opacity: .5, width: '100%' }}>{isBonus ? '先に各ミッションを受け取る' : '条件未達'}</button>}
+                </div>
+                {est == null && !claimed && <div style={{ fontSize: 9, color: '#a98f66', marginTop: 4 }}>進捗はサーバ判定（押すと判定）</div>}
+              </div>
+            );
+          })}
+        </div>
+        <button onClick={back} style={{ ...S.lineBtn, marginTop: 12, alignSelf: 'center' }}>ホームに戻る</button>
       </div>
     </div>
   );
