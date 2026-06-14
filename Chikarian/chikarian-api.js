@@ -103,6 +103,9 @@
   const doCardExchange  = (cardId)                         => rpc('do_card_exchange',  { p_card_id: cardId });
   const claimMission    = (missionKey)                     => rpc('claim_mission',     { p_mission_key: missionKey });
 
+  // ---- 0023（カードのロック切替・資産は動かないがRPC経由）----
+  const setCardLock     = (cardId, locked)                 => rpc('set_card_lock',     { p_card_id: cardId, p_locked: locked });
+
   global.ChikarianAPI = {
     init, client, rpc, auth,
     // reads
@@ -114,6 +117,8 @@
     doKyoka, doSkillTeni, doSkillRensei,
     investRenkiden, collectRenkiden, instantRenkiden, upgradeRenkiden,
     placeKajiyaOrder, claimKajiya, equipBuki,
-    startTansaku, collectTansaku, useExpBook, doCardExchange, claimMission
+    startTansaku, collectTansaku, useExpBook, doCardExchange, claimMission,
+    // writes (0023)
+    setCardLock
   };
 })(window);
