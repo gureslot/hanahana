@@ -54,14 +54,15 @@ begin
 
     if rare = 'n' then
       -- 通常候補4種=各重み4、非戦闘2種=各重み1（§5）＝配列展開で重み表現（18要素）
+      -- array_fill(anyelement,int[]) は要素が裸リテラルだと型 unknown で多態解決に失敗するため ::text 明示
       pool := array[]::text[];
       pool := pool
-        || array_fill('n_sougou_' || attr, array[4])
-        || array_fill('n_sougou_' || weap, array[4])
-        || array_fill('n_hontai_' || attr, array[4])
-        || array_fill('n_hontai_' || weap, array[4])
-        || array_fill('n_util_houjou', array[1])
-        || array_fill('n_util_senri',  array[1]);
+        || array_fill(('n_sougou_' || attr)::text, array[4])
+        || array_fill(('n_sougou_' || weap)::text, array[4])
+        || array_fill(('n_hontai_' || attr)::text, array[4])
+        || array_fill(('n_hontai_' || weap)::text, array[4])
+        || array_fill('n_util_houjou'::text, array[1])
+        || array_fill('n_util_senri'::text,  array[1]);
 
     elsif rare = 'r' then
       pool := array['r_sougou_'||attr, 'r_sougou_'||weap, 'r_soubi_'||attr, 'r_soubi_'||weap];
