@@ -74,6 +74,7 @@
   const getMissionMaster = ()        => selectOwn('mission_master');           // 全員読取り可
   const getExchangeRates = ()        => selectOwn('crystal_exchange_master');  // 全員読取り可
   const getSkillMaster   = ()        => selectOwn('skill_master');             // 全員読取り可
+  const getBossMaster    = ()        => selectOwn('boss_master');              // 全員読取り可（boss_key/stage/role/base_power/attrs/weapons）
 
   // ============================================================
   // 書き込み（資産が動く＝全てRPC）
@@ -111,7 +112,7 @@
     init, client, rpc, auth,
     // reads
     getProfile, getCards, getCardSkills, getDecks, getRenkiden, getKajiyaOrders,
-    getTansaku, getZukan, getSpStates, getMissions, getMissionMaster, getExchangeRates, getSkillMaster,
+    getTansaku, getZukan, getSpStates, getMissions, getMissionMaster, getExchangeRates, getSkillMaster, getBossMaster,
     // writes (existing)
     claimSaishu, doGacha, updateDeck, doBossBattle,
     // writes (0012-0021)

@@ -88,6 +88,10 @@ function errMsg(e) {
   if (m.includes('duplicate card')) return '同じカードを複数の枠に入れられません';
   if (m.includes('SP-unavailable')) return 'SPカードが本日離脱中のため編成できません';
   if (m.includes('exceeds limit')) return 'デッキの合計コストが上限（11）を超えています';
+  if (m.includes('daily limit')) return '本日のボス挑戦は上限（3回）です';
+  if (m.includes('is empty')) return 'デッキが空です（編成してください）';
+  if (m.includes('boss') && m.includes('not found')) return 'ボスが見つかりません';
+  if (m.includes('deck') && m.includes('not found')) return 'デッキが見つかりません（未編成）';
   if (m.includes('not owned') || m.includes('not found')) return '所持していないカードが含まれています';
   return 'エラー: ' + m;
 }
@@ -198,6 +202,7 @@ function App() {
     else if (screen === 'gacha') body = <Gacha profile={profile} onRefresh={refreshAll} back={() => setScreen('home')} flash={flash} />;
     else if (screen === 'zukan') body = <ZukanScreen cards={cards} back={() => setScreen('home')} flash={flash} />;
     else if (screen === 'deck') body = <DeckScreen profile={profile} cards={cards} back={() => setScreen('home')} flash={flash} />;
+    else if (screen === 'boss') body = <BossScreen profile={profile} onRefresh={refreshAll} back={() => setScreen('home')} flash={flash} />;
     else body = <Placeholder name={screen} back={() => setScreen('home')} logout={logout} />;
   }
 
@@ -1025,6 +1030,165 @@ function DeckScreen({ profile, cards, back, flash }) {
 }
 function badge(col) {
   return { position: 'absolute', top: 3, left: '50%', transform: 'translateX(-50%)', fontSize: 9, fontWeight: 700, color: '#1a0f06', background: col, borderRadius: 5, padding: '0 6px', whiteSpace: 'nowrap' };
+}
+
+/* =================================================================== ボス戦 */
+// 勝敗・三すくみ・スキル発動・損失・報酬は全てサーバ(do_boss_battle)。ここは選択と結果表示のみ。
+const WORLD_NAMES = { 1: '古代樹海界', 2: '黒曜山界', 3: '神域界', 4: '鋼殻要塞界', 5: '雷帝界', 6: '群体界', 7: '幻妖界', 8: '終幕界' }; // balance §6-1
+const ROLE_JA = { a: '中ボスA', b: '中ボスB', boss: '面ボス' };
+const EXPRANK_JA = { s: '小', m: '中', l: '大', xl: '特大' };
+const SP_DEP = { sp_ryuki: 'ゴールドドラゴン', sp_aitou: 'ゴーストガール', sp_fushichou: '鳳凰' };
+function arrJA(arr, map) { return (arr && arr.length) ? arr.map(x => map[x] || x).join('・') : 'なし'; }
+
+function BossScreen({ profile, onRefresh, back, flash }) {
+  const [bosses, setBosses] = useState(null);
+  const [decks, setDecks] = useState(null);
+  const [skillMap, setSkillMap] = useState({});
+  const [deckNo, setDeckNo] = useState(1);
+  const [stage, setStage] = useState(1);
+  const [role, setRole] = useState('a');
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState(null);
+
+  const maxDecks = Math.min(2 + Math.floor(((profile && profile.cleared_stage) || 0) / 2), 6);
+  const cleared = (profile && profile.cleared_stage) || 0;
+  const triesUsed = (profile && profile.boss_date === jstToday()) ? (profile.boss_count_today || 0) : 0;
+  const triesLeft = Math.max(0, 3 - triesUsed);
+
+  useEffect(() => {
+    (async () => {
+      try { setBosses(await ChikarianAPI.getBossMaster() || []); } catch (e) { flash(errMsg(e)); setBosses([]); }
+      try { setDecks(await ChikarianAPI.getDecks() || []); } catch (e) { setDecks([]); }
+      try { const sm = await ChikarianAPI.getSkillMaster(); const m = {}; (sm || []).forEach(s => { m[s.skill_key] = s; }); setSkillMap(m); } catch (e) {}
+    })();
+  }, []);
+
+  const bossKey = 'boss_' + stage + '_' + role;
+  const boss = (bosses || []).find(b => b.boss_key === bossKey);
+
+  async function sortie() {
+    if (busy) return; setBusy(true);
+    try {
+      const res = await ChikarianAPI.doBossBattle(deckNo, bossKey);   // ★戦闘計算はサーバ
+      setResult(res);
+      await onRefresh();   // profile（メダル/EXP/回数）＋ cards（武気損失/Lv）をサーバ再取得
+    } catch (e) { flash(errMsg(e)); }
+    finally { setBusy(false); }
+  }
+
+  if (bosses === null || decks === null) return <Booting />;
+
+  if (result) return <BossResult res={result} skillMap={skillMap} onAgain={() => setResult(null)} onHome={back} />;
+
+  return (
+    <div style={S.root}>
+      <div style={S.bg} /><div style={S.vignette} />
+      <div style={{ position: 'relative', zIndex: 2, minHeight: '100dvh', display: 'flex', flexDirection: 'column', padding: '14px 12px 18px', overflowY: 'auto' }}>
+        <div style={{ textAlign: 'center', fontSize: 20, fontWeight: 800, letterSpacing: 3, color: GOLD_HI }}>ボス戦</div>
+        <div style={{ textAlign: 'center', fontSize: 12, color: triesLeft > 0 ? '#cdb488' : '#ff6a7a', marginTop: 2 }}>本日の挑戦 残り {triesLeft} / 3 回（0時リセット）</div>
+
+        {/* 出撃デッキ */}
+        <div style={{ fontSize: 12, color: GOLD, fontWeight: 700, marginTop: 14, marginBottom: 6 }}>出撃デッキ</div>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {Array.from({ length: maxDecks }, (_, i) => i + 1).map(n => (
+            <button key={n} onClick={() => setDeckNo(n)} style={{ ...S.sideSwitch, padding: '6px 14px', ...(n === deckNo ? S.sideSwitchOn : {}) }}>デッキ{n}</button>
+          ))}
+        </div>
+
+        {/* 面（界）選択 */}
+        <div style={{ fontSize: 12, color: GOLD, fontWeight: 700, marginTop: 14, marginBottom: 6 }}>面・界</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 6 }}>
+          {Array.from({ length: 8 }, (_, i) => i + 1).map(s => {
+            const hint = s <= cleared ? '済' : (s === cleared + 1 ? '次' : '');
+            return (
+              <button key={s} onClick={() => setStage(s)} style={{ ...S.sideSwitch, padding: '8px 4px', flexDirection: 'column', display: 'flex', ...(s === stage ? S.sideSwitchOn : {}) }}>
+                <span style={{ fontSize: 13, fontWeight: 700 }}>{s}面{hint && <span style={{ fontSize: 9, color: hint === '済' ? '#7fd39a' : '#ffd24d' }}> {hint}</span>}</span>
+                <span style={{ fontSize: 9, color: '#cdb488' }}>{WORLD_NAMES[s]}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* 敵（中ボスA/B・面ボス） */}
+        <div style={{ fontSize: 12, color: GOLD, fontWeight: 700, marginTop: 14, marginBottom: 6 }}>敵</div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {['a', 'b', 'boss'].map(r => (
+            <button key={r} onClick={() => setRole(r)} style={{ ...S.sideSwitch, flex: 1, padding: '8px 4px', ...(r === role ? S.sideSwitchOn : {}) }}>{ROLE_JA[r]}</button>
+          ))}
+        </div>
+
+        {/* 敵情報（boss_master・サーバデータ） */}
+        <div style={{ marginTop: 12, padding: '10px 12px', background: PANEL, border: BORDER, borderRadius: 8 }}>
+          <div style={{ fontSize: 13, color: GOLD_HI, fontWeight: 700 }}>{WORLD_NAMES[stage]} ・ {ROLE_JA[role]}</div>
+          {boss
+            ? <div style={{ fontSize: 12, color: '#e7d3a6', marginTop: 4, lineHeight: 1.7 }}>
+                敵戦力 {Number(boss.base_power).toLocaleString()}（1周目・balance §6-1）<br />
+                属性 {arrJA(boss.attrs, ATTR_JA)}／武器 {arrJA(boss.weapons, WEAP_JA)}
+              </div>
+            : <div style={{ fontSize: 11, color: '#ff6a7a', marginTop: 4 }}>このボスのデータが boss_master にありません</div>}
+          <div style={{ fontSize: 10, color: '#a98f66', marginTop: 4 }}>三すくみ 有利×1.2／不利×0.8（balance 2026-06-14）。勝敗・損失・報酬はサーバ判定。</div>
+        </div>
+
+        <button onClick={sortie} disabled={busy || triesLeft <= 0} style={{ ...S.bigBtn, marginTop: 16, ...((busy || triesLeft <= 0) ? { opacity: .45, cursor: 'not-allowed' } : {}) }}>
+          {busy ? '出撃中…' : (triesLeft <= 0 ? '本日の挑戦は終了' : '出撃')}
+        </button>
+        <button onClick={back} style={{ ...S.lineBtn, marginTop: 14, alignSelf: 'center' }}>ホームに戻る</button>
+      </div>
+    </div>
+  );
+}
+
+function BossResult({ res, skillMap, onAgain, onHome }) {
+  const win = !!res.win;
+  const fired = res.fired_skills || [];
+  const rewards = res.rewards || {};
+  const lossPct = res.loss_rate != null ? Math.round(res.loss_rate * 100) : null;
+  // SP離脱: sp_ryuki/sp_aitou は発動で離脱、sp_fushichou は敗北時のみ
+  const departed = fired.filter(f => f.skill_key === 'sp_ryuki' || f.skill_key === 'sp_aitou' || (f.skill_key === 'sp_fushichou' && !win))
+    .map(f => SP_DEP[f.skill_key]);
+
+  return (
+    <div style={S.root}>
+      <div style={S.bg} /><div style={S.vignette} />
+      <div style={{ position: 'relative', zIndex: 2, minHeight: '100dvh', display: 'flex', flexDirection: 'column', padding: '16px 14px 18px', overflowY: 'auto' }}>
+        <div style={{ textAlign: 'center', fontSize: 12, color: '#cdb488' }}>{WORLD_NAMES[res.stage]} ・ {ROLE_JA[res.role]}{res.round > 1 ? `（${res.round}周目）` : ''}</div>
+        <div style={{ textAlign: 'center', fontSize: 34, fontWeight: 800, letterSpacing: 4, marginTop: 8, color: win ? '#ffe28a' : '#ff8aa0', textShadow: '0 0 18px rgba(255,200,90,.4)' }}>{win ? '勝　利' : '敗　北'}</div>
+
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginTop: 12 }}>
+          <div style={{ textAlign: 'center' }}><div style={{ fontSize: 10, color: '#cdb488' }}>実戦闘力</div><div style={{ fontSize: 20, fontWeight: 800, color: GOLD_HI }}>{Number(res.own_power || 0).toLocaleString()}</div></div>
+          <div style={{ alignSelf: 'center', color: '#cdb488' }}>vs</div>
+          <div style={{ textAlign: 'center' }}><div style={{ fontSize: 10, color: '#cdb488' }}>敵戦力</div><div style={{ fontSize: 20, fontWeight: 800, color: '#ff9aa8' }}>{Number(res.enemy_power || 0).toLocaleString()}</div></div>
+        </div>
+
+        {/* 発動スキル */}
+        <div style={{ marginTop: 14, padding: '8px 12px', background: PANEL, border: BORDER, borderRadius: 8 }}>
+          <div style={{ fontSize: 11, color: GOLD, fontWeight: 700, marginBottom: 4 }}>発動スキル</div>
+          {fired.length === 0
+            ? <div style={{ fontSize: 11, color: '#a98f66' }}>発動なし</div>
+            : <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {fired.map((f, i) => <span key={i} style={{ fontSize: 11, color: '#fff3c8', background: 'rgba(232,194,90,.15)', border: '1px solid rgba(232,194,90,.4)', borderRadius: 10, padding: '2px 8px' }}>{(skillMap[f.skill_key] && skillMap[f.skill_key].display_name) || f.skill_key}</span>)}
+              </div>}
+        </div>
+
+        {/* 損失・報酬 */}
+        <div style={{ marginTop: 12, padding: '8px 12px', background: PANEL, border: BORDER, borderRadius: 8, fontSize: 12, color: '#e7d3a6', lineHeight: 1.9 }}>
+          {lossPct != null && <div>武気損失率 {lossPct}%（本体は無傷）</div>}
+          {win
+            ? <div>報酬 メダル +{Number(rewards.medal || 0).toLocaleString()}{rewards.exp_count ? `／経験の書（${EXPRANK_JA[rewards.exp_rank] || rewards.exp_rank}）×${rewards.exp_count}` : ''}</div>
+            : <div style={{ color: '#cdb488' }}>敗北のため報酬なし</div>}
+          {win && res.cleared_stage != null && res.role === 'boss' && res.stage === res.cleared_stage && <div style={{ color: '#ffd24d' }}>{res.stage}面クリア！（解放が進みました）</div>}
+        </div>
+
+        {departed.length > 0 && <div style={{ marginTop: 10, fontSize: 11, color: '#ff9aa8', textAlign: 'center' }}>SP発動：{departed.join('・')} が本日離脱（0時に復帰）</div>}
+        <div style={{ marginTop: 6, fontSize: 10, color: '#a98f66', textAlign: 'center' }}>本日の挑戦 残り {Math.max(0, 3 - (res.boss_count_today || 0))} 回</div>
+
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 18 }}>
+          <button onClick={onAgain} style={S.bigBtn}>つづけて挑む</button>
+          <button onClick={onHome} style={S.lineBtn}>ホームに戻る</button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 /* =================================================================== styles */
