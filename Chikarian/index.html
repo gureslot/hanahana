@@ -189,6 +189,7 @@ function App() {
     if (screen === 'home') body = <Home profile={profile} go={setScreen} flash={flash} />;
     else if (screen === 'saishu') body = <Saishu profile={profile} onExit={async () => { await refreshProfile(); setScreen('home'); }} flash={flash} />;
     else if (screen === 'gacha') body = <Gacha profile={profile} onRefresh={refreshAll} back={() => setScreen('home')} flash={flash} />;
+    else if (screen === 'zukan') body = <ZukanScreen cards={cards} back={() => setScreen('home')} flash={flash} />;
     else body = <Placeholder name={screen} back={() => setScreen('home')} logout={logout} />;
   }
 
@@ -643,6 +644,233 @@ function Gacha({ profile, onRefresh, back, flash }) {
     </div>
   );
 }
+
+/* =================================================================== 図鑑/一覧/詳細 */
+// 戦力の数値は balance の確定値（§2-2 本体基礎/Lv上限・§2-1 枠攻撃力）。勝手な値は作らない。
+const CARD_BASE = { n: { base: 80, cap: 30 }, r: { base: 200, cap: 40 }, sr: { base: 360, cap: 50 }, ssr: { base: 560, cap: 60 } }; // balance §2-2
+const SP_BASE = { chara_dragon_sp: 2260, chara_girl_sp: 2160, chara_houou_sp: 2060 };  // balance §2-2 / cards §3
+const QATK = { crude: 7, refined: 15, enchanted: 33, holy: 73 };                       // balance §2-1 枠攻撃力
+const QUALITY_JA = { crude: '粗製', refined: '精製', enchanted: '魔装', holy: '聖装' };
+
+// 図鑑母数＝cards §4（ハイビスカス36＋めしべ2＋SP3＝41種）
+const CATALOG = (() => {
+  const arr = [];
+  for (const rare of ['n', 'r', 'sr', 'ssr']) for (const attr of ['hana', 'ha', 'shin']) for (const weap of ['ken', 'tate', 'tsue']) arr.push('chara_hibiscus_' + attr + '_' + weap + '_' + rare);
+  arr.push('chara_meshibe_shin_tsue_sr', 'chara_meshibe_shin_tsue_ssr', 'chara_dragon_sp', 'chara_girl_sp', 'chara_houou_sp');
+  return arr;
+})();
+
+function computeStats(card) {
+  const key = card.card_key, isSp = key.endsWith('_sp');
+  const info = parseCardKey(key);
+  let base, cap;
+  if (isSp) { base = SP_BASE[key] || 0; cap = 50; }
+  else { const b = CARD_BASE[info.rarity] || CARD_BASE.n; base = b.base; cap = b.cap; }
+  const rL = 2.0 / (cap - 1);                                            // balance §2-2
+  const body = base * (1 + ((card.lv || 1) - 1) * rL) * (1 + 0.15 * (card.star || 0));
+  const qatk = isSp ? 0 : (QATK[card.quality] || 0);
+  const equip = isSp ? 0 : ((card.loaded_buki || 0) * qatk);            // 装備項＝込めた武気×枠攻撃力
+  return { isSp, info, base, cap, body: Math.round(body), equip: Math.round(equip), sougou: Math.round(body + equip) };
+}
+
+function CardThumb({ card, onClick, small }) {
+  const info = parseCardKey(card.card_key);
+  const col = RAR_COL[info.rarity] || '#b9b2a6';
+  return (
+    <button onClick={onClick} style={{ background: 'none', border: 'none', padding: 0, cursor: onClick ? 'pointer' : 'default', width: '100%' }}>
+      <div style={{ width: '100%', aspectRatio: '5/7', borderRadius: 10, border: `1.5px solid ${col}`, background: 'linear-gradient(165deg,#2a1430,#140913)', position: 'relative', overflow: 'hidden', display: 'grid', placeItems: 'center', boxShadow: `0 0 8px ${col}33` }}>
+        <span style={{ fontSize: small ? 22 : 28 }}>❖</span>
+        <div style={{ position: 'absolute', top: 3, left: 3, fontSize: 9, fontWeight: 800, color: '#1a0f06', background: col, borderRadius: 4, padding: '0 5px' }}>{RAR_LABEL[info.rarity]}</div>
+        {card.locked && <div style={{ position: 'absolute', top: 3, right: 3, fontSize: 11 }}>🔒</div>}
+        <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '6px 2px 3px', fontSize: 9, textAlign: 'center', color: '#fff3c8', background: 'linear-gradient(0deg,rgba(0,0,0,.82),transparent)' }}>
+          {info.attr}{info.weap}{info.isSp}{' '}{card.lv ? ('Lv' + card.lv) : ''}{card.star ? ' ★' + card.star : ''}
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function ZukanScreen({ cards, back, flash }) {
+  const [tab, setTab] = useState('catalog');   // catalog | owned
+  const [zukan, setZukan] = useState(null);
+  const [skillMap, setSkillMap] = useState({});
+  const [sel, setSel] = useState(null);
+  useEffect(() => {
+    (async () => {
+      try { setZukan(await ChikarianAPI.getZukan() || []); } catch (e) { flash(errMsg(e)); setZukan([]); }
+      try { const sm = await ChikarianAPI.getSkillMaster(); const m = {}; (sm || []).forEach(s => { m[s.skill_key] = s; }); setSkillMap(m); } catch (e) {}
+    })();
+  }, []);
+
+  if (sel) return <CardDetail card={sel} skillMap={skillMap} back={() => setSel(null)} flash={flash} />;
+
+  const collected = new Set((zukan || []).map(z => z.card_key));
+  const ownedByKey = {};
+  (cards || []).forEach(c => { (ownedByKey[c.card_key] = ownedByKey[c.card_key] || []).push(c); });
+
+  const RAR_ORDER = ['n', 'r', 'sr', 'ssr', 'sp'];
+  const RAR_NAME = { n: 'N', r: 'R', sr: 'SR', ssr: 'SSR', sp: 'SP' };
+
+  return (
+    <div style={S.root}>
+      <div style={S.bg} /><div style={S.vignette} />
+      <div style={{ position: 'relative', zIndex: 2, minHeight: '100dvh', display: 'flex', flexDirection: 'column', padding: '14px 12px 18px' }}>
+        <div style={{ textAlign: 'center', fontSize: 20, fontWeight: 800, letterSpacing: 3, color: GOLD_HI }}>図鑑</div>
+        <div style={{ textAlign: 'center', fontSize: 11, color: '#cdb488', marginTop: 2 }}>収集 {collected.size} / {CATALOG.length} 種</div>
+
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'center', margin: '12px 0' }}>
+          <button onClick={() => setTab('catalog')} style={{ ...S.sideSwitch, ...(tab === 'catalog' ? S.sideSwitchOn : {}) }}>図鑑</button>
+          <button onClick={() => setTab('owned')} style={{ ...S.sideSwitch, ...(tab === 'owned' ? S.sideSwitchOn : {}) }}>所持カード（{(cards || []).length}）</button>
+        </div>
+
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          {tab === 'catalog' && RAR_ORDER.map(rare => {
+            const keys = CATALOG.filter(k => parseCardKey(k).rarity === rare);
+            return (
+              <div key={rare} style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 12, color: RAR_COL[rare], fontWeight: 700, marginBottom: 6 }}>{RAR_NAME[rare]}（{keys.filter(k => collected.has(k)).length}/{keys.length}）</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 6 }}>
+                  {keys.map(k => {
+                    const got = collected.has(k);
+                    const owned = ownedByKey[k] && ownedByKey[k][0];
+                    const info = parseCardKey(k);
+                    if (!got) {
+                      return <div key={k} style={{ aspectRatio: '5/7', borderRadius: 8, border: '1.5px dashed rgba(232,194,90,.25)', background: 'rgba(0,0,0,.35)', display: 'grid', placeItems: 'center', color: '#5a4d38', fontSize: 18 }}>❖</div>;
+                    }
+                    return (
+                      <button key={k} onClick={() => owned && setSel(owned)} style={{ background: 'none', border: 'none', padding: 0, cursor: owned ? 'pointer' : 'default' }}>
+                        <div style={{ aspectRatio: '5/7', borderRadius: 8, border: `1.5px solid ${RAR_COL[rare]}`, background: 'linear-gradient(165deg,#2a1430,#140913)', position: 'relative', display: 'grid', placeItems: 'center', overflow: 'hidden' }}>
+                          <span style={{ fontSize: 20 }}>❖</span>
+                          <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, fontSize: 9, textAlign: 'center', color: '#fff3c8', background: 'linear-gradient(0deg,rgba(0,0,0,.8),transparent)', padding: '5px 1px 2px' }}>{info.attr}{info.weap || (info.rarity === 'sp' ? info.name.slice(0, 2) : '')}</div>
+                          {!owned && <div style={{ position: 'absolute', top: 3, right: 3, fontSize: 9, color: '#cdb488' }}>記録</div>}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+
+          {tab === 'owned' && (
+            (cards || []).length === 0
+              ? <div style={{ textAlign: 'center', color: '#cdb488', marginTop: 30, fontSize: 13 }}>所持カードがありません（ガチャで入手）</div>
+              : <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 6 }}>
+                  {(cards || []).map(c => <CardThumb key={c.id} card={c} onClick={() => setSel(c)} small />)}
+                </div>
+          )}
+        </div>
+
+        <button onClick={back} style={{ ...S.lineBtn, marginTop: 12, alignSelf: 'center' }}>ホームに戻る</button>
+      </div>
+    </div>
+  );
+}
+
+function CardDetail({ card, skillMap, back, flash }) {
+  const [skills, setSkills] = useState(null);
+  useEffect(() => { (async () => { try { setSkills(await ChikarianAPI.getCardSkills(card.id) || []); } catch (e) { flash(errMsg(e)); setSkills([]); } })(); }, [card.id]);
+  const st = computeStats(card);
+  const info = st.info;
+  const bySlot = {}; (skills || []).forEach(s => { bySlot[s.slot] = s; });
+
+  // ロック切替: 専用RPCが無いため未実装（cards を直接UPDATEしない＝RLS/不正対策C）。
+  // ※ chikarian-api.js / 0001-0011 にロックRPCは無い。RPCが用意されたらここを有効化する。
+  const LOCK_RPC_AVAILABLE = false;
+
+  const op = (label) => () => flash(label + 'は準備中です（次フェーズ）');
+
+  function SkillSlot({ slot }) {
+    const isFixed = slot === 0;
+    const row = bySlot[slot];
+    if (st.isSp && slot > 0) {
+      return <div style={dS.slot}><div style={dS.slotHead}>空きスロット{slot}</div><div style={{ fontSize: 11, color: '#a98f66' }}>SPは追加スロットなし</div></div>;
+    }
+    const m = row ? skillMap[row.skill_key] : null;
+    return (
+      <div style={dS.slot}>
+        <div style={dS.slotHead}>{isFixed ? '固定スキル' : '空きスロット' + slot}</div>
+        {row
+          ? <div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: GOLD_HI }}>{m ? m.display_name : row.skill_key} <span style={{ fontSize: 11, color: '#cdb488' }}>Lv{row.skill_lv}</span></div>
+              {m && m.notes && <div style={{ fontSize: 11, color: '#cdb488', marginTop: 2 }}>{m.notes}</div>}
+            </div>
+          : <div style={{ fontSize: 11, color: '#a98f66' }}>空き（転移で付与）</div>}
+      </div>
+    );
+  }
+
+  return (
+    <div style={S.root}>
+      <div style={S.bg} /><div style={S.vignette} />
+      <div style={{ position: 'relative', zIndex: 2, minHeight: '100dvh', display: 'flex', flexDirection: 'column', padding: '14px 14px 18px', overflowY: 'auto' }}>
+        <button onClick={back} style={{ ...S.lineBtn, alignSelf: 'flex-start', padding: '6px 16px' }}>‹ 戻る</button>
+
+        <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
+          {/* 絵 */}
+          <div style={{ width: 120, flex: '0 0 auto' }}>
+            <div style={{ width: '100%', aspectRatio: '5/7', borderRadius: 10, border: `1.5px solid ${RAR_COL[info.rarity]}`, background: 'linear-gradient(165deg,#2a1430,#140913)', display: 'grid', placeItems: 'center', position: 'relative' }}>
+              <span style={{ fontSize: 34 }}>❖</span>
+              <div style={{ position: 'absolute', top: 4, left: 4, fontSize: 10, fontWeight: 800, color: '#1a0f06', background: RAR_COL[info.rarity], borderRadius: 5, padding: '1px 6px' }}>{RAR_LABEL[info.rarity]}</div>
+              {card.locked && <div style={{ position: 'absolute', top: 4, right: 4, fontSize: 13 }}>🔒</div>}
+            </div>
+          </div>
+          {/* 基本情報 */}
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 17, fontWeight: 800, color: GOLD_HI }}>{info.name}</div>
+            <div style={{ fontSize: 12, color: '#cdb488', marginTop: 4, lineHeight: 1.8 }}>
+              {st.isSp
+                ? <>無属性・装備なし（戦闘専用）</>
+                : <>属性 {info.attr}／武器 {info.weap}</>}
+              <br />レア {RAR_LABEL[info.rarity]}　Lv {card.lv}{card.lv != null && <span style={{ color: '#7a6848' }}> / 上限{st.cap}</span>}　★{card.star || 0}
+            </div>
+            <div style={{ marginTop: 8, padding: '6px 10px', background: PANEL, border: BORDER, borderRadius: 8 }}>
+              <div style={{ fontSize: 10, color: '#cdb488' }}>素の総合戦力（発動前）</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: GOLD_HI }}>{st.sougou.toLocaleString()}</div>
+              <div style={{ fontSize: 10, color: '#a98f66' }}>本体 {st.body.toLocaleString()} ＋ 装備 {st.equip.toLocaleString()}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* 充填 */}
+        <div style={{ marginTop: 12, padding: '8px 12px', background: PANEL, border: BORDER, borderRadius: 8 }}>
+          <div style={{ fontSize: 12, color: GOLD, fontWeight: 700, marginBottom: 4 }}>充填（武気）</div>
+          {st.isSp
+            ? <div style={{ fontSize: 11, color: '#a98f66' }}>SPは武気を持たない（装備の質なし・損失なし）</div>
+            : <div style={{ fontSize: 12, color: '#e7d3a6' }}>装備の質：{QUALITY_JA[card.quality] || '—'}（枠攻撃力 {QATK[card.quality] || 0}）　込めた武気：{(card.loaded_buki || 0).toLocaleString()} 枠</div>}
+        </div>
+
+        {/* スキル3枠 */}
+        <div style={{ marginTop: 12 }}>
+          <div style={{ fontSize: 12, color: GOLD, fontWeight: 700, marginBottom: 6 }}>スキル（固定1＋空き2）</div>
+          <SkillSlot slot={0} /><SkillSlot slot={1} /><SkillSlot slot={2} />
+        </div>
+
+        {/* 操作導線（実装は後フェーズ・ここは導線のみ） */}
+        <div style={{ marginTop: 14 }}>
+          <div style={{ fontSize: 11, color: '#a98f66', marginBottom: 6 }}>操作（カード詳細が共通入口）</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            <button style={dS.op} onClick={op('★強化')}>★強化</button>
+            <button style={dS.op} onClick={op('スキル強化/転移')}>スキル強化/転移</button>
+            <button style={{ ...dS.op, ...(st.isSp ? dS.opOff : {}) }} disabled={st.isSp} onClick={op('装備（充填）')}>装備（充填）</button>
+            <button style={{ ...dS.op, ...(card.locked ? dS.opOff : {}) }} disabled={!!card.locked} onClick={op('交換所')}>交換所</button>
+            <button style={{ ...dS.op, ...(LOCK_RPC_AVAILABLE ? {} : dS.opOff), gridColumn: '1 / -1' }} disabled={!LOCK_RPC_AVAILABLE}
+              onClick={() => flash('ロック切替には専用RPCが必要です（cardsの直接更新はRLS/不正対策Cで不可）')}>
+              {card.locked ? 'ロック解除' : 'ロックする'}（専用RPC待ち）
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const dS = {
+  slot: { background: PANEL, border: BORDER, borderRadius: 8, padding: '8px 12px', marginBottom: 8 },
+  slotHead: { fontSize: 10, color: '#cdb488', letterSpacing: 1, marginBottom: 2 },
+  op: { fontSize: 13, fontWeight: 700, color: GOLD_HI, background: 'rgba(20,10,16,.9)', border: BORDER, borderRadius: 10, padding: '11px 8px', cursor: 'pointer' },
+  opOff: { opacity: .4, cursor: 'not-allowed' },
+};
 
 /* =================================================================== styles */
 const S = {
