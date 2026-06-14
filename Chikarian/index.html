@@ -253,7 +253,7 @@ function App() {
     else if (screen === 'deck') body = <DeckScreen profile={profile} cards={cards} back={() => setScreen('home')} flash={flash} />;
     else if (screen === 'boss') body = <BossScreen profile={profile} onRefresh={refreshAll} back={() => setScreen('home')} flash={flash} />;
     else if (screen === 'kyoka') body = <ZukanScreen cards={cards} profile={profile} refreshAll={refreshAll} initialTab="owned" back={() => setScreen('home')} flash={flash} />;
-    else if (screen === 'tatemono') body = <TatemonoScreen profile={profile} refreshAll={refreshAll} back={() => setScreen('home')} flash={flash} />;
+    else if (screen === 'tatemono') body = <TatemonoScreen profile={profile} cards={cards} refreshAll={refreshAll} back={() => setScreen('home')} flash={flash} />;
     else if (screen === 'tansaku') body = <TansakuScreen profile={profile} refreshAll={refreshAll} back={() => setScreen('home')} flash={flash} />;
     else if (screen === 'houchi') body = <HouchiScreen profile={profile} refreshAll={refreshAll} back={() => setScreen('home')} flash={flash} />;
     else if (screen === 'mission') body = <MissionScreen profile={profile} cards={cards} refreshAll={refreshAll} back={() => setScreen('home')} flash={flash} />;
@@ -1391,7 +1391,7 @@ function fmtRemain(ms) {
   return (h > 0 ? h + '時間' : '') + m + '分';
 }
 
-function TatemonoScreen({ profile, refreshAll, back, flash }) {
+function TatemonoScreen({ profile, cards, refreshAll, back, flash }) {
   const [tab, setTab] = useState('renkiden');
   return (
     <div style={S.root}>
@@ -1406,11 +1406,7 @@ function TatemonoScreen({ profile, refreshAll, back, flash }) {
         <div style={{ flex: 1 }}>
           {tab === 'renkiden' && <RenkidenTab profile={profile} refreshAll={refreshAll} flash={flash} />}
           {tab === 'kajiya' && <KajiyaTab profile={profile} refreshAll={refreshAll} flash={flash} />}
-          {tab === 'shurenjo' && (
-            <div style={{ textAlign: 'center', color: '#cdb488', marginTop: 40, fontSize: 13, lineHeight: 1.9 }}>
-              修練場（威力試験）<br /><span style={{ fontSize: 12, color: '#a98f66' }}>準備中（次フェーズ）。報酬なし・ローカル計算で実装予定。</span>
-            </div>
-          )}
+          {tab === 'shurenjo' && <ShurenjoView profile={profile} cards={cards} flash={flash} />}
         </div>
         <button onClick={back} style={{ ...S.lineBtn, marginTop: 12, alignSelf: 'center' }}>ホームに戻る</button>
       </div>
@@ -2230,6 +2226,88 @@ function BattleLogView({ back, flash }) {
               ))}
             </div>}
         <button onClick={back} style={{ ...S.lineBtn, marginTop: 12, alignSelf: 'center' }}>ホームに戻る</button>
+      </div>
+    </div>
+  );
+}
+
+/* =================================================================== 修練場（ローカル計算・報酬なし） */
+// サーバを呼ばない＝資産は一切動かない。数値は balance 確定式のみ（computeStats）。スキル発動はサーバ判定＝ここは素戦力。
+const KAKASHI_PRESETS = [   // 比較用の的（balance §6-1 の面ボス戦力を流用・確定値）
+  { label: '弱（1面ボス 8,000）', v: 8000 },
+  { label: '中（3面ボス 50,000）', v: 50000 },
+  { label: '強（8面ボス 120,000）', v: 120000 },
+];
+const SUKUMI_OPT = [{ label: '無し', v: 1.0 }, { label: '有利', v: 1.2 }, { label: '不利', v: 0.8 }];
+
+function ShurenjoView({ profile, cards, flash }) {
+  const maxDecks = Math.min(2 + Math.floor(((profile && profile.cleared_stage) || 0) / 2), 6);
+  const [decks, setDecks] = useState(null);
+  const [deckNo, setDeckNo] = useState(1);
+  const [target, setTarget] = useState(8000);
+  const [sukumi, setSukumi] = useState(1.0);
+
+  useEffect(() => { (async () => { try { setDecks(await ChikarianAPI.getDecks() || []); } catch (e) { flash(errMsg(e)); setDecks([]); } })(); }, []);
+  if (decks === null) return <Booting />;
+
+  const cardById = {}; (cards || []).forEach(c => { cardById[c.id] = c; });
+  const row = decks.find(d => d.deck_no === deckNo);
+  const ids = row ? [row.slot1_card_id, row.slot2_card_id, row.slot3_card_id] : [null, null, null];
+  const members = ids.map(id => id ? cardById[id] : null).filter(Boolean);
+  const perCard = members.map(c => ({ c, st: computeStats(c) }));
+  const deckTotal = perCard.reduce((a, x) => a + x.st.sougou, 0);
+  const finalPow = Math.round(deckTotal * sukumi);
+  const win = finalPow >= target;
+
+  return (
+    <div style={{ padding: '4px 2px' }}>
+      {/* デッキ */}
+      <div style={{ fontSize: 12, color: GOLD, fontWeight: 700, marginBottom: 6 }}>測定するデッキ</div>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        {Array.from({ length: maxDecks }, (_, i) => i + 1).map(n => (
+          <button key={n} onClick={() => setDeckNo(n)} style={{ ...S.sideSwitch, padding: '6px 14px', ...(n === deckNo ? S.sideSwitchOn : {}) }}>デッキ{n}</button>
+        ))}
+      </div>
+
+      {/* カード内訳 */}
+      <div style={{ marginTop: 12, padding: '8px 12px', background: PANEL, border: BORDER, borderRadius: 8 }}>
+        {perCard.length === 0
+          ? <div style={{ fontSize: 12, color: '#cdb488' }}>このデッキは未編成です</div>
+          : perCard.map(({ c, st }, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#e7d3a6', padding: '3px 0', borderBottom: i < perCard.length - 1 ? '1px dotted rgba(232,194,90,.18)' : 'none' }}>
+                <span>{st.info.name}{st.isSp ? '' : `（${st.info.attr}${st.info.weap}）`} Lv{c.lv}★{c.star || 0}</span>
+                <span style={{ color: '#cdb488' }}>本体{st.body.toLocaleString()}＋装備{st.equip.toLocaleString()}＝<b style={{ color: GOLD_HI }}>{st.sougou.toLocaleString()}</b></span>
+              </div>
+            ))}
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 13, color: GOLD_HI, fontWeight: 700 }}>
+          <span>デッキ総合（素）</span><span>{deckTotal.toLocaleString()}</span>
+        </div>
+      </div>
+
+      {/* 三すくみ */}
+      <div style={{ fontSize: 12, color: GOLD, fontWeight: 700, marginTop: 12, marginBottom: 6 }}>三すくみ補正（測定用・任意）</div>
+      <div style={{ display: 'flex', gap: 6 }}>
+        {SUKUMI_OPT.map(o => <button key={o.v} onClick={() => setSukumi(o.v)} style={{ ...S.sideSwitch, flex: 1, ...(sukumi === o.v ? S.sideSwitchOn : {}) }}>{o.label}×{o.v}</button>)}
+      </div>
+
+      {/* カカシ */}
+      <div style={{ fontSize: 12, color: GOLD, fontWeight: 700, marginTop: 12, marginBottom: 6 }}>カカシ（敵戦力）</div>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        {KAKASHI_PRESETS.map(p => <button key={p.v} onClick={() => setTarget(p.v)} style={{ ...S.sideSwitch, padding: '6px 10px', fontSize: 11, ...(target === p.v ? S.sideSwitchOn : {}) }}>{p.label}</button>)}
+      </div>
+      <input type="number" min="0" value={target} onChange={e => setTarget(Math.max(0, parseInt(e.target.value, 10) || 0))} style={{ ...tIn, width: '100%', marginTop: 8, textAlign: 'right' }} />
+
+      {/* 結果 */}
+      <div style={{ marginTop: 14, padding: '12px', background: PANEL, border: BORDER, borderRadius: 8, textAlign: 'center' }}>
+        <div style={{ fontSize: 11, color: '#cdb488' }}>補正後の実戦闘力（素×三すくみ）</div>
+        <div style={{ fontSize: 26, fontWeight: 800, color: GOLD_HI }}>{finalPow.toLocaleString()}</div>
+        <div style={{ fontSize: 12, color: '#cdb488', marginTop: 4 }}>カカシ {target.toLocaleString()} と比較</div>
+        <div style={{ fontSize: 18, fontWeight: 800, marginTop: 6, color: win ? '#7fd39a' : '#ff9aa8' }}>{win ? '勝てる見込み（目安）' : '届かない見込み（目安）'}</div>
+      </div>
+
+      <div style={{ fontSize: 10, color: '#a98f66', marginTop: 10, lineHeight: 1.7 }}>
+        報酬はありません（戦力確認用・何度でもノーリスク）。表示は発動前の素の戦力＝balance確定式のみ。
+        スキル発動による上振れ・本判定はボス戦（サーバ）で反映されます（ここは参考）。
       </div>
     </div>
   );
