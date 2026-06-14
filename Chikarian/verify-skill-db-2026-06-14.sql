@@ -18,9 +18,8 @@ select count(*) as lv_fixed from public.skill_master where lv_upgradable = false
 select effect_type, count(*) from public.skill_master group by effect_type order by 1;
 
 -- 4) skill_master の RLS ポリシー（全員SELECT・書込みポリシー無し）-------------
-select polname, cmd from pg_policies p
-  join pg_class c on c.relname = 'skill_master'
-where p.tablename = 'skill_master';                                   -- 期待: skill_master_select_all / SELECT のみ
+select policyname, cmd from pg_policies
+where schemaname = 'public' and tablename = 'skill_master';          -- 期待: skill_master_select_all / SELECT のみ
 
 -- 5) profiles.exp_book_xl 列の追加確認 ---------------------------------------
 select column_name, data_type, is_nullable, column_default
