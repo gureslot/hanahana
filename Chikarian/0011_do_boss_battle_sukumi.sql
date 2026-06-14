@@ -249,8 +249,8 @@ begin
     update _bc set equip = equip * (1 + rec.val) where idx = rec.owner_idx;
   end loop;
 
-  -- 5-c. 総合 = 装備項 + 本体
-  update _bc set sougou = equip + body;
+  -- 5-c. 総合 = 装備項 + 本体（全カード対象。where idx is not null は sql_safe_updates 対策＝実質全行）
+  update _bc set sougou = equip + body where idx is not null;
   select coalesce(sum(sougou), 0) into v_own_base from _bc;
   if v_own_base <= 0 then v_R := 999; else v_R := v_enemy / v_own_base; end if;
 
@@ -274,11 +274,11 @@ begin
   for rec in select * from _fs where effect_type = 'per_skill_count' loop
     update _bc set add_pct = add_pct + rec.val * greatest(v_fired_count - 1, 0) where idx = rec.owner_idx;
   end loop;
-  update _bc set sougou = sougou * (1 + add_pct);
+  update _bc set sougou = sougou * (1 + add_pct) where idx is not null;
 
   -- 5-g. deck_sougou_pct(黄金律) → 全カード総合
   for rec in select * from _fs where effect_type = 'deck_sougou_pct' loop
-    update _bc set sougou = sougou * (1 + rec.val);
+    update _bc set sougou = sougou * (1 + rec.val) where idx is not null;
   end loop;
 
   -- 5-h. 三すくみ（カードごと・属性係数×武器係数。1面/SPは中立1.0）。
@@ -286,11 +286,11 @@ begin
   for rec in select * from _fs where effect_type = 'amplify_advantage' loop
     update _bc set sukumi = sukumi + rec.val where idx = rec.owner_idx and sukumi > 1.0;
   end loop;
-  update _bc set sougou = sougou * sukumi;
+  update _bc set sougou = sougou * sukumi where idx is not null;
 
   -- 5-i. deck_sougou_mult(竜気覚醒) → デッキ総合×base(×1.90)
   for rec in select * from _fs where effect_type = 'deck_sougou_mult' loop
-    update _bc set sougou = sougou * rec.val;
+    update _bc set sougou = sougou * rec.val where idx is not null;
   end loop;
 
   -- 6. デッキ実戦闘力
