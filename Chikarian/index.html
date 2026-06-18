@@ -42,6 +42,47 @@
   .gback{background:radial-gradient(60% 45% at 50% 38%, rgba(255,200,110,.25), transparent 70%),linear-gradient(160deg,#2a1430,#160a1c 60%,#0d0612);display:grid;place-items:center;}
   .genter{animation:cardEnter .45s cubic-bezier(.2,.8,.25,1) both;}
   @keyframes cardEnter{from{opacity:0;transform:translateY(26px);}to{opacity:1;transform:translateY(0);}}
+  /* ===== タイトル画面（title-mockup.html 移植・ttl- 名前空間）===== */
+  .ttl-root{position:relative;width:100%;max-width:480px;margin:0 auto;min-height:100dvh;overflow:hidden;background:#070409;cursor:pointer;}
+  .ttl-bg{position:absolute;inset:0;z-index:0;background:#070409 url('./images/title_bg.png') center/cover no-repeat;}
+  .ttl-vignette{position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(180deg,rgba(0,0,0,.28),transparent 22% 64%,rgba(0,0,0,.55));}
+  .ttl-redpulse{position:absolute;inset:0;z-index:2;pointer-events:none;mix-blend-mode:screen;background:radial-gradient(45% 30% at 50% 80%,rgba(255,70,45,.55),transparent 70%),radial-gradient(35% 22% at 14% 88%,rgba(255,60,40,.5),transparent 72%),radial-gradient(35% 22% at 86% 86%,rgba(255,60,40,.5),transparent 72%);animation:ttl-redbreath 3.8s ease-in-out infinite;}
+  @keyframes ttl-redbreath{0%,100%{opacity:.22;}50%{opacity:.8;}}
+  .ttl-wrap{position:relative;z-index:3;min-height:100dvh;display:flex;flex-direction:column;align-items:center;}
+  .ttl-logoBox{position:relative;width:80%;max-width:380px;margin-top:19vh;aspect-ratio:577/433;filter:drop-shadow(0 6px 18px rgba(0,0,0,.6)) drop-shadow(0 0 22px rgba(255,140,60,.25));animation:ttl-logoIn 1.1s cubic-bezier(.2,.8,.25,1) both;}
+  .ttl-logoBox img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block;}
+  .ttl-logoShine{position:absolute;inset:0;mix-blend-mode:screen;pointer-events:none;-webkit-mask:url('./images/logo_title.png') center/contain no-repeat;mask:url('./images/logo_title.png') center/contain no-repeat;background:linear-gradient(108deg,transparent 42%,rgba(255,248,214,.9) 50%,transparent 58%);background-size:260% 100%;background-repeat:no-repeat;animation:ttl-shine 5s ease-in-out infinite;}
+  @keyframes ttl-shine{0%{background-position:170% 0;}55%,100%{background-position:-70% 0;}}
+  @keyframes ttl-logoIn{from{opacity:0;transform:translateY(-14px) scale(.96);}to{opacity:1;transform:none;}}
+  .ttl-spacer{flex:1;}
+  .ttl-start{position:relative;z-index:3;margin-bottom:13vh;text-align:center;}
+  .ttl-startTxt{font-size:19px;font-weight:800;letter-spacing:4px;color:#fff3c8;text-shadow:0 2px 6px #3a0010,0 0 16px rgba(255,180,80,.6);animation:ttl-tapPulse 2.2s ease-in-out infinite;}
+  .ttl-startHint{font-size:11px;letter-spacing:2px;color:#e7d3a6;margin-top:6px;opacity:.85;text-shadow:0 1px 3px #000;}
+  @keyframes ttl-tapPulse{0%,100%{opacity:.55;transform:translateY(2px);}50%{opacity:1;transform:translateY(-2px);}}
+  .ttl-soundtog{position:absolute;z-index:5;left:14px;top:14px;font-family:inherit;font-size:12px;font-weight:800;letter-spacing:1px;color:#fff3c8;background:rgba(20,10,16,.72);border:1.5px solid rgba(232,194,90,.55);border-radius:16px;padding:8px 14px;cursor:pointer;filter:drop-shadow(0 1px 3px rgba(0,0,0,.6));}
+  .ttl-soundtog.off{color:#9a8c70;}
+  .ttl-flash{position:absolute;inset:0;z-index:9;background:#fff;opacity:0;pointer-events:none;transition:opacity .45s ease;}
+  .ttl-flash.on{opacity:1;}
+  /* ===== オープニング（opening-mockup.html 移植・opn- 名前空間）===== */
+  .opn-root{position:relative;width:100%;max-width:480px;margin:0 auto;min-height:100dvh;overflow:hidden;background:#050306;cursor:pointer;}
+  .opn-glow{position:absolute;inset:0;z-index:1;pointer-events:none;opacity:0;background:radial-gradient(circle at 50% 44%,rgba(255,90,55,.95),rgba(255,55,30,.5) 16%,rgba(180,30,20,.18) 34%,transparent 52%);transform:scale(.16);transform-origin:50% 44%;transition:opacity 1.4s ease,transform 2.6s cubic-bezier(.45,.05,.3,1);animation:opn-breath 2.7s ease-in-out infinite;}
+  .opn-glow.show{opacity:1;}
+  .opn-glow.full{transform:scale(1.9);}
+  @keyframes opn-breath{0%,100%{filter:brightness(.72) saturate(1);}50%{filter:brightness(1.35) saturate(1.1);}}
+  .opn-ambient{position:absolute;inset:0;z-index:1;pointer-events:none;opacity:0;background:radial-gradient(120% 80% at 50% 50%,rgba(255,70,45,.16),transparent 70%);transition:opacity 2s ease;mix-blend-mode:screen;}
+  .opn-ambient.show{opacity:1;}
+  .opn-stage{position:relative;z-index:3;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:0 30px;}
+  .opn-line{font-size:19px;line-height:2.05;letter-spacing:2px;text-align:center;font-weight:600;color:#fff3c8;text-shadow:0 2px 8px rgba(0,0,0,.9),0 0 18px rgba(255,150,70,.35);opacity:0;transform:translateY(10px);transition:opacity 1.1s ease,transform 1.1s ease;max-width:420px;}
+  .opn-line.show{opacity:1;transform:none;}
+  .opn-line b{color:#ffe39a;font-weight:800;text-shadow:0 2px 8px rgba(0,0,0,.9),0 0 20px rgba(255,180,80,.6);}
+  .opn-line .em{color:#ffd0c2;}
+  .opn-next{position:absolute;z-index:4;left:0;right:0;bottom:7vh;text-align:center;font-size:12px;letter-spacing:3px;color:#e7d3a6;opacity:0;transition:opacity .5s;text-shadow:0 1px 4px #000;pointer-events:none;}
+  .opn-next.show{opacity:1;animation:opn-tapPulse 2.2s ease-in-out infinite;}
+  @keyframes opn-tapPulse{0%,100%{opacity:.45;}50%{opacity:.95;}}
+  .opn-skip{position:absolute;z-index:5;top:14px;right:14px;font-family:inherit;font-size:12px;letter-spacing:2px;color:#e7d3a6;background:rgba(20,10,16,.6);border:1.5px solid rgba(232,194,90,.5);border-radius:18px;padding:7px 16px;cursor:pointer;}
+  .opn-skip:active{filter:brightness(1.15);}
+  .opn-flash{position:absolute;inset:0;z-index:9;background:#fff;opacity:0;pointer-events:none;transition:opacity .6s ease;}
+  .opn-flash.on{opacity:1;}
 </style>
 
 <!-- 読み込み順: supabase-js → chikarian-api → React/ReactDOM/Babel → cksound -->
@@ -169,32 +210,71 @@ function msUntilMidnight() {
 }
 
 /* =================================================================== App */
+// オープニング視聴済みフラグ（端末単位・v1。設定から再生可。将来 profile 化も可）
+function openingSeen() { try { return localStorage.getItem('ck_opening_seen') === '1'; } catch (e) { return false; } }
+function markOpeningSeen() { try { localStorage.setItem('ck_opening_seen', '1'); } catch (e) {} }
+
 function App() {
-  const [phase, setPhase] = useState('booting');   // booting | login | app
+  const [phase, setPhase] = useState('booting');   // booting | title | login | opening | app
   const [profile, setProfile] = useState(null);
   const [cards, setCards] = useState([]);          // 所持カード（サーバ値）
   const [screen, setScreen] = useState('home');
   const [toast, setToast] = useState(null);
+  const [authed, setAuthed] = useState(false);  // セッション有無（タイトルのタップ分岐に使用）
   const [bgmOn, setBgmOn] = useState(true);     // BGM音声状態（単一ソース・設定画面と共有）
   const [volume, setVolume] = useState(0.45);   // 0..1（セッション内のみ・localStorage不使用）
   const audioRef = useRef(null);
   const bgmStarted = useRef(false);
+  const phaseRef = useRef('booting');
+  const navedOnce = useRef(false);   // サインイン後の自動遷移（opening/app）を一度だけ行うガード
+  const routing = useRef(false);     // routeAfterLogin の多重実行防止
+  useEffect(() => { phaseRef.current = phase; }, [phase]);
 
   const flash = useCallback((msg) => { setToast(msg); setTimeout(() => setToast(null), 1800); }, []);
+
+  // サインイン後（OAuth復帰含む）: プロフィール読込 → 未視聴なら opening / 視聴済みなら app
+  async function routeAfterLogin() {
+    if (routing.current || navedOnce.current) return;
+    routing.current = true;
+    try {
+      await boot();
+      if (window.location.hash) history.replaceState(null, "", window.location.pathname);
+      navedOnce.current = true;
+      setPhase(openingSeen() ? 'app' : 'opening');
+    } catch (e) { flash(errMsg(e)); setPhase('login'); }
+    finally { routing.current = false; }
+  }
 
   // 初期化＋認証監視
   useEffect(() => {
     ChikarianAPI.init(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const oauthReturn = !!window.location.hash;   // OAuth リダイレクト復帰（URLにトークンハッシュ）
     let sub = null;
     (async () => {
       try {
         const session = await ChikarianAPI.auth.getSession();
-        if (session) await boot(); else setPhase('login');
-      } catch (e) { setPhase('login'); }
+        setAuthed(!!session);
+        if (session && oauthReturn) {
+          await routeAfterLogin();              // 直前にサインイン＝タイトルを挟まず opening/app へ
+        } else if (session) {
+          setPhase('title');                    // 既ログインの通常起動：まずタイトル。プロフィールは裏で用意
+          boot().catch((e) => flash(errMsg(e)));
+        } else {
+          setPhase('title');                    // 未ログイン：タイトル → タップ → login
+        }
+      } catch (e) { setPhase('title'); }
     })();
     sub = ChikarianAPI.auth.onChange((session) => {
-      if (session) { boot(); }
-      else { setProfile(null); setScreen('home'); setPhase('login'); }
+      setAuthed(!!session);
+      if (session) {
+        // 自動遷移は「genuineなサインイン」のみ：OAuth復帰(hash) か login画面での確定。
+        // 既ログインの通常起動(INITIAL_SESSION)は必ずタイトルを挟む（boot のみ）。
+        if (oauthReturn || phaseRef.current === 'login') routeAfterLogin();
+        else boot().catch(() => {});            // 既にapp/title：プロフィールを最新化のみ
+      } else {
+        navedOnce.current = false;              // 次回サインインで再び自動遷移できるよう解除
+        setProfile(null); setScreen('home'); setPhase('title');
+      }
     });
     return () => {
       // onChange は supabase-js の {data:{subscription}} 形を返す（実装差を吸収）
@@ -203,17 +283,16 @@ function App() {
     };
   }, []);
 
+  // プロフィール/所持カードをサーバ値で用意（phaseは変えない＝遷移は呼び出し側が決める）
   async function boot() {
-    try {
-      await ChikarianAPI.rpc('initialize_profile');   // get-or-create
-      const p = await ChikarianAPI.getProfile();
-      setProfile(p);
-      try { setCards(await ChikarianAPI.getCards() || []); } catch (e) {}
-      // OAuth 戻りで URL にハッシュが残っていれば掃除
-      if (window.location.hash) history.replaceState(null, "", window.location.pathname);
-      setPhase('app');
-    } catch (e) { flash(errMsg(e)); setPhase('login'); }
+    await ChikarianAPI.rpc('initialize_profile');   // get-or-create
+    const p = await ChikarianAPI.getProfile();
+    setProfile(p);
+    try { setCards(await ChikarianAPI.getCards() || []); } catch (e) {}
   }
+
+  // オープニング終了/スキップ → 視聴済みにして home へ
+  const finishOpening = useCallback(() => { markOpeningSeen(); setScreen('home'); setPhase('app'); }, []);
 
   const refreshProfile = useCallback(async () => {
     try { const p = await ChikarianAPI.getProfile(); setProfile(p); return p; }
@@ -248,7 +327,12 @@ function App() {
 
   let body;
   if (phase === 'booting') body = <Booting />;
+  else if (phase === 'title') body = <Title bgmOn={bgmOn} setBgmOn={setBgmOn} onStart={() => {
+    if (!authed) setPhase('login');
+    else setPhase(openingSeen() ? 'app' : 'opening');
+  }} />;
   else if (phase === 'login') body = <Login flash={flash} />;
+  else if (phase === 'opening') body = <Opening onDone={finishOpening} />;
   else {
     if (screen === 'home') body = <Home profile={profile} go={setScreen} flash={flash} />;
     else if (screen === 'saishu') body = <Saishu profile={profile} onExit={async () => { await refreshProfile(); setScreen('home'); }} flash={flash} />;
@@ -262,7 +346,7 @@ function App() {
     else if (screen === 'houchi') body = <HouchiScreen profile={profile} refreshAll={refreshAll} back={() => setScreen('home')} flash={flash} />;
     else if (screen === 'mission') body = <MissionScreen profile={profile} cards={cards} refreshAll={refreshAll} back={() => setScreen('home')} flash={flash} />;
     else if (screen === 'report') body = <BattleLogView back={() => setScreen('home')} flash={flash} />;
-    else if (screen === 'settings') body = <SettingsScreen bgmOn={bgmOn} setBgmOn={setBgmOn} volume={volume} setVolume={setVolume} logout={logout} back={() => setScreen('home')} />;
+    else if (screen === 'settings') body = <SettingsScreen bgmOn={bgmOn} setBgmOn={setBgmOn} volume={volume} setVolume={setVolume} logout={logout} playOpening={() => setPhase('opening')} back={() => setScreen('home')} />;
     else body = <Placeholder name={screen} back={() => setScreen('home')} logout={logout} />;
   }
 
@@ -293,15 +377,136 @@ function Login({ flash }) {
     catch (e) { flash(errMsg(e)); setBusy(false); }
   };
   return (
-    <div style={{ ...S.bg, ...S.centerFull }}>
-      <div style={{ fontSize: 30, fontWeight: 800, color: GOLD_HI, letterSpacing: 6, textShadow: '0 2px 10px rgba(255,180,80,.5)' }}>チカリアン</div>
-      <div style={{ fontSize: 13, color: '#cdb488', marginTop: 8, marginBottom: 36, letterSpacing: 2 }}>光を集め、花を継ぐ者</div>
-      <button onClick={onLogin} disabled={busy} style={S.bigBtn}>
-        {busy ? 'ログイン中…' : 'Google でログイン'}
-      </button>
-      <div style={{ fontSize: 11, color: '#8a7250', marginTop: 18, textAlign: 'center', lineHeight: 1.7 }}>
-        ログインすると進行データがクラウドに保存されます
+    <div style={{ ...S.centerFull, background: '#070409' }}>
+      {/* 見た目統一：title_bg を背景に（ボタン/ロジックは保持）*/}
+      <div className="ttl-bg" />
+      <div className="ttl-vignette" />
+      <div style={{ position: 'relative', zIndex: 3, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <div style={{ fontSize: 30, fontWeight: 800, color: GOLD_HI, letterSpacing: 6, textShadow: '0 2px 10px rgba(255,180,80,.5)' }}>チカリアン</div>
+        <div style={{ fontSize: 13, color: '#cdb488', marginTop: 8, marginBottom: 36, letterSpacing: 2 }}>光を集め、花を継ぐ者</div>
+        <button onClick={onLogin} disabled={busy} style={S.bigBtn}>
+          {busy ? 'ログイン中…' : 'Google でログイン'}
+        </button>
+        <div style={{ fontSize: 11, color: '#8a7250', marginTop: 18, textAlign: 'center', lineHeight: 1.7 }}>
+          ログインすると進行データがクラウドに保存されます
+        </div>
       </div>
+    </div>
+  );
+}
+
+/* =================================================================== タイトル */
+// title-mockup.html 移植。背景 title_bg / 赤い光の明滅 / ロゴの金箔shine / 音声トグル。
+// 設定ギアはログイン前は省略（設定はホームから到達可）。タップで開始（白フェード→onStart）。
+function Title({ bgmOn, setBgmOn, onStart }) {
+  const [flashing, setFlashing] = useState(false);
+  const started = useRef(false);
+  const start = () => {
+    if (started.current) return; started.current = true;
+    setFlashing(true);
+    setTimeout(() => onStart(), 450);
+  };
+  return (
+    <div className="ttl-root" onClick={start}>
+      <div className="ttl-bg" />
+      <div className="ttl-vignette" />
+      <div className="ttl-redpulse" />
+      <div className="ttl-wrap">
+        <div className="ttl-logoBox">
+          <img src="./images/logo_title.png" alt="チカリアン" />
+          <div className="ttl-logoShine" />
+        </div>
+        <div className="ttl-spacer" />
+        <div className="ttl-start">
+          <div className="ttl-startTxt">ゲームスタート</div>
+          <div className="ttl-startHint">画面をタップ</div>
+        </div>
+      </div>
+      {/* 音声トグル（本番の bgmOn/setBgmOn に配線）。開始とは別操作なので伝播を止める。 */}
+      <button className={'ttl-soundtog' + (bgmOn ? '' : ' off')}
+        onClick={(e) => { e.stopPropagation(); setBgmOn((v) => !v); }} aria-label="音声切替">
+        {bgmOn ? '♪ 音声 ON' : '♪ 音声 OFF'}
+      </button>
+      <div className={'ttl-flash' + (flashing ? ' on' : '')} />
+    </div>
+  );
+}
+
+/* =================================================================== オープニング */
+// opening-mockup.html 移植。SCRIPT 本文は一字一句そのまま（確定した物語本文・言い換え厳禁）。
+const OPENING_SCRIPT = [
+  { type:'beat', glow:'on' },                                   // 暗転→赤い光がかすかに明滅
+  { type:'text', html:'世界の大半は、<b>ジャルゴア</b>に覆われていた。' },
+  { type:'text', html:'その縁に追いやられ、なお消えぬ小さな地がある。<br><b>チカリア</b>。' },
+  { type:'beat', glow:'full' },                                  // 明滅する赤い光が画面いっぱいに広がる
+  { type:'text', html:'チカリアの民は知っている。<br>闇深きとき、彼方より光が訪れることを。' },
+  { type:'text', html:'<span class="em">——いま、あなたが訪れた。</span>' },
+  { type:'text', html:'あなたが届ける赤い光は、この地で<b>チカリウム</b>へと変わる。<br>チカリウムは、辺境を守る戦士たちの力となる。' },
+  { type:'text', html:'あなたは<b>灯し手</b>。' },
+  { type:'text', html:'灯し手よ。<br>あなたが灯す光は、わたしたち戦士の力となる。<br>どうか、その光をわたしたちに分けてほしい。' },
+  { type:'text', html:'<span class="em">——共に、この辺境を守ってほしい。</span>' },
+  { type:'text', html:'もしあなたが<b>現実で赤い光</b>を見つけたなら、<br>その光はチカリウムへと変わり、わたしたちをさらに強くする。' },
+  { type:'text', html:'まずは、わたしたちと前線へ。' },
+];
+
+function Opening({ onDone }) {
+  const [lineHtml, setLineHtml] = useState('');
+  const [lineShow, setLineShow] = useState(false);
+  const [glowShow, setGlowShow] = useState(false);
+  const [glowFull, setGlowFull] = useState(false);
+  const [ambient, setAmbient] = useState(false);
+  const [nextShow, setNextShow] = useState(false);
+  const [flashing, setFlashing] = useState(false);
+  const i = useRef(-1), busy = useRef(false), ended = useRef(false);
+  const hasText = useRef(false);   // 既に地の文を出したか（前行フェードアウト待ちの有無）
+  const timers = useRef([]);
+  const T = (fn, ms) => { const id = setTimeout(fn, ms); timers.current.push(id); };
+
+  const finish = () => {
+    if (ended.current) return; ended.current = true;
+    setNextShow(false); setFlashing(true);
+    T(() => onDone(), 620);
+  };
+
+  const step = () => {
+    if (ended.current) return;
+    i.current++;
+    if (i.current >= OPENING_SCRIPT.length) { finish(); return; }
+    const s = OPENING_SCRIPT[i.current];
+    if (s.type === 'beat') {                       // 演出のみ（テキスト非表示）・自動で進む
+      busy.current = true; setNextShow(false);
+      if (s.glow === 'on') { setGlowShow(true); T(step, 1800); }
+      else if (s.glow === 'full') { setGlowFull(true); setAmbient(true); T(step, 1700); }
+      else T(step, 400);
+      return;
+    }
+    // text：前の行を消してから新しい行を出す → フェードイン完了でタップ受付
+    busy.current = true; setNextShow(false);
+    setLineShow(false);
+    const delay = hasText.current ? 600 : 0;
+    T(() => {
+      setLineHtml(s.html); hasText.current = true; setLineShow(true);
+      T(() => { busy.current = false; setNextShow(true); }, 1100);
+    }, delay);
+  };
+
+  const advance = () => { if (!busy.current && !ended.current) step(); };
+
+  useEffect(() => {
+    T(step, 500);
+    return () => { timers.current.forEach(clearTimeout); };
+  }, []);
+
+  return (
+    <div className="opn-root" onClick={advance}>
+      <div className={'opn-glow' + (glowShow ? ' show' : '') + (glowFull ? ' full' : '')} />
+      <div className={'opn-ambient' + (ambient ? ' show' : '')} />
+      <div className="opn-stage">
+        <div className={'opn-line' + (lineShow ? ' show' : '')} dangerouslySetInnerHTML={{ __html: lineHtml }} />
+      </div>
+      <div className={'opn-next' + (nextShow ? ' show' : '')}>タップで進む</div>
+      <button className="opn-skip" onClick={(e) => { e.stopPropagation(); finish(); }}>スキップ ▶</button>
+      <div className={'opn-flash' + (flashing ? ' on' : '')} />
     </div>
   );
 }
@@ -2406,7 +2611,7 @@ function Toggle({ on, onToggle, label }) {
     </div>
   );
 }
-function SettingsScreen({ bgmOn, setBgmOn, volume, setVolume, logout, back }) {
+function SettingsScreen({ bgmOn, setBgmOn, volume, setVolume, logout, playOpening, back }) {
   const seAvail = !!window.CKSound;   // SE は cksound.js が担当（無ければ項目を出さない）
   const [seOn, setSeOn] = useState(seAvail ? CKSound.isOn() : true);
   const [email, setEmail] = useState(null);
@@ -2430,6 +2635,14 @@ function SettingsScreen({ bgmOn, setBgmOn, volume, setVolume, logout, back }) {
               onChange={e => setVolume(parseInt(e.target.value, 10) / 100)} style={{ width: '100%', marginTop: 6, opacity: bgmOn ? 1 : .4 }} />
           </div>
           {seAvail && <Toggle on={seOn} onToggle={toggleSe} label="効果音" />}
+        </div>
+
+        {/* その他 */}
+        <div style={{ marginTop: 14, padding: '4px 14px', background: PANEL, border: BORDER, borderRadius: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0' }}>
+            <span style={{ fontSize: 13, color: GOLD_HI }}>プロローグ</span>
+            <button onClick={playOpening} style={S.sideSwitch}>プロローグを見る</button>
+          </div>
         </div>
 
         {/* アカウント */}
