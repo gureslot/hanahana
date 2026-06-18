@@ -27,6 +27,7 @@
   @keyframes saishuPulse{0%,100%{filter:drop-shadow(0 0 12px rgba(255,160,60,.5));}50%{filter:drop-shadow(0 0 26px rgba(255,180,70,.85));}}
   .saishu-glow{animation:saishuPulse 2.4s ease-in-out infinite;}
   .saishu-glow:active{transform:scale(.97);}
+  .home-whitein{position:absolute;inset:0;background:#fff;z-index:60;pointer-events:none;animation:whiteFadeOut 1.8s ease forwards;}
   button:active{filter:brightness(1.08);}
   .spin{width:34px;height:34px;border:3px solid rgba(232,194,90,.3);border-top-color:#e8c25a;border-radius:50%;animation:rot 1s linear infinite;}
   @keyframes rot{to{transform:rotate(360deg);}}
@@ -306,6 +307,40 @@ function Login({ flash }) {
 }
 
 /* =================================================================== ホーム */
+// ===== Home 画像アセット（./images 実在・mockup と同パス）。代用（絵文字/グラデ）は各部品の fallback に残す。=====
+const ASSETS = {
+  bg: "./images/home_bg.png",
+  saishu: "./images/btn_saishu.png",
+  buttons: {
+    tansaku:  "./images/btn_tansaku.png",
+    boss:     "./images/btn_boss.png",
+    deck:     "./images/btn_deck.png",
+    gacha:    "./images/btn_gacha.png",
+    tatemono: "./images/btn_tatemono.png",
+    kyoka:    "./images/btn_kyoka.png",
+  },
+  houchi: "./images/btn_houchi.png",
+  ic: { chikarium: "./images/ic_chikarium.png", medal: "./images/ic_medal.png", zukan: "./images/ic_zukan.png", settings: "./images/ic_settings.png", mission: "./images/ic_mission.png", report: "./images/ic_report.png" },
+};
+
+// ===== Home 専用スタイル（共有 S を書き換えず、home 固有分だけここに追加）=====
+const HS = {
+  bgImg: { position: 'absolute', inset: 0, backgroundImage: `url(${ASSETS.bg})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' },
+  resPanelGlow: { backdropFilter: 'blur(2px)', boxShadow: 'inset 0 0 12px rgba(255,200,90,.12)' },
+  sideIconCircle: { position: 'relative', width: 40, height: 40, borderRadius: '50%', display: 'grid', placeItems: 'center', overflow: 'hidden' },
+  sideBadge: { position: 'absolute', top: 0, right: 0, width: 10, height: 10, borderRadius: '50%', background: '#ffcf6a', boxShadow: '0 0 8px rgba(255,200,90,.9)', border: '1.5px solid #1a0e14' },
+  fill: { width: '100%', height: '100%', objectFit: 'contain' },
+  cardArtImg: { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' },
+  houchiImg: { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' },
+};
+
+// リソースアイコン（画像→失敗時は絵文字/記号 fallback）
+function ResIcon({ src, fallback, big }) {
+  const [err, setErr] = useState(false);
+  if (src && !err) return <img alt="" src={src} style={{ width: big ? 44 : 30, height: big ? 44 : 30, objectFit: 'contain' }} onError={() => setErr(true)} />;
+  return <span style={big ? S.icBig : S.ic}>{fallback}</span>;
+}
+
 function Home({ profile, go, flash }) {
   const chikarium = profile ? (profile.chikarium || 0) : 0;
   const medal = profile ? (profile.medal || 0) : 0;
@@ -315,14 +350,29 @@ function Home({ profile, go, flash }) {
   const [countdown, setCountdown] = useState(msUntilMidnight());
   useEffect(() => { const t = setInterval(() => setCountdown(msUntilMidnight()), 1000); return () => clearInterval(t); }, []);
 
+  // 報告書の未読バッジ（localStorage 自己完結：ck_reports vs ck_reports_read）
+  const [hasUnread, setHasUnread] = useState(false);
+  useEffect(() => {
+    try {
+      const log = JSON.parse(localStorage.getItem('ck_reports') || '[]');
+      const read = +(localStorage.getItem('ck_reports_read') || 0);
+      setHasUnread(log.length > 0 && log[0].t > read);
+    } catch (e) {}
+  }, []);
+
+  // TODO(pills): 出撃/探索ピルと放置「！」通知は Home に実データ（tansaku_states / cards.tansaku_deck_no /
+  //   放置報酬の受領可否）が渡っていないため省略。データ層・App ルーターを変えずに配線できるようになったら復活。
+  //   ・出撃ピル: 本番のボス戦は即時完結で「出撃中」状態が無いため恒久的に省略。
+
   return (
     <div style={S.root}>
-      <div style={S.bg} /><div style={S.vignette} />
+      <div className="home-whitein" />
+      <div style={S.bg} /><div style={HS.bgImg} /><div style={S.vignette} />
       <div style={S.frame}>
         {/* 上部リソース */}
         <header style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-          <div style={S.resPanel}>
-            <span style={S.icBig}>◈</span>
+          <div style={{ ...S.resPanel, ...HS.resPanelGlow }}>
+            <ResIcon src={ASSETS.ic.chikarium} fallback="◈" big />
             <div style={S.resCol}>
               <div style={S.resLabel}>チカリウム</div>
               <div style={S.resVal}>{chikarium.toLocaleString()}</div>
@@ -333,24 +383,24 @@ function Home({ profile, go, flash }) {
             </div>
           </div>
           <div style={S.resPanelSm}>
-            <span style={S.ic}>◉</span>
+            <ResIcon src={ASSETS.ic.medal} fallback="◉" />
             <div style={S.resCol}><div style={S.resLabel}>メダル</div><div style={S.resVal}>{medal.toLocaleString()}</div></div>
           </div>
         </header>
 
         {/* 右側 小アイコン */}
         <div style={S.sideIcons}>
-          <SideIcon fb="📜" label="ミッション" onClick={() => go('mission')} />
-          <SideIcon fb="🗎" label="報告書" onClick={() => go('report')} />
-          <SideIcon fb="❖" label="図鑑" onClick={() => go('zukan')} />
-          <SideIcon fb="⚙" label="設定" onClick={() => go('settings')} />
+          <SideIcon src={ASSETS.ic.mission} fb="📜" label="ミッション" onClick={() => go('mission')} />
+          <SideIcon src={ASSETS.ic.report} fb="🗎" label="報告書" badge={hasUnread} onClick={() => go('report')} />
+          <SideIcon src={ASSETS.ic.zukan} fb="❖" label="図鑑" onClick={() => go('zukan')} />
+          <SideIcon src={ASSETS.ic.settings} fb="⚙" label="設定" onClick={() => go('settings')} />
         </div>
 
         {/* 中央：採取 */}
         <main style={S.center}>
           <button style={{ ...S.saishuBtn, ...(reachedCap ? S.saishuOff : {}) }} className={reachedCap ? "" : "saishu-glow"}
             onClick={() => { if (reachedCap) { flash('本日分の採取は完了しています（0時にリセット）'); return; } go('saishu'); }}>
-            <div style={S.saishuInner}><div style={{ fontSize: 46 }}>📷</div><div style={S.saishuTitle}>チカリウム<br />採取</div></div>
+            <SaishuArt />
           </button>
           <div style={S.saishuDesc}>{reachedCap ? '本日分の採取は完了しています' : '赤い光にかざして採取'}</div>
           <div style={S.timer}>
@@ -362,36 +412,61 @@ function Home({ profile, go, flash }) {
 
         {/* 6ボタン（確定配置・増やさない） */}
         <nav style={S.grid}>
-          <CardBtn label="探索" color="#2fa86a" fb="🧭" onClick={() => go('tansaku')} />
-          <CardBtn label="ボス戦" color="#9b3bd6" fb="⚔" onClick={() => go('boss')} />
-          <CardBtn label="デッキ編成" color="#3b6fd6" fb="🃏" onClick={() => go('deck')} />
-          <CardBtn label="チカリアンガチャ" color="#d6433b" fb="🎁" onClick={() => go('gacha')} />
-          <CardBtn label="建物" color="#b07b32" fb="🏛" onClick={() => go('tatemono')} />
-          <CardBtn label="強化合成" color="#c8632e" fb="⚒" onClick={() => go('kyoka')} />
+          <CardBtn label="探索" color="#2fa86a" src={ASSETS.buttons.tansaku} fb="🧭" onClick={() => go('tansaku')} />
+          <CardBtn label="ボス戦" color="#9b3bd6" src={ASSETS.buttons.boss} fb="⚔" onClick={() => go('boss')} />
+          <CardBtn label="デッキ編成" color="#3b6fd6" src={ASSETS.buttons.deck} fb="🃏" onClick={() => go('deck')} />
+          <CardBtn label="チカリアンガチャ" color="#d6433b" src={ASSETS.buttons.gacha} fb="🎁" onClick={() => go('gacha')} />
+          <CardBtn label="建物" color="#b07b32" src={ASSETS.buttons.tatemono} fb="🏛" onClick={() => go('tatemono')} />
+          <CardBtn label="強化合成" color="#c8632e" src={ASSETS.buttons.kyoka} fb="⚒" onClick={() => go('kyoka')} />
         </nav>
 
         <button style={S.houchi} onClick={() => go('houchi')}>
-          <span style={{ fontSize: 34 }}>🧰</span>
+          <HouchiArt />
           <div style={S.houchiLabel}>放置報酬</div>
+          {/* TODO(houchi-notif): 放置報酬の受領可否が Home に渡っていないため「！」通知は省略（捏造しない）。 */}
         </button>
       </div>
     </div>
   );
 }
 
-function SideIcon({ fb, label, onClick }) {
+// 採取ボタンのアート（画像→失敗時は📷＋見出し fallback）
+function SaishuArt() {
+  const [err, setErr] = useState(false);
+  if (ASSETS.saishu && !err) return <img alt="チカリウム採取" src={ASSETS.saishu} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain' }} onError={() => setErr(true)} />;
+  return <div style={S.saishuInner}><div style={{ fontSize: 46 }}>📷</div><div style={S.saishuTitle}>チカリウム<br />採取</div></div>;
+}
+
+// 放置報酬のアート（画像→失敗時は🧰 fallback）
+function HouchiArt() {
+  const [err, setErr] = useState(false);
+  if (ASSETS.houchi && !err) return <img alt="" src={ASSETS.houchi} style={HS.houchiImg} onError={() => setErr(true)} />;
+  return <span style={{ fontSize: 34 }}>🧰</span>;
+}
+
+function SideIcon({ src, fb, label, badge, onClick }) {
+  const [err, setErr] = useState(false);
   return (
     <button style={S.sideIcon} onClick={onClick}>
-      <div style={S.sideIconCircle}><span style={{ fontSize: 20, color: '#f0dcb0' }}>{fb}</span></div>
+      <div style={HS.sideIconCircle}>
+        {src && !err
+          ? <img alt="" src={src} style={HS.fill} onError={() => setErr(true)} />
+          : <span style={{ fontSize: 20, color: '#f0dcb0' }}>{fb}</span>}
+        {badge ? <span style={HS.sideBadge} /> : null}
+      </div>
       <span style={S.sideIconLabel}>{label}</span>
     </button>
   );
 }
-function CardBtn({ label, color, fb, onClick }) {
+function CardBtn({ label, color, src, fb, onClick }) {
+  const [err, setErr] = useState(false);
+  const useImg = src && !err;
   return (
     <button style={S.card} onClick={onClick}>
-      <div style={{ ...S.cardArt, background: `radial-gradient(circle at 50% 40%, ${color}55, #120a14 80%)` }}>
-        <span style={{ fontSize: 34 }}>{fb}</span>
+      <div style={{ ...S.cardArt, ...(useImg ? {} : { background: `radial-gradient(circle at 50% 40%, ${color}55, #120a14 80%)` }) }}>
+        {useImg
+          ? <img alt="" src={src} style={HS.cardArtImg} onError={() => setErr(true)} />
+          : <span style={{ fontSize: 34 }}>{fb}</span>}
         <div style={S.cardLabel}>{label}</div>
       </div>
     </button>
