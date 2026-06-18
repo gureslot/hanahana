@@ -720,8 +720,8 @@ function Gacha({ profile, onRefresh, back, flash }) {
 /* =================================================================== 図鑑/一覧/詳細 */
 // 戦力の数値は balance の確定値（§2-2 本体基礎/Lv上限・§2-1 枠攻撃力）。勝手な値は作らない。
 const CARD_BASE = { n: { base: 80, cap: 30 }, r: { base: 200, cap: 40 }, sr: { base: 360, cap: 50 }, ssr: { base: 560, cap: 60 } }; // balance §2-2
-const SP_BASE = { chara_dragon_sp: 2260, chara_girl_sp: 2160, chara_houou_sp: 2060 };  // balance §2-2 / cards §3
-const QATK = { crude: 7, refined: 15, enchanted: 33, holy: 73 };                       // balance §2-1 枠攻撃力
+const SP_BASE = { chara_dragon_sp: 3200, chara_girl_sp: 3200, chara_houou_sp: 3200 };  // SP本体3種同値（2026-06-18改定 / 0039）
+const QATK = { crude: 10, refined: 15, enchanted: 22, holy: 34 };                      // ギア枠攻撃力（0032 canon-04 §3）
 const QUALITY_JA = { crude: '粗製', refined: '精製', enchanted: '魔装', holy: '聖装' };
 
 // 図鑑母数＝cards §4（ハイビスカス36＋めしべ2＋SP3＝41種）
@@ -739,10 +739,12 @@ function computeStats(card) {
   if (isSp) { base = SP_BASE[key] || 0; cap = 50; }
   else { const b = CARD_BASE[info.rarity] || CARD_BASE.n; base = b.base; cap = b.cap; }
   const rL = 2.0 / (cap - 1);                                            // balance §2-2
-  const body = base * (1 + ((card.lv || 1) - 1) * rL) * (1 + 0.15 * (card.star || 0));
+  const body = base * (1 + ((card.lv || 1) - 1) * rL);                  // 本体は★非依存（0026）
   const qatk = isSp ? 0 : (QATK[card.quality] || 0);
   const equip = isSp ? 0 : ((card.loaded_buki || 0) * qatk);            // 装備項＝込めた武気×枠攻撃力
-  return { isSp, info, base, cap, body: Math.round(body), equip: Math.round(equip), sougou: Math.round(body + equip) };
+  const starMul = 1 + 0.10 * (card.star || 0);                         // ★は総合(装備項+本体)に乗る・係数0.10（0026）
+  const bodyS = body * starMul, equipS = equip * starMul;              // 内訳の和＝総合になるよう表示にも同倍率
+  return { isSp, info, base, cap, body: Math.round(bodyS), equip: Math.round(equipS), sougou: Math.round(bodyS + equipS) };
 }
 
 function CardThumb({ card, onClick, small }) {
