@@ -1991,75 +1991,176 @@ function tansakuEstimate(row, now) {
   return { di, min, medal: Math.floor(min * di.medal), exp: +(min * di.exp).toFixed(1) };
 }
 
+/* 探索画面 専用スタイル（tansaku-mockup のマップUI移植・tan- スコープ・共有 S は不変） */
+const tanRoot = { position: 'relative', width: '100%', maxWidth: 480, margin: '0 auto', height: '100dvh', overflow: 'hidden', background: '#070409', color: GOLD_HI, display: 'flex', alignItems: 'center', justifyContent: 'center' };
+const TAN_CSS = `
+.tan-mapWrap{position:relative; width:100%; aspect-ratio:941/1672; max-height:100dvh; background:#070409 url('./images/tansaku_map_1.png') center/100% 100% no-repeat;}
+.tan-mapDim{position:absolute; inset:0; pointer-events:none; background:linear-gradient(180deg, rgba(0,0,0,.5), transparent 14% 80%, rgba(0,0,0,.5));}
+.tan-node{position:absolute; transform:translate(-50%,-50%); text-align:center; cursor:pointer; z-index:4;}
+.tan-dot{width:34px; height:34px; border-radius:50%; margin:0 auto; background:radial-gradient(circle at 50% 40%, #ffe9a8, #e8b54d 55%, #9a6a23); border:2px solid #fff3c8; box-shadow:0 0 14px rgba(255,200,90,.9), 0 2px 6px rgba(0,0,0,.6); display:grid; place-items:center; animation:tanPulse 2.2s ease-in-out infinite;}
+@keyframes tanPulse{0%,100%{box-shadow:0 0 12px rgba(255,200,90,.7),0 2px 6px rgba(0,0,0,.6);} 50%{box-shadow:0 0 22px rgba(255,220,130,1),0 2px 6px rgba(0,0,0,.6);}}
+.tan-lbl{margin-top:5px; font-size:11px; letter-spacing:1px; color:#fff3c8; text-shadow:0 1px 4px #000, 0 0 8px #000; white-space:nowrap;}
+.tan-node.busy .tan-dot{background:radial-gradient(circle at 50% 40%,#a8e0ff,#4da6e8 55%,#236a9a); border-color:#cfeeff; box-shadow:0 0 18px rgba(120,200,255,.9),0 2px 6px rgba(0,0,0,.6); animation:none;}
+.tan-node.busy .tan-dot::after{content:'⟳'; font-size:18px; color:#06283a; font-weight:800; display:inline-block; animation:tanSpin 1.6s linear infinite;}
+@keyframes tanSpin{to{transform:rotate(360deg)}}
+/* locked スタイルは将来の深さ解放用に残置（現状は3ノード全開放＝未使用） */
+.tan-node.locked .tan-dot{background:radial-gradient(circle at 50% 40%,#5a5048,#2a2420); border-color:rgba(180,170,150,.5); box-shadow:0 2px 6px rgba(0,0,0,.6); animation:none;}
+.tan-node.locked .tan-dot::after{content:'🔒'; font-size:14px;}
+.tan-node.locked .tan-lbl{color:#b9ad95;}
+.tan-topbar{position:absolute; z-index:6; top:0; left:0; right:0; display:flex; align-items:center; gap:10px; padding:12px 14px; max-width:480px; margin:0 auto;}
+.tan-area{flex:1; text-align:center; font-size:16px; font-weight:800; letter-spacing:2px; text-shadow:0 2px 6px #000, 0 0 14px rgba(255,180,80,.4);}
+.tan-res{display:flex; gap:6px; align-items:center; background:rgba(18,10,14,.88); border:1.5px solid rgba(232,194,90,.55); border-radius:14px; padding:5px 12px; font-size:13px;}
+.tan-res b{color:#ffe39a; font-weight:800;}
+.tan-back{position:absolute; z-index:9; left:14px; bottom:16px; font-family:inherit; font-size:14px; letter-spacing:1px; color:#fff3c8; background:rgba(18,10,14,.88); border:1.5px solid rgba(232,194,90,.55); border-radius:22px; padding:11px 22px; cursor:pointer;}
+.tan-scrim{position:absolute; inset:0; z-index:7; background:rgba(0,0,0,.4); opacity:0; pointer-events:none; transition:.3s;}
+.tan-scrim.show{opacity:1; pointer-events:auto;}
+.tan-sheet{position:absolute; z-index:8; left:0; right:0; bottom:0; transform:translateY(110%); transition:transform .35s cubic-bezier(.2,.8,.25,1); background:rgba(18,10,14,.88); border-top:1.5px solid rgba(232,194,90,.55); border-left:1.5px solid rgba(232,194,90,.55); border-right:1.5px solid rgba(232,194,90,.55); border-radius:18px 18px 0 0; padding:16px 18px 22px; box-shadow:0 -8px 24px rgba(0,0,0,.6); max-width:480px; margin:0 auto;}
+.tan-sheet.show{transform:translateY(0);}
+.tan-sheet h3{margin:2px 0 10px; font-size:18px; letter-spacing:2px; text-align:center; text-shadow:0 0 12px rgba(255,180,80,.4); color:#fff3c8;}
+.tan-stat{display:flex; justify-content:space-between; align-items:center; padding:7px 4px; border-bottom:1px dashed rgba(232,194,90,.25); font-size:14px;}
+.tan-stat .k{color:#cdb488; letter-spacing:1px;}
+.tan-stat .v{color:#fff3c8; font-weight:700; text-align:right;}
+.tan-stat .v.attr-none{color:#9fd09f;}
+.tan-secTitle{margin:13px 0 5px; font-size:12px; color:#cdb488; letter-spacing:2px; border-left:3px solid #e8c25a; padding-left:8px;}
+.tan-deckTitle{font-size:12px; color:#cdb488; letter-spacing:1px; margin:13px 0 6px;}
+.tan-decks{display:flex; gap:8px; flex-wrap:wrap;}
+.tan-deck{flex:1; min-width:62px; background:rgba(255,235,180,.06); border:1.5px solid rgba(232,194,90,.55); border-radius:12px; padding:9px 6px; text-align:center; cursor:pointer; transition:.12s;}
+.tan-deck.sel{background:linear-gradient(180deg,rgba(255,228,154,.28),rgba(232,181,77,.18)); box-shadow:0 0 12px rgba(255,200,90,.35);}
+.tan-dn{font-size:13px; font-weight:800; color:#fff3c8;}
+.tan-dp{font-size:11px; color:#cdb488; margin-top:2px;}
+.tan-go{margin-top:14px; width:100%; font-family:inherit; font-weight:800; font-size:16px; letter-spacing:2px; color:#2a160a; border:none; padding:13px; border-radius:26px; cursor:pointer; background:linear-gradient(180deg,#ffe49a,#e8b54d 60%,#b9842f); box-shadow:0 4px 0 #7a531c, 0 8px 18px rgba(0,0,0,.45);}
+.tan-go:active{transform:translateY(3px);}
+.tan-go:disabled{filter:grayscale(.5) brightness(.8); cursor:default;}
+.tan-reward{display:flex; justify-content:center; gap:26px; margin:10px 0 2px;}
+.tan-col{text-align:center;}
+.tan-amt{font-size:24px; font-weight:800; color:#ffe39a; text-shadow:0 0 14px rgba(255,200,90,.6);}
+.tan-cap{font-size:11px; color:#cdb488; letter-spacing:1px; margin-top:2px;}
+.tan-note{text-align:center; font-size:10px; color:#9a8c70; margin-top:8px; line-height:1.5;}
+.tan-recall{margin-top:12px; width:100%; font-family:inherit; font-weight:800; font-size:15px; letter-spacing:2px; color:#fff3c8; background:rgba(120,200,255,.14); border:1.5px solid rgba(150,210,255,.6); padding:12px; border-radius:24px; cursor:pointer;}
+.tan-recall:active{transform:translateY(2px);}
+.tan-recall:disabled{filter:grayscale(.5) brightness(.8); cursor:default;}
+.tan-close{position:absolute; top:10px; right:14px; font-size:20px; color:#cdb488; cursor:pointer; line-height:1;}
+.tan-toast{position:absolute; z-index:20; left:50%; top:44%; transform:translate(-50%,-50%); background:rgba(18,10,14,.88); border:1.5px solid rgba(232,194,90,.55); border-radius:16px; padding:18px 26px; text-align:center; box-shadow:0 8px 28px rgba(0,0,0,.6);}
+.tan-toast .tt{font-size:14px; letter-spacing:2px; color:#cdb488; margin-bottom:8px;}
+.tan-toast .ti{font-size:15px; margin:3px 0; color:#fff3c8;}
+.tan-toast .ti b{color:#ffe39a; font-weight:800;}
+`;
+// ノード座標＝mockup の検出座標。depth キー（shallow/mid/deep）に対応（本番の深さ3種＝3ノード）。
+const TAN_NODES = {
+  shallow: { left: '35.7%', top: '22.2%', name: '浅域 ・ 樹冠の広場' },
+  mid: { left: '49.9%', top: '51.3%', name: '中域 ・ 苔生す祭壇' },
+  deep: { left: '52.6%', top: '79.3%', name: '深域 ・ 霧底の遺構' },
+};
 function TansakuScreen({ profile, refreshAll, back, flash }) {
   const maxDecks = Math.min(2 + Math.floor(((profile && profile.cleared_stage) || 0) / 2), 6);
   const [states, setStates] = useState(null);
   const [deckNo, setDeckNo] = useState(1);
-  const [depth, setDepth] = useState('shallow');
+  const [openNode, setOpenNode] = useState(null);   // 開いているノード(depthキー) or null
   const [busy, setBusy] = useState(false);
   const [now, setNow] = useState(Date.now());
-  const [result, setResult] = useState(null);
+  const [toast, setToast] = useState(null);         // 回収結果トースト {medal, exp}
 
   async function load() { try { setStates(await ChikarianAPI.getTansaku() || []); } catch (e) { flash(errMsg(e)); setStates([]); } }
   useEffect(() => { load(); const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
 
-  async function run(fn, okMsg, keepResult) {
+  async function run(fn, okMsg) {
     if (busy) return; setBusy(true);
-    try { const r = await fn(); if (okMsg) flash(okMsg); if (!keepResult) setResult(null); await load(); await refreshAll(); return r; }
+    try { const r = await fn(); if (okMsg) flash(okMsg); await load(); await refreshAll(); return r; }
     catch (e) { flash(errMsg(e)); }
     finally { setBusy(false); }
   }
-  const start = () => run(() => ChikarianAPI.startTansaku(deckNo, 1, depth), '探索を開始しました');  // area=1固定（面別解放は未確定）
-  const collect = async () => { const r = await run(() => ChikarianAPI.collectTansaku(deckNo), null, true); if (r) setResult(r); };
+  // 出発：選択中デッキ＋このノードの深さで開始（深さ変更時の「既存分は自動回収」は startTansaku 仕様のまま）。area=1固定。
+  const doStart = () => { const depth = openNode; setOpenNode(null); run(() => ChikarianAPI.startTansaku(deckNo, 1, depth), '探索を開始しました'); };
+  // 回収：選択中デッキの探索を回収。返り値の実数のみトースト表示（捏造しない）。
+  const doCollect = async () => {
+    const r = await run(() => ChikarianAPI.collectTansaku(deckNo));
+    setOpenNode(null);
+    if (r) { setToast({ medal: Number(r.medal_gain || 0), exp: r.exp_gain_per_card }); setTimeout(() => setToast(null), 1800); }
+  };
 
   if (!states) return <Booting />;
-  const cur = states.find(s => s.deck_no === deckNo) || null;
+  const cur = states.find(s => s.deck_no === deckNo) || null;            // 選択中デッキの探索状態（1デッキ＝1探索）
+  const curDi = cur ? depthInfo(cur.depth) : null;
+  const curKey = curDi ? curDi.key : null;                              // 選択中デッキが探索中の深さ＝busyノード
   const est = tansakuEstimate(cur, now);
+  const byDeck = {}; states.forEach(s => { byDeck[s.deck_no] = s; });
+  const isBusyNode = openNode && curKey === openNode;                    // 開いたノードが選択中デッキの探索先か
+  const od = openNode ? depthInfo(openNode) : null;
 
   return (
-    <div style={S.root}>
-      <div style={S.bg} /><div style={S.vignette} />
-      <div style={{ position: 'relative', zIndex: 2, minHeight: '100dvh', display: 'flex', flexDirection: 'column', padding: '14px 12px 18px', overflowY: 'auto' }}>
-        <div style={{ textAlign: 'center', fontSize: 20, fontWeight: 800, letterSpacing: 3, color: GOLD_HI }}>探索</div>
-
-        {/* デッキ */}
-        <div style={{ fontSize: 12, color: GOLD, fontWeight: 700, marginTop: 14, marginBottom: 6 }}>出撃デッキ</div>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {Array.from({ length: maxDecks }, (_, i) => i + 1).map(n => (
-            <button key={n} onClick={() => { setDeckNo(n); setResult(null); }} style={{ ...S.sideSwitch, padding: '6px 14px', ...(n === deckNo ? S.sideSwitchOn : {}) }}>デッキ{n}</button>
-          ))}
-        </div>
-
-        {/* 現在の探索状態 */}
-        <div style={{ marginTop: 12, padding: '10px 12px', background: PANEL, border: BORDER, borderRadius: 8 }}>
-          {cur && depthInfo(cur.depth)
-            ? <div>
-                <div style={{ fontSize: 12, color: GOLD_HI, fontWeight: 700 }}>探索中：{depthInfo(cur.depth).label}（area {cur.area}）</div>
-                {est && <div style={{ fontSize: 12, color: '#e7d3a6', marginTop: 4 }}>経過 約{Math.floor(est.min)}分 ／ 見込み メダル+{est.medal.toLocaleString()}・各カードEXP+{est.exp}<span style={{ color: '#a98f66' }}>（目安）</span></div>}
-                <button onClick={collect} disabled={busy} style={{ ...S.bigBtn, marginTop: 10, width: '100%' }}>回収する</button>
-              </div>
-            : <div style={{ fontSize: 12, color: '#cdb488' }}>このデッキは探索していません。下で深さを選んで開始してください。</div>}
-        </div>
-
-        {/* 回収結果 */}
-        {result && <div style={{ marginTop: 10, padding: '8px 12px', background: 'rgba(30,60,40,.3)', border: '1px solid rgba(120,220,140,.4)', borderRadius: 8, fontSize: 12, color: '#bff0cf' }}>
-          回収：メダル +{Number(result.medal_gain || 0).toLocaleString()}{result.exp_gain_per_card != null ? `／各カードEXP +${result.exp_gain_per_card}` : ''}{result.elapsed_min != null ? `（${Math.floor(result.elapsed_min)}分ぶん）` : ''}
-        </div>}
-
-        {/* 深さ選択→開始 */}
-        <div style={{ fontSize: 12, color: GOLD, fontWeight: 700, marginTop: 14, marginBottom: 6 }}>ノードの深さ</div>
-        <div style={{ display: 'flex', gap: 6 }}>
-          {DEPTHS.map(d => (
-            <button key={d.key} onClick={() => setDepth(d.key)} style={{ ...S.sideSwitch, flex: 1, padding: '8px 4px', flexDirection: 'column', display: 'flex', ...(d.key === depth ? S.sideSwitchOn : {}) }}>
-              <span style={{ fontSize: 13, fontWeight: 700 }}>{d.label}</span>
-              <span style={{ fontSize: 9, color: '#cdb488' }}>{d.medal}メダル/{d.exp}EXP・分</span>
-            </button>
-          ))}
-        </div>
-        <button onClick={start} disabled={busy} style={{ ...S.bigBtn, marginTop: 14 }}>{cur ? '深さを変えて開始（既存分は自動回収）' : '探索を開始'}</button>
-        <div style={{ fontSize: 10, color: '#a98f66', marginTop: 8 }}>レートは balance §7 の確定値。増減・時刻計算・Lv反映はサーバ。area は当面1固定（面別解放は未確定）。</div>
-        <button onClick={back} style={{ ...S.lineBtn, marginTop: 14, alignSelf: 'center' }}>ホームに戻る</button>
+    <div style={tanRoot}>
+      <style>{TAN_CSS}</style>
+      <div className="tan-mapWrap">
+        <div className="tan-mapDim" />
+        {DEPTHS.map(d => {
+          const pos = TAN_NODES[d.key]; if (!pos) return null;
+          const nodeBusy = curKey === d.key;
+          return (
+            <div key={d.key} className={'tan-node' + (nodeBusy ? ' busy' : '')} style={{ left: pos.left, top: pos.top }} onClick={() => setOpenNode(d.key)}>
+              <div className="tan-dot" /><div className="tan-lbl">{pos.name}</div>
+            </div>
+          );
+        })}
       </div>
+
+      <div className="tan-topbar">
+        <div className="tan-area">{WORLD_NAMES[1]}</div>
+        <div className="tan-res">メダル <b>{((profile && profile.medal) || 0).toLocaleString()}</b></div>
+      </div>
+
+      <div className={'tan-scrim' + (openNode ? ' show' : '')} onClick={() => setOpenNode(null)} />
+
+      <div className={'tan-sheet' + (openNode ? ' show' : '')}>
+        {openNode && isBusyNode && (
+          /* 探索中ノード：経過/見込み＋回収 */
+          <>
+            <span className="tan-close" onClick={() => setOpenNode(null)}>×</span>
+            <h3>{TAN_NODES[openNode].name}（探索中）</h3>
+            <div className="tan-reward">
+              <div className="tan-col"><div className="tan-amt">{est ? est.medal.toLocaleString() : '0'}</div><div className="tan-cap">メダル（目安）</div></div>
+              <div className="tan-col"><div className="tan-amt">{est ? est.exp : '0'}</div><div className="tan-cap">各カードEXP（目安）</div></div>
+            </div>
+            <div className="tan-note">経過 約{est ? Math.floor(est.min) : 0}分 ／ デッキ{deckNo}。増減・時刻計算・Lv反映はサーバ判定（balance §7）。</div>
+            <button className="tan-recall" onClick={doCollect} disabled={busy}>引っ込めて回収する</button>
+          </>
+        )}
+        {openNode && !isBusyNode && od && (
+          /* 未探索ノード：レート＋デッキ選択＋出発 */
+          <>
+            <span className="tan-close" onClick={() => setOpenNode(null)}>×</span>
+            <h3>{TAN_NODES[openNode].name}</h3>
+            {/* 要求戦力・ドロップchip は本番にデータが無いため省略（捏造しない） // TODO 深さ別の戦力ゲート/ドロップが確定したら追加 */}
+            <div className="tan-stat"><span className="k">属性要求</span><span className="v attr-none">なし</span></div>
+            <div className="tan-secTitle">時間で蓄積（balance §7・上限なし・張り付き不要）</div>
+            <div className="tan-stat"><span className="k">メダル</span><span className="v">{od.medal} /分</span></div>
+            <div className="tan-stat"><span className="k">各カードEXP</span><span className="v">{od.exp} /分</span></div>
+            <div className="tan-deckTitle">派遣するデッキ</div>
+            <div className="tan-decks">
+              {Array.from({ length: maxDecks }, (_, i) => i + 1).map(n => {
+                const st = byDeck[n]; const di = st && depthInfo(st.depth);
+                return (
+                  <div key={n} className={'tan-deck' + (n === deckNo ? ' sel' : '')} onClick={() => setDeckNo(n)}>
+                    <div className="tan-dn">デッキ{n}</div>
+                    <div className="tan-dp">{di ? di.label + '探索中' : '待機'}</div>
+                  </div>
+                );
+              })}
+            </div>
+            <button className="tan-go" onClick={doStart} disabled={busy}>{cur ? '出発（既存分は自動回収）' : '出発'}</button>
+            <div className="tan-note">レートは balance §7 の確定値。増減・時刻計算・Lv反映はサーバ。area は当面1固定（面別解放は未確定）。</div>
+          </>
+        )}
+      </div>
+
+      {toast && (
+        <div className="tan-toast">
+          <div className="tt">回収しました</div>
+          <div className="ti">メダル <b>+{toast.medal.toLocaleString()}</b></div>
+          {toast.exp != null && <div className="ti">各カードEXP <b>+{toast.exp}</b></div>}
+        </div>
+      )}
+
+      <button className="tan-back" onClick={back}>‹ 戻る</button>
     </div>
   );
 }
