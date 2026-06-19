@@ -1667,7 +1667,7 @@ function bossSortieName(bossKey) {
   return (st && st.bosses[idx]) ? st.bosses[idx].name : bossKey;
 }
 
-function BossScreen({ profile, onRefresh, back, flash }) {
+function BossScreen({ profile, cards, onRefresh, back, flash }) {
   const [bosses, setBosses] = useState(null);
   const [decks, setDecks] = useState(null);
   const [skillMap, setSkillMap] = useState({});
