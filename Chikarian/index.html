@@ -2119,7 +2119,7 @@ const kyokaS = {
   slotsRow: { display: 'flex', alignItems: 'flex-start', justifyContent: 'center', gap: 10, margin: '6px 0 4px' },
   slot: { flex: 1, maxWidth: 130 },
   slotLab: { fontSize: 11, color: '#cdb488', letterSpacing: 1, textAlign: 'center', marginBottom: 5 },
-  boxEmpty: { aspectRatio: '5/7', borderRadius: 12, border: '1.5px dashed rgba(232,194,90,.5)', background: 'rgba(0,0,0,.3)', display: 'grid', placeItems: 'center', fontSize: 26, color: '#6a5a3a', cursor: 'pointer' },
+  boxEmpty: { aspectRatio: '2/3', borderRadius: 12, border: '1.5px dashed rgba(232,194,90,.5)', background: 'rgba(0,0,0,.3)', display: 'grid', placeItems: 'center', fontSize: 26, color: '#6a5a3a', cursor: 'pointer' },
   arrow: { flex: 'none', fontSize: 24, color: '#e8b54d', alignSelf: 'center', marginTop: 30 },
   foot: { display: 'flex', flexWrap: 'wrap', gap: 3, alignItems: 'center', justifyContent: 'center', marginTop: 5, minHeight: 18 },
   rb: { fontSize: 9, fontWeight: 800, padding: '1px 6px', borderRadius: 5, color: '#16100a' },
@@ -2260,6 +2260,7 @@ function KyokaView({ base, cards, profile, refreshAll, onBack, flash }) {
                 {candidates.map(c => (
                   <div key={c.id} style={{ outline: matId === c.id ? '2px solid ' + GOLD : 'none', borderRadius: 10 }}>
                     <CardThumb card={c} small onClick={() => setMatId(matId === c.id ? null : c.id)} />
+                    <div style={{ fontSize: 8, lineHeight: 1.2, textAlign: 'center', color: '#cdb488', marginTop: 1 }}>{cardFullName(c)}</div>
                   </div>
                 ))}
               </div>}
@@ -3188,6 +3189,7 @@ function SkillView({ base, cards, profile, skillMap, refreshAll, onBack, flash }
                   {(cards || []).filter(c => c.id !== base.id && !c.locked && !c.card_key.endsWith('_sp')).map(c => (
                     <div key={c.id} style={{ outline: srcId === c.id ? '2px solid #c7a14e' : 'none', borderRadius: 10 }}>
                       <CardThumb card={c} small onClick={() => pickSrc(c.id)} />
+                      <div style={{ fontSize: 8, lineHeight: 1.2, textAlign: 'center', color: '#cdb488', marginTop: 1 }}>{cardFullName(c)}</div>
                     </div>
                   ))}
                 </div>
