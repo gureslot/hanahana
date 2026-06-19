@@ -1525,11 +1525,27 @@ const BOSS_CSS = `
 .boss-node.locked .boss-gi{background:#5a5048; box-shadow:none; animation:none;}
 .boss-node.cleared .boss-dot.hasimg img{filter:brightness(.85) saturate(.9);}
 .boss-node.locked .boss-dot.hasimg img{filter:grayscale(1) brightness(.5);}
-.boss-decksTop{position:absolute; z-index:6; top:14px; left:14px; width:176px; display:flex; flex-direction:column; gap:6px;}
+.boss-topleft{position:absolute; z-index:6; top:14px; left:14px; width:192px; display:flex; flex-direction:column; gap:8px;}
+.boss-decksTop{display:flex; flex-direction:column; gap:6px;}
 .boss-decksTopT{font-size:10px; color:#cdb488; letter-spacing:1px; text-shadow:0 1px 3px #000;}
 .boss-deckRow{display:flex; flex-wrap:wrap; gap:5px;}
 .boss-dpill{font-family:inherit; font-size:11px; color:#cdb488; background:rgba(18,10,14,.9); border:1.5px solid rgba(232,194,90,.55); border-radius:10px; padding:5px 10px; cursor:pointer;}
 .boss-dpill.sel{color:#fff3c8; background:linear-gradient(180deg,rgba(255,228,154,.28),rgba(232,181,77,.18)); box-shadow:0 0 8px rgba(255,200,90,.3);}
+.boss-dpill.busy{opacity:.5; border-style:dashed;}
+/* 出撃ゲージ（mockup .sorties を踏襲・複数デッキを縦積み） */
+.boss-sortie{background:rgba(18,10,14,.92); border:1.5px solid rgba(232,194,90,.55); border-radius:10px; padding:7px 9px; box-shadow:0 2px 10px rgba(0,0,0,.5);}
+.boss-sortieTop{font-size:11px; color:#fff3c8; letter-spacing:.3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:5px;}
+.boss-sgRow{display:flex; align-items:center; gap:6px;}
+.boss-sgRow .ph{font-size:9px; flex:none; width:48px; color:#cdb488;}
+.boss-sgRow .ph.go{color:#e0a23b;} .boss-sgRow .ph.back{color:#9fd0ff;} .boss-sgRow .ph.done{color:#9fe0a0;}
+.boss-sgbar{flex:1; height:5px; border-radius:3px; background:rgba(255,255,255,.14); overflow:hidden;}
+.boss-sgfill{display:block; height:5px; border-radius:3px; background:linear-gradient(90deg,#e0a23b,#ffd98a);}
+.boss-sgfill.back{background:linear-gradient(90deg,#3b7ae0,#9fd0ff);}
+.boss-sgfill.done{background:linear-gradient(90deg,#3a7a40,#9fe0a0);}
+.boss-sgRow .tm{font-size:9px; color:#fff3c8; flex:none; min-width:30px; text-align:right;}
+.boss-sgbtn{margin-top:6px; width:100%; font-family:inherit; font-size:11px; font-weight:800; letter-spacing:.5px; border:none; border-radius:8px; padding:7px 0; cursor:pointer; background:linear-gradient(180deg,#ffcaa0,#e0563b 60%,#a0341c); color:#2a0d06;}
+.boss-sgbtn.collect{background:linear-gradient(180deg,#bfe9c0,#5fa564); color:#0b2a12;}
+.boss-sgbtn:disabled{filter:grayscale(.6) brightness(.7); cursor:default;}
 .boss-worldsel{position:absolute; z-index:7; top:14px; right:14px; width:152px;}
 .boss-wbtn{width:100%; background:rgba(18,10,14,.9); border:1.5px solid rgba(232,194,90,.55); border-radius:12px; padding:8px 12px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; gap:6px;}
 .boss-wn{font-size:13px; font-weight:800; color:#fff3c8; letter-spacing:1px;}
@@ -1577,10 +1593,29 @@ const BOSS_ROLE_KEYS = ['a', 'b', 'boss'];                                   // 
 const BOSS_NODES = [{ left: '28%', top: '23%', size: 'sub' }, { left: '70%', top: '53.5%', size: 'sub' }, { left: '52%', top: '84%', size: 'boss', up: true }];
 
 function BossNodeImg({ src }) {
-  // ボス絵 boss_<面>_<role>。読めなければ赤い拍動ドット(.boss-gi)にフォールバック。
+  // マップのピン＝ic_map_subboss / ic_map_boss（汎用アイコン）。読めなければ赤い拍動ドット(.boss-gi)にフォールバック。
   const [err, setErr] = useState(false);
   if (err) return null;
   return <img src={src} alt="" onError={() => setErr(true)} />;
+}
+// 出撃のローカル秒読み：サーバ now と clientの差(offset)で残り秒・phaseを毎秒再計算（最終判定はサーバ）。
+function bossLivePhase(s, offset, nowMs) {
+  const serverNow = nowMs + offset;
+  if (s.returning) {
+    const ret = s.return_until ? new Date(s.return_until).getTime() : serverNow;
+    const rem = Math.max(0, Math.ceil((ret - serverNow) / 1000));
+    return { phase: rem <= 0 ? 'return_done' : 'returning', remaining: rem };
+  }
+  const arr = new Date(s.arrive_at).getTime();
+  const rem = Math.max(0, Math.ceil((arr - serverNow) / 1000));
+  return { phase: rem <= 0 ? 'arrived' : 'out', remaining: rem };
+}
+function bossMmss(t) { t = Math.max(0, Math.floor(t)); const m = Math.floor(t / 60), s = t % 60; return m + ':' + String(s).padStart(2, '0'); }
+function bossSortieName(bossKey) {
+  const m = /^boss_([1-8])_(a|b|boss)/.exec(bossKey || '');
+  if (!m) return bossKey;
+  const st = BOSS_STAGES[+m[1] - 1]; const idx = BOSS_ROLE_KEYS.indexOf(m[2]);
+  return (st && st.bosses[idx]) ? st.bosses[idx].name : bossKey;
 }
 
 function BossScreen({ profile, onRefresh, back, flash }) {
@@ -1594,26 +1629,53 @@ function BossScreen({ profile, onRefresh, back, flash }) {
   const [worldOpen, setWorldOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
+  const [sorties, setSorties] = useState([]);                           // get_boss_sorties の sorties[]
+  const [clockOffset, setClockOffset] = useState(0);                    // サーバ now − client now（ms）
+  const [now, setNow] = useState(Date.now());
 
   const maxDecks = Math.min(2 + Math.floor(((profile && profile.cleared_stage) || 0) / 2), 6);
   const triesUsed = (profile && profile.boss_date === jstToday()) ? (profile.boss_count_today || 0) : 0;
   const triesLeft = Math.max(0, 3 - triesUsed);
 
+  async function refetchSorties() {
+    try { const d = await ChikarianAPI.getBossSorties(); setSorties((d && d.sorties) || []); setClockOffset(d && d.now ? (new Date(d.now).getTime() - Date.now()) : 0); }
+    catch (e) { /* 取得失敗時はゲージ非表示（最終判定はサーバ操作で担保） */ }
+  }
   useEffect(() => {
     (async () => {
       try { setBosses(await ChikarianAPI.getBossMaster() || []); } catch (e) { flash(errMsg(e)); setBosses([]); }
       try { setDecks(await ChikarianAPI.getDecks() || []); } catch (e) { setDecks([]); }
       try { const sm = await ChikarianAPI.getSkillMaster(); const m = {}; (sm || []).forEach(s => { m[s.skill_key] = s; }); setSkillMap(m); } catch (e) {}
     })();
+    refetchSorties();
+    const t1 = setInterval(() => setNow(Date.now()), 1000);          // ローカル秒読み
+    const t2 = setInterval(refetchSorties, 20000);                   // periodic 再取得
+    return () => { clearInterval(t1); clearInterval(t2); };
   }, []);
 
-  async function sortie(role) {
+  // 出撃（戦闘はまだ起きない・回数消費＋デッキ占有）。bossKey は従来形式。
+  async function startSortie(role) {
+    if (busy) return; setBusy(true);
+    try { await ChikarianAPI.startBossBattle(deckNo, 'boss_' + stage + '_' + role); setOpenNode(null); await refetchSorties(); await onRefresh(); flash('出撃しました'); }
+    catch (e) { flash(errMsg(e)); }
+    finally { setBusy(false); }
+  }
+  // 回収（到着→戦闘解決／帰還完了→解放）。canceled で分岐。
+  async function collectSortie(dno) {
     if (busy) return; setBusy(true);
     try {
-      const res = await ChikarianAPI.doBossBattle(deckNo, 'boss_' + stage + '_' + role);   // ★戦闘計算はサーバ。bossKey は従来形式
-      setResult(res); setOpenNode(null);
-      await onRefresh();   // profile（メダル/EXP/回数）＋ cards（武気損失/Lv）をサーバ再取得
+      const res = await ChikarianAPI.collectBossResult(dno);
+      await refetchSorties(); await onRefresh();                     // profile（回数/報酬）＋ cards（武気損失）
+      if (res && res.canceled) flash('帰還しました');
+      else setResult(res);                                           // 戦闘結果→BossResult（ボスイラスト入り）
     } catch (e) { flash(errMsg(e)); }
+    finally { setBusy(false); }
+  }
+  // キャンセル（出撃中のみ・経過時間ぶん帰還／回数返金）。
+  async function cancelSortie(dno) {
+    if (busy) return; setBusy(true);
+    try { await ChikarianAPI.cancelBossSortie(dno); await refetchSorties(); await onRefresh(); flash('引き返します（帰還中）'); }
+    catch (e) { flash(errMsg(e)); }
     finally { setBusy(false); }
   }
 
@@ -1623,6 +1685,13 @@ function BossScreen({ profile, onRefresh, back, flash }) {
   const curStage = BOSS_STAGES[stage - 1];                              // 表示中の面（名前/界/ボス画像の正）
   const closeSheet = () => setOpenNode(null);
 
+  // 各デッキの live phase（毎秒再計算）。busyByDeck[n]={s,phase,remaining}
+  const liveByDeck = {};
+  sorties.forEach(s => { liveByDeck[s.deck_no] = Object.assign({ s }, bossLivePhase(s, clockOffset, now)); });
+  // 現在の面に出撃中のロール → ノード busy 表示
+  const busyRoleOnStage = {};
+  sorties.forEach(s => { const m = /^boss_([1-8])_(a|b|boss)/.exec(s.boss_key); if (m && +m[1] === stage) busyRoleOnStage[m[2]] = true; });
+
   return (
     <div style={bossRoot}>
       <style>{BOSS_CSS}</style>
@@ -1630,23 +1699,51 @@ function BossScreen({ profile, onRefresh, back, flash }) {
         <div className="boss-mapDim" />
         {curStage.bosses.map((b, i) => {
           const pos = BOSS_NODES[i];
+          const role = BOSS_ROLE_KEYS[i];
+          const pinSrc = i < 2 ? './images/ic_map_subboss.png' : './images/ic_map_boss.png';   // ピン＝汎用アイコン（ボス絵は報告書で使う）
+          const nodeBusy = !!busyRoleOnStage[role];
           return (
-            <div key={i} className={'boss-node' + (pos.up ? ' up' : '')} style={{ left: pos.left, top: pos.top }} onClick={() => setOpenNode(i)}>
-              <div className={'boss-dot ' + pos.size}><span className="boss-gi" /><BossNodeImg src={`./images/${b.img}.png`} /></div>
+            <div key={i} className={'boss-node' + (pos.up ? ' up' : '') + (nodeBusy ? ' busy' : '')} style={{ left: pos.left, top: pos.top }} onClick={() => setOpenNode(i)}>
+              <div className={'boss-dot ' + pos.size}><span className="boss-gi" /><BossNodeImg src={pinSrc} /></div>
               <div className="boss-lbl">{b.role} ・ {b.name}</div>
             </div>
           );
         })}
       </div>
 
-      {/* 左上：出撃デッキ選択 */}
-      <div className="boss-decksTop">
-        <div className="boss-decksTopT">出撃デッキ</div>
-        <div className="boss-deckRow">
-          {Array.from({ length: maxDecks }, (_, i) => i + 1).map(n => (
-            <button key={n} className={'boss-dpill' + (n === deckNo ? ' sel' : '')} onClick={() => setDeckNo(n)}>デッキ{n}</button>
-          ))}
+      {/* 左上：出撃デッキ選択＋出撃ゲージ（全デッキ分） */}
+      <div className="boss-topleft">
+        <div className="boss-decksTop">
+          <div className="boss-decksTopT">出撃デッキ</div>
+          <div className="boss-deckRow">
+            {Array.from({ length: maxDecks }, (_, i) => i + 1).map(n => (
+              <button key={n} className={'boss-dpill' + (n === deckNo ? ' sel' : '') + (liveByDeck[n] ? ' busy' : '')} onClick={() => setDeckNo(n)}>デッキ{n}</button>
+            ))}
+          </div>
         </div>
+
+        {sorties.map(s => {
+          const L = liveByDeck[s.deck_no]; if (!L) return null;
+          const phase = L.phase, rem = L.remaining;
+          const total = s.travel_sec || 1;
+          const pct = (phase === 'arrived' || phase === 'return_done') ? 100 : Math.min(100, Math.max(0, (total - rem) / total * 100));
+          const phCls = phase === 'returning' ? 'back' : ((phase === 'arrived' || phase === 'return_done') ? 'done' : 'go');
+          const phLbl = phase === 'out' ? '到達まで' : (phase === 'returning' ? '帰還まで' : (phase === 'arrived' ? '到着' : '帰還完了'));
+          return (
+            <div key={s.deck_no} className="boss-sortie">
+              <div className="boss-sortieTop">デッキ{s.deck_no} ・ {bossSortieName(s.boss_key)}</div>
+              <div className="boss-sgRow">
+                <span className={'ph ' + phCls}>{phLbl}</span>
+                <div className="boss-sgbar"><span className={'boss-sgfill ' + phCls} style={{ width: pct + '%' }} /></div>
+                <span className="tm">{(phase === 'arrived' || phase === 'return_done') ? '0:00' : bossMmss(rem)}</span>
+              </div>
+              {phase === 'out' && <button className="boss-sgbtn" onClick={() => cancelSortie(s.deck_no)} disabled={busy}>キャンセル（帰還）</button>}
+              {phase === 'arrived' && <button className="boss-sgbtn collect" onClick={() => collectSortie(s.deck_no)} disabled={busy}>結果を見る</button>}
+              {phase === 'returning' && <button className="boss-sgbtn" disabled>帰還中…</button>}
+              {phase === 'return_done' && <button className="boss-sgbtn collect" onClick={() => collectSortie(s.deck_no)} disabled={busy}>回収（解放）</button>}
+            </div>
+          );
+        })}
       </div>
 
       {/* 右上：界選択（畳み式）＋本日の挑戦 */}
@@ -1675,6 +1772,7 @@ function BossScreen({ profile, onRefresh, back, flash }) {
         {openNode !== null && (() => {
           const i = openNode; const sb = curStage.bosses[i]; const role = BOSS_ROLE_KEYS[i];
           const bm = (bosses || []).find(x => x.boss_key === 'boss_' + stage + '_' + role);   // 戦闘数値は boss_master
+          const deckBusy = !!liveByDeck[deckNo];
           return (
             <>
               <span className="boss-close" onClick={closeSheet}>×</span>
@@ -1687,9 +1785,10 @@ function BossScreen({ profile, onRefresh, back, flash }) {
                     <div className="boss-stat"><span className="k">武器</span><span className="v">{arrJA(bm.weapons, WEAP_JA)}</span></div>
                   </>
                 : <div className="boss-stat"><span className="k">敵情報</span><span className="v" style={{ color: '#ff6a7a' }}>boss_master にデータがありません</span></div>}
-              <div className="boss-note">三すくみ 有利×1.2／不利×0.8（balance 2026-06-14）。勝敗・損失・報酬はサーバ判定。</div>
-              <button className="boss-go" onClick={() => sortie(role)} disabled={busy || triesLeft <= 0}>{busy ? '出撃中…' : (triesLeft <= 0 ? '本日の挑戦は終了' : `出撃（デッキ${deckNo}）`)}</button>
-              {triesLeft <= 0 && <div className="boss-warn">本日の挑戦回数を使い切りました（0時に回復）</div>}
+              <div className="boss-note">出撃すると約30分（テスト中30秒）デッキが出払う。到着後に結果を回収（報告書）。三すくみ 有利×1.2／不利×0.8。勝敗・損失・報酬はサーバ判定。</div>
+              <button className="boss-go" onClick={() => startSortie(role)} disabled={busy || triesLeft <= 0 || deckBusy}>{busy ? '処理中…' : (deckBusy ? `デッキ${deckNo}は出撃中` : (triesLeft <= 0 ? '本日の挑戦は終了' : `出撃（デッキ${deckNo}）`))}</button>
+              {triesLeft <= 0 && !deckBusy && <div className="boss-warn">本日の挑戦回数を使い切りました（0時に回復）</div>}
+              {deckBusy && <div className="boss-warn">別のデッキを選ぶか、出撃中デッキの回収/キャンセルをしてください</div>}
             </>
           );
         })()}
@@ -1698,6 +1797,18 @@ function BossScreen({ profile, onRefresh, back, flash }) {
   );
 }
 
+// 報告書のボスイラスト＝./images/boss_<stage>_<role>.png（読めなければ ❖ にフォールバック）。
+function BossResultArt({ stage, role, win }) {
+  const [err, setErr] = useState(false);
+  const col = win ? 'rgba(120,220,140,.5)' : 'rgba(255,120,80,.5)';
+  return (
+    <div style={{ width: '60%', maxWidth: 230, aspectRatio: '1/1', margin: '12px auto 0', borderRadius: 14, overflow: 'hidden', border: '1.5px solid rgba(232,194,90,.5)', background: '#241018', boxShadow: `0 6px 26px rgba(0,0,0,.5), 0 0 18px ${col}`, display: 'grid', placeItems: 'center', position: 'relative' }}>
+      {err
+        ? <span style={{ fontSize: 44, color: '#7a5a3a' }}>❖</span>
+        : <img src={`./images/boss_${stage}_${role}.png`} alt="" onError={() => setErr(true)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+    </div>
+  );
+}
 function BossResult({ res, skillMap, onAgain, onHome }) {
   const win = !!res.win;
   const fired = res.fired_skills || [];
@@ -1713,6 +1824,9 @@ function BossResult({ res, skillMap, onAgain, onHome }) {
       <div style={{ position: 'relative', zIndex: 2, minHeight: '100dvh', display: 'flex', flexDirection: 'column', padding: '16px 14px 18px', overflowY: 'auto' }}>
         <div style={{ textAlign: 'center', fontSize: 12, color: '#cdb488' }}>{WORLD_NAMES[res.stage]} ・ {ROLE_JA[res.role]}{res.round > 1 ? `（${res.round}周目）` : ''}</div>
         <div style={{ textAlign: 'center', fontSize: 34, fontWeight: 800, letterSpacing: 4, marginTop: 8, color: win ? '#ffe28a' : '#ff8aa0', textShadow: '0 0 18px rgba(255,200,90,.4)' }}>{win ? '勝　利' : '敗　北'}</div>
+
+        {/* ボスイラスト（大） */}
+        <BossResultArt stage={res.stage} role={res.role} win={win} />
 
         <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginTop: 12 }}>
           <div style={{ textAlign: 'center' }}><div style={{ fontSize: 10, color: '#cdb488' }}>実戦闘力</div><div style={{ fontSize: 20, fontWeight: 800, color: GOLD_HI }}>{Number(res.own_power || 0).toLocaleString()}</div></div>

@@ -90,7 +90,13 @@
   const claimSaishu  = (n)                  => rpc('claim_saishu',   { n: n });                                    // 0003: 引数名は n（dev/console.html と一致）
   const doGacha      = ()                   => rpc('do_gacha',       {});                                          // 0004/0007: 引数なし
   const updateDeck   = (deckNo, s1, s2, s3) => rpc('update_deck',    { p_deck_no: deckNo, p_slot1: s1, p_slot2: s2, p_slot3: s3 }); // 0005: 一致
-  const doBossBattle = (deckNo, bossKey)    => rpc('do_boss_battle', { p_deck_no: deckNo, p_boss_key: bossKey });  // 0011: 一致
+  const doBossBattle = (deckNo, bossKey)    => rpc('do_boss_battle', { p_deck_no: deckNo, p_boss_key: bossKey });  // 0011: 一致（時間制移行後はクライアント未使用）
+
+  // ---- 0042（ボス時間制出撃）。クライアントは start/collect/cancel/get を使う ----
+  const startBossBattle  = (deckNo, bossKey) => rpc('start_boss_battle',  { p_deck_no: deckNo, p_boss_key: bossKey });
+  const collectBossResult= (deckNo)          => rpc('collect_boss_result',{ p_deck_no: deckNo });
+  const cancelBossSortie = (deckNo)          => rpc('cancel_boss_sortie', { p_deck_no: deckNo });
+  const getBossSorties   = ()                => rpc('get_boss_sorties',   {});
 
   // ---- 0012-0021（引数名は確定）----
   const doKyoka         = (baseId, matId, hoshou = 0)      => rpc('do_kyoka',          { p_base_id: baseId, p_mat_id: matId, p_hoshou_n: hoshou });
@@ -119,6 +125,8 @@
     getTansaku, getZukan, getSpStates, getMissions, getMissionMaster, getExchangeRates, getSkillMaster, getBossMaster, getBattleLogs,
     // writes (existing)
     claimSaishu, doGacha, updateDeck, doBossBattle,
+    // writes (0042: ボス時間制出撃)
+    startBossBattle, collectBossResult, cancelBossSortie, getBossSorties,
     // writes (0012-0021)
     doKyoka, doSkillTeni, doSkillRensei,
     investRenkiden, collectRenkiden, instantRenkiden, upgradeRenkiden,
