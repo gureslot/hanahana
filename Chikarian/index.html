@@ -1370,7 +1370,7 @@ const deckS = {
   summary: { textAlign: 'center', padding: '12px 16px 0' },
   legend: { fontSize: 10, color: '#9a8c70', marginTop: 6, lineHeight: 1.6 },
   autoSave: { fontSize: 10, color: '#9fd0a0', marginTop: 4, letterSpacing: 1 },
-  deckMark: { position: 'absolute', top: 3, left: 3, fontSize: 9, fontWeight: 800, color: '#16100a', background: '#cdb488', borderRadius: 5, padding: '0 5px', zIndex: 2, whiteSpace: 'nowrap' },
+  deckMark: { position: 'absolute', top: 20, left: 3, fontSize: 9, fontWeight: 800, color: '#16100a', background: '#cdb488', borderRadius: 5, padding: '0 5px', zIndex: 2, whiteSpace: 'nowrap' },
   // 移動確認モーダル（ダーク・ゴシック調・赤/黒/金）
   mScrim: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,.74)', display: 'grid', placeItems: 'center', zIndex: 60, padding: 24 },
   mBox: { maxWidth: 340, width: '100%', background: '#160a13', border: '1.5px solid rgba(232,194,90,.55)', borderRadius: 14, padding: '20px 18px 16px', textAlign: 'center', boxShadow: '0 12px 40px rgba(0,0,0,.7)' },
@@ -1423,6 +1423,8 @@ function DeckScreen({ profile, cards, back, flash }) {
 
   let costTotal = 0;
   curSlots.forEach(id => { const c = cardById[id]; if (!c) return; costTotal += COST_BY_RAR[parseCardKey(c.card_key).rarity] || 0; });  // SP=4 を算入
+  // このデッキ自身が出撃中（編成カードに探索/ボス占有が付く）＝編集不可（対称ケースの CARD_IN_TANSAKU を防ぐ）
+  const deckSortie = curSlots.some(id => { const c = id && cardById[id]; return c && (c.tansaku_deck_no != null || c.boss_deck_no != null); });
 
   // 即コミット：操作の都度 updateDeck → サーバ値で反映（撃ちっぱなし）。
   async function commit(newSlots) {
@@ -1454,17 +1456,19 @@ function DeckScreen({ profile, cards, back, flash }) {
                   {list.map(c => {
                     const sameDeckOther = curSlots.some((id, i) => id === c.id && i !== picking);  // 同一デッキ内の他枠で使用中
                     const sp = spSet && spSet[c.id];
+                    const sortieLocked = (c.tansaku_deck_no != null) || (c.boss_deck_no != null);   // 探索/ボス出撃中＝占有ロック
                     const otherDeck = deckNoOf(c.id);                                              // 他デッキ在籍（選べるが確認）
-                    const disabled = busy || sameDeckOther || sp;
+                    const disabled = busy || sameDeckOther || sp || sortieLocked;
                     const onClick = disabled ? undefined
                       : (otherDeck ? () => setMoveConfirm({ cardId: c.id, slot: picking, fromDeckNo: otherDeck })
                                    : () => commit(withSlot(picking, c.id)));
                     return (
-                      <div key={c.id} style={{ position: 'relative', opacity: (sameDeckOther || sp) ? .4 : 1 }}>
+                      <div key={c.id} style={{ position: 'relative', opacity: (sameDeckOther || sp || sortieLocked) ? .4 : 1 }}>
                         <CardThumb card={c} small onClick={onClick} />
                         {sp && <div style={badge('#ff6a7a')}>離脱中</div>}
-                        {!sp && sameDeckOther && <div style={badge('#888')}>編成中</div>}
-                        {!sp && !sameDeckOther && otherDeck && <div style={deckS.deckMark}>デッキ{otherDeck}</div>}
+                        {!sp && sortieLocked && <div style={badge('#ff6a7a')}>{c.tansaku_deck_no != null ? '探索中' : '出撃中'}</div>}
+                        {!sp && !sortieLocked && sameDeckOther && <div style={badge('#888')}>編成中</div>}
+                        {!sp && !sortieLocked && !sameDeckOther && otherDeck && <div style={deckS.deckMark}>デッキ{otherDeck}</div>}
                       </div>
                     );
                   })}
@@ -1511,17 +1515,17 @@ function DeckScreen({ profile, cards, back, flash }) {
           })}
         </div>
 
-        {/* 3枠（即確定：枠タップで選択／×で即空に） */}
-        <div style={{ ...deckS.slots, opacity: busy ? .6 : 1 }}>
+        {/* 3枠（即確定：枠タップで選択／×で即空に。出撃中デッキは編集不可） */}
+        <div style={{ ...deckS.slots, opacity: (busy || deckSortie) ? .6 : 1 }}>
           {[0, 1, 2].map(slot => {
             const id = curSlots[slot]; const c = id ? cardById[id] : null;
             const sp = c && spSet && spSet[c.id];
             const info = c ? parseCardKey(c.card_key) : null;
             return (
-              <div key={slot} onClick={() => { if (!busy) setPicking(slot); }} style={{ ...deckS.slot, ...(c ? deckS.slotFilled : {}) }}>
+              <div key={slot} onClick={() => { if (!busy && !deckSortie) setPicking(slot); }} style={{ ...deckS.slot, ...(c ? deckS.slotFilled : {}) }}>
                 {c
                   ? <>
-                      <div onClick={(e) => { e.stopPropagation(); if (!busy) commit(withSlot(slot, null)); }} style={deckS.rm}>×</div>
+                      <div onClick={(e) => { e.stopPropagation(); if (!busy && !deckSortie) commit(withSlot(slot, null)); }} style={deckS.rm}>×</div>
                       <DeckSlotArt cardKey={c.card_key} />
                       <div style={deckS.meta}><DeckBadges info={info} /></div>
                       {sp && <div style={badge('#ff6a7a')}>離脱中</div>}
@@ -1531,6 +1535,7 @@ function DeckScreen({ profile, cards, back, flash }) {
             );
           })}
         </div>
+        {deckSortie && <div style={{ textAlign: 'center', fontSize: 11, color: '#ff9a8a', marginTop: 4 }}>このデッキは出撃中のため編成できません</div>}
 
         {/* コスト目安（mockup .summary：中央寄せ・本番の文言を維持） */}
         <div style={deckS.summary}>
