@@ -1857,6 +1857,7 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
   const [spSet, setSpSet] = useState({});                              // SP離脱中（card_id→true）。出撃シートで離脱SPを除外表示
   const [detailCard, setDetailCard] = useState(null);                  // カードタップ→CardDetail オーバーレイ
   const [editDeckNo, setEditDeckNo] = useState(null);                  // 編成ボタン→DeckScreen オーバーレイ
+  const [fillingDeck, setFillingDeck] = useState(null);                // 最大充填 処理中のデッキ番号（連打防止）
   const [deckNo, setDeckNo] = useState(1);
   const cleared = (profile && profile.cleared_stage) || 0;
   const [stage, setStage] = useState(() => Math.min(cleared + 1, 8));   // 既定＝次の未クリア面（フロンティア）
@@ -1937,6 +1938,30 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
   function deckTotal(n) { return deckMembers(n).filter(c => c && !spSet[c.id]).reduce((a, c) => a + computeStats(c).sougou, 0); }   // 離脱SPは戦力から除外
   function deckUsable(n) { return deckMembers(n).filter(c => c && !spSet[c.id]).length; }   // 出撃に出せる枚数（離脱SP除く）
   function deckLock(n) { if (busyDecks.has(n)) return 'boss'; if (deckMembers(n).some(c => c && c.tansaku_deck_no != null)) return 'tansaku'; return null; }   // 'boss'=出撃中 / 'tansaku'=探索中 / null=出撃可
+
+  // 最大充填：当該デッキの全カードを順次（並列不可）込められるだけ満タンに。SPはスキップ。
+  //   equip_buki に大きな枠数を渡す→サーバが枠上限/プール残でキャップ＝「最大充填」。質は現状維持(null→crude)。
+  async function maxFillDeck(n) {
+    if (fillingDeck !== null) return; setFillingDeck(n);
+    let totalFilled = 0;
+    try {
+      for (const c of deckMembers(n).filter(Boolean)) {
+        if (/_sp$/.test(c.card_key || '')) continue;                  // SP＝武気を持たない
+        const before = c.loaded_buki || 0;
+        try {
+          const res = await ChikarianAPI.equipBuki(c.id, c.quality || 'crude', 100000);   // 質維持・大量指定でキャップ
+          const after = (res && res.loaded_buki != null) ? Number(res.loaded_buki) : before;
+          totalFilled += Math.max(0, after - before);
+        } catch (e) { /* 個別失敗は継続（最終判定はサーバ） */ }
+      }
+      try { await onRefresh(); } catch (e) {}                         // cards 再取得（loaded_buki 表示更新）
+      let remaining = null;
+      try { const rk = normalizeRk(await ChikarianAPI.getRenkiden()); remaining = rk ? rk.buki : null; } catch (e) {}
+      if (totalFilled > 0) flash(`武気を ${totalFilled.toLocaleString()} 枠充填しました` + (remaining != null ? `（練気殿 残り ${Number(remaining).toLocaleString()}）` : ''));
+      else if (remaining != null && remaining <= 0) flash('練気殿に武気がありません');
+      else flash('すでに最大まで充填されています');
+    } finally { setFillingDeck(null); }
+  }
 
   // 各デッキの live phase（毎秒再計算）
   const liveByDeck = {};
@@ -2041,7 +2066,7 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
                   return (
                     <div key={n} className={'boss-deck2' + (n === deckNo ? ' sel' : '') + (blocked ? ' busy' : '')} onClick={() => { if (!blocked) setDeckNo(n); }}>
                       <div className="boss-deck2Top">
-                        <span>デッキ{n}<button onClick={(e) => { e.stopPropagation(); setEditDeckNo(n); }} style={{ marginLeft: 8, fontFamily: 'inherit', fontSize: 10, fontWeight: 800, color: '#ffe39a', background: 'rgba(60,40,80,.6)', border: '1px solid rgba(232,194,90,.5)', borderRadius: 8, padding: '2px 8px', cursor: 'pointer' }}>✎ 編成</button></span>
+                        <span>デッキ{n}<button onClick={(e) => { e.stopPropagation(); setEditDeckNo(n); }} style={{ marginLeft: 8, fontFamily: 'inherit', fontSize: 10, fontWeight: 800, color: '#ffe39a', background: 'rgba(60,40,80,.6)', border: '1px solid rgba(232,194,90,.5)', borderRadius: 8, padding: '2px 8px', cursor: 'pointer' }}>✎ 編成</button><button onClick={(e) => { e.stopPropagation(); maxFillDeck(n); }} disabled={blocked || fillingDeck !== null} style={{ marginLeft: 6, fontFamily: 'inherit', fontSize: 10, fontWeight: 800, color: (blocked || fillingDeck !== null) ? '#7a6a8a' : '#bfe3ff', background: 'rgba(40,60,80,.6)', border: '1px solid rgba(120,200,255,.45)', borderRadius: 8, padding: '2px 8px', cursor: (blocked || fillingDeck !== null) ? 'default' : 'pointer' }}>{fillingDeck === n ? '充填中…' : '⚡ 最大充填'}</button></span>
                         <span>{topRight}</span>
                       </div>
                       <div className="boss-deck2Cards">
