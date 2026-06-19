@@ -1850,6 +1850,7 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
   const [bosses, setBosses] = useState(null);
   const [decks, setDecks] = useState(null);
   const [skillMap, setSkillMap] = useState({});
+  const [spSet, setSpSet] = useState({});                              // SP離脱中（card_id→true）。出撃シートで離脱SPを除外表示
   const [deckNo, setDeckNo] = useState(1);
   const cleared = (profile && profile.cleared_stage) || 0;
   const [stage, setStage] = useState(() => Math.min(cleared + 1, 8));   // 既定＝次の未クリア面（フロンティア）
@@ -1876,6 +1877,7 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
       try { setBosses(await ChikarianAPI.getBossMaster() || []); } catch (e) { flash(errMsg(e)); setBosses([]); }
       try { setDecks(await ChikarianAPI.getDecks() || []); } catch (e) { setDecks([]); }
       try { const sm = await ChikarianAPI.getSkillMaster(); const m = {}; (sm || []).forEach(s => { m[s.skill_key] = s; }); setSkillMap(m); } catch (e) {}
+      try { const sp = await ChikarianAPI.getSpStates(); const t = jstToday(); const ss = {}; (sp || []).forEach(x => { if (x.unavailable_until >= t) ss[x.card_id] = true; }); setSpSet(ss); } catch (e) {}
     })();
     refetchSorties();
     const t1 = setInterval(() => setNow(Date.now()), 1000);          // ローカル秒読み
@@ -1921,12 +1923,14 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
   const curStage = BOSS_STAGES[stage - 1];                              // 表示中の面（名前/界/ボス画像の正）
   const closeSheet = () => setOpenNode(null);
   const busyDecks = new Set(sorties.map(s => s.deck_no));               // 出撃中デッキ
-  function openSheet(i) { setOpenNode(i); const free = Array.from({ length: maxDecks }, (_, k) => k + 1).find(n => !busyDecks.has(n)); if (free) setDeckNo(free); }
+  function openSheet(i) { setOpenNode(i); const free = Array.from({ length: maxDecks }, (_, k) => k + 1).find(n => deckLock(n) === null && deckUsable(n) > 0); if (free) setDeckNo(free); }
 
   // デッキ内容（CardThumb＋名前）と総合戦力（computeStats の総合の和）
   const cardById = {}; (cards || []).forEach(c => { cardById[c.id] = c; });
   function deckMembers(n) { const row = (decks || []).find(d => d.deck_no === n); const ids = row ? [row.slot1_card_id, row.slot2_card_id, row.slot3_card_id] : [null, null, null]; return ids.map(id => id ? cardById[id] : null); }
-  function deckTotal(n) { return deckMembers(n).filter(Boolean).reduce((a, c) => a + computeStats(c).sougou, 0); }
+  function deckTotal(n) { return deckMembers(n).filter(c => c && !spSet[c.id]).reduce((a, c) => a + computeStats(c).sougou, 0); }   // 離脱SPは戦力から除外
+  function deckUsable(n) { return deckMembers(n).filter(c => c && !spSet[c.id]).length; }   // 出撃に出せる枚数（離脱SP除く）
+  function deckLock(n) { if (busyDecks.has(n)) return 'boss'; if (deckMembers(n).some(c => c && c.tansaku_deck_no != null)) return 'tansaku'; return null; }   // 'boss'=出撃中 / 'tansaku'=探索中 / null=出撃可
 
   // 各デッキの live phase（毎秒再計算）
   const liveByDeck = {};
@@ -2008,7 +2012,7 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
         {openNode !== null && (() => {
           const i = openNode; const sb = curStage.bosses[i]; const role = BOSS_ROLE_KEYS[i];
           const bm = (bosses || []).find(x => x.boss_key === 'boss_' + stage + '_' + role);   // 戦闘数値は boss_master
-          const deckBusy = busyDecks.has(deckNo);
+          const selLock = deckLock(deckNo); const selUsable = deckUsable(deckNo);   // 選択中デッキの占有種別・出せる枚数
           return (
             <>
               <span className="boss-close" onClick={closeSheet}>×</span>
@@ -2026,13 +2030,18 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
               <div className="boss-secTitle">出撃するデッキ</div>
               <div className="boss-decks2">
                 {Array.from({ length: maxDecks }, (_, k) => k + 1).map(n => {
-                  const busyN = busyDecks.has(n); const members = deckMembers(n);
+                  const lock = deckLock(n); const blocked = lock !== null; const members = deckMembers(n);
+                  const topRight = lock === 'boss' ? '出撃中' : (lock === 'tansaku' ? '探索中' : '総合 ' + deckTotal(n).toLocaleString());
                   return (
-                    <div key={n} className={'boss-deck2' + (n === deckNo ? ' sel' : '') + (busyN ? ' busy' : '')} onClick={() => { if (!busyN) setDeckNo(n); }}>
-                      <div className="boss-deck2Top"><span>デッキ{n}</span><span>{busyN ? '出撃中' : '総合 ' + deckTotal(n).toLocaleString()}</span></div>
+                    <div key={n} className={'boss-deck2' + (n === deckNo ? ' sel' : '') + (blocked ? ' busy' : '')} onClick={() => { if (!blocked) setDeckNo(n); }}>
+                      <div className="boss-deck2Top"><span>デッキ{n}</span><span>{topRight}</span></div>
                       <div className="boss-deck2Cards">
                         {members.map((c, si) => c
-                          ? <div key={si} className="boss-deck2Card"><CardThumb card={c} small /><div className="boss-deck2Nm">{cardFullName(c)}</div></div>
+                          ? <div key={si} className="boss-deck2Card" style={spSet[c.id] ? { position: 'relative' } : undefined}>
+                              <div style={spSet[c.id] ? { opacity: .35, filter: 'grayscale(1)' } : undefined}><CardThumb card={c} small /></div>
+                              {spSet[c.id] && <div style={{ position: 'absolute', top: 3, left: 0, right: 0, textAlign: 'center', fontSize: 9, fontWeight: 800, color: '#fff', textShadow: '0 1px 2px #000' }}>離脱中</div>}
+                              <div className="boss-deck2Nm">{cardFullName(c)}</div>
+                            </div>
                           : <div key={si} className="boss-deck2Empty">空き</div>)}
                       </div>
                     </div>
@@ -2040,8 +2049,8 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
                 })}
               </div>
 
-              <button className="boss-go" onClick={() => startSortie(role)} disabled={busy || effTriesLeft <= 0 || deckBusy}>{busy ? '処理中…' : (deckBusy ? `デッキ${deckNo}は出撃中` : (effTriesLeft <= 0 ? '本日の挑戦は終了' : `デッキ${deckNo}で出撃`))}</button>
-              {effTriesLeft <= 0 && !deckBusy && <div className="boss-warn">本日の挑戦回数を使い切りました（0時に回復）</div>}
+              <button className="boss-go" onClick={() => startSortie(role)} disabled={busy || effTriesLeft <= 0 || selLock !== null || selUsable === 0}>{busy ? '処理中…' : (selLock === 'boss' ? `デッキ${deckNo}は出撃中` : (selLock === 'tansaku' ? '探索中のデッキです' : (selUsable === 0 ? '出撃できるカードがありません' : (effTriesLeft <= 0 ? '本日の挑戦は終了' : `デッキ${deckNo}で出撃`))))}</button>
+              {effTriesLeft <= 0 && selLock === null && selUsable > 0 && <div className="boss-warn">本日の挑戦回数を使い切りました（0時に回復）</div>}
             </>
           );
         })()}
