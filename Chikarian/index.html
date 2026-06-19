@@ -1064,8 +1064,80 @@ function CardThumb({ card, onClick, small }) {
   );
 }
 
+/* 図鑑画面 専用スタイル（zukan-mockup 移植・共有 S は不変） */
+const zS = {
+  bg: { position: 'absolute', inset: 0, background: '#0a0509 radial-gradient(80% 45% at 50% 0%, rgba(60,70,120,.2), transparent 60%)' },
+  body: { position: 'relative', zIndex: 2, height: '100dvh', display: 'flex', flexDirection: 'column' },
+  head: { flex: 'none', textAlign: 'center', padding: '14px 16px 2px', fontSize: 19, fontWeight: 800, letterSpacing: 4, color: GOLD_HI, textShadow: '0 2px 6px #10183a,0 0 16px rgba(130,150,255,.3)' },
+  tabs: { flex: 'none', display: 'flex', gap: 8, justifyContent: 'center', padding: '8px 14px 2px' },
+  tab: { fontFamily: 'inherit', fontSize: 12, color: '#cdb488', background: PANEL, border: BORDER, borderRadius: 14, padding: '6px 16px', cursor: 'pointer' },
+  tabSel: { color: GOLD_HI, background: 'linear-gradient(180deg,rgba(255,228,154,.26),rgba(232,181,77,.14))', boxShadow: '0 0 10px rgba(255,200,90,.3)' },
+  filters: { flex: 'none', display: 'flex', gap: 6, overflowX: 'auto', padding: '6px 14px 2px' },
+  fil: { flex: 'none', fontFamily: 'inherit', fontSize: 11, color: GOLD_HI, background: PANEL, border: BORDER, borderRadius: 14, padding: '6px 13px', cursor: 'pointer' },
+  filSel: { background: 'linear-gradient(180deg,rgba(255,228,154,.26),rgba(232,181,77,.14))', boxShadow: '0 0 10px rgba(255,200,90,.3)' },
+  count: { flex: 'none', textAlign: 'center', fontSize: 11, color: '#cdb488', padding: '4px 0 6px' },
+  grid: { flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, alignContent: 'start', padding: '2px 16px 84px' },
+  item: { position: 'relative', width: '100%', aspectRatio: '5/7', borderRadius: 12, overflow: 'hidden', border: '2px solid rgba(232,194,90,.5)', background: '#241018', padding: 0, cursor: 'pointer' },
+  itemLocked: { filter: 'grayscale(1) brightness(.4)', cursor: 'default' },
+  art: { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' },
+  cph: { position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', fontSize: 30, color: '#7a5a3a' },
+  rank: { position: 'absolute', top: 6, right: 7, minWidth: 24, height: 24, padding: '0 5px', borderRadius: 12, display: 'grid', placeItems: 'center', fontSize: 11, fontWeight: 800, color: '#1a1206', background: 'radial-gradient(circle at 50% 40%,#fff3c8,#e8b54d)', border: '1px solid #fff3c8' },
+  cb: { position: 'absolute', top: 6, left: 7, display: 'flex', gap: 3 },
+  badge: { fontSize: 9, fontWeight: 800, padding: '1px 5px', borderRadius: 5, color: '#16100a' },
+  wbadge: { fontSize: 9, fontWeight: 800, padding: '1px 5px', borderRadius: 5, color: '#16100a', background: '#cdb488' },
+  foot: { position: 'absolute', left: 0, right: 0, bottom: 0, padding: '10px 8px 7px', background: 'linear-gradient(0deg,rgba(0,0,0,.9),transparent)' },
+  star: { fontSize: 12, color: '#ffd98a', textShadow: '0 1px 3px #000' },
+  nm: { fontSize: 12, fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: 3, textShadow: '0 1px 4px #000', color: GOLD_HI, textAlign: 'left' },
+  qm: { position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', fontSize: 34, color: '#5a4a6a' },
+  back: { position: 'absolute', zIndex: 7, left: 14, bottom: 12, fontFamily: 'inherit', fontSize: 14, color: GOLD_HI, background: PANEL, border: BORDER, borderRadius: 22, padding: '9px 18px', cursor: 'pointer' },
+  // 詳細
+  dScroll: { position: 'relative', zIndex: 2, height: '100dvh', overflowY: 'auto', padding: '18px 18px 92px', display: 'flex', flexDirection: 'column', alignItems: 'center' },
+  dCard: { width: '66%', maxWidth: 240, aspectRatio: '5/7', borderRadius: 14, overflow: 'hidden', border: '2px solid rgba(232,194,90,.6)', background: '#241018', position: 'relative', boxShadow: '0 6px 24px rgba(0,0,0,.5)' },
+  dName: { fontSize: 18, fontWeight: 800, marginTop: 14, letterSpacing: 1, color: GOLD_HI, textAlign: 'center' },
+  dBadges: { display: 'flex', gap: 5, marginTop: 8, justifyContent: 'center', flexWrap: 'wrap' },
+  dStarRow: { fontSize: 14, color: '#ffd98a', marginTop: 7 },
+  dStats: { width: '100%', maxWidth: 320, marginTop: 16, background: PANEL, border: BORDER, borderRadius: 12, padding: '12px 14px' },
+  dRow: { display: 'flex', justifyContent: 'space-between', padding: '7px 2px', borderBottom: '1px dashed rgba(232,194,90,.22)', fontSize: 13 },
+  dk: { color: '#cdb488' },
+  dv: { color: GOLD_HI, fontWeight: 700, textAlign: 'right' },
+  dSec: { width: '100%', maxWidth: 320, fontSize: 12, color: GOLD, fontWeight: 700, margin: '14px 0 6px' },
+  zActions: { width: '100%', maxWidth: 320, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 },
+  zaBtn: { fontFamily: 'inherit', fontWeight: 700, fontSize: 12, letterSpacing: 1, color: GOLD_HI, background: 'rgba(255,235,180,.06)', border: '1px solid rgba(232,194,90,.45)', borderRadius: 18, padding: '11px 4px', cursor: 'pointer' },
+  zaOff: { opacity: .4, cursor: 'not-allowed' },
+  dnav: { position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 3, padding: '12px 16px 18px', background: 'linear-gradient(0deg,#0a0509 62%,transparent)', display: 'flex', gap: 8, maxWidth: 480, margin: '0 auto' },
+  navBtn: { fontFamily: 'inherit', fontSize: 14, letterSpacing: 1, borderRadius: 22, padding: '11px 0', cursor: 'pointer', background: PANEL, border: BORDER, color: GOLD_HI },
+};
+// 図鑑カードタイル（絵入り・mockup .cardItem）。placeholder=未所持「？」。recorded=記録済だが所持インスタンス無し。
+function ZCard({ cardKey, star, onClick, placeholder, recorded }) {
+  const [err, setErr] = useState(false);
+  if (placeholder) return <div style={{ ...zS.item, ...zS.itemLocked }}><div style={zS.qm}>？</div></div>;
+  const info = parseCardKey(cardKey);
+  return (
+    <button onClick={onClick || undefined} style={{ ...zS.item, ...(onClick ? {} : { cursor: 'default' }) }}>
+      {err ? <div style={zS.cph}>❖</div> : <img src={'./images/' + cardKey + '.png'} alt="" onError={() => setErr(true)} style={zS.art} />}
+      <div style={zS.rank}>{RAR_LABEL[info.rarity]}</div>
+      <div style={zS.cb}>
+        {info.rarity === 'sp'
+          ? <span style={{ ...zS.badge, background: 'linear-gradient(90deg,#ffe39a,#e8b54d)' }}>SP</span>
+          : <><span style={{ ...zS.badge, background: DECK_ATTR_COL[info.attr] || '#888' }}>{info.attr}</span><span style={zS.wbadge}>{info.weap}</span></>}
+      </div>
+      <div style={zS.foot}>
+        {star > 0 && <div style={zS.star}>{'★'.repeat(star)}</div>}
+        <div style={zS.nm}>{info.name}{recorded ? '（記録）' : ''}</div>
+      </div>
+    </button>
+  );
+}
+// 詳細の大カード絵（GCard/CardThumb と同方式・失敗時 ❖＋名前＋属性/武器）
+function ZDetailArt({ cardKey, info }) {
+  const [err, setErr] = useState(false);
+  if (err) return <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 6, textAlign: 'center' }}><div style={{ fontSize: 34 }}>❖</div><div style={{ fontSize: 12, color: '#e7d3a6', marginTop: 4 }}>{info.name}</div>{(info.attr || info.weap) && <div style={{ fontSize: 11, color: '#cdb488' }}>{info.attr}{info.weap}</div>}</div>;
+  return <img src={'./images/' + cardKey + '.png'} alt="" onError={() => setErr(true)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />;
+}
+
 function ZukanScreen({ cards, profile, refreshAll, back, flash, initialTab }) {
   const [tab, setTab] = useState(initialTab || 'catalog');   // catalog | owned
+  const [fil, setFil] = useState('all');                     // 属性フィルタ all/hana/shin/ha/sp
   const [zukan, setZukan] = useState(null);
   const [skillMap, setSkillMap] = useState({});
   const [sel, setSel] = useState(null);
@@ -1080,72 +1152,56 @@ function ZukanScreen({ cards, profile, refreshAll, back, flash, initialTab }) {
     setSel(prev => prev ? ((cards || []).find(c => c.id === prev.id) || null) : prev);
   }, [cards]);
 
-  if (sel) return <CardDetail card={sel} cards={cards} profile={profile} skillMap={skillMap} refreshAll={refreshAll} back={() => setSel(null)} flash={flash} />;
+  if (sel) return <CardDetail card={sel} cards={cards} profile={profile} skillMap={skillMap} refreshAll={refreshAll} back={() => setSel(null)} onSelect={setSel} flash={flash} />;
 
   const collected = new Set((zukan || []).map(z => z.card_key));
   const ownedByKey = {};
   (cards || []).forEach(c => { (ownedByKey[c.card_key] = ownedByKey[c.card_key] || []).push(c); });
-
-  const RAR_ORDER = ['n', 'r', 'sr', 'ssr', 'sp'];
-  const RAR_NAME = { n: 'N', r: 'R', sr: 'SR', ssr: 'SSR', sp: 'SP' };
+  // 属性フィルタ（すべて/花/芯/葉/SP）。card_key の生属性で判定（parseCardphは表示用JA）。
+  const filMatch = key => { if (fil === 'all') return true; const sp = key.endsWith('_sp'); if (fil === 'sp') return sp; return !sp && key.split('_')[2] === fil; };
+  const FILTERS = [['all', 'すべて'], ['hana', '花'], ['shin', '芯'], ['ha', '葉'], ['sp', 'SP']];
 
   return (
     <div style={S.root}>
-      <div style={S.bg} /><div style={S.vignette} />
-      <div style={{ position: 'relative', zIndex: 2, minHeight: '100dvh', display: 'flex', flexDirection: 'column', padding: '14px 12px 18px' }}>
-        <div style={{ textAlign: 'center', fontSize: 20, fontWeight: 800, letterSpacing: 3, color: GOLD_HI }}>図鑑</div>
-        <div style={{ textAlign: 'center', fontSize: 11, color: '#cdb488', marginTop: 2 }}>収集 {collected.size} / {CATALOG.length} 種</div>
-
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'center', margin: '12px 0' }}>
-          <button onClick={() => setTab('catalog')} style={{ ...S.sideSwitch, ...(tab === 'catalog' ? S.sideSwitchOn : {}) }}>図鑑</button>
-          <button onClick={() => setTab('owned')} style={{ ...S.sideSwitch, ...(tab === 'owned' ? S.sideSwitchOn : {}) }}>所持カード（{(cards || []).length}）</button>
+      <div style={zS.bg} />
+      <div style={zS.body}>
+        <div style={zS.head}>図鑑</div>
+        <div style={zS.tabs}>
+          <button style={{ ...zS.tab, ...(tab === 'catalog' ? zS.tabSel : {}) }} onClick={() => setTab('catalog')}>図鑑</button>
+          <button style={{ ...zS.tab, ...(tab === 'owned' ? zS.tabSel : {}) }} onClick={() => setTab('owned')}>所持カード（{(cards || []).length}）</button>
+        </div>
+        <div style={zS.filters}>
+          {FILTERS.map(([k, l]) => <button key={k} style={{ ...zS.fil, ...(fil === k ? zS.filSel : {}) }} onClick={() => setFil(k)}>{l}</button>)}
         </div>
 
-        <div style={{ flex: 1, overflowY: 'auto' }}>
-          {tab === 'catalog' && RAR_ORDER.map(rare => {
-            const keys = CATALOG.filter(k => parseCardKey(k).rarity === rare);
-            return (
-              <div key={rare} style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 12, color: RAR_COL[rare], fontWeight: 700, marginBottom: 6 }}>{RAR_NAME[rare]}（{keys.filter(k => collected.has(k)).length}/{keys.length}）</div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 6 }}>
-                  {keys.map(k => {
-                    const got = collected.has(k);
-                    const owned = ownedByKey[k] && ownedByKey[k][0];
-                    const info = parseCardKey(k);
-                    if (!got) {
-                      return <div key={k} style={{ aspectRatio: '5/7', borderRadius: 8, border: '1.5px dashed rgba(232,194,90,.25)', background: 'rgba(0,0,0,.35)', display: 'grid', placeItems: 'center', color: '#5a4d38', fontSize: 18 }}>❖</div>;
-                    }
-                    return (
-                      <button key={k} onClick={() => owned && setSel(owned)} style={{ background: 'none', border: 'none', padding: 0, cursor: owned ? 'pointer' : 'default' }}>
-                        <div style={{ aspectRatio: '5/7', borderRadius: 8, border: `1.5px solid ${RAR_COL[rare]}`, background: 'linear-gradient(165deg,#2a1430,#140913)', position: 'relative', display: 'grid', placeItems: 'center', overflow: 'hidden' }}>
-                          <span style={{ fontSize: 20 }}>❖</span>
-                          <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, fontSize: 9, textAlign: 'center', color: '#fff3c8', background: 'linear-gradient(0deg,rgba(0,0,0,.8),transparent)', padding: '5px 1px 2px' }}>{info.attr}{info.weap || (info.rarity === 'sp' ? info.name.slice(0, 2) : '')}</div>
-                          {!owned && <div style={{ position: 'absolute', top: 3, right: 3, fontSize: 9, color: '#cdb488' }}>記録</div>}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
+        {tab === 'catalog'
+          ? <>
+              <div style={zS.count}>コンプリート <b style={{ color: '#ffe39a' }}>{collected.size}</b> / {CATALOG.length} 種</div>
+              <div style={zS.grid}>
+                {CATALOG.filter(filMatch).map(k => {
+                  const got = collected.has(k); const inst = ownedByKey[k] && ownedByKey[k][0];
+                  if (!got) return <ZCard key={k} placeholder />;                         // 未収集＝？
+                  return <ZCard key={k} cardKey={k} star={inst ? inst.star : 0} recorded={!inst} onClick={inst ? () => setSel(inst) : null} />;
+                })}
               </div>
-            );
-          })}
-
-          {tab === 'owned' && (
-            (cards || []).length === 0
-              ? <div style={{ textAlign: 'center', color: '#cdb488', marginTop: 30, fontSize: 13 }}>所持カードがありません（ガチャで入手）</div>
-              : <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 6 }}>
-                  {(cards || []).map(c => <CardThumb key={c.id} card={c} onClick={() => setSel(c)} small />)}
-                </div>
-          )}
-        </div>
-
-        <button onClick={back} style={{ ...S.lineBtn, marginTop: 12, alignSelf: 'center' }}>ホームに戻る</button>
+            </>
+          : <>
+              <div style={zS.count}>所持 <b style={{ color: '#ffe39a' }}>{(cards || []).filter(c => filMatch(c.card_key)).length}</b> 枚</div>
+              {(cards || []).length === 0
+                ? <div style={{ flex: 1, textAlign: 'center', color: '#cdb488', marginTop: 30, fontSize: 13 }}>所持カードがありません（ガチャで入手）</div>
+                : <div style={zS.grid}>
+                    {(cards || []).filter(c => filMatch(c.card_key)).map(c => (
+                      <ZCard key={c.id} cardKey={c.card_key} star={c.star || 0} onClick={() => setSel(c)} />
+                    ))}
+                  </div>}
+            </>}
       </div>
+      <button style={zS.back} onClick={back}>‹ 戻る</button>
     </div>
   );
 }
 
-function CardDetail({ card, cards, profile, skillMap, refreshAll, back, flash }) {
+function CardDetail({ card, cards, profile, skillMap, refreshAll, back, flash, onSelect }) {
   const [skills, setSkills] = useState(null);
   const [mode, setMode] = useState(null);   // null | 'kyoka'
   useEffect(() => { (async () => { try { setSkills(await ChikarianAPI.getCardSkills(card.id) || []); } catch (e) { flash(errMsg(e)); setSkills([]); } })(); }, [card.id]);
@@ -1185,66 +1241,64 @@ function CardDetail({ card, cards, profile, skillMap, refreshAll, back, flash })
     );
   }
 
+  // 前後ナビ＝所持カード(cards)を巡る（容易に配線できるため対応）。
+  const navList = cards || [];
+  const navIdx = navList.findIndex(c => c.id === card.id);
+  const canNav = typeof onSelect === 'function';
+
   return (
     <div style={S.root}>
-      <div style={S.bg} /><div style={S.vignette} />
-      <div style={{ position: 'relative', zIndex: 2, minHeight: '100dvh', display: 'flex', flexDirection: 'column', padding: '14px 14px 18px', overflowY: 'auto' }}>
-        <button onClick={back} style={{ ...S.lineBtn, alignSelf: 'flex-start', padding: '6px 16px' }}>‹ 戻る</button>
-
-        <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
-          {/* 絵 */}
-          <div style={{ width: 120, flex: '0 0 auto' }}>
-            <div style={{ width: '100%', aspectRatio: '5/7', borderRadius: 10, border: `1.5px solid ${RAR_COL[info.rarity]}`, background: 'linear-gradient(165deg,#2a1430,#140913)', display: 'grid', placeItems: 'center', position: 'relative' }}>
-              <span style={{ fontSize: 34 }}>❖</span>
-              <div style={{ position: 'absolute', top: 4, left: 4, fontSize: 10, fontWeight: 800, color: '#1a0f06', background: RAR_COL[info.rarity], borderRadius: 5, padding: '1px 6px' }}>{RAR_LABEL[info.rarity]}</div>
-              {card.locked && <div style={{ position: 'absolute', top: 4, right: 4, fontSize: 13 }}>🔒</div>}
-            </div>
-          </div>
-          {/* 基本情報 */}
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 17, fontWeight: 800, color: GOLD_HI }}>{info.name}</div>
-            <div style={{ fontSize: 12, color: '#cdb488', marginTop: 4, lineHeight: 1.8 }}>
-              {st.isSp
-                ? <>無属性・装備なし（戦闘専用）</>
-                : <>属性 {info.attr}／武器 {info.weap}</>}
-              <br />レア {RAR_LABEL[info.rarity]}　Lv {card.lv}{card.lv != null && <span style={{ color: '#7a6848' }}> / 上限{st.cap}</span>}　★{card.star || 0}
-            </div>
-            <div style={{ marginTop: 8, padding: '6px 10px', background: PANEL, border: BORDER, borderRadius: 8 }}>
-              <div style={{ fontSize: 10, color: '#cdb488' }}>素の総合戦力（発動前）</div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: GOLD_HI }}>{st.sougou.toLocaleString()}</div>
-              <div style={{ fontSize: 10, color: '#a98f66' }}>本体 {st.body.toLocaleString()} ＋ 装備 {st.equip.toLocaleString()}</div>
-            </div>
-          </div>
+      <div style={zS.bg} />
+      <div style={zS.dScroll}>
+        {/* カード絵（rank文字＝レア・失敗時 ❖＋名前＋属性/武器）＋ロック */}
+        <div style={zS.dCard}>
+          <ZDetailArt cardKey={card.card_key} info={info} />
+          <div style={zS.rank}>{RAR_LABEL[info.rarity]}</div>
+          {card.locked && <div style={{ position: 'absolute', top: 8, left: 9, fontSize: 15, filter: 'drop-shadow(0 1px 2px #000)' }}>🔒</div>}
         </div>
 
-        {/* 充填 */}
-        <div style={{ marginTop: 12, padding: '8px 12px', background: PANEL, border: BORDER, borderRadius: 8 }}>
-          <div style={{ fontSize: 12, color: GOLD, fontWeight: 700, marginBottom: 4 }}>充填（武気）</div>
+        <div style={zS.dName}>{info.name}</div>
+        <div style={zS.dBadges}>
           {st.isSp
-            ? <div style={{ fontSize: 11, color: '#a98f66' }}>SPは武気を持たない（装備の質なし・損失なし）</div>
-            : <div style={{ fontSize: 12, color: '#e7d3a6' }}>装備の質：{QUALITY_JA[card.quality] || '—'}（枠攻撃力 {QATK[card.quality] || 0}）　込めた武気：{(card.loaded_buki || 0).toLocaleString()} 枠</div>}
+            ? <span style={{ ...zS.badge, background: 'linear-gradient(90deg,#ffe39a,#e8b54d)' }}>SP</span>
+            : <><span style={{ ...zS.badge, background: DECK_ATTR_COL[info.attr] || '#888' }}>{info.attr}</span><span style={zS.wbadge}>{info.weap}</span></>}
+          <span style={{ ...zS.badge, background: '#3a2a40', color: '#e7d3ff' }}>{RAR_LABEL[info.rarity]}</span>
+        </div>
+        <div style={zS.dStarRow}>{st.isSp ? '—' : (card.star > 0 ? '★'.repeat(card.star) : '☆')}　Lv {card.lv}{card.lv != null && <span style={{ fontSize: 11, color: '#7a6848' }}> / 上限{st.cap}</span>}</div>
+
+        {/* ステータス（数値は本番 computeStats＝SP本体3200・★0.10・枠攻撃力10/15/22/34） */}
+        <div style={zS.dStats}>
+          <div style={zS.dRow}><span style={zS.dk}>総合戦力（発動前）</span><span style={zS.dv}>{st.sougou.toLocaleString()}</span></div>
+          <div style={zS.dRow}><span style={zS.dk}>本体戦闘力</span><span style={zS.dv}>{st.body.toLocaleString()}</span></div>
+          <div style={zS.dRow}><span style={zS.dk}>装備項</span><span style={zS.dv}>{st.equip.toLocaleString()}</span></div>
+          <div style={{ ...zS.dRow, borderBottom: 'none' }}><span style={zS.dk}>充填（武気）</span><span style={zS.dv}>{st.isSp ? '装備なし（SP）' : `${QUALITY_JA[card.quality] || '—'}・${(card.loaded_buki || 0).toLocaleString()}枠（枠攻${QATK[card.quality] || 0}）`}</span></div>
         </div>
 
-        {/* スキル3枠 */}
-        <div style={{ marginTop: 12 }}>
-          <div style={{ fontSize: 12, color: GOLD, fontWeight: 700, marginBottom: 6 }}>スキル（固定1＋空き2）</div>
+        {/* スキル3枠（getCardSkills＋skillMap の実データ） */}
+        <div style={zS.dSec}>スキル（固定1＋空き2）</div>
+        <div style={{ width: '100%', maxWidth: 320 }}>
           <SkillSlot slot={0} /><SkillSlot slot={1} /><SkillSlot slot={2} />
         </div>
 
-        {/* 操作導線（実装は後フェーズ・ここは導線のみ） */}
-        <div style={{ marginTop: 14 }}>
-          <div style={{ fontSize: 11, color: '#a98f66', marginBottom: 6 }}>操作（カード詳細が共通入口）</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            <button style={{ ...dS.op, ...(card.locked ? dS.opOff : {}) }} disabled={!!card.locked} onClick={() => setMode('kyoka')}>★強化</button>
-            <button style={{ ...dS.op, ...(st.isSp ? dS.opOff : {}) }} disabled={st.isSp} onClick={() => setMode('skill')}>スキル強化/転移{st.isSp ? '（SP不可）' : ''}</button>
-            <button style={{ ...dS.op, ...(st.isSp ? dS.opOff : {}) }} disabled={st.isSp} onClick={() => setMode('equip')}>装備（充填）{st.isSp ? '（SP不可）' : ''}</button>
-            <button style={{ ...dS.op, ...(card.locked ? dS.opOff : {}) }} disabled={!!card.locked} onClick={() => setMode('exchange')}>交換所</button>
-            <button style={{ ...dS.op, ...(LOCK_RPC_AVAILABLE ? {} : dS.opOff), gridColumn: '1 / -1' }} disabled={!LOCK_RPC_AVAILABLE}
-              onClick={() => flash('ロック切替には専用RPCが必要です（cardsの直接更新はRLS/不正対策Cで不可）')}>
-              {card.locked ? 'ロック解除' : 'ロックする'}（専用RPC待ち）
-            </button>
-          </div>
+        {/* 操作（本番の全操作を維持＝各 setMode） */}
+        <div style={zS.dSec}>操作（カード詳細が共通入口）</div>
+        <div style={zS.zActions}>
+          <button style={{ ...zS.zaBtn, ...(card.locked ? zS.zaOff : {}) }} disabled={!!card.locked} onClick={() => setMode('kyoka')}>★強化</button>
+          <button style={{ ...zS.zaBtn, ...(st.isSp ? zS.zaOff : {}) }} disabled={st.isSp} onClick={() => setMode('skill')}>スキル強化/転移{st.isSp ? '（SP不可）' : ''}</button>
+          <button style={{ ...zS.zaBtn, ...(st.isSp ? zS.zaOff : {}) }} disabled={st.isSp} onClick={() => setMode('equip')}>装備（充填）{st.isSp ? '（SP不可）' : ''}</button>
+          <button style={{ ...zS.zaBtn, ...(card.locked ? zS.zaOff : {}) }} disabled={!!card.locked} onClick={() => setMode('exchange')}>交換所</button>
+          <button style={{ ...zS.zaBtn, ...zS.zaOff, gridColumn: '1 / -1' }} disabled={!LOCK_RPC_AVAILABLE}
+            onClick={() => flash('ロック切替には専用RPCが必要です（cardsの直接更新はRLS/不正対策Cで不可）')}>
+            {card.locked ? 'ロック解除' : 'ロックする'}（専用RPC待ち）
+          </button>
         </div>
+      </div>
+
+      {/* 下部ナビ：一覧へ／前／次（所持カードを巡る） */}
+      <div style={zS.dnav}>
+        <button style={{ ...zS.navBtn, flex: 1.2 }} onClick={back}>一覧へ</button>
+        <button style={{ ...zS.navBtn, flex: 1, ...((!canNav || navIdx <= 0) ? zS.zaOff : {}) }} disabled={!canNav || navIdx <= 0} onClick={() => { if (canNav && navIdx > 0) onSelect(navList[navIdx - 1]); }}>‹ 前</button>
+        <button style={{ ...zS.navBtn, flex: 1, ...((!canNav || navIdx < 0 || navIdx >= navList.length - 1) ? zS.zaOff : {}) }} disabled={!canNav || navIdx < 0 || navIdx >= navList.length - 1} onClick={() => { if (canNav && navIdx >= 0 && navIdx < navList.length - 1) onSelect(navList[navIdx + 1]); }}>次 ›</button>
       </div>
     </div>
   );
