@@ -338,7 +338,7 @@ function App() {
     else if (screen === 'saishu') body = <Saishu profile={profile} onExit={async () => { await refreshProfile(); setScreen('home'); }} flash={flash} />;
     else if (screen === 'gacha') body = <Gacha profile={profile} onRefresh={refreshAll} back={() => setScreen('home')} flash={flash} />;
     else if (screen === 'zukan') body = <ZukanScreen cards={cards} profile={profile} refreshAll={refreshAll} back={() => setScreen('home')} flash={flash} />;
-    else if (screen === 'deck') body = <DeckScreen profile={profile} cards={cards} back={() => setScreen('home')} flash={flash} />;
+    else if (screen === 'deck') body = <DeckScreen profile={profile} cards={cards} refreshAll={refreshAll} back={() => setScreen('home')} flash={flash} />;
     else if (screen === 'boss') body = <BossScreen profile={profile} cards={cards} onRefresh={refreshAll} back={() => setScreen('home')} flash={flash} />;
     else if (screen === 'kyoka') body = <ZukanScreen cards={cards} profile={profile} refreshAll={refreshAll} initialTab="owned" back={() => setScreen('home')} flash={flash} />;
     else if (screen === 'tatemono') body = <TatemonoScreen profile={profile} cards={cards} refreshAll={refreshAll} back={() => setScreen('home')} flash={flash} />;
@@ -537,7 +537,12 @@ const HS = {
   fill: { width: '100%', height: '100%', objectFit: 'contain' },
   cardArtImg: { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' },
   houchiImg: { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' },
-  fleetPill: { display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(20,11,16,.8)', border: '1px solid rgba(232,194,90,.5)', borderRadius: 12, padding: '4px 9px' },
+  fleetPill: { display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(20,11,16,.8)', border: '1px solid rgba(232,194,90,.5)', borderRadius: 12, padding: '4px 9px', fontFamily: 'inherit', cursor: 'pointer' },
+  fleetScrim: { position: 'fixed', inset: 0, zIndex: 40, background: 'rgba(0,0,0,.5)' },
+  fleetSheet: { position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 41, maxWidth: 480, margin: '0 auto', background: 'rgba(18,10,14,.96)', borderTop: '1.5px solid rgba(232,194,90,.55)', borderLeft: '1.5px solid rgba(232,194,90,.55)', borderRight: '1.5px solid rgba(232,194,90,.55)', borderRadius: '18px 18px 0 0', padding: '16px 18px 22px', boxShadow: '0 -8px 24px rgba(0,0,0,.6)' },
+  fleetRow: { display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid rgba(232,194,90,.18)' },
+  fleetBtn: { fontFamily: 'inherit', fontSize: 11, fontWeight: 700, color: '#1a0f06', background: 'linear-gradient(180deg,#ffe49a,#e8b54d)', border: 'none', borderRadius: 8, padding: '6px 10px', cursor: 'pointer', whiteSpace: 'nowrap' },
+  fleetBtnGhost: { fontFamily: 'inherit', fontSize: 11, fontWeight: 700, color: GOLD_HI, background: 'rgba(40,26,32,.9)', border: '1px solid rgba(232,194,90,.4)', borderRadius: 8, padding: '6px 10px', cursor: 'pointer', whiteSpace: 'nowrap' },
 };
 
 // リソースアイコン（画像→失敗時は絵文字/記号 fallback）
@@ -566,35 +571,70 @@ function Home({ profile, go, flash, onRefresh }) {
     } catch (e) {}
   }, []);
 
-  // 出撃中（ボス）／探索中（探索）の部隊数。Home 自身が取得（30秒ごと更新）。
-  // ＋ 帰還済み（arrived/return_done）の出撃はマップを開いていなくても自動回収（撃ちっぱなし＝デッキ解放）。
-  const [fleetBoss, setFleetBoss] = useState(0);
-  const [fleetTansaku, setFleetTansaku] = useState(0);
-  const collectedRef = useRef({});   // 自動回収の重複防止（deck_no:started_at）
+  // 出撃中（ボス）／探索中（探索）の部隊。Home 自身が getBossSorties / getTansaku を保持し、
+  // ボス戦ページと同じ毎秒判定で帰還時間に自動回収＝デッキ解放（マップを開かなくても解放／報告書記録）。
+  const [sorties, setSorties] = useState([]);          // get_boss_sorties の sorties[]
+  const [tansaku, setTansaku] = useState([]);          // get_tansaku の depth付き行（探索中）
+  const [clockOffset, setClockOffset] = useState(0);   // サーバ now − client now（ms）
+  const [now, setNow] = useState(Date.now());
+  const [fleetSheet, setFleetSheet] = useState(null);  // 管理シート 'boss' | 'tansaku' | null
+  const [fleetBusy, setFleetBusy] = useState(false);   // キャンセル/回収中の二重防止
+  const collectedRef = useRef({});                     // 自動回収の重複防止（deck_no:started_at）
+
+  async function refetchSorties() {
+    try { const d = await ChikarianAPI.getBossSorties(); setSorties((d && d.sorties) || []); setClockOffset(d && d.now ? (new Date(d.now).getTime() - Date.now()) : 0); }
+    catch (e) { /* 取得失敗時はゲージ非表示（最終判定はサーバ操作で担保） */ }
+  }
+  async function refetchTansaku() {
+    try { setTansaku((await ChikarianAPI.getTansaku() || []).filter(x => x.depth)); } catch (e) {}
+  }
   useEffect(() => {
-    let alive = true;
-    async function load() {
-      try {
-        const d = await ChikarianAPI.getBossSorties();
-        const arr = (d && d.sorties) || [];
-        let collectedAny = false;
-        for (const s of arr) {
-          if (s.phase === 'arrived' || s.phase === 'return_done') {   // サーバ phase で判定
-            const k = s.deck_no + ':' + s.started_at;
-            if (!collectedRef.current[k]) {
-              collectedRef.current[k] = true;
-              try { await ChikarianAPI.collectBossResult(s.deck_no); collectedAny = true; } catch (e) { /* 冪等・無視 */ }
-            }
-          }
-        }
-        if (collectedAny) { try { await onRefresh(); } catch (e) {} }
-        if (alive) setFleetBoss(arr.filter(s => s.phase !== 'arrived' && s.phase !== 'return_done').length);
-      } catch (e) {}
-      try { const t = await ChikarianAPI.getTansaku(); if (alive) setFleetTansaku((t || []).filter(x => x.depth).length); } catch (e) {}
-    }
-    load(); const iv = setInterval(load, 30000);
-    return () => { alive = false; clearInterval(iv); };
+    refetchSorties(); refetchTansaku();
+    const t1 = setInterval(() => setNow(Date.now()), 1000);             // ローカル秒読み
+    const t2 = setInterval(() => { refetchSorties(); refetchTansaku(); }, 25000);  // periodic 再取得
+    return () => { clearInterval(t1); clearInterval(t2); };
   }, []);
+
+  // ライブphase（毎秒再計算）。出撃ピル＝'out'/'returning'（arrived/return_done は数えない＝自動回収待ち）。
+  const outSorties = sorties.map(s => ({ s, L: bossLivePhase(s, clockOffset, now) }))
+    .filter(x => x.L.phase === 'out' || x.L.phase === 'returning');
+  const fleetBoss = outSorties.length;
+  const fleetTansaku = tansaku.length;
+
+  // 毎秒：帰還済み（arrived/return_done）のデッキを1回だけ collectBossResult（撃ちっぱなし＝解放＋報告書）。
+  useEffect(() => {
+    const pending = sorties.filter(s => {
+      const L = bossLivePhase(s, clockOffset, now);
+      if (L.phase !== 'arrived' && L.phase !== 'return_done') return false;
+      const k = s.deck_no + ':' + s.started_at;
+      if (collectedRef.current[k]) return false;
+      collectedRef.current[k] = true; return true;
+    });
+    if (!pending.length) return;
+    (async () => {
+      for (const s of pending) { try { await ChikarianAPI.collectBossResult(s.deck_no); } catch (e) { /* 冪等・無視 */ } }
+      await refetchSorties(); try { await onRefresh(); } catch (e) {}
+    })();
+  }, [sorties, now, clockOffset]);
+
+  // 管理シートは対象が空になったら自動で閉じる。
+  useEffect(() => {
+    if (fleetSheet === 'boss' && fleetBoss === 0) setFleetSheet(null);
+    if (fleetSheet === 'tansaku' && fleetTansaku === 0) setFleetSheet(null);
+  }, [fleetSheet, fleetBoss, fleetTansaku]);
+
+  // キャンセル（'out'のみ有効・経過ぶん帰還／回数返金はサーバ）。'returning'は非表示。
+  async function cancelSortie(dno) {
+    if (fleetBusy) return; setFleetBusy(true);
+    try { await ChikarianAPI.cancelBossSortie(dno); await refetchSorties(); await onRefresh(); flash('引き返します（帰還中）'); }
+    catch (e) { flash(errMsg(e)); } finally { setFleetBusy(false); }
+  }
+  // 回収して戻す（蓄積回収＝デッキ解放はサーバ collect_tansaku）。
+  async function recallTansaku(dno) {
+    if (fleetBusy) return; setFleetBusy(true);
+    try { await ChikarianAPI.collectTansaku(dno); await refetchTansaku(); await onRefresh(); flash('回収しました'); }
+    catch (e) { flash(errMsg(e)); } finally { setFleetBusy(false); }
+  }
 
   return (
     <div style={S.root}>
@@ -623,8 +663,8 @@ function Home({ profile, go, flash, onRefresh }) {
         {/* 出撃中（ボス）／探索中の部隊 */}
         {(fleetBoss > 0 || fleetTansaku > 0) && (
           <div style={{ display: 'flex', gap: 8, padding: '6px 2px 0' }}>
-            {fleetBoss > 0 && <span style={HS.fleetPill}><span style={{ fontSize: 13 }}>⚔</span><span style={{ fontSize: 11, color: GOLD_HI }}>出撃 ×{fleetBoss}</span></span>}
-            {fleetTansaku > 0 && <span style={HS.fleetPill}><span style={{ fontSize: 13 }}>🧭</span><span style={{ fontSize: 11, color: GOLD_HI }}>探索 ×{fleetTansaku}</span></span>}
+            {fleetBoss > 0 && <button style={HS.fleetPill} onClick={() => setFleetSheet('boss')}><span style={{ fontSize: 13 }}>⚔</span><span style={{ fontSize: 11, color: GOLD_HI }}>出撃 ×{fleetBoss}</span></button>}
+            {fleetTansaku > 0 && <button style={HS.fleetPill} onClick={() => setFleetSheet('tansaku')}><span style={{ fontSize: 13 }}>🧭</span><span style={{ fontSize: 11, color: GOLD_HI }}>探索 ×{fleetTansaku}</span></button>}
           </div>
         )}
 
@@ -666,6 +706,40 @@ function Home({ profile, go, flash, onRefresh }) {
           {/* TODO(houchi-notif): 放置報酬の受領可否が Home に渡っていないため「！」通知は省略（捏造しない）。 */}
         </button>
       </div>
+
+      {/* 出撃/探索 管理シート（背後スクリムで外側タップ閉じ・空になれば自動で閉じる） */}
+      {fleetSheet && (
+        <>
+          <div style={HS.fleetScrim} onClick={() => setFleetSheet(null)} />
+          <div style={HS.fleetSheet}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <div style={{ fontSize: 14, fontWeight: 800, color: GOLD_HI, letterSpacing: 1 }}>{fleetSheet === 'boss' ? '⚔ 出撃中の部隊' : '🧭 探索中の部隊'}</div>
+              <button style={HS.fleetBtnGhost} onClick={() => setFleetSheet(null)}>閉じる</button>
+            </div>
+            {fleetSheet === 'boss' && outSorties.map(({ s, L }) => (
+              <div key={s.deck_no} style={HS.fleetRow}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12, color: '#fff3c8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>デッキ{s.deck_no} ・ {bossSortieName(s.boss_key)}</div>
+                  <div style={{ fontSize: 10, color: '#cdb488', marginTop: 2 }}>{L.phase === 'out' ? '出撃中' : '帰還中'} ・ 残り {bossMmss(L.remaining)}</div>
+                </div>
+                {L.phase === 'out' && <button style={{ ...HS.fleetBtn, ...(fleetBusy ? { opacity: .5 } : {}) }} disabled={fleetBusy} onClick={() => cancelSortie(s.deck_no)}>キャンセル（帰還）</button>}
+              </div>
+            ))}
+            {fleetSheet === 'tansaku' && tansaku.map(t => {
+              const di = depthInfo(t.depth);
+              return (
+                <div key={t.deck_no} style={HS.fleetRow}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, color: '#fff3c8' }}>デッキ{t.deck_no}{di ? ' ・ ' + di.label : ''}</div>
+                    <div style={{ fontSize: 10, color: '#cdb488', marginTop: 2 }}>探索中</div>
+                  </div>
+                  <button style={{ ...HS.fleetBtn, ...(fleetBusy ? { opacity: .5 } : {}) }} disabled={fleetBusy} onClick={() => recallTansaku(t.deck_no)}>回収して戻す</button>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -1356,6 +1430,8 @@ const deckS = {
   tab: { fontFamily: 'inherit', fontSize: 12, letterSpacing: 1, color: GOLD_HI, background: PANEL, border: '1.5px solid rgba(232,194,90,.5)', borderRadius: 16, padding: '7px 15px', cursor: 'pointer' },
   tabSel: { background: 'linear-gradient(180deg,rgba(255,228,154,.28),rgba(232,181,77,.18))', boxShadow: '0 0 12px rgba(255,200,90,.3)' },
   tabLocked: { color: '#8a7c60', cursor: 'default' },
+  sortieBanner: { display: 'flex', alignItems: 'center', gap: 10, marginTop: 10, padding: '10px 12px', background: 'rgba(40,18,24,.9)', border: '1.5px solid rgba(255,120,120,.5)', borderRadius: 12 },
+  sortieRelease: { fontFamily: 'inherit', fontSize: 12, fontWeight: 700, color: '#1a0f06', background: 'linear-gradient(180deg,#ffd98a,#e8a23b)', border: 'none', borderRadius: 9, padding: '8px 12px', cursor: 'pointer', whiteSpace: 'nowrap' },
   slots: { display: 'flex', gap: 10, padding: '16px 4px 8px', justifyContent: 'center' },
   slot: { flex: 1, maxWidth: 128, aspectRatio: '5/7', borderRadius: 12, border: '1.5px dashed rgba(232,194,90,.5)', background: 'rgba(0,0,0,.3)', position: 'relative', cursor: 'pointer', overflow: 'hidden' },
   slotFilled: { borderStyle: 'solid' },
@@ -1396,7 +1472,7 @@ function DeckSlotArt({ cardKey }) {
   return <img src={'./images/' + cardKey + '.png'} alt="" onError={() => setErr(true)} style={deckS.slotImg} />;
 }
 
-function DeckScreen({ profile, cards, back, flash }) {
+function DeckScreen({ profile, cards, refreshAll, back, flash }) {
   const maxDecks = Math.min(2 + Math.floor(((profile && profile.cleared_stage) || 0) / 2), 6); // balance §10
   const [decks, setDecks] = useState(null);
   const [spSet, setSpSet] = useState(null);     // {card_id:true} 本日離脱中
@@ -1424,7 +1500,10 @@ function DeckScreen({ profile, cards, back, flash }) {
   let costTotal = 0;
   curSlots.forEach(id => { const c = cardById[id]; if (!c) return; costTotal += COST_BY_RAR[parseCardKey(c.card_key).rarity] || 0; });  // SP=4 を算入
   // このデッキ自身が出撃中（編成カードに探索/ボス占有が付く）＝編集不可（対称ケースの CARD_IN_TANSAKU を防ぐ）
-  const deckSortie = curSlots.some(id => { const c = id && cardById[id]; return c && (c.tansaku_deck_no != null || c.boss_deck_no != null); });
+  // 種別を判定：boss_deck_no===deckNo → ボス出撃中／tansaku_deck_no===deckNo → 探索中。
+  const deckBossSortie = curSlots.some(id => { const c = id && cardById[id]; return c && Number(c.boss_deck_no) === deckNo; });
+  const deckTansaku = curSlots.some(id => { const c = id && cardById[id]; return c && Number(c.tansaku_deck_no) === deckNo; });
+  const deckSortie = deckBossSortie || deckTansaku;
 
   // 即コミット：操作の都度 updateDeck → サーバ値で反映（撃ちっぱなし）。
   async function commit(newSlots) {
@@ -1435,6 +1514,18 @@ function DeckScreen({ profile, cards, back, flash }) {
   }
   // カードの在籍デッキ（このデッキ以外）。0043 で 1カード=1デッキ。
   const deckNoOf = (cardId) => { const d = (decks || []).find(x => x.deck_no !== deckNo && [x.slot1_card_id, x.slot2_card_id, x.slot3_card_id].includes(cardId)); return d ? d.deck_no : null; };
+
+  // 出撃中デッキの解除（判定・回数返却・蓄積回収はサーバ。成功で decks＋cards 再取得）。
+  async function releaseBoss() {
+    if (busy) return; setBusy(true);
+    try { await ChikarianAPI.cancelBossSortie(deckNo); await loadDecks(); await refreshAll(); flash('引き返します（帰還中）'); }
+    catch (e) { flash(errMsg(e)); } finally { setBusy(false); }
+  }
+  async function releaseTansaku() {
+    if (busy) return; setBusy(true);
+    try { await ChikarianAPI.collectTansaku(deckNo); await loadDecks(); await refreshAll(); flash('回収しました'); }
+    catch (e) { flash(errMsg(e)); } finally { setBusy(false); }
+  }
 
   if (decks === null) return <Booting />;
 
@@ -1515,6 +1606,17 @@ function DeckScreen({ profile, cards, back, flash }) {
           })}
         </div>
 
+        {/* 出撃/探索中バナー（編集ロック＝枠タップで picking を開かない・解除ボタン付き） */}
+        {deckSortie && (
+          <div style={deckS.sortieBanner}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#fff3c8' }}>{deckBossSortie ? 'このデッキはボス出撃中です' : 'このデッキは探索中です'}</div>
+              <div style={{ fontSize: 10, color: '#cdb488', marginTop: 2 }}>解除すると編成できます</div>
+            </div>
+            <button style={{ ...deckS.sortieRelease, ...(busy ? { opacity: .5 } : {}) }} disabled={busy} onClick={deckBossSortie ? releaseBoss : releaseTansaku}>{deckBossSortie ? 'キャンセル（帰還）' : '回収して戻す'}</button>
+          </div>
+        )}
+
         {/* 3枠（即確定：枠タップで選択／×で即空に。出撃中デッキは編集不可） */}
         <div style={{ ...deckS.slots, opacity: (busy || deckSortie) ? .6 : 1 }}>
           {[0, 1, 2].map(slot => {
@@ -1535,7 +1637,6 @@ function DeckScreen({ profile, cards, back, flash }) {
             );
           })}
         </div>
-        {deckSortie && <div style={{ textAlign: 'center', fontSize: 11, color: '#ff9a8a', marginTop: 4 }}>このデッキは出撃中のため編成できません</div>}
 
         {/* コスト目安（mockup .summary：中央寄せ・本番の文言を維持） */}
         <div style={deckS.summary}>
