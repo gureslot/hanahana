@@ -33,7 +33,7 @@
   @keyframes rot{to{transform:rotate(360deg);}}
   /* ガチャ演出 */
   .gstage{display:flex;flex-wrap:wrap;justify-content:center;align-content:center;gap:10px;perspective:1200px;width:100%;}
-  .gcard{position:relative;width:29%;max-width:108px;aspect-ratio:5/7;filter:drop-shadow(0 8px 16px rgba(0,0,0,.55));}
+  .gcard{position:relative;width:29%;max-width:108px;aspect-ratio:2/3;filter:drop-shadow(0 8px 16px rgba(0,0,0,.55));}
   .gcardInner{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform .55s cubic-bezier(.2,.7,.25,1);transform:rotateY(0deg);}
   .gcard.flipped .gcardInner{transform:rotateY(180deg);}
   .gface{position:absolute;inset:0;border-radius:12px;overflow:hidden;backface-visibility:hidden;-webkit-backface-visibility:hidden;border:1.5px solid rgba(232,194,90,.55);box-shadow:inset 0 0 14px rgba(0,0,0,.5);}
@@ -543,6 +543,13 @@ const HS = {
   fleetRow: { display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid rgba(232,194,90,.18)' },
   fleetBtn: { fontFamily: 'inherit', fontSize: 11, fontWeight: 700, color: '#1a0f06', background: 'linear-gradient(180deg,#ffe49a,#e8b54d)', border: 'none', borderRadius: 8, padding: '6px 10px', cursor: 'pointer', whiteSpace: 'nowrap' },
   fleetBtnGhost: { fontFamily: 'inherit', fontSize: 11, fontWeight: 700, color: GOLD_HI, background: 'rgba(40,26,32,.9)', border: '1px solid rgba(232,194,90,.4)', borderRadius: 8, padding: '6px 10px', cursor: 'pointer', whiteSpace: 'nowrap' },
+  cScrim: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,.74)', display: 'grid', placeItems: 'center', zIndex: 62, padding: 24 },
+  cBox: { maxWidth: 340, width: '100%', background: '#160a13', border: '1.5px solid rgba(232,194,90,.55)', borderRadius: 14, padding: '20px 18px 16px', textAlign: 'center', boxShadow: '0 12px 40px rgba(0,0,0,.7)' },
+  cTitle: { fontSize: 14, fontWeight: 800, letterSpacing: 1, color: '#ff9a8a', marginBottom: 10 },
+  cMsg: { fontSize: 13, color: GOLD_HI, lineHeight: 1.8, marginBottom: 18 },
+  cBtns: { display: 'flex', gap: 10 },
+  cYes: { flex: 1, fontFamily: 'inherit', fontWeight: 800, fontSize: 14, letterSpacing: 1, color: '#2a160a', border: 'none', borderRadius: 22, padding: '11px 0', cursor: 'pointer', background: 'linear-gradient(180deg,#ffe49a,#e8b54d 60%,#b9842f)' },
+  cNo: { flex: 1, fontFamily: 'inherit', fontWeight: 700, fontSize: 14, letterSpacing: 1, color: GOLD_HI, background: 'rgba(20,10,16,.9)', border: '1.5px solid rgba(232,194,90,.55)', borderRadius: 22, padding: '11px 0', cursor: 'pointer' },
 };
 
 // リソースアイコン（画像→失敗時は絵文字/記号 fallback）
@@ -579,6 +586,7 @@ function Home({ profile, go, flash, onRefresh }) {
   const [now, setNow] = useState(Date.now());
   const [fleetSheet, setFleetSheet] = useState(null);  // 管理シート 'boss' | 'tansaku' | null
   const [fleetBusy, setFleetBusy] = useState(false);   // キャンセル/回収中の二重防止
+  const [fleetConfirm, setFleetConfirm] = useState(null); // {kind:'boss'|'tansaku', deckNo} 帰還/回収の確認
   const collectedRef = useRef({});                     // 自動回収の重複防止（deck_no:started_at）
 
   async function refetchSorties() {
@@ -722,7 +730,7 @@ function Home({ profile, go, flash, onRefresh }) {
                   <div style={{ fontSize: 12, color: '#fff3c8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>デッキ{s.deck_no} ・ {bossSortieName(s.boss_key)}</div>
                   <div style={{ fontSize: 10, color: '#cdb488', marginTop: 2 }}>{L.phase === 'out' ? '出撃中' : '帰還中'} ・ 残り {bossMmss(L.remaining)}</div>
                 </div>
-                {L.phase === 'out' && <button style={{ ...HS.fleetBtn, ...(fleetBusy ? { opacity: .5 } : {}) }} disabled={fleetBusy} onClick={() => cancelSortie(s.deck_no)}>キャンセル（帰還）</button>}
+                {L.phase === 'out' && <button style={{ ...HS.fleetBtn, ...(fleetBusy ? { opacity: .5 } : {}) }} disabled={fleetBusy} onClick={() => setFleetConfirm({ kind: 'boss', deckNo: s.deck_no })}>キャンセル（帰還）</button>}
               </div>
             ))}
             {fleetSheet === 'tansaku' && tansaku.map(t => {
@@ -733,13 +741,30 @@ function Home({ profile, go, flash, onRefresh }) {
                     <div style={{ fontSize: 12, color: '#fff3c8' }}>デッキ{t.deck_no}{di ? ' ・ ' + di.label : ''}</div>
                     <div style={{ fontSize: 10, color: '#cdb488', marginTop: 2 }}>探索中</div>
                   </div>
-                  <button style={{ ...HS.fleetBtn, ...(fleetBusy ? { opacity: .5 } : {}) }} disabled={fleetBusy} onClick={() => recallTansaku(t.deck_no)}>回収して戻す</button>
+                  <button style={{ ...HS.fleetBtn, ...(fleetBusy ? { opacity: .5 } : {}) }} disabled={fleetBusy} onClick={() => setFleetConfirm({ kind: 'tansaku', deckNo: t.deck_no })}>回収して戻す</button>
                 </div>
               );
             })}
           </div>
         </>
       )}
+
+      {/* 帰還/回収の確認モーダル（編成画面と同じ意匠・誤操作防止） */}
+      {fleetConfirm && (() => {
+        const fc = fleetConfirm; const isBoss = fc.kind === 'boss';
+        return (
+          <div style={HS.cScrim} onClick={() => setFleetConfirm(null)}>
+            <div style={HS.cBox} onClick={(e) => e.stopPropagation()}>
+              <div style={HS.cTitle}>{isBoss ? '帰還の確認' : '回収の確認'}</div>
+              <div style={HS.cMsg}>{isBoss ? `デッキ${fc.deckNo} を帰還させますか？` : `デッキ${fc.deckNo} を回収して戻しますか？`}</div>
+              <div style={HS.cBtns}>
+                <button style={HS.cNo} onClick={() => setFleetConfirm(null)} disabled={fleetBusy}>いいえ</button>
+                <button style={HS.cYes} onClick={() => { setFleetConfirm(null); isBoss ? cancelSortie(fc.deckNo) : recallTansaku(fc.deckNo); }} disabled={fleetBusy}>{fleetBusy ? '処理中…' : (isBoss ? 'はい（帰還）' : 'はい（回収）')}</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -1021,6 +1046,11 @@ function parseCardKey(key) {
   const isMeshibe = p[1] === 'meshibe';
   return { rarity: rar, name: isMeshibe ? 'めしべだけマン' : 'ハイビスカスマン', attr: ATTR_JA[p[2]] || '', weap: WEAP_JA[p[3]] || '' };
 }
+// 表示名＝レア＋名前＋属性＋武器（例「SSRめしべだけマン芯杖」）。card オブジェクト/キー文字列どちらでも可。
+function cardFullName(card) {
+  const i = parseCardKey(typeof card === 'string' ? card : card.card_key);
+  return (RAR_LABEL[i.rarity] || '') + i.name + i.attr + i.weap;
+}
 
 function GCard({ data, flipped, skillName, index }) {
   const [imgErr, setImgErr] = useState(false);
@@ -1154,7 +1184,7 @@ function CardThumb({ card, onClick, small }) {
   const col = RAR_COL[info.rarity] || '#b9b2a6';
   return (
     <button onClick={onClick} style={{ background: 'none', border: 'none', padding: 0, cursor: onClick ? 'pointer' : 'default', width: '100%' }}>
-      <div style={{ width: '100%', aspectRatio: '5/7', borderRadius: 10, border: `1.5px solid ${col}`, background: 'linear-gradient(165deg,#2a1430,#140913)', position: 'relative', overflow: 'hidden', display: 'grid', placeItems: 'center', boxShadow: `0 0 8px ${col}33` }}>
+      <div style={{ width: '100%', aspectRatio: '2/3', borderRadius: 10, border: `1.5px solid ${col}`, background: 'linear-gradient(165deg,#2a1430,#140913)', position: 'relative', overflow: 'hidden', display: 'grid', placeItems: 'center', boxShadow: `0 0 8px ${col}33` }}>
         {/* カード絵（GCard と同方式・失敗時はグラデ背景＋❖＋名前＋属性/武器） */}
         {imgErr
           ? <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 4, textAlign: 'center' }}>
@@ -1163,10 +1193,10 @@ function CardThumb({ card, onClick, small }) {
               {(info.attr || info.weap) && <div style={{ fontSize: 10, color: '#cdb488' }}>{info.attr}{info.weap}</div>}
             </div>
           : <img src={'./images/' + card.card_key + '.png'} alt="" onError={() => setImgErr(true)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
-        <div style={{ position: 'absolute', top: 3, left: 3, fontSize: 9, fontWeight: 800, color: '#1a0f06', background: col, borderRadius: 4, padding: '0 5px' }}>{RAR_LABEL[info.rarity]}</div>
+        {/* レアバッジは廃止（カード絵自体がレアを表す・絵を隠さない）。レア/属性/武器は表示名へ集約。 */}
         {card.locked && <div style={{ position: 'absolute', top: 3, right: 3, fontSize: 11 }}>🔒</div>}
         <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '6px 2px 3px', fontSize: 9, textAlign: 'center', color: '#fff3c8', background: 'linear-gradient(0deg,rgba(0,0,0,.82),transparent)' }}>
-          {info.attr}{info.weap}{' '}{card.lv ? ('Lv' + card.lv) : ''}{card.star ? ' ★' + card.star : ''}
+          {card.lv ? ('Lv' + card.lv) : ''}{card.star ? ' ★' + card.star : ''}
         </div>
       </div>
     </button>
@@ -1186,7 +1216,7 @@ const zS = {
   filSel: { background: 'linear-gradient(180deg,rgba(255,228,154,.26),rgba(232,181,77,.14))', boxShadow: '0 0 10px rgba(255,200,90,.3)' },
   count: { flex: 'none', textAlign: 'center', fontSize: 11, color: '#cdb488', padding: '4px 0 6px' },
   grid: { flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, alignContent: 'start', padding: '2px 16px 84px' },
-  item: { position: 'relative', width: '100%', aspectRatio: '5/7', borderRadius: 12, overflow: 'hidden', border: '2px solid rgba(232,194,90,.5)', background: '#241018', padding: 0, cursor: 'pointer' },
+  item: { position: 'relative', width: '100%', aspectRatio: '2/3', borderRadius: 12, overflow: 'hidden', border: '2px solid rgba(232,194,90,.5)', background: '#241018', padding: 0, cursor: 'pointer' },
   itemLocked: { filter: 'grayscale(1) brightness(.4)', cursor: 'default' },
   art: { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' },
   cph: { position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', fontSize: 30, color: '#7a5a3a' },
@@ -1201,7 +1231,7 @@ const zS = {
   back: { position: 'absolute', zIndex: 7, left: 14, bottom: 12, fontFamily: 'inherit', fontSize: 14, color: GOLD_HI, background: PANEL, border: BORDER, borderRadius: 22, padding: '9px 18px', cursor: 'pointer' },
   // 詳細
   dScroll: { position: 'relative', zIndex: 2, height: '100dvh', overflowY: 'auto', padding: '18px 18px 92px', display: 'flex', flexDirection: 'column', alignItems: 'center' },
-  dCard: { width: '66%', maxWidth: 240, aspectRatio: '5/7', borderRadius: 14, overflow: 'hidden', border: '2px solid rgba(232,194,90,.6)', background: '#241018', position: 'relative', boxShadow: '0 6px 24px rgba(0,0,0,.5)' },
+  dCard: { width: '66%', maxWidth: 240, aspectRatio: '2/3', borderRadius: 14, overflow: 'hidden', border: '2px solid rgba(232,194,90,.6)', background: '#241018', position: 'relative', boxShadow: '0 6px 24px rgba(0,0,0,.5)' },
   dName: { fontSize: 18, fontWeight: 800, marginTop: 14, letterSpacing: 1, color: GOLD_HI, textAlign: 'center' },
   dBadges: { display: 'flex', gap: 5, marginTop: 8, justifyContent: 'center', flexWrap: 'wrap' },
   dStarRow: { fontSize: 14, color: '#ffd98a', marginTop: 7 },
@@ -1366,7 +1396,7 @@ function CardDetail({ card, cards, profile, skillMap, refreshAll, back, flash, o
           {card.locked && <div style={{ position: 'absolute', top: 8, left: 9, fontSize: 15, filter: 'drop-shadow(0 1px 2px #000)' }}>🔒</div>}
         </div>
 
-        <div style={zS.dName}>{info.name}</div>
+        <div style={zS.dName}>{cardFullName(card)}</div>
         <div style={zS.dBadges}>
           {st.isSp
             ? <span style={{ ...zS.badge, background: 'linear-gradient(90deg,#ffe39a,#e8b54d)' }}>SP</span>
@@ -1433,7 +1463,7 @@ const deckS = {
   sortieBanner: { display: 'flex', alignItems: 'center', gap: 10, marginTop: 10, padding: '10px 12px', background: 'rgba(40,18,24,.9)', border: '1.5px solid rgba(255,120,120,.5)', borderRadius: 12 },
   sortieRelease: { fontFamily: 'inherit', fontSize: 12, fontWeight: 700, color: '#1a0f06', background: 'linear-gradient(180deg,#ffd98a,#e8a23b)', border: 'none', borderRadius: 9, padding: '8px 12px', cursor: 'pointer', whiteSpace: 'nowrap' },
   slots: { display: 'flex', gap: 10, padding: '16px 4px 8px', justifyContent: 'center' },
-  slot: { flex: 1, maxWidth: 128, aspectRatio: '5/7', borderRadius: 12, border: '1.5px dashed rgba(232,194,90,.5)', background: 'rgba(0,0,0,.3)', position: 'relative', cursor: 'pointer', overflow: 'hidden' },
+  slot: { flex: 1, maxWidth: 128, aspectRatio: '2/3', borderRadius: 12, border: '1.5px dashed rgba(232,194,90,.5)', background: 'rgba(0,0,0,.3)', position: 'relative', cursor: 'pointer', overflow: 'hidden' },
   slotFilled: { borderStyle: 'solid' },
   empty: { position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', fontSize: 30, color: '#6a5a3a' },
   emptySmall: { display: 'block', fontSize: 10, color: '#6a5a3a', letterSpacing: 1, marginTop: 4 },
@@ -1480,6 +1510,7 @@ function DeckScreen({ profile, cards, refreshAll, back, flash }) {
   const [picking, setPicking] = useState(null); // 編集中の枠 index or null
   const [busy, setBusy] = useState(false);      // 即コミット中（二重防止）
   const [moveConfirm, setMoveConfirm] = useState(null); // {cardId, slot, fromDeckNo} 他デッキ移動の確認
+  const [recallConfirm, setRecallConfirm] = useState(null); // {kind:'boss'|'tansaku', deckNo} 帰還/回収の確認
 
   const cardById = {}; (cards || []).forEach(c => { cardById[c.id] = c; });
 
@@ -1491,7 +1522,7 @@ function DeckScreen({ profile, cards, refreshAll, back, flash }) {
       catch (e) { setSpSet({}); }   // 読めなければバッジ無し（最終判定はサーバ拒否で対応）
     })();
   }, []);
-  useEffect(() => { setPicking(null); setMoveConfirm(null); }, [deckNo]);   // デッキ切替で編集状態をリセット
+  useEffect(() => { setPicking(null); setMoveConfirm(null); setRecallConfirm(null); }, [deckNo]);   // デッキ切替で編集状態をリセット
 
   // 現在の編成は decks（サーバ値）から導く curSlots を唯一のソースに（draft 廃止）。
   const curSlots = (() => { if (!decks) return [null, null, null]; const row = decks.find(x => x.deck_no === deckNo); return row ? [row.slot1_card_id || null, row.slot2_card_id || null, row.slot3_card_id || null] : [null, null, null]; })();
@@ -1560,6 +1591,7 @@ function DeckScreen({ profile, cards, refreshAll, back, flash }) {
                         {!sp && sortieLocked && <div style={badge('#ff6a7a')}>{c.tansaku_deck_no != null ? '探索中' : '出撃中'}</div>}
                         {!sp && !sortieLocked && sameDeckOther && <div style={badge('#888')}>編成中</div>}
                         {!sp && !sortieLocked && !sameDeckOther && otherDeck && <div style={deckS.deckMark}>デッキ{otherDeck}</div>}
+                        <div style={{ fontSize: 8, lineHeight: 1.2, textAlign: 'center', color: '#cdb488', marginTop: 1 }}>{cardFullName(c)}</div>
                       </div>
                     );
                   })}
@@ -1613,7 +1645,7 @@ function DeckScreen({ profile, cards, refreshAll, back, flash }) {
               <div style={{ fontSize: 13, fontWeight: 700, color: '#fff3c8' }}>{deckBossSortie ? 'このデッキはボス出撃中です' : 'このデッキは探索中です'}</div>
               <div style={{ fontSize: 10, color: '#cdb488', marginTop: 2 }}>解除すると編成できます</div>
             </div>
-            <button style={{ ...deckS.sortieRelease, ...(busy ? { opacity: .5 } : {}) }} disabled={busy} onClick={deckBossSortie ? releaseBoss : releaseTansaku}>{deckBossSortie ? 'キャンセル（帰還）' : '回収して戻す'}</button>
+            <button style={{ ...deckS.sortieRelease, ...(busy ? { opacity: .5 } : {}) }} disabled={busy} onClick={() => setRecallConfirm({ kind: deckBossSortie ? 'boss' : 'tansaku', deckNo })}>{deckBossSortie ? 'キャンセル（帰還）' : '回収して戻す'}</button>
           </div>
         )}
 
@@ -1649,6 +1681,23 @@ function DeckScreen({ profile, cards, refreshAll, back, flash }) {
 
         <button onClick={back} style={{ ...S.lineBtn, marginTop: 16, alignSelf: 'center' }}>ホームに戻る</button>
       </div>
+
+      {/* 帰還/回収の確認モーダル（moveConfirm と同じ意匠） */}
+      {recallConfirm && (() => {
+        const rc = recallConfirm; const isBoss = rc.kind === 'boss';
+        return (
+          <div style={deckS.mScrim} onClick={() => setRecallConfirm(null)}>
+            <div style={deckS.mBox} onClick={(e) => e.stopPropagation()}>
+              <div style={deckS.mTitle}>{isBoss ? '帰還の確認' : '回収の確認'}</div>
+              <div style={deckS.mMsg}>{isBoss ? `デッキ${rc.deckNo} を帰還させますか？` : `デッキ${rc.deckNo} を回収して戻しますか？`}</div>
+              <div style={deckS.mBtns}>
+                <button style={deckS.mCancel} onClick={() => setRecallConfirm(null)} disabled={busy}>いいえ</button>
+                <button style={deckS.mMove} onClick={() => { setRecallConfirm(null); isBoss ? releaseBoss() : releaseTansaku(); }} disabled={busy}>{busy ? '処理中…' : (isBoss ? 'はい（帰還）' : 'はい（回収）')}</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -1746,7 +1795,7 @@ const BOSS_CSS = `
 .boss-deck2Cards{display:flex; gap:6px;}
 .boss-deck2Card{flex:1; min-width:0;}
 .boss-deck2Nm{font-size:9px; color:#cdb488; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px;}
-.boss-deck2Empty{flex:1; aspect-ratio:5/7; border:1.5px dashed rgba(232,194,90,.3); border-radius:8px; display:grid; place-items:center; font-size:10px; color:#7a6a4a;}
+.boss-deck2Empty{flex:1; aspect-ratio:2/3; border:1.5px dashed rgba(232,194,90,.3); border-radius:8px; display:grid; place-items:center; font-size:10px; color:#7a6a4a;}
 `;
 // 名前・界名・モチーフ・ボス画像は boss-mockup の STAGES が正（デザイン確定値／boss_master には無い）。
 // bosses 配列の並びは [中ボスA, 中ボスB, 面ボス]＝role a/b/boss。画像 boss_<面>_<role>。戦闘数値は boss_master を bossKey で引く。
@@ -1978,7 +2027,7 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
                       <div className="boss-deck2Top"><span>デッキ{n}</span><span>{busyN ? '出撃中' : '総合 ' + deckTotal(n).toLocaleString()}</span></div>
                       <div className="boss-deck2Cards">
                         {members.map((c, si) => c
-                          ? <div key={si} className="boss-deck2Card"><CardThumb card={c} small /><div className="boss-deck2Nm">{parseCardKey(c.card_key).name}</div></div>
+                          ? <div key={si} className="boss-deck2Card"><CardThumb card={c} small /><div className="boss-deck2Nm">{cardFullName(c)}</div></div>
                           : <div key={si} className="boss-deck2Empty">空き</div>)}
                       </div>
                     </div>
