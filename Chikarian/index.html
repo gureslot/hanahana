@@ -1042,15 +1042,16 @@ const RAR_COL = { n: '#b9b2a6', r: '#6fa8ff', sr: '#c98bff', ssr: '#ffd24d', sp:
 const RAR_LABEL = { n: 'N', r: 'R', sr: 'SR', ssr: 'SSR', sp: 'SP' };
 const ATTR_JA = { hana: '花', ha: '葉', shin: '芯' };
 const WEAP_JA = { ken: '剣', tate: '盾', tsue: '杖' };
+const ATTR_IC = { hana: './images/ic_attr_hana.png', ha: './images/ic_attr_ha.png', shin: './images/ic_attr_shin.png' };
 function parseCardKey(key) {
   if (key.endsWith('_sp')) {
     const n = { chara_dragon_sp: 'ゴールドドラゴン', chara_girl_sp: 'ゴーストガール', chara_houou_sp: '鳳凰' }[key] || 'SP';
-    return { rarity: 'sp', name: n, attr: '', weap: '' };
+    return { rarity: 'sp', name: n, attr: '', weap: '', attrKey: '' };
   }
   const p = key.split('_');
   const rar = p[p.length - 1];
   const isMeshibe = p[1] === 'meshibe';
-  return { rarity: rar, name: isMeshibe ? 'めしべだけマン' : 'ハイビスカスマン', attr: ATTR_JA[p[2]] || '', weap: WEAP_JA[p[3]] || '' };
+  return { rarity: rar, name: isMeshibe ? 'めしべだけマン' : 'ハイビスカスマン', attr: ATTR_JA[p[2]] || '', weap: WEAP_JA[p[3]] || '', attrKey: p[2] || '' };
 }
 // 表示名＝レア＋名前＋属性＋武器（例「SSRめしべだけマン芯杖」）。card オブジェクト/キー文字列どちらでも可。
 function cardFullName(card) {
@@ -1533,6 +1534,7 @@ const COST_BY_RAR = { n: 1, r: 2, sr: 3, ssr: 5, sp: 4 };   // N1/R2/SR3/SSR5/SP
 
 /* デッキ編成画面 専用スタイル（deck-mockup の見た目移植・共有 S は上書きしない） */
 const deckS = {
+  attrIc: { width: 18, height: 18, borderRadius: '50%', objectFit: 'cover', verticalAlign: 'middle', boxShadow: '0 0 0 1px rgba(232,194,90,.45)', background: '#241018' },
   tabs: { display: 'flex', gap: 6, justifyContent: 'center', flexWrap: 'wrap', margin: '12px 0' },
   tab: { fontFamily: 'inherit', fontSize: 12, letterSpacing: 1, color: GOLD_HI, background: PANEL, border: '1.5px solid rgba(232,194,90,.5)', borderRadius: 16, padding: '7px 15px', cursor: 'pointer' },
   tabSel: { background: 'linear-gradient(180deg,rgba(255,228,154,.28),rgba(232,181,77,.18))', boxShadow: '0 0 12px rgba(255,200,90,.3)' },
@@ -1780,11 +1782,17 @@ function CardPicker({ title, cards, getStatus, chooseLabel, onChoose, onClear, b
   );
 }
 
+function AttrIcon({ info }) {
+  const [err, setErr] = useState(false);
+  const src = ATTR_IC[info.attrKey];
+  if (!src || err) return <span style={{ ...deckS.badge, background: DECK_ATTR_COL[info.attr] || '#888' }}>{info.attr}</span>;
+  return <img src={src} alt={info.attr} title={info.attr} style={deckS.attrIc} onError={() => setErr(true)} />;
+}
 function DeckBadges({ info }) {
-  // SP は無属性＝SPバッジ、それ以外は属性＋武器バッジ（色は mockup 踏襲）
+  // SP は無属性＝SPバッジ。属性は画像アイコン（ic_attr_*・onError時はテキストバッジ）＋武器はテキストバッジ（武器アイコン素材は未作成）
   if (info.rarity === 'sp') return <span style={{ ...deckS.badge, background: 'linear-gradient(90deg,#ffe39a,#e8b54d)' }}>SP</span>;
   return (<>
-    <span style={{ ...deckS.badge, background: DECK_ATTR_COL[info.attr] || '#888' }}>{info.attr}</span>
+    <AttrIcon info={info} />
     <span style={deckS.wbadge}>{info.weap}</span>
   </>);
 }
