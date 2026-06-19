@@ -1451,18 +1451,97 @@ const EXPRANK_JA = { s: '小', m: '中', l: '大', xl: '特大' };
 const SP_DEP = { sp_ryuki: 'ゴールドドラゴン', sp_aitou: 'ゴーストガール', sp_fushichou: '鳳凰' };
 function arrJA(arr, map) { return (arr && arr.length) ? arr.map(x => map[x] || x).join('・') : 'なし'; }
 
+/* ボス戦画面 専用スタイル（boss-mockup のマップUI移植・boss- スコープ・共有 S は不変） */
+const bossRoot = { position: 'relative', width: '100%', maxWidth: 480, margin: '0 auto', height: '100dvh', overflow: 'hidden', background: '#070409', color: GOLD_HI, display: 'flex', alignItems: 'center', justifyContent: 'center' };
+const BOSS_CSS = `
+.boss-mapWrap{position:relative; width:100%; aspect-ratio:941/1672; max-height:100dvh; background-color:#070409; background-position:center; background-size:100% 100%; background-repeat:no-repeat;}
+.boss-mapDim{position:absolute; inset:0; pointer-events:none; background:linear-gradient(180deg, rgba(0,0,0,.5), transparent 14% 80%, rgba(0,0,0,.5));}
+.boss-node{position:absolute; transform:translate(-50%,-50%); text-align:center; cursor:pointer; z-index:4;}
+.boss-node.up{display:flex; flex-direction:column-reverse;}
+.boss-dot{position:relative; margin:0 auto; display:grid; place-items:center;}
+.boss-dot.sub{width:48px; height:48px;} .boss-dot.boss{width:60px; height:60px;}
+.boss-gi{width:16px; height:16px; border-radius:50%; background:#e0563b; box-shadow:0 0 10px rgba(224,86,59,.9); animation:bossPulse 2.1s ease-in-out infinite;}
+@keyframes bossPulse{0%,100%{box-shadow:0 0 8px rgba(224,86,59,.6);}50%{box-shadow:0 0 16px rgba(255,110,70,1);}}
+.boss-dot img{position:absolute; inset:0; width:100%; height:100%; object-fit:contain; filter:drop-shadow(0 2px 7px rgba(0,0,0,.8));}
+.boss-dot.hasimg .boss-gi{display:none;}
+.boss-lbl{margin-top:7px; font-size:11px; letter-spacing:1px; color:#fff3c8; text-shadow:0 1px 4px #000,0 0 8px #000; white-space:nowrap;}
+.boss-node.up .boss-lbl{margin-top:0; margin-bottom:7px;}
+/* cleared/locked/busy のノード状態は将来サーバが役割順制限/占有を持つ時用に残置（現状は開放面=全出撃可で未使用） */
+.boss-node.cleared .boss-gi{background:#5fa564; box-shadow:0 0 8px rgba(120,220,140,.7); animation:none;}
+.boss-node.locked .boss-gi{background:#5a5048; box-shadow:none; animation:none;}
+.boss-node.cleared .boss-dot.hasimg img{filter:brightness(.85) saturate(.9);}
+.boss-node.locked .boss-dot.hasimg img{filter:grayscale(1) brightness(.5);}
+.boss-decksTop{position:absolute; z-index:6; top:14px; left:14px; width:176px; display:flex; flex-direction:column; gap:6px;}
+.boss-decksTopT{font-size:10px; color:#cdb488; letter-spacing:1px; text-shadow:0 1px 3px #000;}
+.boss-deckRow{display:flex; flex-wrap:wrap; gap:5px;}
+.boss-dpill{font-family:inherit; font-size:11px; color:#cdb488; background:rgba(18,10,14,.9); border:1.5px solid rgba(232,194,90,.55); border-radius:10px; padding:5px 10px; cursor:pointer;}
+.boss-dpill.sel{color:#fff3c8; background:linear-gradient(180deg,rgba(255,228,154,.28),rgba(232,181,77,.18)); box-shadow:0 0 8px rgba(255,200,90,.3);}
+.boss-worldsel{position:absolute; z-index:7; top:14px; right:14px; width:152px;}
+.boss-wbtn{width:100%; background:rgba(18,10,14,.9); border:1.5px solid rgba(232,194,90,.55); border-radius:12px; padding:8px 12px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; gap:6px;}
+.boss-wn{font-size:13px; font-weight:800; color:#fff3c8; letter-spacing:1px;}
+.boss-ar{font-size:11px; color:#cdb488; transition:transform .25s;}
+.boss-worldsel.open .boss-ar{transform:rotate(180deg);}
+.boss-wlist{margin-top:6px; background:rgba(18,10,14,.9); border:1.5px solid rgba(232,194,90,.55); border-radius:12px; overflow:hidden; max-height:0; transition:max-height .3s ease;}
+.boss-worldsel.open .boss-wlist{max-height:60vh; overflow-y:auto;}
+.boss-witem{padding:9px 12px; font-size:12px; letter-spacing:1px; border-bottom:1px solid rgba(232,194,90,.18); cursor:pointer; color:#fff3c8; display:flex; justify-content:space-between; align-items:center; gap:6px;}
+.boss-witem:last-child{border-bottom:none;}
+.boss-witem.cur{background:rgba(255,228,154,.16);}
+.boss-witem.locked{color:#8a7c60; cursor:default;}
+.boss-tries{margin-top:6px; background:rgba(18,10,14,.9); border:1.5px solid rgba(232,194,90,.55); border-radius:12px; padding:6px 12px; text-align:center; font-size:11px; color:#cdb488; letter-spacing:1px;}
+.boss-tries b{color:#ffe39a; font-weight:800;}
+.boss-back{position:absolute; z-index:7; left:14px; bottom:16px; font-family:inherit; font-size:14px; letter-spacing:1px; color:#fff3c8; background:rgba(18,10,14,.9); border:1.5px solid rgba(232,194,90,.55); border-radius:22px; padding:11px 22px; cursor:pointer;}
+.boss-scrim{position:absolute; inset:0; z-index:8; background:rgba(0,0,0,.45); opacity:0; pointer-events:none; transition:.3s;}
+.boss-scrim.show{opacity:1; pointer-events:auto;}
+.boss-sheet{position:absolute; z-index:9; left:0; right:0; bottom:0; transform:translateY(110%); max-width:480px; margin:0 auto; transition:transform .35s cubic-bezier(.2,.8,.25,1); background:rgba(18,10,14,.9); border-top:1.5px solid rgba(232,194,90,.55); border-left:1.5px solid rgba(232,194,90,.55); border-right:1.5px solid rgba(232,194,90,.55); border-radius:18px 18px 0 0; padding:16px 18px 22px; box-shadow:0 -8px 24px rgba(0,0,0,.6);}
+.boss-sheet.show{transform:translateY(0);}
+.boss-sheet h3{margin:2px 0 4px; font-size:19px; letter-spacing:2px; text-align:center; text-shadow:0 0 12px rgba(255,120,80,.4); color:#fff3c8;}
+.boss-subt{text-align:center; font-size:11px; color:#cdb488; letter-spacing:2px; margin-bottom:8px;}
+.boss-stat{display:flex; justify-content:space-between; padding:7px 4px; border-bottom:1px dashed rgba(232,194,90,.25); font-size:14px;}
+.boss-stat .k{color:#cdb488; letter-spacing:1px;} .boss-stat .v{color:#fff3c8; font-weight:700; text-align:right;}
+.boss-secTitle{margin:13px 0 5px; font-size:12px; color:#cdb488; letter-spacing:2px; border-left:3px solid #e8c25a; padding-left:8px;}
+.boss-note{font-size:10px; color:#a98f66; margin-top:8px; line-height:1.5;}
+.boss-go{margin-top:12px; width:100%; font-family:inherit; font-weight:800; font-size:16px; letter-spacing:2px; border:none; padding:13px; border-radius:26px; cursor:pointer; background:linear-gradient(180deg,#ffcaa0,#e0563b 60%,#a0341c); color:#2a0d06; box-shadow:0 4px 0 #6a1e0e,0 8px 18px rgba(0,0,0,.45);}
+.boss-go:active{transform:translateY(3px);} .boss-go:disabled{filter:grayscale(.6) brightness(.7); cursor:default;}
+.boss-warn{text-align:center; font-size:11px; color:#ff9a8a; margin-top:8px; min-height:14px;}
+.boss-close{position:absolute; top:10px; right:14px; font-size:20px; color:#cdb488; cursor:pointer; line-height:1;}
+`;
+// 名前・界名・モチーフ・ボス画像は boss-mockup の STAGES が正（デザイン確定値／boss_master には無い）。
+// bosses 配列の並びは [中ボスA, 中ボスB, 面ボス]＝role a/b/boss。画像 boss_<面>_<role>。戦闘数値は boss_master を bossKey で引く。
+const BOSS_STAGES = [
+  { stage: 1, world: '古代樹海界', motif: 'リス', bosses: [{ role: '中ボスA', name: 'ヴェルグラフ', img: 'boss_1_a' }, { role: '中ボスB', name: 'ゼルヴァニクス', img: 'boss_1_b' }, { role: '面ボス', name: 'アルヴェノクス', img: 'boss_1_boss' }] },
+  { stage: 2, world: '黒曜山界', motif: '牛', bosses: [{ role: '中ボスA', name: 'グラドム', img: 'boss_2_a' }, { role: '中ボスB', name: 'ヴォルガルド', img: 'boss_2_b' }, { role: '面ボス', name: 'ザグロディオン', img: 'boss_2_boss' }] },
+  { stage: 3, world: '神域界', motif: '柴犬', bosses: [{ role: '中ボスA', name: 'シラフェイン', img: 'boss_3_a' }, { role: '中ボスB', name: 'アークレオン', img: 'boss_3_b' }, { role: '面ボス', name: 'ラディシオン', img: 'boss_3_boss' }] },
+  { stage: 4, world: '鋼殻要塞界', motif: 'サイ', bosses: [{ role: '中ボスA', name: 'フォートガル', img: 'boss_4_a' }, { role: '中ボスB', name: 'アイゼルバスト', img: 'boss_4_b' }, { role: '面ボス', name: 'ガルドニクス', img: 'boss_4_boss' }] },
+  { stage: 5, world: '雷帝界', motif: '虎', bosses: [{ role: '中ボスA', name: 'ライガルス', img: 'boss_5_a' }, { role: '中ボスB', name: 'ジンライヴァ', img: 'boss_5_b' }, { role: '面ボス', name: 'ザルギアント', img: 'boss_5_boss' }] },
+  { stage: 6, world: '群体界', motif: 'ネズミ', bosses: [{ role: '中ボスA', name: 'ミュラト', img: 'boss_6_a' }, { role: '中ボスB', name: 'ミュラゴス', img: 'boss_6_b' }, { role: '面ボス', name: 'ヌグラミアス', img: 'boss_6_boss' }] },
+  { stage: 7, world: '幻妖界', motif: '狐', bosses: [{ role: '中ボスA', name: 'セリナフ', img: 'boss_7_a' }, { role: '中ボスB', name: 'ファルヴェイラ', img: 'boss_7_b' }, { role: '面ボス', name: 'ナギュリスカ', img: 'boss_7_boss' }] },
+  { stage: 8, world: '終幕界', motif: 'ピエロ', bosses: [{ role: '中ボスA', name: 'カリヴェナ', img: 'boss_8_a' }, { role: '中ボスB', name: 'ノルディアス', img: 'boss_8_b' }, { role: '面ボス', name: 'グラヴィネア＝ディスカリオ', img: 'boss_8_boss' }] },
+];
+// 終幕界2周目（女型3体）。マップ・解放は今後対応のためデータのみ保持（UI未使用）。
+const BOSS_FINALE_R2 = { stage: 8, round: 2, world: '終幕界', motif: 'ピエロ（女型）', bosses: [{ role: '中ボスA', name: 'カリオネラ', img: 'boss_8_a_r2' }, { role: '中ボスB', name: 'ノルディアーナ', img: 'boss_8_b_r2' }, { role: '面ボス', name: 'グラヴィエラ＝ディスカリス', img: 'boss_8_boss_r2' }] };
+const BOSS_ROLE_KEYS = ['a', 'b', 'boss'];                                   // ノード並び＝STAGES bosses 並び
+const BOSS_NODES = [{ left: '28%', top: '23%', size: 'sub' }, { left: '70%', top: '53.5%', size: 'sub' }, { left: '52%', top: '84%', size: 'boss', up: true }];
+
+function BossNodeImg({ src }) {
+  // ボス絵 boss_<面>_<role>。読めなければ赤い拍動ドット(.boss-gi)にフォールバック。
+  const [err, setErr] = useState(false);
+  if (err) return null;
+  return <img src={src} alt="" onError={() => setErr(true)} />;
+}
+
 function BossScreen({ profile, onRefresh, back, flash }) {
   const [bosses, setBosses] = useState(null);
   const [decks, setDecks] = useState(null);
   const [skillMap, setSkillMap] = useState({});
   const [deckNo, setDeckNo] = useState(1);
-  const [stage, setStage] = useState(1);
-  const [role, setRole] = useState('a');
+  const cleared = (profile && profile.cleared_stage) || 0;
+  const [stage, setStage] = useState(() => Math.min(cleared + 1, 8));   // 既定＝次の未クリア面（フロンティア）
+  const [openNode, setOpenNode] = useState(null);                       // 開いているノード index(0..2) or null
+  const [worldOpen, setWorldOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
 
   const maxDecks = Math.min(2 + Math.floor(((profile && profile.cleared_stage) || 0) / 2), 6);
-  const cleared = (profile && profile.cleared_stage) || 0;
   const triesUsed = (profile && profile.boss_date === jstToday()) ? (profile.boss_count_today || 0) : 0;
   const triesLeft = Math.max(0, 3 - triesUsed);
 
@@ -1474,76 +1553,92 @@ function BossScreen({ profile, onRefresh, back, flash }) {
     })();
   }, []);
 
-  const bossKey = 'boss_' + stage + '_' + role;
-  const boss = (bosses || []).find(b => b.boss_key === bossKey);
-
-  async function sortie() {
+  async function sortie(role) {
     if (busy) return; setBusy(true);
     try {
-      const res = await ChikarianAPI.doBossBattle(deckNo, bossKey);   // ★戦闘計算はサーバ
-      setResult(res);
+      const res = await ChikarianAPI.doBossBattle(deckNo, 'boss_' + stage + '_' + role);   // ★戦闘計算はサーバ。bossKey は従来形式
+      setResult(res); setOpenNode(null);
       await onRefresh();   // profile（メダル/EXP/回数）＋ cards（武気損失/Lv）をサーバ再取得
     } catch (e) { flash(errMsg(e)); }
     finally { setBusy(false); }
   }
 
   if (bosses === null || decks === null) return <Booting />;
-
   if (result) return <BossResult res={result} skillMap={skillMap} onAgain={() => setResult(null)} onHome={back} />;
 
-  return (
-    <div style={S.root}>
-      <div style={S.bg} /><div style={S.vignette} />
-      <div style={{ position: 'relative', zIndex: 2, minHeight: '100dvh', display: 'flex', flexDirection: 'column', padding: '14px 12px 18px', overflowY: 'auto' }}>
-        <div style={{ textAlign: 'center', fontSize: 20, fontWeight: 800, letterSpacing: 3, color: GOLD_HI }}>ボス戦</div>
-        <div style={{ textAlign: 'center', fontSize: 12, color: triesLeft > 0 ? '#cdb488' : '#ff6a7a', marginTop: 2 }}>本日の挑戦 残り {triesLeft} / 3 回（0時リセット）</div>
+  const curStage = BOSS_STAGES[stage - 1];                              // 表示中の面（名前/界/ボス画像の正）
+  const closeSheet = () => setOpenNode(null);
 
-        {/* 出撃デッキ */}
-        <div style={{ fontSize: 12, color: GOLD, fontWeight: 700, marginTop: 14, marginBottom: 6 }}>出撃デッキ</div>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+  return (
+    <div style={bossRoot}>
+      <style>{BOSS_CSS}</style>
+      <div className="boss-mapWrap" style={{ backgroundImage: `url(./images/boss_map_${stage}.png)` }}>
+        <div className="boss-mapDim" />
+        {curStage.bosses.map((b, i) => {
+          const pos = BOSS_NODES[i];
+          return (
+            <div key={i} className={'boss-node' + (pos.up ? ' up' : '')} style={{ left: pos.left, top: pos.top }} onClick={() => setOpenNode(i)}>
+              <div className={'boss-dot ' + pos.size}><span className="boss-gi" /><BossNodeImg src={`./images/${b.img}.png`} /></div>
+              <div className="boss-lbl">{b.role} ・ {b.name}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* 左上：出撃デッキ選択 */}
+      <div className="boss-decksTop">
+        <div className="boss-decksTopT">出撃デッキ</div>
+        <div className="boss-deckRow">
           {Array.from({ length: maxDecks }, (_, i) => i + 1).map(n => (
-            <button key={n} onClick={() => setDeckNo(n)} style={{ ...S.sideSwitch, padding: '6px 14px', ...(n === deckNo ? S.sideSwitchOn : {}) }}>デッキ{n}</button>
+            <button key={n} className={'boss-dpill' + (n === deckNo ? ' sel' : '')} onClick={() => setDeckNo(n)}>デッキ{n}</button>
           ))}
         </div>
+      </div>
 
-        {/* 面（界）選択 */}
-        <div style={{ fontSize: 12, color: GOLD, fontWeight: 700, marginTop: 14, marginBottom: 6 }}>面・界</div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 6 }}>
+      {/* 右上：界選択（畳み式）＋本日の挑戦 */}
+      <div className={'boss-worldsel' + (worldOpen ? ' open' : '')}>
+        <div className="boss-wbtn" onClick={() => setWorldOpen(o => !o)}><span className="boss-wn">{WORLD_NAMES[stage]}</span><span className="boss-ar">▾</span></div>
+        <div className="boss-wlist">
           {Array.from({ length: 8 }, (_, i) => i + 1).map(s => {
+            const locked = s > cleared + 1;                            // 解放＝cleared_stage+1 まで（サーバ整合）
             const hint = s <= cleared ? '済' : (s === cleared + 1 ? '次' : '');
             return (
-              <button key={s} onClick={() => setStage(s)} style={{ ...S.sideSwitch, padding: '8px 4px', flexDirection: 'column', display: 'flex', ...(s === stage ? S.sideSwitchOn : {}) }}>
-                <span style={{ fontSize: 13, fontWeight: 700 }}>{s}面{hint && <span style={{ fontSize: 9, color: hint === '済' ? '#7fd39a' : '#ffd24d' }}> {hint}</span>}</span>
-                <span style={{ fontSize: 9, color: '#cdb488' }}>{WORLD_NAMES[s]}</span>
-              </button>
+              <div key={s} className={'boss-witem' + (s === stage ? ' cur' : '') + (locked ? ' locked' : '')} onClick={() => { if (locked) return; setStage(s); setWorldOpen(false); setOpenNode(null); }}>
+                <span>{WORLD_NAMES[s]}</span>
+                <span>{locked ? '🔒' : (hint ? <span style={{ fontSize: 10, color: hint === '済' ? '#7fd39a' : '#ffd24d' }}>{hint}</span> : '')}</span>
+              </div>
             );
           })}
         </div>
+        <div className="boss-tries">本日の挑戦 残り <b>{triesLeft}</b>/3</div>
+      </div>
 
-        {/* 敵（中ボスA/B・面ボス） */}
-        <div style={{ fontSize: 12, color: GOLD, fontWeight: 700, marginTop: 14, marginBottom: 6 }}>敵</div>
-        <div style={{ display: 'flex', gap: 6 }}>
-          {['a', 'b', 'boss'].map(r => (
-            <button key={r} onClick={() => setRole(r)} style={{ ...S.sideSwitch, flex: 1, padding: '8px 4px', ...(r === role ? S.sideSwitchOn : {}) }}>{ROLE_JA[r]}</button>
-          ))}
-        </div>
+      <button className="boss-back" onClick={back}>‹ 戻る</button>
 
-        {/* 敵情報（boss_master・サーバデータ） */}
-        <div style={{ marginTop: 12, padding: '10px 12px', background: PANEL, border: BORDER, borderRadius: 8 }}>
-          <div style={{ fontSize: 13, color: GOLD_HI, fontWeight: 700 }}>{WORLD_NAMES[stage]} ・ {ROLE_JA[role]}</div>
-          {boss
-            ? <div style={{ fontSize: 12, color: '#e7d3a6', marginTop: 4, lineHeight: 1.7 }}>
-                敵戦力 {Number(boss.base_power).toLocaleString()}（1周目・balance §6-1）<br />
-                属性 {arrJA(boss.attrs, ATTR_JA)}／武器 {arrJA(boss.weapons, WEAP_JA)}
-              </div>
-            : <div style={{ fontSize: 11, color: '#ff6a7a', marginTop: 4 }}>このボスのデータが boss_master にありません</div>}
-          <div style={{ fontSize: 10, color: '#a98f66', marginTop: 4 }}>三すくみ 有利×1.2／不利×0.8（balance 2026-06-14）。勝敗・損失・報酬はサーバ判定。</div>
-        </div>
+      <div className={'boss-scrim' + (openNode !== null ? ' show' : '')} onClick={closeSheet} />
 
-        <button onClick={sortie} disabled={busy || triesLeft <= 0} style={{ ...S.bigBtn, marginTop: 16, ...((busy || triesLeft <= 0) ? { opacity: .45, cursor: 'not-allowed' } : {}) }}>
-          {busy ? '出撃中…' : (triesLeft <= 0 ? '本日の挑戦は終了' : '出撃')}
-        </button>
-        <button onClick={back} style={{ ...S.lineBtn, marginTop: 14, alignSelf: 'center' }}>ホームに戻る</button>
+      <div className={'boss-sheet' + (openNode !== null ? ' show' : '')}>
+        {openNode !== null && (() => {
+          const i = openNode; const sb = curStage.bosses[i]; const role = BOSS_ROLE_KEYS[i];
+          const bm = (bosses || []).find(x => x.boss_key === 'boss_' + stage + '_' + role);   // 戦闘数値は boss_master
+          return (
+            <>
+              <span className="boss-close" onClick={closeSheet}>×</span>
+              <h3>{sb.name}</h3>
+              <div className="boss-subt">{i < 2 ? '中ボス' : '面ボス'} ・ {curStage.world}</div>
+              {bm
+                ? <>
+                    <div className="boss-stat"><span className="k">敵の戦力</span><span className="v">{Number(bm.base_power).toLocaleString()}（1周目・balance §6-1）</span></div>
+                    <div className="boss-stat"><span className="k">属性</span><span className="v">{arrJA(bm.attrs, ATTR_JA)}</span></div>
+                    <div className="boss-stat"><span className="k">武器</span><span className="v">{arrJA(bm.weapons, WEAP_JA)}</span></div>
+                  </>
+                : <div className="boss-stat"><span className="k">敵情報</span><span className="v" style={{ color: '#ff6a7a' }}>boss_master にデータがありません</span></div>}
+              <div className="boss-note">三すくみ 有利×1.2／不利×0.8（balance 2026-06-14）。勝敗・損失・報酬はサーバ判定。</div>
+              <button className="boss-go" onClick={() => sortie(role)} disabled={busy || triesLeft <= 0}>{busy ? '出撃中…' : (triesLeft <= 0 ? '本日の挑戦は終了' : `出撃（デッキ${deckNo}）`)}</button>
+              {triesLeft <= 0 && <div className="boss-warn">本日の挑戦回数を使い切りました（0時に回復）</div>}
+            </>
+          );
+        })()}
       </div>
     </div>
   );
