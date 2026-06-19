@@ -1736,24 +1736,93 @@ function fmtRemain(ms) {
   return (h > 0 ? h + '時間' : '') + m + '分';
 }
 
+/* 建物画面 専用スタイル（tatemono-mockup の暖色・面取り意匠を tat- プレフィックスで移植・共有 S は不変） */
+const tatRoot = { position: 'relative', width: '100%', maxWidth: 480, margin: '0 auto', minHeight: '100dvh', overflowY: 'auto', color: '#efe6d5', background: 'radial-gradient(120% 80% at 50% -10%, #1d1412 0%, #15100f 38%, #0b0809 100%)' };
+const TAT_CSS = `
+.tat-wrap{padding:0 16px 30px;}
+.tat-hdr{padding:18px 4px 0; text-align:center;}
+.tat-hdr h1{margin:4px 0 0; font-size:21px; font-weight:800; color:#ecd28a; text-shadow:0 1px 0 #000,0 0 18px rgba(199,161,78,.25);}
+.tat-deco{color:#c7a14e; font-size:11px; letter-spacing:.42em; opacity:.8;}
+.tat-divider{height:1px; margin:14px 6px 0; background:linear-gradient(90deg,transparent,#8c7038 18%,#c7a14e 50%,#8c7038 82%,transparent);}
+.tat-res{display:flex; gap:10px; margin-top:14px;}
+.tat-res .tat-it{flex:1; padding:10px 12px; border-radius:4px; border:1px solid #3a2c22; background:#140f0d; text-align:center;}
+.tat-it .k{font-size:10px; color:#7d7160; letter-spacing:.12em;}
+.tat-it b{display:block; font-size:18px; color:#ecd28a; font-weight:800; margin-top:2px;}
+.tat-it small{color:#7d7160; font-weight:400; font-size:12px;}
+.tat-tabs{display:flex; gap:8px; margin-top:14px;}
+.tat-tab{flex:1; font-family:inherit; font-size:13px; font-weight:700; color:#b6a890; background:linear-gradient(180deg,#221a14,#181210); border:1px solid #3a2c22; border-radius:4px; padding:10px 0; cursor:pointer;}
+.tat-tab.sel{color:#0c0a09; background:linear-gradient(180deg,#ecd28a,#c7a14e); border-color:#a07e2a;}
+.tat-fac{margin-top:14px; padding:14px; border-radius:5px; border:1px solid #3a2c22; background:linear-gradient(180deg,#241a17,#1c1513); position:relative;}
+.tat-fac.renki{border-color:#274a47;} .tat-fac.kaji{border-color:#4a2c26;}
+.tat-fhead{display:flex; gap:12px; align-items:flex-start;}
+.tat-ficon{position:relative; width:46px; height:46px; flex:none; border-radius:5px; display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:800; color:#ecd28a; border:1px solid #8c7038; background:radial-gradient(70% 70% at 50% 30%,#2a2017,#15100d);}
+.tat-ficon-img{position:absolute; inset:3px; width:calc(100% - 6px); height:calc(100% - 6px); object-fit:contain;}
+.tat-ficon.hasimg{font-size:0;}
+.tat-fac.renki .tat-ficon{color:#aee3dd; border-color:#3a7a73; background:radial-gradient(70% 70% at 50% 30%,#16302d,#0d1a18);}
+.tat-fac.kaji .tat-ficon{color:#f0b9a0; border-color:#6e3a2c; background:radial-gradient(70% 70% at 50% 30%,#2a1813,#170d0a);}
+.tat-fn{font-size:17px; font-weight:800; color:#efe6d5;}
+.tat-flv{font-size:12px; color:#c7a14e; font-weight:700; margin-left:6px; letter-spacing:.06em;}
+.tat-runpill{display:inline-block; font-size:10px; font-weight:700; padding:2px 9px; border-radius:10px; letter-spacing:.08em; margin-left:8px;}
+.tat-runpill.on{background:rgba(111,184,176,.18); color:#aee3dd; border:1px solid #3a7a73;}
+.tat-runpill.off{background:#15100e; color:#7d7160; border:1px solid #3a2c22;}
+.tat-fd{font-size:11.5px; color:#7d7160; margin-top:3px; line-height:1.5;}
+.tat-fstat{margin-top:12px; padding-top:11px; border-top:1px solid #3a2c22;}
+.tat-st{display:flex; justify-content:space-between; align-items:baseline; padding:4px 0; font-size:13px;}
+.tat-st .k{color:#7d7160;} .tat-st b{color:#efe6d5; font-weight:700;}
+.tat-gauge{height:6px; border-radius:4px; background:rgba(0,0,0,.5); overflow:hidden; border:1px solid #274a47; margin:4px 0;}
+.tat-gauge>div{height:100%; background:linear-gradient(90deg,#3a7a73,#aee3dd);}
+.tat-qrow{margin-top:4px;}
+.tat-q{display:inline-block; font-size:11px; font-weight:700; padding:2px 9px; border-radius:3px; margin:3px 5px 0 0; color:#0c0a09;}
+.tat-q.gin{background:linear-gradient(135deg,#c9ccd3,#8b9099);}
+.tat-q.ao{background:linear-gradient(135deg,#5a93d6,#2f5e95); color:#eaf3ff;}
+.tat-q.mura{background:linear-gradient(135deg,#a274d6,#6f4aa3); color:#f3e9ff;}
+.tat-q.kin{background:linear-gradient(135deg,#e6c060,#a07e2a);}
+.tat-q.lock{background:none; border:1px dashed #3a2c22; color:#7d7160;}
+.tat-invest{margin-top:12px; padding-top:11px; border-top:1px solid #3a2c22;}
+.tat-ilab{font-size:11px; color:#7d7160; letter-spacing:.1em; margin-bottom:6px;}
+.tat-irow{display:flex; gap:8px;}
+.tat-irow input{flex:1; min-width:0; background:#100c0b; border:1px solid #3a2c22; border-radius:4px; color:#ecd28a; font-family:inherit; font-size:18px; font-weight:700; padding:9px 12px; text-align:right;}
+.tat-irow input:focus{outline:none; border-color:#3a7a73; box-shadow:0 0 0 1px #3a7a73 inset;}
+.tat-allbtn{flex:none; padding:0 14px; border:1px solid #8c7038; border-radius:4px; background:#181210; color:#ecd28a; font-family:inherit; font-size:12px; font-weight:700; cursor:pointer;}
+.tat-est{margin-top:10px; font-size:12px; line-height:1.75; color:#b6a890;}
+.tat-est .row2{display:flex; justify-content:space-between;}
+.tat-est .b{color:#ecd28a; font-weight:700;} .tat-est .note{color:#d99a5a; font-size:11px;}
+.tat-fbtns{display:flex; gap:9px; margin-top:12px;}
+.tat-fb{flex:1; padding:12px 6px; border-radius:4px; cursor:pointer; font-family:inherit; font-size:13px; font-weight:700; letter-spacing:.04em; border:1px solid #8c7038; background:linear-gradient(180deg,#221a14,#181210); color:#ecd28a;}
+.tat-fb.primary{border:none; color:#0c0a09; background:linear-gradient(180deg,#bfeae3,#6fb8b0); box-shadow:0 0 12px rgba(111,184,176,.3);}
+.tat-fb.gold{border:none; color:#0c0a09; background:linear-gradient(180deg,#ecd28a,#c7a14e); box-shadow:0 0 12px rgba(199,161,78,.25);}
+.tat-fb.wide{margin-top:9px; width:100%; flex:none;}
+.tat-fb:active{transform:translateY(1px);}
+.tat-fb:disabled{opacity:.45; cursor:not-allowed; box-shadow:none;}
+.tat-foot{font-size:10px; color:#7d7160; margin-top:12px; line-height:1.6;}
+.tat-backlink{display:block; text-align:center; margin-top:18px; font-size:12px; color:#b6a890; cursor:pointer; letter-spacing:.08em;}
+`;
 function TatemonoScreen({ profile, cards, refreshAll, back, flash }) {
   const [tab, setTab] = useState('renkiden');
+  const medal = profile ? (profile.medal || 0) : 0;
   return (
-    <div style={S.root}>
-      <div style={S.bg} /><div style={S.vignette} />
-      <div style={{ position: 'relative', zIndex: 2, minHeight: '100dvh', display: 'flex', flexDirection: 'column', padding: '14px 12px 18px', overflowY: 'auto' }}>
-        <div style={{ textAlign: 'center', fontSize: 20, fontWeight: 800, letterSpacing: 3, color: GOLD_HI }}>建物</div>
-        <div style={{ display: 'flex', gap: 6, justifyContent: 'center', margin: '12px 0' }}>
+    <div style={tatRoot}>
+      <style>{TAT_CSS}</style>
+      <div className="tat-wrap">
+        <div className="tat-hdr"><span className="tat-deco">CHIKARIAN</span><h1>建物</h1><div className="tat-divider" /></div>
+
+        {/* リソース（メダル。武気は練気殿カード内に表示） */}
+        <div className="tat-res">
+          <div className="tat-it"><span className="k">メダル</span><b>{medal.toLocaleString()}</b></div>
+        </div>
+
+        {/* 施設タブ（本番の操作構造を維持しつつ意匠を移植） */}
+        <div className="tat-tabs">
           {[['renkiden', '練気殿'], ['kajiya', '鍛冶屋'], ['shurenjo', '修練場']].map(([k, label]) => (
-            <button key={k} onClick={() => setTab(k)} style={{ ...S.sideSwitch, padding: '6px 14px', ...(tab === k ? S.sideSwitchOn : {}) }}>{label}</button>
+            <button key={k} onClick={() => setTab(k)} className={'tat-tab' + (tab === k ? ' sel' : '')}>{label}</button>
           ))}
         </div>
-        <div style={{ flex: 1 }}>
-          {tab === 'renkiden' && <RenkidenTab profile={profile} refreshAll={refreshAll} flash={flash} />}
-          {tab === 'kajiya' && <KajiyaTab profile={profile} refreshAll={refreshAll} flash={flash} />}
-          {tab === 'shurenjo' && <ShurenjoView profile={profile} cards={cards} flash={flash} />}
-        </div>
-        <button onClick={back} style={{ ...S.lineBtn, marginTop: 12, alignSelf: 'center' }}>ホームに戻る</button>
+
+        {tab === 'renkiden' && <RenkidenTab profile={profile} refreshAll={refreshAll} flash={flash} />}
+        {tab === 'kajiya' && <KajiyaTab profile={profile} refreshAll={refreshAll} flash={flash} />}
+        {tab === 'shurenjo' && <ShurenjoView profile={profile} cards={cards} flash={flash} />}
+
+        <div className="tat-backlink" onClick={back}>‹ ホームへ戻る</div>
       </div>
     </div>
   );
@@ -1787,37 +1856,48 @@ function RenkidenTab({ profile, refreshAll, flash }) {
   if (!rk) return <Booting />;
   const upFee = 8000 * rk.lv;   // balance §11
   const pct = rk.cap > 0 ? Math.min(100, rk.buki / rk.cap * 100) : 0;
+  const running = rk.fuel > 0 && rk.buki < rk.cap;
+  const instNum = parseInt(instantN, 10);
 
   return (
-    <div style={{ padding: '4px 2px' }}>
-      <div style={{ padding: '10px 12px', background: PANEL, border: BORDER, borderRadius: 8 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-          <span style={{ fontSize: 12, color: GOLD, fontWeight: 700 }}>練気殿 Lv{rk.lv}</span>
-          <span style={{ fontSize: 11, color: '#cdb488' }}>レート {rk.rate}/秒</span>
+    <div className="tat-fac renki">
+      <div className="tat-fhead">
+        <div className="tat-ficon"><img className="tat-ficon-img" src="./images/ic_tatemono_renkiden.png" alt="" onLoad={e => e.target.parentNode.classList.add('hasimg')} onError={e => e.target.remove()} />練</div>
+        <div>
+          <div className="tat-fn">練気殿<span className="tat-flv">Lv {rk.lv}</span><span className={'tat-runpill ' + (running ? 'on' : 'off')}>{running ? '稼働中' : '停止'}</span></div>
+          <div className="tat-fd">メダルを投資すると、毎秒ずつ武気を練る。離れていても進む。急ぐ分は即生産。</div>
         </div>
-        <div style={{ fontSize: 20, fontWeight: 800, color: GOLD_HI, marginTop: 4 }}>武気 {Math.floor(rk.buki).toLocaleString()} <span style={{ fontSize: 12, color: '#cdb488' }}>/ {rk.cap.toLocaleString()}</span></div>
-        <div style={{ height: 6, background: 'rgba(0,0,0,.5)', borderRadius: 3, overflow: 'hidden', border: '1px solid rgba(232,194,90,.4)', marginTop: 4 }}><div style={{ height: '100%', width: pct + '%', background: 'linear-gradient(90deg,#7fd0ff,#bfeaff)' }} /></div>
-        <div style={{ fontSize: 11, color: '#cdb488', marginTop: 6 }}>投資残メダル {rk.fuel.toLocaleString()}（尽きるまで毎秒練成）</div>
-        <div style={{ fontSize: 10, color: '#a98f66', marginTop: 2 }}>単価 武気1=メダル5（時間）／即生産 武気1=メダル15。所持メダル {medal.toLocaleString()}</div>
+      </div>
+      <div className="tat-fstat">
+        <div className="tat-st"><span className="k">武気</span><b>{Math.floor(rk.buki).toLocaleString()} / {rk.cap.toLocaleString()}</b></div>
+        <div className="tat-gauge"><div style={{ width: pct + '%' }} /></div>
+        <div className="tat-st"><span className="k">練成レート</span><b>毎秒 {rk.rate}（時間 武気1＝メダル5）</b></div>
+        <div className="tat-st"><span className="k">投資中のメダル</span><b>{rk.fuel.toLocaleString()}{rk.fuel > 0 ? '（尽きるまで毎秒練成）' : ''}</b></div>
       </div>
 
-      {/* 投資 */}
-      <div style={{ marginTop: 12, display: 'flex', gap: 8, alignItems: 'center' }}>
-        <input type="number" min="1" value={investAmt} onChange={e => setInvestAmt(e.target.value)} placeholder="投資メダル" style={tIn} />
-        <button onClick={invest} disabled={busy} style={{ ...S.lineBtn, flex: 1 }}>投資する</button>
-      </div>
-      {/* 即生産 */}
-      <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
-        <input type="number" min="1" value={instantN} onChange={e => setInstantN(e.target.value)} placeholder="即生産する武気" style={tIn} />
-        <button onClick={instant} disabled={busy} style={{ ...S.lineBtn, flex: 1 }}>即生産（×15）</button>
-      </div>
-      {instantN && parseInt(instantN, 10) > 0 && <div style={{ fontSize: 10, color: '#a98f66', marginTop: 3 }}>必要メダル 目安 {(parseInt(instantN, 10) * 15).toLocaleString()}（上限超過はサーバが拒否）</div>}
+      <div className="tat-invest">
+        <div className="tat-ilab">投資するメダル（自由入力）</div>
+        <div className="tat-irow">
+          <input type="number" min="1" value={investAmt} onChange={e => setInvestAmt(e.target.value)} placeholder="投資メダル" />
+          <button className="tat-allbtn" onClick={() => setInvestAmt(String(medal))}>全額</button>
+        </div>
+        <div className="tat-fbtns">
+          <button className="tat-fb primary" disabled={busy} onClick={invest}>投資して練る</button>
+        </div>
 
-      <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-        <button onClick={collect} disabled={busy} style={{ ...S.lineBtn, flex: 1 }}>回収/更新</button>
-        <button onClick={upgrade} disabled={busy} style={{ ...S.lineBtn, flex: 1 }}>強化 Lv{rk.lv}→{rk.lv + 1}（{upFee.toLocaleString()}）</button>
+        <div className="tat-ilab" style={{ marginTop: 12 }}>即生産する武気（メダル15/個）</div>
+        <div className="tat-irow">
+          <input type="number" min="1" value={instantN} onChange={e => setInstantN(e.target.value)} placeholder="即生産する武気" />
+        </div>
+        {instNum > 0 && <div className="tat-est"><div className="row2"><span>必要メダル 目安</span><span className="b">{(instNum * 15).toLocaleString()}</span></div><div className="note">※上限超過はサーバが拒否。</div></div>}
+        <div className="tat-fbtns">
+          <button className="tat-fb gold" disabled={busy} onClick={instant}>即生産（×15）</button>
+          <button className="tat-fb" disabled={busy} onClick={collect}>回収 / 更新</button>
+        </div>
       </div>
-      <div style={{ fontSize: 10, color: '#a98f66', marginTop: 8 }}>練成量・残量はサーバ確定値（開くたび/操作後に最新化）。</div>
+
+      <button className="tat-fb wide" disabled={busy} onClick={upgrade}>練気殿を強化 Lv{rk.lv}→{rk.lv + 1}（メダル{upFee.toLocaleString()}）</button>
+      <div className="tat-foot">単価 武気1＝メダル5（時間）／即生産 武気1＝メダル15。所持メダル {medal.toLocaleString()}。練成量・残量はサーバ確定値（開くたび/操作後に最新化）。</div>
     </div>
   );
 }
@@ -1843,49 +1923,53 @@ function KajiyaTab({ profile, refreshAll, flash }) {
   const inProgress = orders.find(o => !o.claimed) || null;
   const nextQ = Q_ORDER[claimedLv]; // claimedLv(1..)→次の質。4(holy)なら undefined
   const fee = 15000 * claimedLv;    // balance §11
+  const QCLASS = ['gin', 'ao', 'mura', 'kin'];   // 粗製/精製/魔装/聖装 → mockup の質カラー
 
   return (
-    <div style={{ padding: '4px 2px' }}>
-      <div style={{ padding: '10px 12px', background: PANEL, border: BORDER, borderRadius: 8 }}>
-        <div style={{ fontSize: 12, color: GOLD, fontWeight: 700 }}>鍛冶屋 Lv{claimedLv}（{QUALITY_JA[Q_ORDER[claimedLv - 1]]}まで解放）</div>
-        <div style={{ fontSize: 10, color: '#a98f66', marginTop: 2 }}>所持メダル {medal.toLocaleString()}</div>
-        <div style={{ marginTop: 8, display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 6 }}>
-          {Q_ORDER.map(q => {
-            const unlocked = Q_LV[q] <= claimedLv;
-            return (
-              <div key={q} style={{ padding: '6px 4px', borderRadius: 8, border: BORDER, textAlign: 'center', opacity: unlocked ? 1 : .4, background: 'rgba(0,0,0,.25)' }}>
-                <div style={{ fontSize: 12, color: GOLD_HI, fontWeight: 700 }}>{QUALITY_JA[q]}</div>
-                <div style={{ fontSize: 9, color: '#cdb488' }}>コスト{Q_COST[q]}/攻{QATK[q]}</div>
-                <div style={{ fontSize: 9, color: unlocked ? '#7fd39a' : '#a98f66' }}>{unlocked ? '解放済' : '未解放'}</div>
-              </div>
-            );
-          })}
+    <div className="tat-fac kaji">
+      <div className="tat-fhead">
+        <div className="tat-ficon"><img className="tat-ficon-img" src="./images/ic_tatemono_kaji.png" alt="" onLoad={e => e.target.parentNode.classList.add('hasimg')} onError={e => e.target.remove()} />鍛</div>
+        <div>
+          <div className="tat-fn">鍛冶屋<span className="tat-flv">Lv {claimedLv}</span></div>
+          <div className="tat-fd">武具を鍛え、装備の「質」を解放する。解放は依頼制（メダル→作業時間→完成・1件ずつ）。質が上がるほど枠攻撃力が増す。</div>
         </div>
       </div>
+      <div className="tat-fstat">
+        <div className="tat-st"><span className="k">所持メダル</span><b>{medal.toLocaleString()}</b></div>
+        <div className="tat-st"><span className="k">解放済みの質</span><span></span></div>
+        <div className="tat-qrow">
+          {Q_ORDER.map((q, i) => (<span key={q} className={'tat-q ' + (Q_LV[q] <= claimedLv ? QCLASS[i] : 'lock')}>{QUALITY_JA[q]}</span>))}
+        </div>
+        <div className="tat-st" style={{ marginTop: 8 }}>
+          <span className="k">枠コスト / 攻撃力</span>
+          <b style={{ fontSize: 11 }}>{Q_ORDER.map(q => `${QUALITY_JA[q]}${Q_COST[q]}/${QATK[q]}`).join('・')}</b>
+        </div>
 
-      {/* 進行中 or 次の依頼 */}
-      <div style={{ marginTop: 12, padding: '10px 12px', background: PANEL, border: BORDER, borderRadius: 8 }}>
         {inProgress
           ? (() => {
               const ms = new Date(inProgress.done_at).getTime() - now;
               const ready = ms <= 0;
               return (
-                <div>
-                  <div style={{ fontSize: 12, color: GOLD_HI, fontWeight: 700 }}>依頼中：{QUALITY_JA[inProgress.quality]}</div>
-                  <div style={{ fontSize: 11, color: '#cdb488', marginTop: 3 }}>{ready ? '完成しました' : `完成まで 約${fmtRemain(ms)}（${new Date(inProgress.done_at).toLocaleString('ja-JP')}）`}</div>
-                  <button onClick={() => run(() => ChikarianAPI.claimKajiya(inProgress.id), '解放しました')} disabled={busy || !ready} style={{ ...S.bigBtn, marginTop: 10, width: '100%', ...((busy || !ready) ? { opacity: .45, cursor: 'not-allowed' } : {}) }}>受け取る（解放）</button>
-                </div>
+                <div className="tat-st"><span className="k">依頼中</span><b style={{ color: '#f0b9a0' }}>{QUALITY_JA[inProgress.quality]}（{ready ? '完成しました' : '残り ' + fmtRemain(ms)}）</b></div>
               );
             })()
           : nextQ
-            ? <div>
-                <div style={{ fontSize: 12, color: GOLD_HI, fontWeight: 700 }}>次の解放：{QUALITY_JA[nextQ]}</div>
-                <div style={{ fontSize: 11, color: '#cdb488', marginTop: 3 }}>費用 {fee.toLocaleString()} メダル／作業 {KAJIYA_HOURS[nextQ]}時間（1件ずつ）</div>
-                <button onClick={() => run(() => ChikarianAPI.placeKajiyaOrder(nextQ), '依頼しました')} disabled={busy} style={{ ...S.bigBtn, marginTop: 10, width: '100%', ...(busy ? { opacity: .45 } : {}) }}>依頼する</button>
-              </div>
-            : <div style={{ fontSize: 12, color: '#7fd39a', textAlign: 'center' }}>全ての質を解放済みです</div>}
+            ? <div className="tat-st"><span className="k">次に解放</span><b>{QUALITY_JA[nextQ]}（Lv{claimedLv + 1}・作業{KAJIYA_HOURS[nextQ]}h・メダル{fee.toLocaleString()}）</b></div>
+            : <div className="tat-st"><span className="k">解放状況</span><b style={{ color: '#aee3dd' }}>全ての質を解放済み</b></div>}
       </div>
-      <div style={{ fontSize: 10, color: '#a98f66', marginTop: 8 }}>解放・時刻判定はサーバ確定（残り時間は表示の目安）。</div>
+
+      <div className="tat-fbtns">
+        {inProgress
+          ? (() => {
+              const ms = new Date(inProgress.done_at).getTime() - now;
+              const ready = ms <= 0;
+              return <button className="tat-fb gold" disabled={busy || !ready} onClick={() => run(() => ChikarianAPI.claimKajiya(inProgress.id), '解放しました')}>{ready ? '受け取る（解放）' : `依頼中：${QUALITY_JA[inProgress.quality]}（残り ${fmtRemain(ms)}）`}</button>;
+            })()
+          : nextQ
+            ? <button className="tat-fb gold" disabled={busy} onClick={() => run(() => ChikarianAPI.placeKajiyaOrder(nextQ), '依頼しました')}>強化＝「{QUALITY_JA[nextQ]}」を鍛造依頼（メダル{fee.toLocaleString()}・作業{KAJIYA_HOURS[nextQ]}h）</button>
+            : <button className="tat-fb" disabled>全ての質を解放済み</button>}
+      </div>
+      <div className="tat-foot">解放・時刻判定はサーバ確定（残り時間は表示の目安）。</div>
     </div>
   );
 }
@@ -1980,6 +2064,21 @@ function TansakuScreen({ profile, refreshAll, back, flash }) {
   );
 }
 
+/* 放置報酬画面 専用スタイル（houchi-mockup＝ホーム見本のため、ホーム背景＋共有パネル語彙で統一） */
+const houS = {
+  title: { textAlign: 'center', fontSize: 20, fontWeight: 800, letterSpacing: 3, color: GOLD_HI, textShadow: '0 2px 6px #3a0010, 0 0 16px rgba(255,180,80,.4)' },
+  sub: { textAlign: 'center', fontSize: 11, color: '#cdb488', marginTop: 2 },
+  card: { padding: '12px 14px', background: PANEL, border: BORDER, borderRadius: 12, boxShadow: 'inset 0 0 12px rgba(255,200,90,.06)' },
+  top: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  deck: { fontSize: 14, color: GOLD_HI, fontWeight: 800, letterSpacing: .5 },
+  pill: { fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 12, letterSpacing: .5 },
+  pillOn: { color: '#aee3dd', background: 'rgba(111,184,176,.18)', border: '1px solid rgba(58,122,115,.8)' },
+  pillOff: { color: '#9a8c70', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(150,140,110,.35)' },
+  est: { fontSize: 11, color: '#e7d3a6', marginTop: 6 },
+  btns: { display: 'flex', gap: 8, marginTop: 10 },
+  collect: { flex: 1, fontFamily: 'inherit', fontWeight: 800, fontSize: 13, color: '#2a160a', border: 'none', padding: '10px 6px', borderRadius: 12, cursor: 'pointer', background: 'linear-gradient(180deg,#ffe49a,#e8b54d 60%,#b9842f)' },
+  collectOff: { filter: 'grayscale(.6) brightness(.8)', cursor: 'not-allowed' },
+};
 function HouchiScreen({ profile, refreshAll, back, flash }) {
   const maxDecks = Math.min(2 + Math.floor(((profile && profile.cleared_stage) || 0) / 2), 6);
   const [states, setStates] = useState(null);
@@ -2002,22 +2101,22 @@ function HouchiScreen({ profile, refreshAll, back, flash }) {
     <div style={S.root}>
       <div style={S.bg} /><div style={S.vignette} />
       <div style={{ position: 'relative', zIndex: 2, minHeight: '100dvh', display: 'flex', flexDirection: 'column', padding: '14px 12px 18px', overflowY: 'auto' }}>
-        <div style={{ textAlign: 'center', fontSize: 20, fontWeight: 800, letterSpacing: 3, color: GOLD_HI }}>放置報酬</div>
-        <div style={{ textAlign: 'center', fontSize: 11, color: '#cdb488', marginTop: 2 }}>放置＝浅域での探索（貯まった分を回収）</div>
+        <div style={houS.title}>放置報酬</div>
+        <div style={houS.sub}>放置＝浅域での探索（貯まった分を回収）</div>
 
         <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
           {Array.from({ length: maxDecks }, (_, i) => i + 1).map(n => {
             const row = byDeck[n]; const est = tansakuEstimate(row, now); const di = row && depthInfo(row.depth);
             return (
-              <div key={n} style={{ padding: '10px 12px', background: PANEL, border: BORDER, borderRadius: 8 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                  <span style={{ fontSize: 13, color: GOLD_HI, fontWeight: 700 }}>デッキ{n}</span>
-                  <span style={{ fontSize: 11, color: '#cdb488' }}>{di ? di.label + '探索中' : '未探索'}</span>
+              <div key={n} style={houS.card}>
+                <div style={houS.top}>
+                  <span style={houS.deck}>デッキ{n}</span>
+                  <span style={{ ...houS.pill, ...(di ? houS.pillOn : houS.pillOff) }}>{di ? di.label + '探索中' : '未探索'}</span>
                 </div>
-                {est && <div style={{ fontSize: 11, color: '#e7d3a6', marginTop: 3 }}>見込み メダル+{est.medal.toLocaleString()}・各カードEXP+{est.exp}（{Math.floor(est.min)}分・目安）</div>}
-                <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                  <button onClick={() => run(() => ChikarianAPI.collectTansaku(n), '回収しました')} disabled={busy || !row} style={{ ...S.lineBtn, flex: 1, ...((busy || !row) ? { opacity: .45 } : {}) }}>回収</button>
-                  <button onClick={() => run(() => ChikarianAPI.startTansaku(n, 1, 'shallow'), '浅域で放置開始')} disabled={busy} style={{ ...S.lineBtn, flex: 1 }}>浅域で放置開始</button>
+                {est && <div style={houS.est}>見込み メダル+{est.medal.toLocaleString()}・各カードEXP+{est.exp}（{Math.floor(est.min)}分・目安）</div>}
+                <div style={houS.btns}>
+                  <button onClick={() => run(() => ChikarianAPI.collectTansaku(n), '回収しました')} disabled={busy || !row} style={{ ...houS.collect, ...((busy || !row) ? houS.collectOff : {}) }}>回収</button>
+                  <button onClick={() => run(() => ChikarianAPI.startTansaku(n, 1, 'shallow'), '浅域で放置開始')} disabled={busy} style={{ ...S.lineBtn, flex: 1, padding: '10px 6px', ...(busy ? { opacity: .45 } : {}) }}>浅域で放置開始</button>
                 </div>
               </div>
             );
@@ -2383,6 +2482,34 @@ function rewardChips(reward) {
   return Object.keys(reward).map(k => REWARD_LABEL[k] ? <span key={k} style={{ fontSize: 11, color: '#fff3c8', background: 'rgba(232,194,90,.15)', border: '1px solid rgba(232,194,90,.4)', borderRadius: 10, padding: '2px 8px', marginRight: 4 }}>{REWARD_LABEL[k]}×{reward[k]}</span> : null);
 }
 
+/* ミッション画面 専用スタイル（mission-mockup 移植・共有 S は上書きしない） */
+const misS = {
+  bg: { position: 'absolute', inset: 0, background: '#0a0509 radial-gradient(80% 45% at 50% 0%, rgba(90,80,40,.2), transparent 60%)' },
+  body: { position: 'relative', zIndex: 2, height: '100dvh', display: 'flex', flexDirection: 'column' },
+  head: { flex: 'none', textAlign: 'center', padding: '16px 16px 4px' },
+  title: { fontSize: 19, fontWeight: 800, letterSpacing: 4, color: GOLD_HI, textShadow: '0 2px 6px #2a2000,0 0 16px rgba(255,180,70,.3)' },
+  sub: { fontSize: 11, color: '#cdb488', letterSpacing: 1, marginTop: 5 },
+  tabs: { flex: 'none', display: 'flex', gap: 6, padding: '8px 14px 4px' },
+  tab: { flex: 1, fontFamily: 'inherit', fontSize: 12, letterSpacing: 1, color: GOLD_HI, background: PANEL, border: BORDER, borderRadius: 14, padding: '8px 0', cursor: 'pointer', textAlign: 'center' },
+  tabSel: { background: 'linear-gradient(180deg,rgba(255,228,154,.26),rgba(232,181,77,.14))', boxShadow: '0 0 10px rgba(255,200,90,.3)' },
+  reset: { textAlign: 'center', fontSize: 10, color: '#a98f66', padding: '2px 0 0' },
+  list: { flex: 1, overflowY: 'auto', padding: '8px 16px 90px' },
+  ms: { background: PANEL, border: BORDER, borderRadius: 13, padding: '12px 14px', marginBottom: 10 },
+  msTop: { display: 'flex', alignItems: 'center', gap: 8 },
+  msName: { flex: 1, fontSize: 14, fontWeight: 800, letterSpacing: .5, color: GOLD_HI },
+  state: { fontSize: 10, fontWeight: 800, padding: '2px 9px', borderRadius: 8, flex: 'none' },
+  stProg: { color: '#cdb488', background: 'rgba(255,255,255,.06)', border: '1px solid rgba(232,194,90,.4)' },
+  stClaim: { color: '#0b2a12', background: 'linear-gradient(180deg,#bfe9c0,#5fa564)' },
+  stGot: { color: '#9a8c70', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(150,140,110,.3)' },
+  bar: { height: 8, borderRadius: 5, background: 'rgba(255,255,255,.12)', overflow: 'hidden', marginTop: 9 },
+  fill: { height: '100%', background: 'linear-gradient(90deg,#e0a23b,#ffd98a)' },
+  foot: { display: 'flex', alignItems: 'center', gap: 10, marginTop: 9 },
+  progT: { fontSize: 11, color: '#cdb488' },
+  claimBtn: { fontFamily: 'inherit', fontWeight: 800, fontSize: 12, color: '#2a160a', border: 'none', padding: '7px 16px', borderRadius: 16, cursor: 'pointer', background: 'linear-gradient(180deg,#ffe49a,#e8b54d 60%,#b9842f)', marginLeft: 'auto' },
+  claimOff: { filter: 'grayscale(.6) brightness(.8)', cursor: 'default' },
+  note: { fontSize: 9, color: '#a98f66', marginTop: 6 },
+  back: { position: 'absolute', zIndex: 7, left: 14, bottom: 14, fontFamily: 'inherit', fontSize: 14, color: GOLD_HI, background: PANEL, border: BORDER, borderRadius: 22, padding: '10px 20px', cursor: 'pointer' },
+};
 function MissionScreen({ profile, cards, refreshAll, back, flash }) {
   const [tab, setTab] = useState('daily');
   const [master, setMaster] = useState(null);
@@ -2446,17 +2573,17 @@ function MissionScreen({ profile, cards, refreshAll, back, flash }) {
   const list = master.filter(m => m.category === tab).sort((a, b) => (a.tier - b.tier) || a.mission_key.localeCompare(b.mission_key));
 
   return (
-    <div style={S.root}><div style={S.bg} /><div style={S.vignette} />
-      <div style={{ position: 'relative', zIndex: 2, minHeight: '100dvh', display: 'flex', flexDirection: 'column', padding: '14px 12px 18px', overflowY: 'auto' }}>
-        <div style={{ textAlign: 'center', fontSize: 20, fontWeight: 800, letterSpacing: 3, color: GOLD_HI }}>ミッション</div>
-        <div style={{ display: 'flex', gap: 6, justifyContent: 'center', margin: '12px 0' }}>
+    <div style={S.root}><div style={misS.bg} />
+      <div style={misS.body}>
+        <div style={misS.head}><div style={misS.title}>ミッション</div><div style={misS.sub}>目標を達成して報酬を受け取る</div></div>
+        <div style={misS.tabs}>
           {['daily', 'weekly', 'achievement'].map(c => (
-            <button key={c} onClick={() => setTab(c)} style={{ ...S.sideSwitch, padding: '6px 14px', ...(c === tab ? S.sideSwitchOn : {}) }}>{CAT_JA[c]}</button>
+            <button key={c} onClick={() => setTab(c)} style={{ ...misS.tab, ...(c === tab ? misS.tabSel : {}) }}>{CAT_JA[c]}</button>
           ))}
         </div>
-        <div style={{ textAlign: 'center', fontSize: 10, color: '#a98f66', marginBottom: 8 }}>{CAT_RESET[tab]}</div>
+        <div style={misS.reset}>{CAT_RESET[tab]}</div>
 
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={misS.list}>
           {list.map(mm => {
             const row = rowOf(mm);
             const claimed = row ? row.claimed : false;
@@ -2464,27 +2591,35 @@ function MissionScreen({ profile, cards, refreshAll, back, flash }) {
             const isBonus = mm.condition_type === 'all_daily' || mm.condition_type === 'all_weekly';
             const met = est == null ? null : est >= Number(mm.threshold);
             const claimable = !claimed && (met === null || met === true);
+            const thr = Number(mm.threshold);
+            const pct = claimed ? 100 : (est == null ? 0 : Math.min(100, est / (thr || 1) * 100));
             return (
-              <div key={mm.mission_key} style={{ padding: '10px 12px', background: PANEL, border: BORDER, borderRadius: 8, opacity: claimed ? .6 : 1 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                  <span style={{ fontSize: 14, color: GOLD_HI, fontWeight: 700 }}>{mm.title}</span>
-                  <span style={{ fontSize: 11, color: met === false ? '#cdb488' : '#7fd39a' }}>{est == null ? '？' : Math.floor(est)} / {Number(mm.threshold).toLocaleString()}</span>
-                </div>
-                <div style={{ marginTop: 6 }}>{rewardChips(mm.reward)}</div>
-                <div style={{ marginTop: 8 }}>
+              <div key={mm.mission_key} style={misS.ms}>
+                <div style={misS.msTop}>
+                  <span style={misS.msName}>{mm.title}</span>
                   {claimed
-                    ? <button disabled style={{ ...S.lineBtn, opacity: .5, width: '100%' }}>受取済</button>
+                    ? <span style={{ ...misS.state, ...misS.stGot }}>受取済</span>
                     : claimable
-                      ? <button onClick={() => claim(mm)} disabled={busy} style={{ ...S.bigBtn, width: '100%', padding: '9px' }}>受け取る</button>
-                      : <button disabled style={{ ...S.lineBtn, opacity: .5, width: '100%' }}>{isBonus ? '先に各ミッションを受け取る' : '条件未達'}</button>}
+                      ? <span style={{ ...misS.state, ...misS.stClaim }}>受取可</span>
+                      : <span style={{ ...misS.state, ...misS.stProg }}>進行中</span>}
                 </div>
-                {est == null && !claimed && <div style={{ fontSize: 9, color: '#a98f66', marginTop: 4 }}>進捗はサーバ判定（押すと判定）</div>}
+                <div style={{ marginTop: 8 }}>{rewardChips(mm.reward)}</div>
+                <div style={misS.bar}><div style={{ ...misS.fill, width: pct + '%' }} /></div>
+                <div style={misS.foot}>
+                  <span style={misS.progT}>{est == null ? '？' : Math.floor(est)} / {thr.toLocaleString()}</span>
+                  {claimed
+                    ? <button disabled style={{ ...misS.claimBtn, ...misS.claimOff }}>受取済</button>
+                    : claimable
+                      ? <button onClick={() => claim(mm)} disabled={busy} style={{ ...misS.claimBtn, ...(busy ? misS.claimOff : {}) }}>受け取る</button>
+                      : <button disabled style={{ ...misS.claimBtn, ...misS.claimOff }}>{isBonus ? '先に各ミッションを' : '条件未達'}</button>}
+                </div>
+                {est == null && !claimed && <div style={misS.note}>進捗はサーバ判定（押すと判定）</div>}
               </div>
             );
           })}
         </div>
-        <button onClick={back} style={{ ...S.lineBtn, marginTop: 12, alignSelf: 'center' }}>ホームに戻る</button>
       </div>
+      <button onClick={back} style={misS.back}>‹ 戻る</button>
     </div>
   );
 }
@@ -2496,6 +2631,50 @@ function parseBossKey(k) {
   if (!m) return null;
   return { stage: +m[1], role: m[2], round: m[3] ? +m[3] : 1 };
 }
+/* 報告書画面 専用スタイル（report-mockup 移植・共有 S は上書きしない） */
+const repS = {
+  bg: { position: 'absolute', inset: 0, background: '#0a0509 radial-gradient(80% 50% at 50% 0%, rgba(120,40,30,.22), transparent 60%)' },
+  body: { position: 'relative', zIndex: 2, height: '100dvh', display: 'flex', flexDirection: 'column' },
+  head: { flex: 'none', textAlign: 'center', padding: '18px 16px 10px' },
+  title: { fontSize: 20, fontWeight: 800, letterSpacing: 4, color: GOLD_HI, textShadow: '0 2px 6px #3a0010,0 0 16px rgba(255,150,70,.4)' },
+  sub: { fontSize: 11, color: '#cdb488', letterSpacing: 2, marginTop: 4 },
+  list: { flex: 1, overflowY: 'auto', padding: '6px 14px 90px' },
+  empty: { marginTop: 60, textAlign: 'center', color: '#9a8c70', fontSize: 14, letterSpacing: 1, lineHeight: 2 },
+  rep: { position: 'relative', display: 'block', width: '100%', textAlign: 'left', background: PANEL, border: BORDER, borderRadius: 14, padding: '13px 15px', marginBottom: 11, boxShadow: '0 3px 12px rgba(0,0,0,.4)', cursor: 'pointer' },
+  repTop: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 7 },
+  badge: { flex: 'none', fontSize: 12, fontWeight: 800, letterSpacing: 2, padding: '3px 11px', borderRadius: 8 },
+  badgeWin: { color: '#0b2a12', background: 'linear-gradient(180deg,#bfe9c0,#5fa564)' },
+  badgeLose: { color: '#2a0d09', background: 'linear-gradient(180deg,#ffb3a0,#e0563b)' },
+  repName: { flex: 1, fontSize: 15, fontWeight: 800, letterSpacing: 1, color: GOLD_HI },
+  repTime: { flex: 'none', fontSize: 10, color: '#9a8c70' },
+  repSub: { fontSize: 11, color: '#cdb488', letterSpacing: 1 },
+  chev: { position: 'absolute', right: 14, bottom: 12, color: '#cdb488', fontSize: 13 },
+  footer: { position: 'absolute', left: 0, right: 0, bottom: 0, padding: '12px 16px 18px', background: 'linear-gradient(0deg, #0a0509 60%, transparent)', display: 'flex', gap: 10 },
+  footBack: { flex: 1, fontFamily: 'inherit', fontSize: 15, letterSpacing: 2, color: GOLD_HI, background: PANEL, border: BORDER, borderRadius: 24, padding: 13, cursor: 'pointer' },
+  scroll: { flex: 1, overflowY: 'auto', padding: '18px 16px 90px' },
+  result: { textAlign: 'center', fontSize: 34, fontWeight: 800, letterSpacing: 6, margin: '6px 0 4px' },
+  resultWin: { color: '#9fe0a0', textShadow: '0 0 18px rgba(120,220,140,.6)' },
+  resultLose: { color: '#ff9a8a', textShadow: '0 0 18px rgba(255,120,80,.5)' },
+  dHead: { textAlign: 'center', fontSize: 12, color: '#cdb488', letterSpacing: 1, lineHeight: 1.9, marginBottom: 12 },
+  msg: { background: 'rgba(255,235,180,.05)', borderLeft: '3px solid ' + GOLD, borderRadius: 6, padding: '10px 12px', fontSize: 13, lineHeight: 1.8, color: '#ffe8c8', marginBottom: 14 },
+  msgLose: { borderLeftColor: '#e0563b', color: '#ffd2c6' },
+  sec: { margin: '0 0 14px' },
+  secT: { fontSize: 12, color: '#cdb488', letterSpacing: 2, borderLeft: '3px solid ' + GOLD, paddingLeft: 8, marginBottom: 8 },
+  rewards: { display: 'flex', flexWrap: 'wrap', gap: 6 },
+  rw: { fontSize: 12, background: 'rgba(255,235,180,.07)', border: '1px solid rgba(232,194,90,.4)', borderRadius: 9, padding: '4px 11px', color: GOLD_HI },
+  none: { fontSize: 12, color: '#9a8c70' },
+  vs: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, background: 'rgba(0,0,0,.25)', border: '1px dashed rgba(232,194,90,.3)', borderRadius: 12, padding: 12 },
+  vsSide: { textAlign: 'center', flex: 1 },
+  vsLab: { fontSize: 10, color: '#cdb488', letterSpacing: 1 },
+  vsNumMe: { fontSize: 22, fontWeight: 800, marginTop: 3, color: '#ffe39a' },
+  vsNumFoe: { fontSize: 16, fontWeight: 800, marginTop: 3, color: '#ff9a8a' },
+  vsX: { fontSize: 13, color: '#cdb488' },
+  drow: { display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#e7d3a6', padding: '6px 2px', borderBottom: '1px solid rgba(232,194,90,.14)' },
+  chip: { fontSize: 11, color: '#fff3c8', background: 'rgba(232,194,90,.15)', border: '1px solid rgba(232,194,90,.4)', borderRadius: 10, padding: '2px 8px' },
+  noteSm: { fontSize: 11, color: '#9a8c70', marginTop: 6, lineHeight: 1.5 },
+  dnav: { position: 'absolute', left: 0, right: 0, bottom: 0, padding: '12px 14px 18px', background: 'linear-gradient(0deg,#0a0509 60%,transparent)', display: 'flex', gap: 8 },
+  navBtn: { fontFamily: 'inherit', fontSize: 13, letterSpacing: 1, borderRadius: 22, padding: '11px 0', cursor: 'pointer', background: PANEL, border: BORDER, color: GOLD_HI },
+};
 function BattleLogView({ back, flash }) {
   const [logs, setLogs] = useState(null);
   const [err, setErr] = useState(null);
@@ -2519,32 +2698,62 @@ function BattleLogView({ back, flash }) {
     const deck = Array.isArray(sel.deck) ? sel.deck : [];
     const fired = Array.isArray(sel.fired_skills) ? sel.fired_skills : [];
     const rw = sel.rewards || {};
+    const win = sel.win;
+    const label = bossLabel(sel.boss_key);
+    const idx = logs.findIndex(l => l.id === sel.id);   // 前(古い)/次(新しい)ナビ用（報告書はサーバ取得＝削除なし）
+    const deckTotal = deck.reduce((a, c) => a + (Number(c.sougou) || 0), 0);
+    // 文面はwin/相手から決定的に生成（捏造データではなく表示用テンプレ）
+    const msg = win ? `部隊は ${label} の討伐に成功した。` : `部隊は ${label} に届かなかった。戦力の差を埋められなかった。`;
     return (
-      <div style={S.root}><div style={S.bg} /><div style={S.vignette} />
-        <div style={{ position: 'relative', zIndex: 2, minHeight: '100dvh', display: 'flex', flexDirection: 'column', padding: '14px 14px 18px', overflowY: 'auto' }}>
-          <button onClick={() => setSel(null)} style={{ ...S.lineBtn, alignSelf: 'flex-start', padding: '6px 16px' }}>‹ 一覧へ</button>
-          <div style={{ textAlign: 'center', fontSize: 12, color: '#cdb488', marginTop: 8 }}>{fmtDt(sel.fought_at)}</div>
-          <div style={{ textAlign: 'center', fontSize: 16, color: GOLD_HI, fontWeight: 700, marginTop: 2 }}>{bossLabel(sel.boss_key)}</div>
-          <div style={{ textAlign: 'center', fontSize: 24, fontWeight: 800, marginTop: 8, color: sel.win ? '#ffe28a' : '#ff8aa0' }}>{sel.win ? '勝利' : '敗北'}</div>
+      <div style={S.root}><div style={repS.bg} />
+        <div style={repS.body}>
+          <div style={repS.scroll}>
+            <div style={{ ...repS.result, ...(win ? repS.resultWin : repS.resultLose) }}>{win ? 'VICTORY' : 'DEFEATED'}</div>
+            <div style={repS.dHead}>相手：<b style={{ color: GOLD_HI }}>{label}</b><br />{fmtDt(sel.fought_at)}</div>
+            <div style={{ ...repS.msg, ...(win ? {} : repS.msgLose) }}>{msg}</div>
 
-          {sel.loss_rate != null && <div style={{ textAlign: 'center', fontSize: 12, color: '#e7d3a6', marginTop: 6 }}>武気損失率 {Math.round(sel.loss_rate * 100)}%</div>}
+            <div style={repS.sec}>
+              <div style={repS.secT}>獲得報酬</div>
+              {win
+                ? <div style={repS.rewards}>
+                    <span style={repS.rw}>メダル <b style={{ color: '#ffe39a' }}>+{Number(rw.medal || 0).toLocaleString()}</b></span>
+                    {rw.exp_count ? <span style={repS.rw}>経験の書（{EXPRANK_JA[rw.exp_rank] || rw.exp_rank}）×{rw.exp_count}</span> : null}
+                  </div>
+                : <span style={repS.none}>報酬なし（再挑戦できます）</span>}
+            </div>
 
-          <div style={{ marginTop: 12, padding: '8px 12px', background: PANEL, border: BORDER, borderRadius: 8 }}>
-            <div style={{ fontSize: 11, color: GOLD, fontWeight: 700, marginBottom: 4 }}>発動スキル</div>
-            {fired.length === 0 ? <div style={{ fontSize: 11, color: '#a98f66' }}>記録なし</div>
-              : <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>{fired.map((f, i) => <span key={i} style={{ fontSize: 11, color: '#fff3c8', background: 'rgba(232,194,90,.15)', border: '1px solid rgba(232,194,90,.4)', borderRadius: 10, padding: '2px 8px' }}>{skName(f.skill_key)}</span>)}</div>}
+            <div style={repS.sec}>
+              <div style={repS.secT}>戦闘力</div>
+              <div style={repS.vs}>
+                <div style={repS.vsSide}><div style={repS.vsLab}>自軍（総合・記録）</div><div style={repS.vsNumMe}>{deckTotal ? deckTotal.toLocaleString() : '—'}</div></div>
+                <div style={repS.vsX}>VS</div>
+                {/* 敵戦力は battle_logs 未保存のため損失率を表示 // TODO: 敵戦力を記録できたら foe に出す */}
+                <div style={repS.vsSide}><div style={repS.vsLab}>武気損失率</div><div style={repS.vsNumFoe}>{sel.loss_rate != null ? Math.round(sel.loss_rate * 100) + '%' : '—'}</div></div>
+              </div>
+            </div>
+
+            <div style={repS.sec}>
+              <div style={repS.secT}>発動スキル</div>
+              {fired.length === 0 ? <span style={repS.none}>記録なし</span>
+                : <div style={repS.rewards}>{fired.map((f, i) => <span key={i} style={repS.chip}>{skName(f.skill_key)}</span>)}</div>}
+            </div>
+
+            {deck.length > 0 && <div style={repS.sec}>
+              <div style={repS.secT}>デッキ（記録）</div>
+              {deck.map((c, i) => (
+                <div key={i} style={repS.drow}>
+                  <span>{c.is_sp ? 'SP（装備なし）' : 'カード'}{c.sukumi != null ? `　三すくみ×${c.sukumi}` : ''}</span>
+                  <span style={{ color: GOLD_HI, fontWeight: 700 }}>{c.sougou != null ? '総合 ' + Number(c.sougou).toLocaleString() : '—'}</span>
+                </div>
+              ))}
+              {/* per-card 武気損失/残存・カード絵は battle_logs 未保存 // TODO: 記録できたら mockup の武気表を完全再現 */}
+              <div style={repS.noteSm}>※ 消耗するのは武気のみ。本体戦闘力は無傷（練気殿で補充）。損失率＝0.5×(敵戦力÷自軍戦力)・下限10%〜上限100%。</div>
+            </div>}
           </div>
-
-          {deck.length > 0 && <div style={{ marginTop: 10, padding: '8px 12px', background: PANEL, border: BORDER, borderRadius: 8 }}>
-            <div style={{ fontSize: 11, color: GOLD, fontWeight: 700, marginBottom: 4 }}>デッキ（記録）</div>
-            {deck.map((c, i) => <div key={i} style={{ fontSize: 11, color: '#e7d3a6' }}>{c.is_sp ? 'SP' : 'カード'}{c.sougou != null ? `：総合 ${Number(c.sougou).toLocaleString()}` : ''}{c.sukumi != null ? `／三すくみ×${c.sukumi}` : ''}</div>)}
-          </div>}
-
-          <div style={{ marginTop: 10, padding: '8px 12px', background: PANEL, border: BORDER, borderRadius: 8, fontSize: 12, color: '#e7d3a6' }}>
-            <div style={{ fontSize: 11, color: GOLD, fontWeight: 700, marginBottom: 4 }}>報酬</div>
-            {sel.win
-              ? <div>メダル +{Number(rw.medal || 0).toLocaleString()}{rw.exp_count ? `／経験の書（${EXPRANK_JA[rw.exp_rank] || rw.exp_rank}）×${rw.exp_count}` : ''}</div>
-              : <div style={{ color: '#cdb488' }}>なし（敗北）</div>}
+          <div style={repS.dnav}>
+            <button onClick={() => setSel(null)} style={{ ...repS.navBtn, flex: 1.2 }}>リスト</button>
+            <button onClick={() => { if (idx >= 0 && idx < logs.length - 1) setSel(logs[idx + 1]); }} disabled={idx < 0 || idx >= logs.length - 1} style={{ ...repS.navBtn, flex: 1, ...(idx >= logs.length - 1 ? { opacity: .4, cursor: 'default' } : {}) }}>‹ 前</button>
+            <button onClick={() => { if (idx > 0) setSel(logs[idx - 1]); }} disabled={idx <= 0} style={{ ...repS.navBtn, flex: 1, ...(idx <= 0 ? { opacity: .4, cursor: 'default' } : {}) }}>次 ›</button>
           </div>
         </div>
       </div>
@@ -2553,24 +2762,26 @@ function BattleLogView({ back, flash }) {
 
   // 一覧
   return (
-    <div style={S.root}><div style={S.bg} /><div style={S.vignette} />
-      <div style={{ position: 'relative', zIndex: 2, minHeight: '100dvh', display: 'flex', flexDirection: 'column', padding: '14px 12px 18px', overflowY: 'auto' }}>
-        <div style={{ textAlign: 'center', fontSize: 20, fontWeight: 800, letterSpacing: 3, color: GOLD_HI }}>報告書</div>
-        {err && <div style={{ fontSize: 11, color: '#ff9aa8', textAlign: 'center', marginTop: 8 }}>記録を表示できません：{err}</div>}
-        {logs.length === 0 && !err
-          ? <div style={{ textAlign: 'center', color: '#cdb488', marginTop: 40, fontSize: 13 }}>まだ戦闘記録がありません</div>
-          : <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
-              {logs.map(lg => (
-                <button key={lg.id} onClick={() => setSel(lg)} style={{ textAlign: 'left', padding: '10px 12px', background: PANEL, border: BORDER, borderRadius: 8, cursor: 'pointer' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                    <span style={{ fontSize: 13, color: GOLD_HI, fontWeight: 700 }}>{bossLabel(lg.boss_key)}</span>
-                    <span style={{ fontSize: 13, fontWeight: 800, color: lg.win ? '#ffe28a' : '#ff8aa0' }}>{lg.win ? '勝利' : '敗北'}</span>
+    <div style={S.root}><div style={repS.bg} />
+      <div style={repS.body}>
+        <div style={repS.head}><div style={repS.title}>戦 闘 報 告 書</div><div style={repS.sub}>ボス戦の記録</div></div>
+        <div style={repS.list}>
+          {err && <div style={{ fontSize: 11, color: '#ff9aa8', textAlign: 'center', marginTop: 8 }}>記録を表示できません：{err}</div>}
+          {logs.length === 0 && !err
+            ? <div style={repS.empty}>まだ報告書はありません。<br />ボスへ出撃すると、ここへ記録が届きます。</div>
+            : logs.map(lg => (
+                <button key={lg.id} onClick={() => setSel(lg)} style={repS.rep}>
+                  <div style={repS.repTop}>
+                    <span style={{ ...repS.badge, ...(lg.win ? repS.badgeWin : repS.badgeLose) }}>{lg.win ? '勝利' : '敗北'}</span>
+                    <span style={repS.repName}>{bossLabel(lg.boss_key)}</span>
+                    <span style={repS.repTime}>{fmtDt(lg.fought_at)}</span>
                   </div>
-                  <div style={{ fontSize: 10, color: '#a98f66', marginTop: 3 }}>{fmtDt(lg.fought_at)}{lg.loss_rate != null ? `　損失${Math.round(lg.loss_rate * 100)}%` : ''}{lg.win && lg.rewards && lg.rewards.medal ? `　メダル+${Number(lg.rewards.medal).toLocaleString()}` : ''}</div>
+                  <div style={repS.repSub}>{lg.loss_rate != null ? `武気損失 ${Math.round(lg.loss_rate * 100)}%` : '―'}{lg.win && lg.rewards && lg.rewards.medal ? `　／　メダル +${Number(lg.rewards.medal).toLocaleString()}` : ''}</div>
+                  <span style={repS.chev}>詳細 ›</span>
                 </button>
               ))}
-            </div>}
-        <button onClick={back} style={{ ...S.lineBtn, marginTop: 12, alignSelf: 'center' }}>ホームに戻る</button>
+        </div>
+        <div style={repS.footer}><button onClick={back} style={repS.footBack}>‹ ホームに戻る</button></div>
       </div>
     </div>
   );
@@ -2660,16 +2871,30 @@ function ShurenjoView({ profile, cards, flash }) {
 
 /* =================================================================== 設定 */
 // サーバを呼ばない＝資産不変。実際に効く項目のみ（捏造UI禁止）。音設定はセッション内state（localStorage不使用）。
-function Toggle({ on, onToggle, label }) {
+function Toggle({ on, onToggle }) {
+  // settings-mockup .toggle（50×28・onで金グラデ・knob22）
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px dotted rgba(232,194,90,.2)' }}>
-      <span style={{ fontSize: 14, color: GOLD_HI }}>{label}</span>
-      <button onClick={onToggle} style={{ width: 52, height: 28, borderRadius: 14, border: BORDER, background: on ? 'linear-gradient(90deg,#caa23e,#f0d36a)' : 'rgba(20,10,16,.9)', position: 'relative', cursor: 'pointer', padding: 0 }}>
-        <span style={{ position: 'absolute', top: 2, left: on ? 26 : 2, width: 22, height: 22, borderRadius: '50%', background: on ? '#1a0f06' : '#cdb488', transition: 'left .15s' }} />
-      </button>
-    </div>
+    <button onClick={onToggle} aria-pressed={on} style={{ width: 50, height: 28, borderRadius: 16, border: '1px solid rgba(232,194,90,.3)', background: on ? 'linear-gradient(90deg,#e8b54d,#ffd98a)' : 'rgba(255,255,255,.15)', position: 'relative', cursor: 'pointer', padding: 0, flex: 'none', transition: '.2s' }}>
+      <span style={{ position: 'absolute', top: 2, left: on ? 26 : 2, width: 22, height: 22, borderRadius: '50%', background: '#fff', transition: '.2s' }} />
+    </button>
   );
 }
+/* 設定画面 専用スタイル（settings-mockup 移植・共有 S は上書きしない） */
+const setS = {
+  bg: { position: 'absolute', inset: 0, background: '#0a0509 radial-gradient(80% 45% at 50% 0%, rgba(60,60,80,.2), transparent 60%)' },
+  body: { position: 'relative', zIndex: 2, height: '100dvh', display: 'flex', flexDirection: 'column' },
+  head: { flex: 'none', textAlign: 'center', padding: '16px 16px 6px' },
+  title: { fontSize: 19, fontWeight: 800, letterSpacing: 4, color: GOLD_HI },
+  scroll: { flex: 1, overflowY: 'auto', padding: '10px 16px 90px' },
+  sec: { fontSize: 11, color: '#cdb488', letterSpacing: 2, borderLeft: '3px solid ' + GOLD, paddingLeft: 8, margin: '14px 0 7px' },
+  row: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: PANEL, border: BORDER, borderRadius: 12, padding: '13px 14px', marginBottom: 8, gap: 12 },
+  k: { fontSize: 14, color: GOLD_HI },
+  sub: { fontSize: 10, color: '#9a8c70', marginTop: 3 },
+  small: { fontFamily: 'inherit', fontSize: 12, color: GOLD_HI, background: 'rgba(255,255,255,.05)', border: '1px solid rgba(232,194,90,.4)', borderRadius: 14, padding: '7px 14px', cursor: 'pointer', flex: 'none' },
+  uid: { fontSize: 11, color: '#9a8c70', marginTop: 4, wordBreak: 'break-all' },
+  ver: { textAlign: 'center', fontSize: 10, color: '#6a5a4a', marginTop: 18, lineHeight: 1.8 },
+  back: { position: 'absolute', zIndex: 7, left: 14, bottom: 14, fontFamily: 'inherit', fontSize: 14, color: GOLD_HI, background: PANEL, border: BORDER, borderRadius: 22, padding: '10px 20px', cursor: 'pointer' },
+};
 function SettingsScreen({ bgmOn, setBgmOn, volume, setVolume, logout, playOpening, back }) {
   const seAvail = !!window.CKSound;   // SE は cksound.js が担当（無ければ項目を出さない）
   const [seOn, setSeOn] = useState(seAvail ? CKSound.isOn() : true);
@@ -2679,47 +2904,50 @@ function SettingsScreen({ bgmOn, setBgmOn, volume, setVolume, logout, playOpenin
   const toggleSe = () => { const n = !seOn; setSeOn(n); if (window.CKSound) CKSound.setOn(n); };
 
   return (
-    <div style={S.root}><div style={S.bg} /><div style={S.vignette} />
-      <div style={{ position: 'relative', zIndex: 2, minHeight: '100dvh', display: 'flex', flexDirection: 'column', padding: '14px 16px 18px', overflowY: 'auto' }}>
-        <div style={{ textAlign: 'center', fontSize: 20, fontWeight: 800, letterSpacing: 3, color: GOLD_HI }}>設定</div>
+    <div style={S.root}><div style={setS.bg} />
+      <div style={setS.body}>
+        <div style={setS.head}><div style={setS.title}>設定</div></div>
+        <div style={setS.scroll}>
 
-        {/* 音 */}
-        <div style={{ marginTop: 14, padding: '4px 14px', background: PANEL, border: BORDER, borderRadius: 10 }}>
-          <Toggle on={bgmOn} onToggle={() => setBgmOn(v => !v)} label="BGM" />
-          <div style={{ padding: '12px 0', borderBottom: seAvail ? '1px dotted rgba(232,194,90,.2)' : 'none' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: bgmOn ? GOLD_HI : '#7a6848' }}>
-              <span>音量</span><span>{Math.round(volume * 100)}%</span>
-            </div>
+          {/* サウンド */}
+          <div style={setS.sec}>サウンド</div>
+          <div style={setS.row}>
+            <div><div style={setS.k}>BGM</div><div style={setS.sub}>タイトル・ホームのBGM</div></div>
+            <Toggle on={bgmOn} onToggle={() => setBgmOn(v => !v)} />
+          </div>
+          <div style={setS.row}>
+            <div style={setS.k}>音量 <span style={{ color: bgmOn ? '#cdb488' : '#7a6848' }}>{Math.round(volume * 100)}%</span></div>
             <input type="range" min="0" max="100" value={Math.round(volume * 100)} disabled={!bgmOn}
-              onChange={e => setVolume(parseInt(e.target.value, 10) / 100)} style={{ width: '100%', marginTop: 6, opacity: bgmOn ? 1 : .4 }} />
+              onChange={e => setVolume(parseInt(e.target.value, 10) / 100)} style={{ width: 130, accentColor: '#e8b54d', opacity: bgmOn ? 1 : .4 }} />
           </div>
-          {seAvail && <Toggle on={seOn} onToggle={toggleSe} label="効果音" />}
-        </div>
+          {seAvail && <div style={setS.row}>
+            <div><div style={setS.k}>効果音</div><div style={setS.sub}>ボタン・カードめくり等のSE</div></div>
+            <Toggle on={seOn} onToggle={toggleSe} />
+          </div>}
 
-        {/* その他 */}
-        <div style={{ marginTop: 14, padding: '4px 14px', background: PANEL, border: BORDER, borderRadius: 10 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0' }}>
-            <span style={{ fontSize: 13, color: GOLD_HI }}>プロローグ</span>
-            <button onClick={playOpening} style={S.sideSwitch}>プロローグを見る</button>
+          {/* その他 */}
+          <div style={setS.sec}>その他</div>
+          <div style={setS.row}>
+            <div><div style={setS.k}>プロローグ</div><div style={setS.sub}>冒頭の物語をもう一度見る</div></div>
+            <button onClick={playOpening} style={setS.small}>プロローグを見る</button>
           </div>
+
+          {/* アカウント・データ */}
+          <div style={setS.sec}>アカウント・データ</div>
+          <div style={setS.row}>
+            <div style={{ minWidth: 0 }}><div style={setS.k}>ログイン中アカウント</div><div style={setS.uid}>{email || '取得中…'}</div></div>
+          </div>
+          <div style={setS.row}>
+            <div><div style={setS.k}>ログアウト</div><div style={setS.sub}>このアカウントから出る</div></div>
+            <button onClick={() => setConfirm(true)} style={{ ...setS.small, color: '#ff9a8a', borderColor: 'rgba(224,86,59,.5)' }}>ログアウト</button>
+          </div>
+
+          {/* バージョン */}
+          <div style={setS.ver}>チカリアン（開発版）<br />© Chikarian</div>
         </div>
-
-        {/* アカウント */}
-        <div style={{ marginTop: 14, padding: '12px 14px', background: PANEL, border: BORDER, borderRadius: 10 }}>
-          <div style={{ fontSize: 10, color: '#cdb488', letterSpacing: 1 }}>ログイン中アカウント</div>
-          <div style={{ fontSize: 13, color: GOLD_HI, marginTop: 4, wordBreak: 'break-all' }}>{email || '取得中…'}</div>
-        </div>
-
-        {/* ログアウト */}
-        <button onClick={() => setConfirm(true)} style={{ ...S.lineBtn, marginTop: 18, alignSelf: 'center' }}>ログアウト</button>
-
-        {/* バージョン */}
-        <div style={{ marginTop: 'auto', paddingTop: 24, textAlign: 'center', fontSize: 10, color: '#7a6848', lineHeight: 1.8 }}>
-          チカリアン（開発版）<br />© Chikarian
-        </div>
-
-        <button onClick={back} style={{ ...S.lineBtn, marginTop: 14, alignSelf: 'center' }}>ホームに戻る</button>
       </div>
+
+      <button onClick={back} style={setS.back}>‹ 戻る</button>
 
       {confirm && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.7)', display: 'grid', placeItems: 'center', zIndex: 60, padding: 24 }}>
