@@ -1502,8 +1502,6 @@ function CardDetail({ card, cards, profile, skillMap, refreshAll, back, flash, o
         <div style={zS.zActions}>
           <button style={{ ...zS.zaBtn, ...(card.locked ? zS.zaOff : {}) }} disabled={!!card.locked} onClick={() => setMode('kyoka')}>★強化</button>
           <button style={{ ...zS.zaBtn, ...(st.isSp ? zS.zaOff : {}) }} disabled={st.isSp} onClick={() => setMode('skill')}>スキル強化/転移{st.isSp ? '（SP不可）' : ''}</button>
-          <button style={{ ...zS.zaBtn, ...(st.isSp ? zS.zaOff : {}) }} disabled={st.isSp} onClick={() => setMode('equip')}>装備（充填）{st.isSp ? '（SP不可）' : ''}</button>
-          <button style={{ ...zS.zaBtn, ...(card.locked ? zS.zaOff : {}) }} disabled={!!card.locked} onClick={() => setMode('exchange')}>交換所</button>
           <button style={{ ...zS.zaBtn, ...zS.zaOff, gridColumn: '1 / -1' }} disabled={!LOCK_RPC_AVAILABLE}
             onClick={() => flash('ロック切替には専用RPCが必要です（cardsの直接更新はRLS/不正対策Cで不可）')}>
             {card.locked ? 'ロック解除' : 'ロックする'}（専用RPC待ち）
@@ -1628,20 +1626,14 @@ const cpS = {
   empty: { color: '#a98f66', fontSize: 13, padding: 20, textAlign: 'center' },
   li: { display: 'flex', gap: 8, alignItems: 'center', padding: 6, borderRadius: 10, border: '1px solid rgba(232,194,90,.18)', background: 'rgba(20,12,16,.5)', cursor: 'pointer', textAlign: 'left', width: '100%', boxSizing: 'border-box' },
   liSel: { borderColor: '#e8c25a', background: 'rgba(232,194,90,.14)', boxShadow: '0 0 8px rgba(232,194,90,.25)' },
-  liThumb: { width: 40, height: 40, flex: '0 0 40px', borderRadius: 8, overflow: 'hidden' },
-  liMeta: { minWidth: 0, flex: 1 },
-  liNameRow: { display: 'flex', alignItems: 'center', gap: 4 },
-  liRar: { fontSize: 10, fontWeight: 800, color: GOLD_HI, flex: '0 0 auto' },
-  liName: { fontSize: 12, color: '#efe2c8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 },
-  liBadges: { display: 'flex', alignItems: 'center', gap: 4, marginTop: 3, flexWrap: 'wrap' },
-  liTag: { fontSize: 10, color: '#cdb488', padding: '1px 6px', borderRadius: 6, border: '1px solid rgba(232,194,90,.25)' },
+  liArt: { width: 54, height: 81, flex: '0 0 54px', borderRadius: 7, overflow: 'hidden', position: 'relative' },
+  liInfo: { display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 },
+  liLv: { fontSize: 12, fontWeight: 700, color: '#efe2c8', whiteSpace: 'nowrap' },
+  liTag: { fontSize: 10, color: '#cdb488', padding: '1px 6px', borderRadius: 6, border: '1px solid rgba(232,194,90,.25)', alignSelf: 'flex-start', whiteSpace: 'nowrap' },
   right: { flex: '1 1 0', minWidth: 0, boxSizing: 'border-box', overflowY: 'auto', overflowX: 'hidden', maxHeight: '66vh', border: '1px solid rgba(232,194,90,.2)', borderRadius: 12, background: 'rgba(14,9,12,.55)', padding: 12 },
   ph: { color: '#a98f66', fontSize: 14, textAlign: 'center', padding: '40px 10px', lineHeight: 1.8 },
-  dArt: { width: 108, height: 162, margin: '0 auto 10px', borderRadius: 10, overflow: 'hidden', boxShadow: '0 4px 18px rgba(0,0,0,.5)' },
-  dNameRow: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 8, flexWrap: 'wrap' },
-  dRar: { fontSize: 13, fontWeight: 800, color: GOLD_HI },
-  dName: { fontFamily: "'Shippori Mincho',serif", fontSize: 16, fontWeight: 700, color: '#efe2c8', overflowWrap: 'anywhere' },
-  dBadges: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 10 },
+  dArt: { width: 120, height: 180, margin: '0 auto 10px', borderRadius: 10, overflow: 'hidden', boxShadow: '0 4px 18px rgba(0,0,0,.5)' },
+  dName: { fontFamily: "'Shippori Mincho',serif", fontSize: 16, fontWeight: 700, color: '#efe2c8', textAlign: 'center', marginBottom: 10, overflowWrap: 'anywhere' },
   dRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '7px 2px', borderBottom: '1px solid rgba(232,194,90,.12)', fontSize: 13, color: '#cdb488' },
   dv: { color: '#efe2c8', fontWeight: 700, textAlign: 'right', overflowWrap: 'anywhere', minWidth: 0 },
   skTitle: { marginTop: 12, marginBottom: 6, fontSize: 13, fontWeight: 700, color: GOLD_HI, letterSpacing: '.04em' },
@@ -1729,13 +1721,12 @@ function CardPicker({ title, cards, getStatus, chooseLabel, onChoose, onClear, b
               ? <div style={cpS.empty}>該当カードなし</div>
               : items.map(c => {
                   const st = getStatus(c);
-                  const info = parseCardKey(c.card_key);
                   return (
                     <button key={c.id} onClick={() => setSel(c.id)} style={{ ...cpS.li, ...(sel === c.id ? cpS.liSel : {}), ...(st.dim ? { opacity: .45 } : {}) }}>
-                      <div style={cpS.liThumb}><CardThumb card={c} small /></div>
-                      <div style={cpS.liMeta}>
-                        <div style={cpS.liNameRow}><span style={cpS.liRar}>{RAR_LABEL[info.rarity]}</span><span style={cpS.liName}>{info.name}</span></div>
-                        <div style={cpS.liBadges}><DeckBadges info={info} />{st.tag && <span style={cpS.liTag}>{st.tag}</span>}</div>
+                      <div style={cpS.liArt}><DeckSlotArt cardKey={c.card_key} /></div>
+                      <div style={cpS.liInfo}>
+                        <span style={cpS.liLv}>Lv{c.lv || 1}{(c.star || 0) > 0 ? ' ★' + (c.star || 0) : ''}</span>
+                        {st.tag && <span style={cpS.liTag}>{st.tag}</span>}
                       </div>
                     </button>
                   );
@@ -1746,8 +1737,7 @@ function CardPicker({ title, cards, getStatus, chooseLabel, onChoose, onClear, b
               ? <div style={cpS.ph}>← 左の一覧から<br />カードを選ぶと<br />詳細が出ます</div>
               : <>
                   <div style={cpS.dArt}><DeckSlotArt cardKey={selCard.card_key} /></div>
-                  <div style={cpS.dNameRow}><span style={cpS.dRar}>{RAR_LABEL[selInfo.rarity]}</span><span style={cpS.dName}>{selInfo.name}</span></div>
-                  <div style={cpS.dBadges}><DeckBadges info={selInfo} /></div>
+                  <div style={cpS.dName}>{RAR_LABEL[selInfo.rarity]} {selInfo.name}</div>
                   <div style={cpS.dRow}><span>レベル</span><span style={cpS.dv}>Lv {selCard.lv || 1} / 上限 {selStats.cap}</span></div>
                   <div style={cpS.dRow}><span>強化値</span><span style={cpS.dv}>★{selCard.star || 0}</span></div>
                   <div style={cpS.dRow}><span>本体戦闘力</span><span style={cpS.dv}>{selStats.body.toLocaleString()}</span></div>
@@ -1976,7 +1966,6 @@ function DeckScreen({ profile, cards, refreshAll, back, flash, initialDeckNo }) 
                   ? <>
                       <div onClick={(e) => { e.stopPropagation(); if (!busy && !deckSortie) commit(withSlot(slot, null)); }} style={deckS.rm}>×</div>
                       <DeckSlotArt cardKey={c.card_key} />
-                      <div style={deckS.meta}><DeckBadges info={info} /></div>
                       {sp && <div style={badge('#ff6a7a')}>離脱中</div>}
                     </>
                   : <div style={deckS.empty}>＋<small style={deckS.emptySmall}>枠 {slot + 1}</small></div>}
@@ -2554,58 +2543,17 @@ const kyokaS = {
   rHome: { marginTop: 22, fontFamily: 'inherit', fontWeight: 800, fontSize: 15, letterSpacing: 2, color: '#2a160a', border: 'none', padding: '12px 30px', borderRadius: 26, cursor: 'pointer', background: 'linear-gradient(180deg,#ffe49a,#e8b54d 60%,#b9842f)' },
 };
 function KyokaScreen({ cards, profile, refreshAll, back, flash }) {
-  const [baseId, setBaseId] = useState(null);
-  const [sel, setSel] = useState(null);
+  const [baseCard, setBaseCard] = useState(null);
+  const [skillMap, setSkillMap] = useState({});
   const cardById = {}; (cards || []).forEach(c => { cardById[c.id] = c; });
-  // 強化後も本体は残る（★+1）。最新 cards を反映するため cardById から都度引く。
-  if (baseId && cardById[baseId]) {
-    return <KyokaView base={cardById[baseId]} cards={cards} profile={profile} refreshAll={refreshAll} onBack={() => setBaseId(null)} flash={flash} />;
+  useEffect(() => { (async () => { try { const sm = await ChikarianAPI.getSkillMaster(); const m = {}; (sm || []).forEach(s => { m[s.skill_key] = s; }); setSkillMap(m); } catch (e) {} })(); }, []);
+  // 強化合成＝カードを選ぶ→カード詳細（★強化／スキル強化・転移）。refreshAll 後も最新を反映するため cardById から都度引く。
+  const cur = baseCard ? cardById[baseCard.id] : null;
+  if (cur) {
+    return <CardDetail card={cur} cards={cards} profile={profile} skillMap={skillMap} refreshAll={refreshAll} back={() => setBaseCard(null)} onSelect={setBaseCard} flash={flash} />;
   }
-  const list = (cards || []);
-  const selCard = sel ? cardById[sel] : null;
-  const selInfo = selCard ? parseCardKey(selCard.card_key) : null;
-  const selStats = selCard ? computeStats(selCard) : null;
-  const subOf = (c) => c.locked ? 'ロック中' : ('Lv' + (c.lv || 1) + '・★' + (c.star || 0));
-  return (
-    <div style={S.root}>
-      <div style={S.bg} /><div style={S.vignette} />
-      <div style={pickS.wrap}>
-        <div style={pickS.head}>
-          <button onClick={back} style={{ ...S.lineBtn, padding: '6px 14px' }}>‹ 戻る</button>
-          <div style={pickS.title}>強化する本体カードを選ぶ</div>
-        </div>
-        <div style={pickS.split}>
-          <div style={pickS.left}>
-            {list.length === 0
-              ? <div style={pickS.empty}>所持カードがありません</div>
-              : list.map(c => (
-                  <button key={c.id} onClick={() => setSel(c.id)} style={{ ...pickS.li, ...(sel === c.id ? pickS.liSel : {}), ...(c.locked ? { opacity: .5 } : {}) }}>
-                    <div style={pickS.liThumb}><CardThumb card={c} small /></div>
-                    <div style={pickS.liMeta}>
-                      <div style={pickS.liName}>{cardFullName(c)}</div>
-                      <div style={pickS.liSub}>{subOf(c)}</div>
-                    </div>
-                  </button>
-                ))}
-          </div>
-          <div style={pickS.right}>
-            {!selCard
-              ? <div style={pickS.ph}>← 左の一覧から<br />本体カードを選ぶ<br />と詳細が出ます</div>
-              : <>
-                  <div style={pickS.dArt}><DeckSlotArt cardKey={selCard.card_key} /></div>
-                  <div style={pickS.dName}>{cardFullName(selCard)}</div>
-                  <div style={pickS.dRow}><span>レベル</span><span style={pickS.dv}>Lv {selCard.lv || 1}</span></div>
-                  <div style={pickS.dRow}><span>強化値（★）</span><span style={pickS.dv}>★{selCard.star || 0}</span></div>
-                  <div style={{ ...pickS.dRow, borderBottom: 'none' }}><span>戦闘力（総合）</span><span style={pickS.dv}>{selStats.sougou.toLocaleString()}</span></div>
-                  {selCard.locked
-                    ? <div style={pickS.dLock}>ロック中（強化できません）</div>
-                    : <button onClick={() => setBaseId(selCard.id)} style={pickS.choose}>このカードを強化する</button>}
-                </>}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  const getStatus = (c) => { const locked = !!c.locked; return { disabled: locked, dim: locked, tag: locked ? 'ロック中' : null }; };
+  return <CardPicker title="強化するカードを選ぶ" cards={cards} getStatus={getStatus} chooseLabel="このカードを選ぶ" onChoose={(c) => setBaseCard(c)} back={back} flash={flash} />;
 }
 
 function KyokaView({ base, cards, profile, refreshAll, onBack, flash }) {
