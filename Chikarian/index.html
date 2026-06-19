@@ -1369,6 +1369,16 @@ const deckS = {
   wbadge: { fontSize: 9, fontWeight: 800, padding: '1px 5px', borderRadius: 5, color: '#16100a', background: '#cdb488' },
   summary: { textAlign: 'center', padding: '12px 16px 0' },
   legend: { fontSize: 10, color: '#9a8c70', marginTop: 6, lineHeight: 1.6 },
+  autoSave: { fontSize: 10, color: '#9fd0a0', marginTop: 4, letterSpacing: 1 },
+  deckMark: { position: 'absolute', top: 3, left: 3, fontSize: 9, fontWeight: 800, color: '#16100a', background: '#cdb488', borderRadius: 5, padding: '0 5px', zIndex: 2, whiteSpace: 'nowrap' },
+  // 移動確認モーダル（ダーク・ゴシック調・赤/黒/金）
+  mScrim: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,.74)', display: 'grid', placeItems: 'center', zIndex: 60, padding: 24 },
+  mBox: { maxWidth: 340, width: '100%', background: '#160a13', border: '1.5px solid rgba(232,194,90,.55)', borderRadius: 14, padding: '20px 18px 16px', textAlign: 'center', boxShadow: '0 12px 40px rgba(0,0,0,.7)' },
+  mTitle: { fontSize: 14, fontWeight: 800, letterSpacing: 1, color: '#ff9a8a', marginBottom: 10 },
+  mMsg: { fontSize: 13, color: GOLD_HI, lineHeight: 1.8, marginBottom: 18 },
+  mBtns: { display: 'flex', gap: 10 },
+  mMove: { flex: 1, fontFamily: 'inherit', fontWeight: 800, fontSize: 14, letterSpacing: 1, color: '#2a160a', border: 'none', borderRadius: 22, padding: '11px 0', cursor: 'pointer', background: 'linear-gradient(180deg,#ffe49a,#e8b54d 60%,#b9842f)' },
+  mCancel: { flex: 1, fontFamily: 'inherit', fontWeight: 700, fontSize: 14, letterSpacing: 1, color: GOLD_HI, background: 'rgba(20,10,16,.9)', border: '1.5px solid rgba(232,194,90,.55)', borderRadius: 22, padding: '11px 0', cursor: 'pointer' },
 };
 const DECK_ATTR_COL = { '花': '#e86b8a', '葉': '#5fa564', '芯': '#e8c25a' };  // mockup --hana/--ha/--shin
 function DeckBadges({ info }) {
@@ -1391,9 +1401,9 @@ function DeckScreen({ profile, cards, back, flash }) {
   const [decks, setDecks] = useState(null);
   const [spSet, setSpSet] = useState(null);     // {card_id:true} 本日離脱中
   const [deckNo, setDeckNo] = useState(1);
-  const [draft, setDraft] = useState([null, null, null]);
   const [picking, setPicking] = useState(null); // 編集中の枠 index or null
-  const [saving, setSaving] = useState(false);
+  const [busy, setBusy] = useState(false);      // 即コミット中（二重防止）
+  const [moveConfirm, setMoveConfirm] = useState(null); // {cardId, slot, fromDeckNo} 他デッキ移動の確認
 
   const cardById = {}; (cards || []).forEach(c => { cardById[c.id] = c; });
 
@@ -1405,41 +1415,29 @@ function DeckScreen({ profile, cards, back, flash }) {
       catch (e) { setSpSet({}); }   // 読めなければバッジ無し（最終判定はサーバ拒否で対応）
     })();
   }, []);
-  useEffect(() => {
-    if (!decks) return;
-    const row = decks.find(x => x.deck_no === deckNo);
-    setDraft(row ? [row.slot1_card_id || null, row.slot2_card_id || null, row.slot3_card_id || null] : [null, null, null]);
-    setPicking(null);
-  }, [deckNo, decks]);
+  useEffect(() => { setPicking(null); setMoveConfirm(null); }, [deckNo]);   // デッキ切替で編集状態をリセット
 
-  function costInfo() {
-    let total = 0;
-    draft.forEach(id => { const c = cardById[id]; if (!c) return; total += COST_BY_RAR[parseCardKey(c.card_key).rarity] || 0; });  // SP=4 を算入
-    return { total };
-  }
+  // 現在の編成は decks（サーバ値）から導く curSlots を唯一のソースに（draft 廃止）。
   const curSlots = (() => { if (!decks) return [null, null, null]; const row = decks.find(x => x.deck_no === deckNo); return row ? [row.slot1_card_id || null, row.slot2_card_id || null, row.slot3_card_id || null] : [null, null, null]; })();
-  const isDirty = JSON.stringify(curSlots) !== JSON.stringify(draft);
+  const withSlot = (slot, id) => { const n = curSlots.slice(); n[slot] = id; return n; };
 
-  function assign(slot, id) { setDraft(d => { const n = d.slice(); n[slot] = id; return n; }); setPicking(null); }
-  function removeAt(slot) { setDraft(d => { const n = d.slice(); n[slot] = null; return n; }); }
-  function reset() { setDraft(curSlots.slice()); }
+  let costTotal = 0;
+  curSlots.forEach(id => { const c = cardById[id]; if (!c) return; costTotal += COST_BY_RAR[parseCardKey(c.card_key).rarity] || 0; });  // SP=4 を算入
 
-  async function save() {
-    if (saving) return; setSaving(true);
-    try {
-      await ChikarianAPI.updateDeck(deckNo, draft[0], draft[1], draft[2]);  // 空き枠は null
-      flash('編成を保存しました');
-      await loadDecks();   // サーバ値で反映（最終結果に従う）
-    } catch (e) { flash(errMsg(e)); }
-    finally { setSaving(false); }
+  // 即コミット：操作の都度 updateDeck → サーバ値で反映（撃ちっぱなし）。
+  async function commit(newSlots) {
+    if (busy) return; setBusy(true);
+    try { await ChikarianAPI.updateDeck(deckNo, newSlots[0], newSlots[1], newSlots[2]); await loadDecks(); }
+    catch (e) { flash(errMsg(e)); }
+    finally { setBusy(false); setPicking(null); }
   }
+  // カードの在籍デッキ（このデッキ以外）。0043 で 1カード=1デッキ。
+  const deckNoOf = (cardId) => { const d = (decks || []).find(x => x.deck_no !== deckNo && [x.slot1_card_id, x.slot2_card_id, x.slot3_card_id].includes(cardId)); return d ? d.deck_no : null; };
 
   if (decks === null) return <Booting />;
-  const ci = costInfo();
 
   // カード選択パネル
   if (picking !== null) {
-    const usedElsewhere = new Set(draft.filter((id, i) => id && i !== picking));
     const list = (cards || []);
     return (
       <div style={S.root}>
@@ -1449,26 +1447,49 @@ function DeckScreen({ profile, cards, back, flash }) {
             <button onClick={() => setPicking(null)} style={{ ...S.lineBtn, padding: '6px 14px' }}>‹ 戻る</button>
             <div style={{ fontSize: 15, color: GOLD_HI, fontWeight: 700 }}>枠 {picking + 1} に入れるカード</div>
           </div>
-          <div style={{ flex: 1, overflowY: 'auto', marginTop: 12 }}>
+          <div style={{ flex: 1, overflowY: 'auto', marginTop: 12, opacity: busy ? .6 : 1 }}>
             {list.length === 0
               ? <div style={{ textAlign: 'center', color: '#cdb488', marginTop: 30 }}>所持カードがありません</div>
               : <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 6 }}>
                   {list.map(c => {
-                    const dup = usedElsewhere.has(c.id);
+                    const sameDeckOther = curSlots.some((id, i) => id === c.id && i !== picking);  // 同一デッキ内の他枠で使用中
                     const sp = spSet && spSet[c.id];
-                    const disabled = dup || sp;
+                    const otherDeck = deckNoOf(c.id);                                              // 他デッキ在籍（選べるが確認）
+                    const disabled = busy || sameDeckOther || sp;
+                    const onClick = disabled ? undefined
+                      : (otherDeck ? () => setMoveConfirm({ cardId: c.id, slot: picking, fromDeckNo: otherDeck })
+                                   : () => commit(withSlot(picking, c.id)));
                     return (
-                      <div key={c.id} style={{ position: 'relative', opacity: disabled ? .4 : 1 }}>
-                        <CardThumb card={c} small onClick={disabled ? undefined : () => assign(picking, c.id)} />
+                      <div key={c.id} style={{ position: 'relative', opacity: (sameDeckOther || sp) ? .4 : 1 }}>
+                        <CardThumb card={c} small onClick={onClick} />
                         {sp && <div style={badge('#ff6a7a')}>離脱中</div>}
-                        {!sp && dup && <div style={badge('#888')}>編成中</div>}
+                        {!sp && sameDeckOther && <div style={badge('#888')}>編成中</div>}
+                        {!sp && !sameDeckOther && otherDeck && <div style={deckS.deckMark}>デッキ{otherDeck}</div>}
                       </div>
                     );
                   })}
                 </div>}
           </div>
-          <button onClick={() => { removeAt(picking); }} style={{ ...S.lineBtn, marginTop: 10, alignSelf: 'center' }}>この枠を空にする</button>
+          <button onClick={() => { if (!busy) commit(withSlot(picking, null)); }} disabled={busy} style={{ ...S.lineBtn, marginTop: 10, alignSelf: 'center', ...(busy ? { opacity: .45 } : {}) }}>この枠を空にする</button>
         </div>
+
+        {/* 他デッキ移動の確認モーダル */}
+        {moveConfirm && (() => {
+          const mc = moveConfirm; const mcCard = cardById[mc.cardId];
+          const nm = mcCard ? parseCardKey(mcCard.card_key).name : 'カード';
+          return (
+            <div style={deckS.mScrim} onClick={() => setMoveConfirm(null)}>
+              <div style={deckS.mBox} onClick={(e) => e.stopPropagation()}>
+                <div style={deckS.mTitle}>デッキ移動の確認</div>
+                <div style={deckS.mMsg}>《{nm}》は デッキ{mc.fromDeckNo} に編成済みです。<br />デッキ{mc.fromDeckNo} から外して デッキ{deckNo} に移動しますか？</div>
+                <div style={deckS.mBtns}>
+                  <button style={deckS.mCancel} onClick={() => setMoveConfirm(null)} disabled={busy}>やめる</button>
+                  <button style={deckS.mMove} onClick={() => { const m = mc; setMoveConfirm(null); commit(withSlot(m.slot, m.cardId)); }} disabled={busy}>{busy ? '移動中…' : '移動する'}</button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
     );
   }
@@ -1490,17 +1511,17 @@ function DeckScreen({ profile, cards, back, flash }) {
           })}
         </div>
 
-        {/* 3枠（mockup .slot：カード絵 cover・空きはダッシュ枠＋＋・右上×除去・下帯に属性/武器バッジ） */}
-        <div style={deckS.slots}>
+        {/* 3枠（即確定：枠タップで選択／×で即空に） */}
+        <div style={{ ...deckS.slots, opacity: busy ? .6 : 1 }}>
           {[0, 1, 2].map(slot => {
-            const id = draft[slot]; const c = id ? cardById[id] : null;
+            const id = curSlots[slot]; const c = id ? cardById[id] : null;
             const sp = c && spSet && spSet[c.id];
             const info = c ? parseCardKey(c.card_key) : null;
             return (
-              <div key={slot} onClick={() => setPicking(slot)} style={{ ...deckS.slot, ...(c ? deckS.slotFilled : {}) }}>
+              <div key={slot} onClick={() => { if (!busy) setPicking(slot); }} style={{ ...deckS.slot, ...(c ? deckS.slotFilled : {}) }}>
                 {c
                   ? <>
-                      <div onClick={(e) => { e.stopPropagation(); removeAt(slot); }} style={deckS.rm}>×</div>
+                      <div onClick={(e) => { e.stopPropagation(); if (!busy) commit(withSlot(slot, null)); }} style={deckS.rm}>×</div>
                       <DeckSlotArt cardKey={c.card_key} />
                       <div style={deckS.meta}><DeckBadges info={info} /></div>
                       {sp && <div style={badge('#ff6a7a')}>離脱中</div>}
@@ -1513,17 +1534,14 @@ function DeckScreen({ profile, cards, back, flash }) {
 
         {/* コスト目安（mockup .summary：中央寄せ・本番の文言を維持） */}
         <div style={deckS.summary}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: ci.total > 11 ? '#ff6a7a' : GOLD_HI }}>
-            合計コスト目安 <b style={{ fontSize: 24, color: ci.total > 11 ? '#ff6a7a' : '#ffe39a', textShadow: '0 0 12px rgba(255,200,90,.5)', marginLeft: 6 }}>{ci.total}</b> / 11{ci.total > 11 ? '（上限超過）' : ''}
+          <div style={{ fontSize: 13, fontWeight: 700, color: costTotal > 11 ? '#ff6a7a' : GOLD_HI }}>
+            合計コスト目安 <b style={{ fontSize: 24, color: costTotal > 11 ? '#ff6a7a' : '#ffe39a', textShadow: '0 0 12px rgba(255,200,90,.5)', marginLeft: 6 }}>{costTotal}</b> / 11{costTotal > 11 ? '（上限超過）' : ''}
           </div>
           <div style={deckS.legend}>コスト N1 / R2 / SR3 / SSR5 / SP4（確定）。三すくみ 有利×1.2・不利×0.8（balance 2026-06-14）。<br />可否（コスト上限11・本数・SP離脱・重複）はサーバ判定です。</div>
+          <div style={deckS.autoSave}>編成は自動で保存されます</div>
         </div>
 
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 16 }}>
-          <button onClick={save} disabled={!isDirty || saving} style={{ ...S.bigBtn, ...((!isDirty || saving) ? { opacity: .45, cursor: 'not-allowed' } : {}) }}>{saving ? '保存中…' : '保存（確定）'}</button>
-          <button onClick={reset} disabled={!isDirty || saving} style={{ ...S.lineBtn, ...((!isDirty || saving) ? { opacity: .45, cursor: 'not-allowed' } : {}) }}>リセット</button>
-        </div>
-        <button onClick={back} style={{ ...S.lineBtn, marginTop: 14, alignSelf: 'center' }}>ホームに戻る</button>
+        <button onClick={back} style={{ ...S.lineBtn, marginTop: 16, alignSelf: 'center' }}>ホームに戻る</button>
       </div>
     </div>
   );
