@@ -913,14 +913,20 @@ function parseCardKey(key) {
   return { rarity: rar, name: isMeshibe ? 'めしべだけマン' : 'ハイビスカスマン', attr: ATTR_JA[p[2]] || '', weap: WEAP_JA[p[3]] || '' };
 }
 
-function GCard({ data, flipped, skillName }) {
+function GCard({ data, flipped, skillName, index }) {
   const [imgErr, setImgErr] = useState(false);
+  const [backErr, setBackErr] = useState(false);
   const info = parseCardKey(data.card_key);
   const col = RAR_COL[data.rarity] || '#b9b2a6';
   return (
-    <div className={'gcard genter' + (flipped ? ' flipped' : '')}>
+    <div className={'gcard genter' + (flipped ? ' flipped' : '')} style={{ animationDelay: ((index || 0) * 0.1) + 's' }}>
       <div className="gcardInner">
-        <div className="gface gback"><span style={{ fontSize: 30, color: 'rgba(232,194,90,.85)' }}>❖</span></div>
+        {/* 裏面：card_back.png（mockup .back／失敗時は ❖ fallback） */}
+        <div className="gface gback">
+          {backErr
+            ? <span style={{ fontSize: 30, color: 'rgba(232,194,90,.85)' }}>❖</span>
+            : <img src="./images/card_back.png" alt="" onError={() => setBackErr(true)} />}
+        </div>
         <div className="gface gfront" style={{ borderColor: col, boxShadow: `inset 0 0 14px rgba(0,0,0,.5), 0 0 10px ${col}55` }}>
           {imgErr
             ? <div style={{ width: '100%', height: '100%', background: 'linear-gradient(165deg,#3a2418,#1c1018)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 4, textAlign: 'center' }}>
@@ -939,6 +945,12 @@ function GCard({ data, flipped, skillName }) {
   );
 }
 
+/* ガチャ画面 専用スタイル（gacha-mockup の見た目移植・共有 S は上書きしない） */
+const gachaS = {
+  // 堂内背景：gacha-bg.png（cover）／読めない時は S.bg 相当のグラデが下層に残る（fallback）
+  bg: { position: 'absolute', inset: 0, backgroundImage: "url('./images/gacha-bg.png'), radial-gradient(120% 90% at 50% 18%, #5a1f3a 0%, #2a1024 38%, #140913 68%, #090509 100%)", backgroundSize: 'cover, cover', backgroundPosition: 'center, center', backgroundRepeat: 'no-repeat, no-repeat', backgroundColor: '#070409' },
+  vignette: { position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(70% 50% at 50% 38%, rgba(255,180,90,.16), transparent 60%), linear-gradient(180deg, rgba(0,0,0,.5), rgba(0,0,0,.15) 30%, rgba(0,0,0,.6))' },
+};
 function Gacha({ profile, onRefresh, back, flash }) {
   const [drawing, setDrawing] = useState(false);
   const [results, setResults] = useState(null);   // [{id, card_key, rarity, skill_key}]
@@ -975,7 +987,7 @@ function Gacha({ profile, onRefresh, back, flash }) {
 
   return (
     <div style={S.root}>
-      <div style={S.bg} /><div style={S.vignette} />
+      <div style={gachaS.bg} /><div style={gachaS.vignette} />
       <div style={{ position: 'relative', zIndex: 2, minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '18px 16px 22px' }}>
         <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: 3, color: GOLD_HI, textShadow: '0 2px 6px #3a0010, 0 0 16px rgba(255,180,80,.5)' }}>チカリアンガチャ</div>
         <div style={{ ...S.resPanelSm, marginTop: 8 }}>
@@ -987,7 +999,7 @@ function Gacha({ profile, onRefresh, back, flash }) {
         <div style={{ fontSize: 10, color: '#a98f66', marginTop: 2 }}>排出率 N55.45 / R31.65 / SR9 / SP1.7 / SSR2.2 ％</div>
 
         <div className="gstage" style={{ flex: 1, marginTop: 14, marginBottom: 14, minHeight: 220 }}>
-          {results && results.map((c, i) => <GCard key={c.id} data={c} flipped={flipped[i]} skillName={skillMap[c.skill_key]} />)}
+          {results && results.map((c, i) => <GCard key={c.id} data={c} flipped={flipped[i]} skillName={skillMap[c.skill_key]} index={i} />)}
         </div>
 
         <button onClick={draw} disabled={drawing} style={S.bigBtn}>{drawing ? '排出中…' : '引く（300）'}</button>
