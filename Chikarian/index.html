@@ -609,18 +609,24 @@ function Home({ profile, go, flash, onRefresh }) {
   const fleetBoss = outSorties.length;
   const fleetTansaku = tansaku.length;
 
-  // 毎秒：帰還済み（arrived/return_done）のデッキを1回だけ collectBossResult（撃ちっぱなし＝解放＋報告書）。
+  // 毎秒：到着('arrived')／帰宅('return_done')のデッキを各1回 collectBossResult（撃ちっぱなし＝報告書＋復路解放／0045）。
   useEffect(() => {
-    const pending = sorties.filter(s => {
+    const pending = [];
+    sorties.forEach(s => {
       const L = bossLivePhase(s, clockOffset, now);
-      if (L.phase !== 'arrived' && L.phase !== 'return_done') return false;
-      const k = s.deck_no + ':' + s.started_at;
-      if (collectedRef.current[k]) return false;
-      collectedRef.current[k] = true; return true;
+      if (L.phase !== 'arrived' && L.phase !== 'return_done') return;
+      const k = s.deck_no + ':' + s.started_at + ':' + L.phase;
+      if (collectedRef.current[k]) return;
+      collectedRef.current[k] = true; pending.push({ s, k });
     });
     if (!pending.length) return;
     (async () => {
-      for (const s of pending) { try { await ChikarianAPI.collectBossResult(s.deck_no); } catch (e) { /* 冪等・無視 */ } }
+      for (const { s, k } of pending) {
+        try {
+          const res = await ChikarianAPI.collectBossResult(s.deck_no);
+          flash(res && res.returning ? `デッキ${s.deck_no} 到着・帰還中（報告書に記録）` : `デッキ${s.deck_no} 帰還`);
+        } catch (e) { if (/STILL_/.test((e && e.message) || '')) delete collectedRef.current[k]; }  // 復路未完（クロックずれ）は次tick再試行
+      }
       await refetchSorties(); try { await onRefresh(); } catch (e) {}
     })();
   }, [sorties, now, clockOffset]);
@@ -1877,21 +1883,20 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
     return () => { clearInterval(t1); clearInterval(t2); };
   }, []);
 
-  // 自動回収：到着('arrived')／帰還完了('return_done')になったデッキを1回だけ collect。
-  //   撃ちっぱなし＝手動「回収」は無し。結果は battle_logs（戦闘報告書）へ。冪等なので例外は握りつぶす。
-  async function autoCollect(dno) {
+  // 自動回収：到着('arrived'=戦闘＋復路入り)／帰宅('return_done'=解放)を各1回 collect（0045）。結果は battle_logs へ。
+  async function autoCollect(dno, k) {
     try {
       const res = await ChikarianAPI.collectBossResult(dno);
-      flash(res && res.canceled ? `デッキ${dno} 帰還` : `デッキ${dno} 帰還（報告書に記録）`);
-    } catch (e) { /* NOT_ON_SORTIE 等（既に解放済み）は無視 */ }
+      flash(res && res.returning ? `デッキ${dno} 到着・帰還中（報告書に記録）` : `デッキ${dno} 帰還`);
+    } catch (e) { if (/STILL_/.test((e && e.message) || '')) delete collectedRef.current[k]; }  // 復路未完は次tick再試行・NOT_ON_SORTIE等はキー保持
     finally { await refetchSorties(); try { await onRefresh(); } catch (e) {} }
   }
   useEffect(() => {
     sorties.forEach(s => {
       const L = bossLivePhase(s, clockOffset, now);
       if (L.phase === 'arrived' || L.phase === 'return_done') {
-        const k = s.deck_no + ':' + s.started_at;
-        if (!collectedRef.current[k]) { collectedRef.current[k] = true; autoCollect(s.deck_no); }
+        const k = s.deck_no + ':' + s.started_at + ':' + L.phase;
+        if (!collectedRef.current[k]) { collectedRef.current[k] = true; autoCollect(s.deck_no, k); }
       }
     });
   }, [sorties, now, clockOffset]);
