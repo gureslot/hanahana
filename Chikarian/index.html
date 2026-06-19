@@ -1508,11 +1508,11 @@ function DeckSlotArt({ cardKey }) {
   return <img src={'./images/' + cardKey + '.png'} alt="" onError={() => setErr(true)} style={deckS.slotImg} />;
 }
 
-function DeckScreen({ profile, cards, refreshAll, back, flash }) {
+function DeckScreen({ profile, cards, refreshAll, back, flash, initialDeckNo }) {
   const maxDecks = Math.min(2 + Math.floor(((profile && profile.cleared_stage) || 0) / 2), 6); // balance §10
   const [decks, setDecks] = useState(null);
   const [spSet, setSpSet] = useState(null);     // {card_id:true} 本日離脱中
-  const [deckNo, setDeckNo] = useState(1);
+  const [deckNo, setDeckNo] = useState(initialDeckNo || 1);
   const [picking, setPicking] = useState(null); // 編集中の枠 index or null
   const [busy, setBusy] = useState(false);      // 即コミット中（二重防止）
   const [moveConfirm, setMoveConfirm] = useState(null); // {cardId, slot, fromDeckNo} 他デッキ移動の確認
@@ -1846,11 +1846,17 @@ function bossSortieName(bossKey) {
   return (st && st.bosses[idx]) ? st.bosses[idx].name : bossKey;
 }
 
+const BUKI_CAP = { n: { base: 80, max: 240, lvcap: 30 }, r: { base: 120, max: 400, lvcap: 40 }, sr: { base: 160, max: 560, lvcap: 50 }, ssr: { base: 200, max: 800, lvcap: 60 } };  // 武気の充填量(枠上限)＝0017準拠
+const BUKI_COLOR = { crude: '#9aa0a6', refined: '#7ec8ff', enchanted: '#c08bff', holy: '#ffd86a' };  // 質ごとのゲージ色
+function bukiCapacity(card) { if (/_sp$/.test(card.card_key || '')) return 0; const r = (parseCardKey(card.card_key) || {}).rarity || 'n'; const b = BUKI_CAP[r] || BUKI_CAP.n; return Math.floor(b.base + (b.max - b.base) * ((card.lv || 1) - 1) / (b.lvcap - 1)); }
+
 function BossScreen({ profile, cards, onRefresh, back, flash }) {
   const [bosses, setBosses] = useState(null);
   const [decks, setDecks] = useState(null);
   const [skillMap, setSkillMap] = useState({});
   const [spSet, setSpSet] = useState({});                              // SP離脱中（card_id→true）。出撃シートで離脱SPを除外表示
+  const [detailCard, setDetailCard] = useState(null);                  // カードタップ→CardDetail オーバーレイ
+  const [editDeckNo, setEditDeckNo] = useState(null);                  // 編成ボタン→DeckScreen オーバーレイ
   const [deckNo, setDeckNo] = useState(1);
   const cleared = (profile && profile.cleared_stage) || 0;
   const [stage, setStage] = useState(() => Math.min(cleared + 1, 8));   // 既定＝次の未クリア面（フロンティア）
@@ -2034,13 +2040,22 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
                   const topRight = lock === 'boss' ? '出撃中' : (lock === 'tansaku' ? '探索中' : '総合 ' + deckTotal(n).toLocaleString());
                   return (
                     <div key={n} className={'boss-deck2' + (n === deckNo ? ' sel' : '') + (blocked ? ' busy' : '')} onClick={() => { if (!blocked) setDeckNo(n); }}>
-                      <div className="boss-deck2Top"><span>デッキ{n}</span><span>{topRight}</span></div>
+                      <div className="boss-deck2Top">
+                        <span>デッキ{n}<button onClick={(e) => { e.stopPropagation(); setEditDeckNo(n); }} style={{ marginLeft: 8, fontFamily: 'inherit', fontSize: 10, fontWeight: 800, color: '#ffe39a', background: 'rgba(60,40,80,.6)', border: '1px solid rgba(232,194,90,.5)', borderRadius: 8, padding: '2px 8px', cursor: 'pointer' }}>✎ 編成</button></span>
+                        <span>{topRight}</span>
+                      </div>
                       <div className="boss-deck2Cards">
                         {members.map((c, si) => c
-                          ? <div key={si} className="boss-deck2Card" style={spSet[c.id] ? { position: 'relative' } : undefined}>
+                          ? <div key={si} className="boss-deck2Card" style={{ position: 'relative', cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); setDetailCard(c); }}>
                               <div style={spSet[c.id] ? { opacity: .35, filter: 'grayscale(1)' } : undefined}><CardThumb card={c} small /></div>
                               {spSet[c.id] && <div style={{ position: 'absolute', top: 3, left: 0, right: 0, textAlign: 'center', fontSize: 9, fontWeight: 800, color: '#fff', textShadow: '0 1px 2px #000' }}>離脱中</div>}
                               <div className="boss-deck2Nm">{cardFullName(c)}</div>
+                              {(() => { if (/_sp$/.test(c.card_key || '')) return <div style={{ fontSize: 8, color: '#8a7a9a', textAlign: 'center', marginTop: 3 }}>武気なし</div>;
+                                const capv = bukiCapacity(c), filled = c.loaded_buki || 0, pct = capv > 0 ? Math.min(100, filled / capv * 100) : 0;
+                                return <div style={{ marginTop: 3 }}>
+                                  <div style={{ height: 4, borderRadius: 2, background: 'rgba(255,255,255,.14)', overflow: 'hidden' }}><div style={{ height: '100%', width: pct + '%', background: BUKI_COLOR[c.quality] || '#9a7' }} /></div>
+                                  <div style={{ fontSize: 8, color: '#cdb488', textAlign: 'center', marginTop: 1 }}>{filled}/{capv}</div>
+                                </div>; })()}
                             </div>
                           : <div key={si} className="boss-deck2Empty">空き</div>)}
                       </div>
@@ -2055,6 +2070,22 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
           );
         })()}
       </div>
+
+      {/* カードタップ→詳細（スキル＋武気充填）。戻るで出撃シートに復帰 */}
+      {detailCard && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 200, overflowY: 'auto', background: '#0a0608' }}>
+          <CardDetail card={detailCard} cards={cards} profile={profile} skillMap={skillMap} refreshAll={onRefresh} onSelect={setDetailCard} flash={flash}
+            back={async () => { setDetailCard(null); try { await onRefresh(); } catch (e) {} }} />
+        </div>
+      )}
+
+      {/* 編成ボタン→DeckScreen。戻るでデッキ内容を反映して出撃シートに復帰 */}
+      {editDeckNo !== null && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 200, overflowY: 'auto', background: '#0a0608' }}>
+          <DeckScreen profile={profile} cards={cards} refreshAll={onRefresh} flash={flash} initialDeckNo={editDeckNo}
+            back={async () => { setEditDeckNo(null); try { setDecks(await ChikarianAPI.getDecks() || []); } catch (e) {} await refetchSorties(); try { await onRefresh(); } catch (e) {} }} />
+        </div>
+      )}
     </div>
   );
 }
