@@ -537,6 +537,7 @@ const HS = {
   fill: { width: '100%', height: '100%', objectFit: 'contain' },
   cardArtImg: { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' },
   houchiImg: { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' },
+  fleetPill: { display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(20,11,16,.8)', border: '1px solid rgba(232,194,90,.5)', borderRadius: 12, padding: '4px 9px' },
 };
 
 // リソースアイコン（画像→失敗時は絵文字/記号 fallback）
@@ -565,9 +566,18 @@ function Home({ profile, go, flash }) {
     } catch (e) {}
   }, []);
 
-  // TODO(pills): 出撃/探索ピルと放置「！」通知は Home に実データ（tansaku_states / cards.tansaku_deck_no /
-  //   放置報酬の受領可否）が渡っていないため省略。データ層・App ルーターを変えずに配線できるようになったら復活。
-  //   ・出撃ピル: 本番のボス戦は即時完結で「出撃中」状態が無いため恒久的に省略。
+  // 出撃中（ボス）／探索中（探索）の部隊数。Home 自身が取得（30秒ごと更新）。
+  const [fleetBoss, setFleetBoss] = useState(0);
+  const [fleetTansaku, setFleetTansaku] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    async function load() {
+      try { const d = await ChikarianAPI.getBossSorties(); if (alive) setFleetBoss(((d && d.sorties) || []).length); } catch (e) {}
+      try { const t = await ChikarianAPI.getTansaku(); if (alive) setFleetTansaku((t || []).filter(x => x.depth).length); } catch (e) {}
+    }
+    load(); const iv = setInterval(load, 30000);
+    return () => { alive = false; clearInterval(iv); };
+  }, []);
 
   return (
     <div style={S.root}>
@@ -592,6 +602,14 @@ function Home({ profile, go, flash }) {
             <div style={S.resCol}><div style={S.resLabel}>メダル</div><div style={S.resVal}>{medal.toLocaleString()}</div></div>
           </div>
         </header>
+
+        {/* 出撃中（ボス）／探索中の部隊 */}
+        {(fleetBoss > 0 || fleetTansaku > 0) && (
+          <div style={{ display: 'flex', gap: 8, padding: '6px 2px 0' }}>
+            {fleetBoss > 0 && <span style={HS.fleetPill}><span style={{ fontSize: 13 }}>⚔</span><span style={{ fontSize: 11, color: GOLD_HI }}>出撃 ×{fleetBoss}</span></span>}
+            {fleetTansaku > 0 && <span style={HS.fleetPill}><span style={{ fontSize: 13 }}>🧭</span><span style={{ fontSize: 11, color: GOLD_HI }}>探索 ×{fleetTansaku}</span></span>}
+          </div>
+        )}
 
         {/* 右側 小アイコン */}
         <div style={S.sideIcons}>
