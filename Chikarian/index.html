@@ -1028,16 +1028,24 @@ function computeStats(card) {
 }
 
 function CardThumb({ card, onClick, small }) {
+  const [imgErr, setImgErr] = useState(false);
   const info = parseCardKey(card.card_key);
   const col = RAR_COL[info.rarity] || '#b9b2a6';
   return (
     <button onClick={onClick} style={{ background: 'none', border: 'none', padding: 0, cursor: onClick ? 'pointer' : 'default', width: '100%' }}>
       <div style={{ width: '100%', aspectRatio: '5/7', borderRadius: 10, border: `1.5px solid ${col}`, background: 'linear-gradient(165deg,#2a1430,#140913)', position: 'relative', overflow: 'hidden', display: 'grid', placeItems: 'center', boxShadow: `0 0 8px ${col}33` }}>
-        <span style={{ fontSize: small ? 22 : 28 }}>❖</span>
+        {/* カード絵（GCard と同方式・失敗時はグラデ背景＋❖＋名前＋属性/武器） */}
+        {imgErr
+          ? <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 4, textAlign: 'center' }}>
+              <div style={{ fontSize: small ? 22 : 28 }}>❖</div>
+              <div style={{ fontSize: 10, color: '#e7d3a6', marginTop: 2 }}>{info.name}</div>
+              {(info.attr || info.weap) && <div style={{ fontSize: 10, color: '#cdb488' }}>{info.attr}{info.weap}</div>}
+            </div>
+          : <img src={'./images/' + card.card_key + '.png'} alt="" onError={() => setImgErr(true)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
         <div style={{ position: 'absolute', top: 3, left: 3, fontSize: 9, fontWeight: 800, color: '#1a0f06', background: col, borderRadius: 4, padding: '0 5px' }}>{RAR_LABEL[info.rarity]}</div>
         {card.locked && <div style={{ position: 'absolute', top: 3, right: 3, fontSize: 11 }}>🔒</div>}
         <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '6px 2px 3px', fontSize: 9, textAlign: 'center', color: '#fff3c8', background: 'linear-gradient(0deg,rgba(0,0,0,.82),transparent)' }}>
-          {info.attr}{info.weap}{info.isSp}{' '}{card.lv ? ('Lv' + card.lv) : ''}{card.star ? ' ★' + card.star : ''}
+          {info.attr}{info.weap}{' '}{card.lv ? ('Lv' + card.lv) : ''}{card.star ? ' ★' + card.star : ''}
         </div>
       </div>
     </button>
@@ -1241,6 +1249,42 @@ const dS = {
 // 可否(コスト上限11・本数・SP離脱・重複)の最終判定はサーバ(update_deck)。ここは目安表示のみ。
 const COST_BY_RAR = { n: 1, r: 2, sr: 3, ssr: 5, sp: 4 };   // N1/R2/SR3/SSR5/SP4（サーバ0005と一致・確定）。レア判定は card_key 末尾。
 
+/* デッキ編成画面 専用スタイル（deck-mockup の見た目移植・共有 S は上書きしない） */
+const deckS = {
+  tabs: { display: 'flex', gap: 6, justifyContent: 'center', flexWrap: 'wrap', margin: '12px 0' },
+  tab: { fontFamily: 'inherit', fontSize: 12, letterSpacing: 1, color: GOLD_HI, background: PANEL, border: '1.5px solid rgba(232,194,90,.5)', borderRadius: 16, padding: '7px 15px', cursor: 'pointer' },
+  tabSel: { background: 'linear-gradient(180deg,rgba(255,228,154,.28),rgba(232,181,77,.18))', boxShadow: '0 0 12px rgba(255,200,90,.3)' },
+  tabLocked: { color: '#8a7c60', cursor: 'default' },
+  slots: { display: 'flex', gap: 10, padding: '16px 4px 8px', justifyContent: 'center' },
+  slot: { flex: 1, maxWidth: 128, aspectRatio: '5/7', borderRadius: 12, border: '1.5px dashed rgba(232,194,90,.5)', background: 'rgba(0,0,0,.3)', position: 'relative', cursor: 'pointer', overflow: 'hidden' },
+  slotFilled: { borderStyle: 'solid' },
+  empty: { position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', fontSize: 30, color: '#6a5a3a' },
+  emptySmall: { display: 'block', fontSize: 10, color: '#6a5a3a', letterSpacing: 1, marginTop: 4 },
+  slotImg: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' },
+  slotPh: { position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', fontSize: 26, color: '#7a5a3a', background: '#241018' },
+  meta: { position: 'absolute', left: 0, right: 0, bottom: 0, padding: 5, background: 'linear-gradient(0deg,rgba(0,0,0,.85),transparent)', display: 'flex', gap: 4, alignItems: 'center' },
+  rm: { position: 'absolute', top: 4, right: 4, width: 18, height: 18, borderRadius: '50%', background: 'rgba(0,0,0,.6)', border: '1px solid rgba(232,194,90,.5)', color: '#ffd', fontSize: 11, display: 'grid', placeItems: 'center', zIndex: 2, cursor: 'pointer' },
+  badge: { fontSize: 9, fontWeight: 800, padding: '1px 5px', borderRadius: 5, color: '#16100a' },
+  wbadge: { fontSize: 9, fontWeight: 800, padding: '1px 5px', borderRadius: 5, color: '#16100a', background: '#cdb488' },
+  summary: { textAlign: 'center', padding: '12px 16px 0' },
+  legend: { fontSize: 10, color: '#9a8c70', marginTop: 6, lineHeight: 1.6 },
+};
+const DECK_ATTR_COL = { '花': '#e86b8a', '葉': '#5fa564', '芯': '#e8c25a' };  // mockup --hana/--ha/--shin
+function DeckBadges({ info }) {
+  // SP は無属性＝SPバッジ、それ以外は属性＋武器バッジ（色は mockup 踏襲）
+  if (info.rarity === 'sp') return <span style={{ ...deckS.badge, background: 'linear-gradient(90deg,#ffe39a,#e8b54d)' }}>SP</span>;
+  return (<>
+    <span style={{ ...deckS.badge, background: DECK_ATTR_COL[info.attr] || '#888' }}>{info.attr}</span>
+    <span style={deckS.wbadge}>{info.weap}</span>
+  </>);
+}
+function DeckSlotArt({ cardKey }) {
+  // カード絵を cover 表示・失敗時は ph プレースホルダ（GCard / CardThumb と同方式）
+  const [err, setErr] = useState(false);
+  if (err) return <div style={deckS.slotPh}>❖</div>;
+  return <img src={'./images/' + cardKey + '.png'} alt="" onError={() => setErr(true)} style={deckS.slotImg} />;
+}
+
 function DeckScreen({ profile, cards, back, flash }) {
   const maxDecks = Math.min(2 + Math.floor(((profile && profile.cleared_stage) || 0) / 2), 6); // balance §10
   const [decks, setDecks] = useState(null);
@@ -1335,40 +1379,43 @@ function DeckScreen({ profile, cards, back, flash }) {
         <div style={{ textAlign: 'center', fontSize: 20, fontWeight: 800, letterSpacing: 3, color: GOLD_HI }}>デッキ編成</div>
         <div style={{ textAlign: 'center', fontSize: 11, color: '#cdb488', marginTop: 2 }}>解放 {maxDecks} 本（2＋クリア面/2・上限6）</div>
 
-        {/* デッキ番号タブ */}
-        <div style={{ display: 'flex', gap: 6, justifyContent: 'center', flexWrap: 'wrap', margin: '12px 0' }}>
-          {Array.from({ length: maxDecks }, (_, i) => i + 1).map(n => (
-            <button key={n} onClick={() => setDeckNo(n)} style={{ ...S.sideSwitch, padding: '6px 16px', ...(n === deckNo ? S.sideSwitchOn : {}) }}>デッキ{n}</button>
-          ))}
+        {/* デッキ番号タブ（mockup .tab/.tab.sel/.tab.locked／解放数は maxDecks まで） */}
+        <div style={deckS.tabs}>
+          {Array.from({ length: 6 }, (_, i) => i + 1).map(n => {
+            const locked = n > maxDecks;
+            return (
+              <button key={n} onClick={() => { if (!locked) setDeckNo(n); }} style={{ ...deckS.tab, ...(n === deckNo ? deckS.tabSel : {}), ...(locked ? deckS.tabLocked : {}) }}>デッキ{n}{locked ? ' 🔒' : ''}</button>
+            );
+          })}
         </div>
 
-        {/* 3枠 */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8 }}>
+        {/* 3枠（mockup .slot：カード絵 cover・空きはダッシュ枠＋＋・右上×除去・下帯に属性/武器バッジ） */}
+        <div style={deckS.slots}>
           {[0, 1, 2].map(slot => {
             const id = draft[slot]; const c = id ? cardById[id] : null;
             const sp = c && spSet && spSet[c.id];
+            const info = c ? parseCardKey(c.card_key) : null;
             return (
-              <div key={slot} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <div style={{ fontSize: 10, color: '#cdb488', textAlign: 'center' }}>枠{slot + 1}</div>
+              <div key={slot} onClick={() => setPicking(slot)} style={{ ...deckS.slot, ...(c ? deckS.slotFilled : {}) }}>
                 {c
-                  ? <div style={{ position: 'relative' }}>
-                      <CardThumb card={c} onClick={() => setPicking(slot)} />
+                  ? <>
+                      <div onClick={(e) => { e.stopPropagation(); removeAt(slot); }} style={deckS.rm}>×</div>
+                      <DeckSlotArt cardKey={c.card_key} />
+                      <div style={deckS.meta}><DeckBadges info={info} /></div>
                       {sp && <div style={badge('#ff6a7a')}>離脱中</div>}
-                    </div>
-                  : <button onClick={() => setPicking(slot)} style={{ width: '100%', aspectRatio: '5/7', borderRadius: 10, border: '1.5px dashed rgba(232,194,90,.4)', background: 'rgba(0,0,0,.3)', color: '#cdb488', fontSize: 13, cursor: 'pointer' }}>＋ 追加</button>}
-                {c && <button onClick={() => removeAt(slot)} style={{ fontSize: 11, color: '#cdb488', background: 'none', border: 'none', cursor: 'pointer' }}>外す</button>}
+                    </>
+                  : <div style={deckS.empty}>＋<small style={deckS.emptySmall}>枠 {slot + 1}</small></div>}
               </div>
             );
           })}
         </div>
 
-        {/* コスト目安 */}
-        <div style={{ marginTop: 14, padding: '8px 12px', background: PANEL, border: BORDER, borderRadius: 8 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: ci.total > 11 ? '#ff6a7a' : GOLD_HI }}>
-            合計コスト目安 {ci.total} / 11{ci.total > 11 ? '（上限超過）' : ''}
+        {/* コスト目安（mockup .summary：中央寄せ・本番の文言を維持） */}
+        <div style={deckS.summary}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: ci.total > 11 ? '#ff6a7a' : GOLD_HI }}>
+            合計コスト目安 <b style={{ fontSize: 24, color: ci.total > 11 ? '#ff6a7a' : '#ffe39a', textShadow: '0 0 12px rgba(255,200,90,.5)', marginLeft: 6 }}>{ci.total}</b> / 11{ci.total > 11 ? '（上限超過）' : ''}
           </div>
-          <div style={{ fontSize: 10, color: '#a98f66', marginTop: 3 }}>コスト N1 / R2 / SR3 / SSR5 / SP4（確定）。三すくみ 有利×1.2・不利×0.8（balance 2026-06-14）。</div>
-          <div style={{ fontSize: 10, color: '#a98f66', marginTop: 1 }}>可否（コスト上限11・本数・SP離脱・重複）はサーバ判定です。</div>
+          <div style={deckS.legend}>コスト N1 / R2 / SR3 / SSR5 / SP4（確定）。三すくみ 有利×1.2・不利×0.8（balance 2026-06-14）。<br />可否（コスト上限11・本数・SP離脱・重複）はサーバ判定です。</div>
         </div>
 
         <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 16 }}>
