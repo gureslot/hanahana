@@ -1654,6 +1654,8 @@ function BossScreen({ profile, onRefresh, back, flash }) {
   const maxDecks = Math.min(2 + Math.floor(((profile && profile.cleared_stage) || 0) / 2), 6);
   const triesUsed = (profile && profile.boss_date === jstToday()) ? (profile.boss_count_today || 0) : 0;
   const triesLeft = Math.max(0, 3 - triesUsed);
+  const BOSS_TEST_NO_LIMIT = true;                                       // ★テスト用・本番前に false か削除
+  const effTriesLeft = BOSS_TEST_NO_LIMIT ? 99 : triesLeft;             // 出撃可否のみ解放（表示の triesLeft は実数のまま）
 
   async function refetchSorties() {
     try { const d = await ChikarianAPI.getBossSorties(); setSorties((d && d.sorties) || []); setClockOffset(d && d.now ? (new Date(d.now).getTime() - Date.now()) : 0); }
@@ -1804,8 +1806,8 @@ function BossScreen({ profile, onRefresh, back, flash }) {
                   </>
                 : <div className="boss-stat"><span className="k">敵情報</span><span className="v" style={{ color: '#ff6a7a' }}>boss_master にデータがありません</span></div>}
               <div className="boss-note">出撃すると約30分（テスト中30秒）デッキが出払う。到着後に結果を回収（報告書）。三すくみ 有利×1.2／不利×0.8。勝敗・損失・報酬はサーバ判定。</div>
-              <button className="boss-go" onClick={() => startSortie(role)} disabled={busy || triesLeft <= 0 || deckBusy}>{busy ? '処理中…' : (deckBusy ? `デッキ${deckNo}は出撃中` : (triesLeft <= 0 ? '本日の挑戦は終了' : `出撃（デッキ${deckNo}）`))}</button>
-              {triesLeft <= 0 && !deckBusy && <div className="boss-warn">本日の挑戦回数を使い切りました（0時に回復）</div>}
+              <button className="boss-go" onClick={() => startSortie(role)} disabled={busy || effTriesLeft <= 0 || deckBusy}>{busy ? '処理中…' : (deckBusy ? `デッキ${deckNo}は出撃中` : (effTriesLeft <= 0 ? '本日の挑戦は終了' : `出撃（デッキ${deckNo}）`))}</button>
+              {effTriesLeft <= 0 && !deckBusy && <div className="boss-warn">本日の挑戦回数を使い切りました（0時に回復）</div>}
               {deckBusy && <div className="boss-warn">別のデッキを選ぶか、出撃中デッキの回収/キャンセルをしてください</div>}
             </>
           );
