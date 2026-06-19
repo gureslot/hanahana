@@ -2672,8 +2672,54 @@ const RENSEI_RATE = { blue: 10, red: 33, rainbow: 100 };   // 確定（青10/赤
 const COLOR_JA = { blue: '青', red: '赤', rainbow: '虹' };
 const TENI_COST = 3000;   // メダル（確定）
 
+/* スキル錬成/転移画面 専用スタイル（skill-mockup の暖色意匠・sk- スコープ・共有 S 不変） */
+const SKILL_CSS = `
+.sk-root{position:relative; width:100%; max-width:480px; margin:0 auto; min-height:100dvh; overflow-y:auto; color:#efe6d5; background:radial-gradient(120% 80% at 50% -10%, #1d1412 0%, #15100f 38%, #0b0809 100%);}
+.sk-wrap{padding:0 16px 28px;}
+.sk-hdr{padding:18px 4px 0; text-align:center;}
+.sk-hdr h1{margin:4px 0 0; font-size:21px; font-weight:800; color:#ecd28a; text-shadow:0 1px 0 #000,0 0 18px rgba(199,161,78,.25);}
+.sk-deco{color:#c7a14e; font-size:11px; letter-spacing:.42em; opacity:.8;}
+.sk-divider{height:1px; margin:14px 6px 0; background:linear-gradient(90deg,transparent,#8c7038 18%,#c7a14e 50%,#8c7038 82%,transparent);}
+.sk-modes{display:flex; gap:8px; padding:14px 0 6px;}
+.sk-mode{flex:1; padding:11px 0; text-align:center; cursor:pointer; border-radius:3px; border:1px solid #3a2c22; background:linear-gradient(180deg,#181210,#120d0c); color:#b6a890; font-size:14px; font-weight:600; font-family:inherit;}
+.sk-mode .sub{display:block; font-size:9px; letter-spacing:.2em; margin-top:2px; opacity:.7;}
+.sk-mode.on{color:#0c0a09; border-color:#c7a14e; background:linear-gradient(180deg,#ecd28a,#c7a14e); box-shadow:0 0 14px rgba(199,161,78,.35);}
+.sk-card{display:flex; gap:12px; padding:13px; margin-top:12px; border-radius:4px; border:1px solid #3a2c22; background:linear-gradient(180deg,#241a17,#1c1513);}
+.sk-art{width:64px; height:90px; flex:none; border-radius:3px; position:relative; border:1px solid #8c7038; overflow:hidden; background:#241a16;}
+.sk-art img{width:100%; height:100%; object-fit:cover;} .sk-art .g{position:absolute; inset:0; display:grid; place-items:center; font-size:26px; color:#8c7038;}
+.sk-art .rare{position:absolute; top:-1px; right:-1px; font-size:10px; font-weight:800; padding:2px 6px; color:#0c0a09; background:#c7a14e; border-radius:0 3px 0 6px; z-index:2;}
+.sk-cmeta{flex:1; min-width:0;} .sk-cname{font-size:16px; font-weight:700; color:#efe6d5;} .sk-ctag{font-size:11px; color:#7d7160; margin-top:1px;} .sk-clv{font-size:11px; color:#c7a14e; margin-top:7px;}
+.sk-seclabel{font-size:11px; letter-spacing:.3em; color:#c7a14e; margin:16px 0 8px; opacity:.85;}
+.sk-slot{padding:11px 12px; border-radius:4px; margin-bottom:8px; cursor:pointer; border:1px solid #3a2c22; background:#150f0d; position:relative; width:100%; text-align:left; display:block; color:inherit; font-family:inherit;}
+.sk-slot.sel{border-color:#c7a14e; background:#1a140d; box-shadow:0 0 0 1px #c7a14e inset;}
+.sk-slot.empty{border-style:dashed; color:#7d7160; cursor:default; text-align:center; font-size:13px;}
+.sk-slot.off{opacity:.5; cursor:default;}
+.sk-slot .pin{position:absolute; top:9px; right:11px; font-size:9px; letter-spacing:.15em; color:#8c7038;}
+.sk-sn{font-size:14px; font-weight:700; color:#efe6d5;} .sk-se{font-size:11px; color:#b6a890; margin-top:3px;} .sk-sm{font-size:10px; color:#7d7160; margin-top:4px;}
+.sk-crys{display:flex; gap:8px; margin-top:12px;}
+.sk-cry{flex:1; padding:10px 4px 9px; text-align:center; cursor:pointer; border-radius:4px; border:1px solid #3a2c22; background:#0f0c0b;}
+.sk-cry .gem{width:26px; height:26px; margin:0 auto 5px; transform:rotate(45deg); border-radius:5px;}
+.sk-cry.ao .gem{background:linear-gradient(135deg,#7fb6ec,#3a78b8); box-shadow:0 0 12px rgba(58,120,184,.5);}
+.sk-cry.aka .gem{background:linear-gradient(135deg,#e87f8f,#b83b4d); box-shadow:0 0 12px rgba(184,59,77,.5);}
+.sk-cry.niji .gem{background:conic-gradient(from 0deg,#e87f8f,#ecd28a,#7fb6ec,#a78fd6,#e87f8f); box-shadow:0 0 14px rgba(255,255,255,.45);}
+.sk-cry .nm{font-size:11px; font-weight:600; color:#b6a890; letter-spacing:.2em;}
+.sk-cry .rate{font-size:24px; font-weight:800; margin-top:5px;}
+.sk-cry.ao .rate{color:#7fb6ec;} .sk-cry.aka .rate{color:#e87f8f;} .sk-cry.niji .rate{color:#ecd28a;}
+.sk-cry .hold{font-size:11px; color:#b6a890; margin-top:7px; padding-top:6px; border-top:1px solid #3a2c22;}
+.sk-cry.on{border-color:#c7a14e; background:#171210; box-shadow:0 0 12px rgba(199,161,78,.3);}
+.sk-cta{display:block; width:100%; margin-top:16px; padding:14px 0; border:none; border-radius:4px; cursor:pointer; font-family:inherit; font-size:16px; font-weight:800; letter-spacing:.16em; color:#0c0a09; background:linear-gradient(180deg,#ecd28a,#c7a14e); box-shadow:0 0 16px rgba(199,161,78,.3);}
+.sk-cta:disabled{filter:grayscale(.5) brightness(.8); cursor:not-allowed;}
+.sk-back{display:block; text-align:center; margin-top:14px; font-size:12px; color:#b6a890; cursor:pointer; background:none; border:none; font-family:inherit; width:100%;}
+.sk-hint{font-size:11px; color:#7d7160; margin:8px 0 2px; line-height:1.5;}
+.sk-banner{padding:9px 12px; margin-top:10px; border-radius:4px; border:1px solid #3a2c22; font-size:12px;}
+.sk-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:6px; max-height:220px; overflow-y:auto;}
+.sk-dst{display:flex; gap:8px;}
+.sk-dstb{flex:1; padding:10px 0; text-align:center; cursor:pointer; border-radius:4px; border:1px solid #3a2c22; background:#150f0d; color:#b6a890; font-family:inherit; font-size:13px; font-weight:700;}
+.sk-dstb.on{color:#0c0a09; border-color:#c7a14e; background:linear-gradient(180deg,#ecd28a,#c7a14e);}
+`;
 function SkillView({ base, cards, profile, skillMap, refreshAll, onBack, flash }) {
   const [tab, setTab] = useState('rensei');
+  const [artErr, setArtErr] = useState(false);
   const [skills, setSkills] = useState(null);   // base のスキル
   const [busy, setBusy] = useState(false);
   // 錬成
@@ -2714,67 +2760,79 @@ function SkillView({ base, cards, profile, skillMap, refreshAll, onBack, flash }
   const bySlot = {}; skills.forEach(s => { bySlot[s.slot] = s; });
   const emptySlots = [1, 2].filter(s => !bySlot[s]);
 
+  const bInfo = parseCardKey(base.card_key);
   return (
-    <div style={S.root}><div style={S.bg} /><div style={S.vignette} />
-      <div style={{ position: 'relative', zIndex: 2, minHeight: '100dvh', display: 'flex', flexDirection: 'column', padding: '14px 14px 18px', overflowY: 'auto' }}>
-        <button onClick={onBack} style={{ ...S.lineBtn, alignSelf: 'flex-start', padding: '6px 16px' }}>‹ 戻る</button>
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'center', margin: '10px 0' }}>
-          <button onClick={() => setTab('rensei')} style={{ ...S.sideSwitch, ...(tab === 'rensei' ? S.sideSwitchOn : {}) }}>錬成（強化）</button>
-          <button onClick={() => setTab('teni')} style={{ ...S.sideSwitch, ...(tab === 'teni' ? S.sideSwitchOn : {}) }}>転移</button>
+    <div className="sk-root"><style>{SKILL_CSS}</style>
+      <div className="sk-wrap">
+        <div className="sk-hdr"><span className="sk-deco">CHIKARIAN</span><h1>スキル錬成・転移</h1><div className="sk-divider" /></div>
+
+        {/* モード切替（錬成/転移） */}
+        <div className="sk-modes">
+          <div className={'sk-mode' + (tab === 'rensei' ? ' on' : '')} onClick={() => setTab('rensei')}>錬成<span className="sub">強化</span></div>
+          <div className={'sk-mode' + (tab === 'teni' ? ' on' : '')} onClick={() => setTab('teni')}>転移<span className="sub">移す</span></div>
+        </div>
+
+        {/* 受け側カード */}
+        <div className="sk-card">
+          <div className="sk-art">{artErr ? <span className="g">❖</span> : <img src={'./images/' + base.card_key + '.png'} alt="" onError={() => setArtErr(true)} />}<span className="rare">{RAR_LABEL[bInfo.rarity]}</span></div>
+          <div className="sk-cmeta">
+            <div className="sk-cname">{bInfo.name}</div>
+            <div className="sk-ctag">{bInfo.isSp ? '無属性・装備なし' : `${bInfo.attr}・${bInfo.weap}`}　Lv {base.lv}／★{base.star || 0}</div>
+            <div className="sk-clv">スキル {skills.length} / 3 枠</div>
+          </div>
         </div>
 
         {/* ===== 錬成 ===== */}
         {tab === 'rensei' && <>
-          {rResult && <div style={{ padding: '8px 12px', marginBottom: 10, borderRadius: 8, border: '1px solid rgba(232,194,90,.4)', background: 'rgba(40,30,20,.4)', fontSize: 12, color: rResult.success ? '#ffe28a' : '#ff9aa8' }}>
+          {rResult && <div className="sk-banner" style={{ color: rResult.success ? '#ecd28a' : '#e87f8f', borderColor: rResult.success ? '#8c7038' : '#b83b4d' }}>
             {rResult.success ? '成功' : '失敗'}：{skName(rResult.skill_key)} Lv{rResult.old_lv}→{rResult.new_lv}（{COLOR_JA[rResult.color]} 消費{rResult.cost}・残{rResult.crystal_remaining}）
           </div>}
-          <div style={{ fontSize: 11, color: '#cdb488', marginBottom: 6 }}>強化するスキル枠を選択（lv_upgradable=false は不可）</div>
+          <div className="sk-seclabel">強化するスキル枠（lv_upgradable=false は不可）</div>
           {[0, 1, 2].map(slot => {
             const row = bySlot[slot];
             const upg = row ? skUpg(row.skill_key) : false;
             const sel = selSlot === slot;
+            const m = row ? skillMap[row.skill_key] : null;
+            if (!row) return <div key={slot} className="sk-slot empty">{slot === 0 ? '固定スキル' : '空きスロット' + slot}（空き）</div>;
             return (
-              <button key={slot} onClick={() => row && upg && setSelSlot(slot)} disabled={!row || !upg}
-                style={{ display: 'block', width: '100%', textAlign: 'left', marginBottom: 6, padding: '8px 12px', borderRadius: 8, cursor: (row && upg) ? 'pointer' : 'default', background: sel ? 'rgba(232,194,90,.18)' : PANEL, border: sel ? '1.5px solid ' + GOLD : BORDER, opacity: (row && !upg) ? .5 : 1 }}>
-                <div style={{ fontSize: 10, color: '#cdb488' }}>{slot === 0 ? '固定スキル' : '空きスロット' + slot}</div>
-                {row
-                  ? <div style={{ fontSize: 13, color: GOLD_HI, fontWeight: 700 }}>{skName(row.skill_key)} <span style={{ fontSize: 11, color: '#cdb488' }}>Lv{row.skill_lv}{!upg ? '・強化不可' : ''}</span>
-                      {skillMap[row.skill_key] && skillMap[row.skill_key].notes && <span style={{ display: 'block', fontSize: 10, color: '#a98f66', fontWeight: 400 }}>{skillMap[row.skill_key].notes}</span>}
-                    </div>
-                  : <div style={{ fontSize: 12, color: '#a98f66' }}>空き</div>}
+              <button key={slot} onClick={() => upg && setSelSlot(slot)} disabled={!upg} className={'sk-slot' + (sel ? ' sel' : '') + (!upg ? ' off' : '')}>
+                <span className="pin">{slot === 0 ? '固定' : '空き' + slot}</span>
+                <div className="sk-sn">{skName(row.skill_key)} <span style={{ fontSize: 11, color: '#c7a14e' }}>Lv{row.skill_lv}{!upg ? '・強化不可' : ''}</span></div>
+                {m && m.notes && <div className="sk-sm">{m.notes}</div>}
               </button>
             );
           })}
 
-          <div style={{ fontSize: 11, color: '#cdb488', margin: '10px 0 6px' }}>クリスタル色（成功率）</div>
-          <div style={{ display: 'flex', gap: 6 }}>
-            {['blue', 'red', 'rainbow'].map(c => {
+          <div className="sk-seclabel">クリスタル色（成功率）</div>
+          <div className="sk-crys">
+            {[['blue', 'ao'], ['red', 'aka'], ['rainbow', 'niji']].map(([c, cls]) => {
               const have = profile ? (profile['crystal_' + c] || 0) : 0;
               return (
-                <button key={c} onClick={() => setColor(c)} style={{ ...S.sideSwitch, flex: 1, padding: '8px 2px', flexDirection: 'column', display: 'flex', ...(c === color ? S.sideSwitchOn : {}) }}>
-                  <span style={{ fontSize: 13, fontWeight: 700 }}>{COLOR_JA[c]} {RENSEI_RATE[c]}%</span>
-                  <span style={{ fontSize: 9, color: '#cdb488' }}>所持 {have}</span>
-                </button>
+                <div key={c} className={'sk-cry ' + cls + (c === color ? ' on' : '')} onClick={() => setColor(c)}>
+                  <div className="gem" /><div className="nm">{COLOR_JA[c]}</div>
+                  <div className="rate">{RENSEI_RATE[c]}<span style={{ fontSize: 14 }}>%</span></div>
+                  <div className="hold">所持 {have}</div>
+                </div>
               );
             })}
           </div>
-          <div style={{ fontSize: 10, color: '#a98f66', marginTop: 6 }}>消費クリスタル数はサーバ算出（カーブ×レア倍率）。成功＝Lv+1／失敗＝消費のみ・Lv据置。</div>
-          <button onClick={rensei} disabled={busy || selSlot == null} style={{ ...S.bigBtn, marginTop: 14, ...((busy || selSlot == null) ? { opacity: .45 } : {}) }}>{busy ? '錬成中…' : '錬成する'}</button>
+          <div className="sk-hint">消費クリスタル数はサーバ算出（カーブ×レア倍率）。成功＝Lv+1／失敗＝消費のみ・Lv据置。</div>
+          <button onClick={rensei} disabled={busy || selSlot == null} className="sk-cta">{busy ? '錬成中…' : '錬成する'}</button>
         </>}
 
         {/* ===== 転移 ===== */}
         {tab === 'teni' && <>
-          {tResult && <div style={{ padding: '8px 12px', marginBottom: 10, borderRadius: 8, border: '1px solid rgba(120,220,140,.4)', background: 'rgba(30,60,40,.3)', fontSize: 12, color: '#bff0cf' }}>
+          {tResult && <div className="sk-banner" style={{ color: '#9fe0a0', borderColor: '#3a7a40' }}>
             転移成功：{skName(tResult.moved_skill)} Lv{tResult.moved_lv} を 枠{tResult.dst_slot} へ（メダル −{Number(tResult.medal_spent || TENI_COST).toLocaleString()}／残 {Number(tResult.medal_remaining || 0).toLocaleString()}）
           </div>}
-          <div style={{ fontSize: 12, color: '#e7d3a6' }}>受け側：{parseCardKey(base.card_key).name}（空き枠 {emptySlots.length ? emptySlots.join('・') : 'なし'}）</div>
+          <div className="sk-hint" style={{ color: '#b6a890' }}>受け側：{bInfo.name}（空き枠 {emptySlots.length ? emptySlots.join('・') : 'なし'}）</div>
           {emptySlots.length === 0
-            ? <div style={{ fontSize: 12, color: '#ff9aa8', marginTop: 10 }}>空き枠がありません（転移先なし）</div>
+            ? <div className="sk-banner" style={{ color: '#e87f8f', borderColor: '#b83b4d' }}>空き枠がありません（転移先なし）</div>
             : <>
-                <div style={{ fontSize: 11, color: '#cdb488', margin: '10px 0 6px' }}>素材カードを選ぶ（同名/別カード可・ロック/SPは不可。素材は消滅）</div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 6, maxHeight: 220, overflowY: 'auto' }}>
+                <div className="sk-seclabel">素材カードを選ぶ（ロック/SPは不可・素材は消滅）</div>
+                <div className="sk-grid">
                   {(cards || []).filter(c => c.id !== base.id && !c.locked && !c.card_key.endsWith('_sp')).map(c => (
-                    <div key={c.id} style={{ outline: srcId === c.id ? '2px solid ' + GOLD : 'none', borderRadius: 10 }}>
+                    <div key={c.id} style={{ outline: srcId === c.id ? '2px solid #c7a14e' : 'none', borderRadius: 10 }}>
                       <CardThumb card={c} small onClick={() => pickSrc(c.id)} />
                     </div>
                   ))}
@@ -2782,37 +2840,39 @@ function SkillView({ base, cards, profile, skillMap, refreshAll, onBack, flash }
 
                 {srcId && (srcSkills === null ? <div style={{ marginTop: 10 }}><div className="spin" /></div>
                   : <>
-                      <div style={{ fontSize: 11, color: '#cdb488', margin: '10px 0 6px' }}>移すスキルを1つ選ぶ</div>
-                      {srcSkills.length === 0 ? <div style={{ fontSize: 11, color: '#a98f66' }}>スキルがありません</div>
+                      <div className="sk-seclabel">移すスキルを1つ選ぶ</div>
+                      {srcSkills.length === 0 ? <div className="sk-hint">スキルがありません</div>
                         : srcSkills.map(s => (
-                          <button key={s.slot} onClick={() => setSrcSlot(s.slot)} style={{ display: 'block', width: '100%', textAlign: 'left', marginBottom: 6, padding: '8px 12px', borderRadius: 8, cursor: 'pointer', background: srcSlot === s.slot ? 'rgba(232,194,90,.18)' : PANEL, border: srcSlot === s.slot ? '1.5px solid ' + GOLD : BORDER }}>
-                            <span style={{ fontSize: 13, color: GOLD_HI, fontWeight: 700 }}>{skName(s.skill_key)}</span> <span style={{ fontSize: 11, color: '#cdb488' }}>Lv{s.skill_lv}（{s.slot === 0 ? '固定' : '空き' + s.slot}）</span>
+                          <button key={s.slot} onClick={() => setSrcSlot(s.slot)} className={'sk-slot' + (srcSlot === s.slot ? ' sel' : '')}>
+                            <span className="pin">{s.slot === 0 ? '固定' : '空き' + s.slot}</span>
+                            <div className="sk-sn">{skName(s.skill_key)} <span style={{ fontSize: 11, color: '#c7a14e' }}>Lv{s.skill_lv}</span></div>
                           </button>
                         ))}
                     </>)}
 
                 {srcId && srcSlot != null && <>
-                  <div style={{ fontSize: 11, color: '#cdb488', margin: '10px 0 6px' }}>受け側の空き枠</div>
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    {emptySlots.map(s => <button key={s} onClick={() => setDstSlot(s)} style={{ ...S.sideSwitch, flex: 1, ...(dstSlot === s ? S.sideSwitchOn : {}) }}>枠{s}</button>)}
+                  <div className="sk-seclabel">受け側の空き枠</div>
+                  <div className="sk-dst">
+                    {emptySlots.map(s => <div key={s} className={'sk-dstb' + (dstSlot === s ? ' on' : '')} onClick={() => setDstSlot(s)}>枠{s}</div>)}
                   </div>
                 </>}
 
-                <button onClick={() => setConfirm(true)} disabled={busy || srcId == null || srcSlot == null || dstSlot == null}
-                  style={{ ...S.bigBtn, marginTop: 14, ...((busy || srcId == null || srcSlot == null || dstSlot == null) ? { opacity: .45 } : {}) }}>転移する（メダル{TENI_COST.toLocaleString()}）</button>
+                <button onClick={() => setConfirm(true)} disabled={busy || srcId == null || srcSlot == null || dstSlot == null} className="sk-cta">転移する（メダル{TENI_COST.toLocaleString()}）</button>
               </>}
         </>}
+
+        <button onClick={onBack} className="sk-back">‹ カードに戻る</button>
       </div>
 
       {/* 転移 確認ポップアップ */}
       {confirm && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.7)', display: 'grid', placeItems: 'center', zIndex: 60, padding: 24 }}>
-          <div style={{ maxWidth: 360, background: '#160a13', border: BORDER, borderRadius: 12, padding: 18, textAlign: 'center' }}>
-            <div style={{ fontSize: 14, color: GOLD_HI, fontWeight: 700, marginBottom: 8 }}>転移の確認</div>
-            <div style={{ fontSize: 12, color: '#e7d3a6', lineHeight: 1.8 }}>素材カードと、<b>選ばなかったスキルも失われます</b>。<br />メダル {TENI_COST.toLocaleString()} を消費します。よろしいですか？</div>
+          <div style={{ maxWidth: 360, background: '#1c1513', border: '1px solid #8c7038', borderRadius: 12, padding: 18, textAlign: 'center' }}>
+            <div style={{ fontSize: 14, color: '#ecd28a', fontWeight: 700, marginBottom: 8 }}>転移の確認</div>
+            <div style={{ fontSize: 12, color: '#b6a890', lineHeight: 1.8 }}>素材カードと、<b style={{ color: '#e87f8f' }}>選ばなかったスキルも失われます</b>。<br />メダル {TENI_COST.toLocaleString()} を消費します。よろしいですか？</div>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 16 }}>
-              <button onClick={teni} disabled={busy} style={S.bigBtn}>{busy ? '転移中…' : '実行する'}</button>
-              <button onClick={() => setConfirm(false)} disabled={busy} style={S.lineBtn}>やめる</button>
+              <button onClick={teni} disabled={busy} className="sk-cta" style={{ marginTop: 0, flex: 1 }}>{busy ? '転移中…' : '実行する'}</button>
+              <button onClick={() => setConfirm(false)} disabled={busy} className="sk-back" style={{ marginTop: 0, flex: 1, border: '1px solid #8c7038', borderRadius: 4, padding: '14px 0' }}>やめる</button>
             </div>
           </div>
         </div>
@@ -3220,12 +3280,29 @@ const KAKASHI_PRESETS = [   // 比較用の的（balance §6-1 の面ボス戦�
 ];
 const SUKUMI_OPT = [{ label: '無し', v: 1.0 }, { label: '有利', v: 1.2 }, { label: '不利', v: 0.8 }];
 
+/* 修練場 専用スタイル（shurenjo-mockup の暖色意匠・tatemonoタブ内で使用・共有 S 不変） */
+const shurS = {
+  dummy: { margin: '4px 0 6px', padding: '18px 12px 14px', borderRadius: 5, textAlign: 'center', border: '1px solid #3a2c22', background: 'radial-gradient(80% 120% at 50% 0%, #221a16, #140f0d)' },
+  target: { width: 84, height: 84, margin: '0 auto 8px', borderRadius: '50%', position: 'relative', overflow: 'hidden', border: '2px solid #8c7038', background: 'repeating-radial-gradient(circle at 50% 50%, rgba(199,161,78,.16) 0 8px, transparent 8px 16px)', display: 'grid', placeItems: 'center', fontSize: 32, color: '#8c7038' },
+  dn: { fontSize: 13, color: '#b6a890', letterSpacing: '.08em' },
+  ds: { fontSize: 11, color: '#7d7160', marginTop: 3 },
+  seclabel: { fontSize: 11, letterSpacing: '.3em', color: '#c7a14e', margin: '16px 0 9px', opacity: .85 },
+  chips: { display: 'flex', gap: 8, flexWrap: 'wrap' },
+  chip: { flex: 1, minWidth: 60, padding: '10px 4px', textAlign: 'center', cursor: 'pointer', borderRadius: 4, border: '1px solid #3a2c22', background: 'linear-gradient(180deg,#181210,#120d0c)', color: '#b6a890', fontSize: 13, fontWeight: 700, fontFamily: 'inherit' },
+  chipOn: { color: '#0c0a09', borderColor: '#c7a14e', background: 'linear-gradient(180deg,#ecd28a,#c7a14e)' },
+  input: { width: '100%', marginTop: 8, background: '#100c0b', border: '1px solid #3a2c22', borderRadius: 4, color: '#ecd28a', fontFamily: 'inherit', fontSize: 16, fontWeight: 700, padding: '9px 12px', textAlign: 'right' },
+  panel: { marginTop: 14, padding: 13, borderRadius: 5, border: '1px solid #3a2c22', background: 'linear-gradient(180deg,#241a17,#1c1513)' },
+  crow: { display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#b6a890', padding: '4px 0' },
+  total: { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 10, padding: '13px 14px', borderRadius: 4, border: '1px solid #8c7038', background: 'linear-gradient(180deg,#1d160e,#15100b)' },
+  foot: { fontSize: 10, color: '#7d7160', marginTop: 12, lineHeight: 1.7 },
+};
 function ShurenjoView({ profile, cards, flash }) {
   const maxDecks = Math.min(2 + Math.floor(((profile && profile.cleared_stage) || 0) / 2), 6);
   const [decks, setDecks] = useState(null);
   const [deckNo, setDeckNo] = useState(1);
   const [target, setTarget] = useState(8000);
   const [sukumi, setSukumi] = useState(1.0);
+  const [kErr, setKErr] = useState(false);
 
   useEffect(() => { (async () => { try { setDecks(await ChikarianAPI.getDecks() || []); } catch (e) { flash(errMsg(e)); setDecks([]); } })(); }, []);
   if (decks === null) return <Booting />;
@@ -3240,54 +3317,61 @@ function ShurenjoView({ profile, cards, flash }) {
   const win = finalPow >= target;
 
   return (
-    <div style={{ padding: '4px 2px' }}>
-      {/* デッキ */}
-      <div style={{ fontSize: 12, color: GOLD, fontWeight: 700, marginBottom: 6 }}>測定するデッキ</div>
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+    <div style={{ padding: '4px 0' }}>
+      {/* カカシ（戦力確認用の的） */}
+      <div style={shurS.dummy}>
+        <div style={shurS.target}>{kErr ? '◎' : <img src="./images/kakashi.png" alt="" onError={() => setKErr(true)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain' }} />}</div>
+        <div style={shurS.dn}>カカシ（戦力確認用の的）</div>
+        <div style={shurS.ds}>強化なし・報酬なし・回数無制限</div>
+      </div>
+
+      {/* 測定するデッキ */}
+      <div style={shurS.seclabel}>測定するデッキ</div>
+      <div style={shurS.chips}>
         {Array.from({ length: maxDecks }, (_, i) => i + 1).map(n => (
-          <button key={n} onClick={() => setDeckNo(n)} style={{ ...S.sideSwitch, padding: '6px 14px', ...(n === deckNo ? S.sideSwitchOn : {}) }}>デッキ{n}</button>
+          <div key={n} onClick={() => setDeckNo(n)} style={{ ...shurS.chip, ...(n === deckNo ? shurS.chipOn : {}) }}>デッキ{n}</div>
         ))}
       </div>
 
-      {/* カード内訳 */}
-      <div style={{ marginTop: 12, padding: '8px 12px', background: PANEL, border: BORDER, borderRadius: 8 }}>
+      {/* カード内訳（本番 computeStats） */}
+      <div style={shurS.panel}>
         {perCard.length === 0
-          ? <div style={{ fontSize: 12, color: '#cdb488' }}>このデッキは未編成です</div>
+          ? <div style={{ fontSize: 12, color: '#7d7160' }}>このデッキは未編成です</div>
           : perCard.map(({ c, st }, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#e7d3a6', padding: '3px 0', borderBottom: i < perCard.length - 1 ? '1px dotted rgba(232,194,90,.18)' : 'none' }}>
+              <div key={i} style={{ ...shurS.crow, borderBottom: i < perCard.length - 1 ? '1px dotted #3a2c22' : 'none' }}>
                 <span>{st.info.name}{st.isSp ? '' : `（${st.info.attr}${st.info.weap}）`} Lv{c.lv}★{c.star || 0}</span>
-                <span style={{ color: '#cdb488' }}>本体{st.body.toLocaleString()}＋装備{st.equip.toLocaleString()}＝<b style={{ color: GOLD_HI }}>{st.sougou.toLocaleString()}</b></span>
+                <span>本体{st.body.toLocaleString()}＋装備{st.equip.toLocaleString()}＝<b style={{ color: '#efe6d5' }}>{st.sougou.toLocaleString()}</b></span>
               </div>
             ))}
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 13, color: GOLD_HI, fontWeight: 700 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 13, color: '#ecd28a', fontWeight: 700 }}>
           <span>デッキ総合（素）</span><span>{deckTotal.toLocaleString()}</span>
         </div>
       </div>
 
-      {/* 三すくみ */}
-      <div style={{ fontSize: 12, color: GOLD, fontWeight: 700, marginTop: 12, marginBottom: 6 }}>三すくみ補正（測定用・任意）</div>
-      <div style={{ display: 'flex', gap: 6 }}>
-        {SUKUMI_OPT.map(o => <button key={o.v} onClick={() => setSukumi(o.v)} style={{ ...S.sideSwitch, flex: 1, ...(sukumi === o.v ? S.sideSwitchOn : {}) }}>{o.label}×{o.v}</button>)}
+      {/* 三すくみ補正 */}
+      <div style={shurS.seclabel}>三すくみ補正（測定用・任意）</div>
+      <div style={shurS.chips}>
+        {SUKUMI_OPT.map(o => <div key={o.v} onClick={() => setSukumi(o.v)} style={{ ...shurS.chip, ...(sukumi === o.v ? shurS.chipOn : {}) }}>{o.label}×{o.v}</div>)}
       </div>
 
-      {/* カカシ */}
-      <div style={{ fontSize: 12, color: GOLD, fontWeight: 700, marginTop: 12, marginBottom: 6 }}>カカシ（敵戦力）</div>
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-        {KAKASHI_PRESETS.map(p => <button key={p.v} onClick={() => setTarget(p.v)} style={{ ...S.sideSwitch, padding: '6px 10px', fontSize: 11, ...(target === p.v ? S.sideSwitchOn : {}) }}>{p.label}</button>)}
+      {/* カカシ戦力 */}
+      <div style={shurS.seclabel}>カカシ（敵戦力）</div>
+      <div style={shurS.chips}>
+        {KAKASHI_PRESETS.map(p => <div key={p.v} onClick={() => setTarget(p.v)} style={{ ...shurS.chip, fontSize: 11, ...(target === p.v ? shurS.chipOn : {}) }}>{p.label}</div>)}
       </div>
-      <input type="number" min="0" value={target} onChange={e => setTarget(Math.max(0, parseInt(e.target.value, 10) || 0))} style={{ ...tIn, width: '100%', marginTop: 8, textAlign: 'right' }} />
+      <input type="number" min="0" value={target} onChange={e => setTarget(Math.max(0, parseInt(e.target.value, 10) || 0))} style={shurS.input} />
 
       {/* 結果 */}
-      <div style={{ marginTop: 14, padding: '12px', background: PANEL, border: BORDER, borderRadius: 8, textAlign: 'center' }}>
-        <div style={{ fontSize: 11, color: '#cdb488' }}>補正後の実戦闘力（素×三すくみ）</div>
-        <div style={{ fontSize: 26, fontWeight: 800, color: GOLD_HI }}>{finalPow.toLocaleString()}</div>
-        <div style={{ fontSize: 12, color: '#cdb488', marginTop: 4 }}>カカシ {target.toLocaleString()} と比較</div>
-        <div style={{ fontSize: 18, fontWeight: 800, marginTop: 6, color: win ? '#7fd39a' : '#ff9aa8' }}>{win ? '勝てる見込み（目安）' : '届かない見込み（目安）'}</div>
+      <div style={{ ...shurS.panel, textAlign: 'center' }}>
+        <div style={{ fontSize: 11, letterSpacing: '.2em', color: '#c7a14e' }}>補正後の実戦闘力（素×三すくみ）</div>
+        <div style={{ fontSize: 32, fontWeight: 800, color: '#ecd28a', textShadow: '0 0 18px rgba(236,210,138,.3)', marginTop: 2 }}>{finalPow.toLocaleString()}</div>
+        <div style={{ fontSize: 12, color: '#7d7160', marginTop: 4 }}>カカシ {target.toLocaleString()} と比較</div>
+        <div style={{ fontSize: 18, fontWeight: 800, marginTop: 6, color: win ? '#7fb6ec' : '#d08a8a' }}>{win ? '勝てる見込み（目安）' : '届かない見込み（目安）'}</div>
       </div>
 
-      <div style={{ fontSize: 10, color: '#a98f66', marginTop: 10, lineHeight: 1.7 }}>
-        報酬はありません（戦力確認用・何度でもノーリスク）。表示は発動前の素の戦力＝balance確定式のみ。
-        スキル発動による上振れ・本判定はボス戦（サーバ）で反映されます（ここは参考）。
+      <div style={shurS.foot}>
+        報酬はありません（戦力確認用・何度でもノーリスク）。表示は発動前の素の戦力＝balance確定式（computeStats）のみ。
+        スキル発動による上振れ・本判定はボス戦（サーバ）で反映されます。
       </div>
     </div>
   );
