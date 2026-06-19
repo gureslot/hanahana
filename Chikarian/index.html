@@ -2084,6 +2084,7 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
   const [detailCard, setDetailCard] = useState(null);                  // カードタップ→CardDetail オーバーレイ
   const [editDeckNo, setEditDeckNo] = useState(null);                  // 編成ボタン→DeckScreen オーバーレイ
   const [fillingDeck, setFillingDeck] = useState(null);                // 最大充填 処理中のデッキ番号（連打防止）
+  const [emptyingDeck, setEmptyingDeck] = useState(null);              // 空にする 処理中のデッキ番号（連打防止）
   const [deckNo, setDeckNo] = useState(1);
   const cleared = (profile && profile.cleared_stage) || 0;
   const [stage, setStage] = useState(() => Math.min(cleared + 1, 8));   // 既定＝次の未クリア面（フロンティア）
@@ -2189,6 +2190,28 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
     } finally { setFillingDeck(null); }
   }
 
+  // 空にする：当該デッキの全カードの武気を解除（loaded_buki=0）→プールへ返却。SPはスキップ。
+  async function emptyDeck(n) {
+    if (fillingDeck !== null || emptyingDeck !== null) return; setEmptyingDeck(n);
+    let totalEmptied = 0;
+    try {
+      for (const c of deckMembers(n).filter(Boolean)) {
+        if (/_sp$/.test(c.card_key || '')) continue;                  // SP＝武気を持たない
+        const before = c.loaded_buki || 0;
+        if (before <= 0) continue;
+        try {
+          await ChikarianAPI.equipBuki(c.id, c.quality || 'crude', 0);   // 0=空（武気はプールへ返却）
+          totalEmptied += before;
+        } catch (e) { /* 個別失敗は継続（最終判定はサーバ） */ }
+      }
+      try { await onRefresh(); } catch (e) {}                         // cards 再取得（loaded_buki 表示更新）
+      let remaining = null;
+      try { const rk = normalizeRk(await ChikarianAPI.getRenkiden()); remaining = rk ? rk.buki : null; } catch (e) {}
+      if (totalEmptied > 0) flash(`武気を ${totalEmptied.toLocaleString()} 枠 解除しました` + (remaining != null ? `（練気殿 残り ${Number(remaining).toLocaleString()}）` : ''));
+      else flash('解除する武気がありません');
+    } finally { setEmptyingDeck(null); }
+  }
+
   // 各デッキの live phase（毎秒再計算）
   const liveByDeck = {};
   sorties.forEach(s => { liveByDeck[s.deck_no] = Object.assign({ s }, bossLivePhase(s, clockOffset, now)); });
@@ -2292,7 +2315,7 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
                   return (
                     <div key={n} className={'boss-deck2' + (n === deckNo ? ' sel' : '') + (blocked ? ' busy' : '')} onClick={() => { if (!blocked) setDeckNo(n); }}>
                       <div className="boss-deck2Top">
-                        <span>デッキ{n}<button onClick={(e) => { e.stopPropagation(); setEditDeckNo(n); }} style={{ marginLeft: 8, fontFamily: 'inherit', fontSize: 10, fontWeight: 800, color: '#ffe39a', background: 'rgba(60,40,80,.6)', border: '1px solid rgba(232,194,90,.5)', borderRadius: 8, padding: '2px 8px', cursor: 'pointer' }}>✎ 編成</button><button onClick={(e) => { e.stopPropagation(); maxFillDeck(n); }} disabled={blocked || fillingDeck !== null} style={{ marginLeft: 6, fontFamily: 'inherit', fontSize: 10, fontWeight: 800, color: (blocked || fillingDeck !== null) ? '#7a6a8a' : '#bfe3ff', background: 'rgba(40,60,80,.6)', border: '1px solid rgba(120,200,255,.45)', borderRadius: 8, padding: '2px 8px', cursor: (blocked || fillingDeck !== null) ? 'default' : 'pointer' }}>{fillingDeck === n ? '充填中…' : '⚡ 最大充填'}</button></span>
+                        <span>デッキ{n}<button onClick={(e) => { e.stopPropagation(); setEditDeckNo(n); }} style={{ marginLeft: 8, fontFamily: 'inherit', fontSize: 10, fontWeight: 800, color: '#ffe39a', background: 'rgba(60,40,80,.6)', border: '1px solid rgba(232,194,90,.5)', borderRadius: 8, padding: '2px 8px', cursor: 'pointer' }}>✎ 編成</button><button onClick={(e) => { e.stopPropagation(); maxFillDeck(n); }} disabled={blocked || fillingDeck !== null || emptyingDeck !== null} style={{ marginLeft: 6, fontFamily: 'inherit', fontSize: 10, fontWeight: 800, color: (blocked || fillingDeck !== null || emptyingDeck !== null) ? '#7a6a8a' : '#bfe3ff', background: 'rgba(40,60,80,.6)', border: '1px solid rgba(120,200,255,.45)', borderRadius: 8, padding: '2px 8px', cursor: (blocked || fillingDeck !== null || emptyingDeck !== null) ? 'default' : 'pointer' }}>{fillingDeck === n ? '充填中…' : '⚡ 最大充填'}</button><button onClick={(e) => { e.stopPropagation(); emptyDeck(n); }} disabled={blocked || fillingDeck !== null || emptyingDeck !== null} style={{ marginLeft: 6, fontFamily: 'inherit', fontSize: 10, fontWeight: 800, color: (blocked || fillingDeck !== null || emptyingDeck !== null) ? '#7a6a8a' : '#ffc7b0', background: 'rgba(70,40,30,.6)', border: '1px solid rgba(255,150,110,.45)', borderRadius: 8, padding: '2px 8px', cursor: (blocked || fillingDeck !== null || emptyingDeck !== null) ? 'default' : 'pointer' }}>{emptyingDeck === n ? '解除中…' : '空にする'}</button></span>
                         <span>{topRight}</span>
                       </div>
                       <div className="boss-deck2Cards">
