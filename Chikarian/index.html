@@ -3466,6 +3466,7 @@ const houS = {
 function HouchiScreen({ profile, refreshAll, back, flash }) {
   const maxDecks = Math.min(2 + Math.floor(((profile && profile.cleared_stage) || 0) / 2), 6);
   const [states, setStates] = useState(null);
+  const [decks, setDecks] = useState([]);
   const [busy, setBusy] = useState(false);
   const [now, setNow] = useState(Date.now());
 
@@ -3477,6 +3478,7 @@ function HouchiScreen({ profile, refreshAll, back, flash }) {
     catch (e) { flash(errMsg(e)); }
     finally { setBusy(false); }
   }
+  useEffect(() => { (async () => { try { setDecks(await ChikarianAPI.getDecks() || []); } catch (e) {} })(); }, []);   // デッキ編成（空デッキ判定用）
   async function collectAll() {
     if (busy) return;
     const active = (states || []).filter(s => s.depth).map(s => s.deck_no);
@@ -3507,16 +3509,17 @@ function HouchiScreen({ profile, refreshAll, back, flash }) {
         <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
           {Array.from({ length: maxDecks }, (_, i) => i + 1).map(n => {
             const row = byDeck[n]; const est = tansakuEstimate(row, now); const di = row && depthInfo(row.depth);
+            const dr = (decks || []).find(x => x.deck_no === n); const cc = dr ? [dr.slot1_card_id, dr.slot2_card_id, dr.slot3_card_id].filter(Boolean).length : 0;
             return (
               <div key={n} style={houS.card}>
                 <div style={houS.top}>
                   <span style={houS.deck}>デッキ{n}</span>
-                  <span style={{ ...houS.pill, ...(di ? houS.pillOn : houS.pillOff) }}>{di ? di.label + '探索中' : '未探索'}</span>
+                  <span style={{ ...houS.pill, ...(di ? houS.pillOn : houS.pillOff) }}>{di ? di.label + '探索中' : (cc === 0 ? 'カードなし' : '未探索')}</span>
                 </div>
                 {est && <div style={houS.est}>見込み メダル+{est.medal.toLocaleString()}・各カードEXP+{est.exp}（{Math.floor(est.min)}分・目安）</div>}
                 <div style={houS.btns}>
                   <button onClick={() => run(() => ChikarianAPI.collectTansaku(n), '回収しました')} disabled={busy || !row} style={{ ...houS.collect, ...((busy || !row) ? houS.collectOff : {}) }}>回収</button>
-                  <button onClick={() => run(() => ChikarianAPI.startTansaku(n, 1, 'shallow'), '浅域で放置開始')} disabled={busy} style={{ ...S.lineBtn, flex: 1, padding: '10px 6px', ...(busy ? { opacity: .45 } : {}) }}>浅域で放置開始</button>
+                  <button onClick={() => run(() => ChikarianAPI.startTansaku(n, 1, 'shallow'), '浅域で放置開始')} disabled={busy || cc === 0} style={{ ...S.lineBtn, flex: 1, padding: '10px 6px', ...((busy || cc === 0) ? { opacity: .45 } : {}) }}>{cc === 0 ? 'カードなし' : '浅域で放置開始'}</button>
                 </div>
               </div>
             );
