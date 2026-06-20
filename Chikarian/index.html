@@ -3738,6 +3738,13 @@ function EquipView({ base, refreshAll, onBack, flash }) {
 /* =================================================================== スキル錬成/転移 */
 // 抽選・成否・消費・移動は全てサーバ(do_skill_rensei / do_skill_teni)。クライアントは結果表示のみ。
 const RENSEI_RATE = { blue: 10, red: 33, rainbow: 100 };   // 確定（青10/赤33/虹100）
+// 錬成の消費クリスタル数（サーバ do_skill_rensei=0014 と同式）：ceil(基礎カーブ(現Lv) × レア倍率 N2/R4.4/SR8.8/SSR17.6）。色によらず同数。
+function renseiCost(lv, rarity) {
+  const L = Math.max(1, lv || 1);
+  const base = L <= 2 ? 1 : L <= 4 ? 2 : L <= 6 ? 3 : L <= 8 ? 4 : L <= 10 ? 5 : L <= 13 ? 7 : L <= 16 ? 10 : L <= 19 ? 14 : L <= 24 ? 20 : L <= 29 ? 28 : L <= 39 ? 40 : Math.round(40 * Math.pow(1.4, Math.floor((L - 40) / 10) + 1));
+  const mult = { n: 2.0, r: 4.4, sr: 8.8, ssr: 17.6 }[rarity];
+  return mult ? Math.ceil(base * mult) : null;
+}
 const COLOR_JA = { blue: '青', red: '赤', rainbow: '虹' };
 const TENI_COST = 3000;   // メダル（確定）
 
@@ -3816,9 +3823,9 @@ function SkillView({ base, cards, profile, skillMap, refreshAll, onBack, flash }
   }
   async function pickSrc(id) { setSrcId(id); setSrcSlot(null); setSrcSkills(null); try { setSrcSkills(await ChikarianAPI.getCardSkills(id) || []); } catch (e) { flash(errMsg(e)); setSrcSkills([]); } }
   async function teni() {
-    if (busy || srcId == null || srcSlot == null || emptySlots.length === 0) return; setBusy(true);
+    if (busy || srcId == null || srcSlot == null || dstSlot == null) return; setBusy(true);
     try {
-      const res = await ChikarianAPI.doSkillTeni(srcId, srcSlot, base.id, emptySlots[0]);
+      const res = await ChikarianAPI.doSkillTeni(srcId, srcSlot, base.id, dstSlot);
       if (window.CKSound) CKSound.play('se_enhance_success');  // 転移成功（失敗は throw→catch されるため SE なし）
       setTResult(res); setConfirm(false);
       setSrcId(null); setSrcSkills(null); setSrcSlot(null); setDstSlot(null);
@@ -3829,6 +3836,11 @@ function SkillView({ base, cards, profile, skillMap, refreshAll, onBack, flash }
   if (!skills) return <Booting />;
   const bySlot = {}; skills.forEach(s => { bySlot[s.slot] = s; });
   const emptySlots = [1, 2].filter(s => !bySlot[s]);
+  const rsRow = selSlot != null ? bySlot[selSlot] : null;
+  const rsM = rsRow ? skillMap[rsRow.skill_key] : null;
+  const rsCost = (rsRow && rsM) ? renseiCost(rsRow.skill_lv, rsM.rarity) : null;
+  const rsHave = profile ? (profile['crystal_' + color] || 0) : 0;
+  const rsShort = rsCost != null && rsHave < rsCost;
 
   const bInfo = parseCardKey(base.card_key);
   return (
@@ -3886,8 +3898,9 @@ function SkillView({ base, cards, profile, skillMap, refreshAll, onBack, flash }
               );
             })}
           </div>
-          <div className="sk-hint">消費クリスタル数はサーバ算出（カーブ×レア倍率）。成功＝Lv+1／失敗＝消費のみ・Lv据置。</div>
-          <button onClick={rensei} disabled={busy || selSlot == null} className="sk-cta">{busy ? '錬成中…' : '錬成する'}</button>
+          {rsCost != null && <div style={{ fontSize: 13, fontWeight: 700, color: rsShort ? '#ff9a8a' : '#ecd28a', margin: '6px 0 2px', textAlign: 'center' }}>消費：{COLOR_JA[color]}クリスタル <b style={{ fontSize: 17 }}>{rsCost}</b> 個（Lv{rsRow.skill_lv}→{rsRow.skill_lv + 1}・所持 {rsHave}）{rsShort ? ' ＝不足' : ''}</div>}
+          <div className="sk-hint">消費はカーブ×レア倍率で色によらず同数。成功＝Lv+1／失敗＝消費のみ・Lv据置。最終判定はサーバ。</div>
+          <button onClick={rensei} disabled={busy || selSlot == null || rsShort} className="sk-cta">{busy ? '錬成中…' : (rsShort ? 'クリスタル不足' : '錬成する')}</button>
         </>}
 
         {/* ===== 転移 ===== */}
@@ -3895,10 +3908,8 @@ function SkillView({ base, cards, profile, skillMap, refreshAll, onBack, flash }
           {tResult && <div className="sk-banner" style={{ color: '#9fe0a0', borderColor: '#3a7a40' }}>
             転移成功：{skName(tResult.moved_skill)} Lv{tResult.moved_lv} を 枠{tResult.dst_slot} へ（メダル −{Number(tResult.medal_spent || TENI_COST).toLocaleString()}／残 {Number(tResult.medal_remaining || 0).toLocaleString()}）
           </div>}
-          <div className="sk-hint" style={{ color: '#b6a890' }}>受け側：{bInfo.name}（空き枠 {emptySlots.length ? emptySlots.join('・') : 'なし'}）</div>
-          {emptySlots.length === 0
-            ? <div className="sk-banner" style={{ color: '#e87f8f', borderColor: '#b83b4d' }}>空き枠がありません（転移先なし）</div>
-            : <>
+          <div className="sk-hint" style={{ color: '#b6a890' }}>受け側：{bInfo.name}（移植枠は2つ・埋まっている枠は上書き＝元のスキルは消えます）</div>
+          {<>
                 <div className="sk-seclabel">素材カードを選ぶ（ロック/SPは不可・素材は消滅）</div>
                 <div className="sk-grid">
                   {(cards || []).filter(c => c.id !== base.id && !c.locked && !c.card_key.endsWith('_sp') && c.boss_deck_no == null && c.tansaku_deck_no == null).map(c => (
@@ -3922,7 +3933,18 @@ function SkillView({ base, cards, profile, skillMap, refreshAll, onBack, flash }
                         ))}
                     </>)}
 
-                <button onClick={() => setConfirm(true)} disabled={busy || srcId == null || srcSlot == null || emptySlots.length === 0} className="sk-cta">転移する（メダル{TENI_COST.toLocaleString()}）</button>
+                {srcId && srcSlot != null && <>
+                  <div className="sk-seclabel">移植先の枠を選ぶ（埋まっている枠は上書き）</div>
+                  <div className="sk-dst">
+                    {[1, 2].map(s => { const cur = bySlot[s]; const cm = cur ? skillMap[cur.skill_key] : null; return (
+                      <div key={s} className={'sk-dstb' + (dstSlot === s ? ' on' : '')} onClick={() => setDstSlot(s)} style={{ flexDirection: 'column', height: 'auto', padding: '8px 4px' }}>
+                        <div style={{ fontWeight: 800 }}>枠{s}</div>
+                        <div style={{ fontSize: 9.5, marginTop: 3, lineHeight: 1.3, color: cur ? '#e8b07a' : '#9a8c70' }}>{cur ? '上書き：' + (cm ? cm.display_name : cur.skill_key) : '空き'}</div>
+                      </div>
+                    ); })}
+                  </div>
+                </>}
+                <button onClick={() => setConfirm(true)} disabled={busy || srcId == null || srcSlot == null || dstSlot == null} className="sk-cta">転移する（メダル{TENI_COST.toLocaleString()}）</button>
               </>}
         </>}
 
