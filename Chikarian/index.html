@@ -2392,10 +2392,13 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
           const role = BOSS_ROLE_KEYS[i];
           const pinSrc = i < 2 ? './images/ic_map_subboss.png' : './images/ic_map_boss.png';   // ピン＝汎用アイコン（ボス絵は報告書で使う）
           const nodeBusy = !!busyRoleOnStage[role];
+          // 面内順次解放：フロンティア面のみ中A→中B→面ボスの順。過去面（stage≤cleared）は全ノード開放。
+          const roleProg = (profile && profile.boss_round_role) || 0;
+          const nodeLocked = (stage === cleared + 1) && ((i === 1 && roleProg < 1) || (i === 2 && roleProg < 2));
           return (
-            <div key={i} className={'boss-node' + (pos.up ? ' up' : '') + (nodeBusy ? ' busy' : '')} style={{ left: pos.left, top: pos.top }} onClick={() => openSheet(i)}>
+            <div key={i} className={'boss-node' + (pos.up ? ' up' : '') + (nodeBusy ? ' busy' : '') + (nodeLocked ? ' locked' : '')} style={{ left: pos.left, top: pos.top }} onClick={() => { if (nodeLocked) { flash(i === 2 ? '中ボスA・Bを撃破すると解放されます' : '中ボスAを撃破すると解放されます'); return; } openSheet(i); }}>
               <div className={'boss-dot ' + pos.size}><span className="boss-gi" /><BossNodeImg src={pinSrc} /></div>
-              <div className="boss-lbl">{b.role} ・ {b.name}</div>
+              <div className="boss-lbl">{b.role} ・ {b.name}{nodeLocked ? ' 🔒' : ''}</div>
             </div>
           );
         })}
