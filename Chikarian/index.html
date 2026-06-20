@@ -1081,6 +1081,26 @@ function cardFullName(card) {
   return (RAR_LABEL[i.rarity] || '') + i.name + i.attr + i.weap;
 }
 
+// 三すくみ係数（サーバ public.sukumi_factor=0028 と同値）：花>芯>葉>花／盾>剣>杖>盾。c==e=1.0・有利1.2・不利0.8。
+const SUKUMI_BEATS = { hana: 'shin', shin: 'ha', ha: 'hana', tate: 'ken', ken: 'tsue', tsue: 'tate' };
+function sukumiFactor(c, e) {
+  if (!c || !e || c === e) return 1.0;
+  return SUKUMI_BEATS[c] === e ? 1.2 : 0.8;
+}
+// カードの三すくみ補正＝属性係数×武器係数（敵の各属性/武器を全乗算・§2-B方式）。SPは常に中立・めしべは芯/杖（サーバ do_boss_battle と同じ）。
+function cardSukumiVsBoss(card, boss) {
+  if (!card || !boss) return 1.0;
+  const key = card.card_key || '';
+  if (/_sp$/.test(key)) return 1.0;
+  const p = key.split('_');
+  const mAttr = p[1] === 'meshibe' ? 'shin' : p[2];
+  const mWeap = p[1] === 'meshibe' ? 'tsue' : p[3];
+  let f = 1.0;
+  (boss.attrs || []).forEach(ea => { f *= sukumiFactor(mAttr, ea); });
+  (boss.weapons || []).forEach(ew => { f *= sukumiFactor(mWeap, ew); });
+  return f;
+}
+
 function GCard({ data, flipped, skillName, index }) {
   const [imgErr, setImgErr] = useState(false);
   const [backErr, setBackErr] = useState(false);
@@ -1494,10 +1514,6 @@ function CardDetail({ card, cards, profile, skillMap, refreshAll, back, flash, o
   const st = computeStats(card);
   const info = st.info;
   const bySlot = {}; (skills || []).forEach(s => { bySlot[s.slot] = s; });
-
-  // ロック切替: 専用RPCが無いため未実装（cards を直接UPDATEしない＝RLS/不正対策C）。
-  // ※ chikarian-api.js / 0001-0011 にロックRPCは無い。RPCが用意されたらここを有効化する。
-  const LOCK_RPC_AVAILABLE = false;
 
   const op = (label) => () => flash(label + 'は準備中です（次フェーズ）');
 
@@ -2510,6 +2526,7 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
                         {members.map((c, si) => c
                           ? <div key={si} className="boss-deck2Card" style={{ position: 'relative', cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); setDetailCard(c); }}>
                               <div style={spSet[c.id] ? { opacity: .35, filter: 'grayscale(1)' } : undefined}><CardThumb card={c} small /></div>
+                              {(() => { const f = cardSukumiVsBoss(c, bm); if (Math.abs(f - 1) < 0.001) return null; const adv = f > 1; return <div style={{ position: 'absolute', top: 3, right: 3, zIndex: 3, fontSize: 9, fontWeight: 800, padding: '1px 5px', borderRadius: 6, color: '#fff', background: adv ? 'rgba(38,132,58,.94)' : 'rgba(168,40,52,.94)', border: '1px solid ' + (adv ? 'rgba(150,230,160,.7)' : 'rgba(255,150,150,.7)'), boxShadow: '0 1px 3px rgba(0,0,0,.6)' }}>{adv ? '有利' : '不利'}</div>; })()}
                               {spSet[c.id] && <div style={{ position: 'absolute', top: 3, left: 0, right: 0, textAlign: 'center', fontSize: 9, fontWeight: 800, color: '#fff', textShadow: '0 1px 2px #000' }}>離脱中</div>}
                               <div className="boss-deck2Nm">{cardFullName(c)}</div>
                               {(() => { if (/_sp$/.test(c.card_key || '')) return <div style={{ fontSize: 8, color: '#8a7a9a', textAlign: 'center', marginTop: 3 }}>武気なし</div>;
