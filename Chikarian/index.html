@@ -1441,7 +1441,10 @@ function skillEffectParts(sk, lv) {
     case 'advantage_scaling': return { pre: '格上の敵ほど効果増・総合戦闘力を最大', num: pct + '%', post: '上昇' };
     case 'meta_amplify': return { pre: '同時発動した他スキルの効果量を', num: pct + '%', post: '増幅' };
     case 'per_skill_count': return { pre: '同時発動した他スキル1つにつき総合戦闘力を', num: pct + '%', post: '上昇' };
-    default: return sk.notes ? { pre: '', num: '', post: sk.notes } : null;
+    case 'enemy_mult': return { pre: '敵の実戦闘力を', num: Math.round((1 - val) * 100) + '%', post: '減少' };
+    case 'loss_nullify': return { pre: '', num: '', post: '敗北してもデッキの武気を失わない' };
+    case 'force_activate': return { pre: '', num: '', post: '戦闘時、確率スキルから1つを必ず発動' };
+    default: { const t = sk.notes ? String(sk.notes).replace(/（[^（）]*(?:girl|dragon|houou|chara|旧|改定|仮|spec|TODO)[^（）]*）/g, '').trim() : ''; return t ? { pre: '', num: '', post: t } : null; }
   }
 }
 function SkillEffect({ sk, lv, style }) {
@@ -1451,7 +1454,7 @@ function SkillEffect({ sk, lv, style }) {
   return (
     <span style={style}>
       {d.pre}{d.num ? <b style={{ color: GOLD_HI, fontWeight: 800 }}>{d.num}</b> : null}{d.post}
-      {rate != null && rate < 1 ? <span style={{ color: '#a98f66' }}>（発動{Math.round(rate * 100)}%）</span> : null}
+      {rate != null && rate < 1 ? <span style={{ color: '#d8b06a' }}>（発動<b style={{ color: GOLD_HI }}>{Math.round(rate * 100)}%</b>）</span> : null}
     </span>
   );
 }
@@ -1535,16 +1538,7 @@ function CardDetail({ card, cards, profile, skillMap, refreshAll, back, flash, o
           <SkillSlot slot={0} /><SkillSlot slot={1} /><SkillSlot slot={2} />
         </div>
 
-        {/* 操作（本番の全操作を維持＝各 setMode） */}
-        <div style={zS.dSec}>操作（カード詳細が共通入口）</div>
-        <div style={zS.zActions}>
-          <button style={{ ...zS.zaBtn, ...(card.locked ? zS.zaOff : {}) }} disabled={!!card.locked} onClick={() => setMode('kyoka')}>★強化</button>
-          <button style={{ ...zS.zaBtn, ...(st.isSp ? zS.zaOff : {}) }} disabled={st.isSp} onClick={() => setMode('skill')}>スキル強化/転移{st.isSp ? '（SP不可）' : ''}</button>
-          <button style={{ ...zS.zaBtn, ...zS.zaOff, gridColumn: '1 / -1' }} disabled={!LOCK_RPC_AVAILABLE}
-            onClick={() => flash('ロック切替には専用RPCが必要です（cardsの直接更新はRLS/不正対策Cで不可）')}>
-            {card.locked ? 'ロック解除' : 'ロックする'}（専用RPC待ち）
-          </button>
-        </div>
+        {/* 図鑑詳細は閲覧専用（★強化/スキル/ロックは強化合成画面で実施）。 */}
       </div>
 
       {/* 下部ナビ：一覧へ／前／次（所持カードを巡る） */}
@@ -2083,6 +2077,7 @@ function DeckScreen({ profile, cards, refreshAll, back, flash, initialDeckNo }) 
         })()}
 
       {/* 帰還/回収の確認モーダル（moveConfirm と同じ意匠） */}
+      {detailCard && <CardPopup card={detailCard} onClose={() => setDetailCard(null)} />}
       {recallConfirm && (() => {
         const rc = recallConfirm; const isBoss = rc.kind === 'boss';
         return (
@@ -2234,7 +2229,7 @@ function bossLivePhase(s, offset, nowMs) {
 }
 function bossMmss(t) { t = Math.max(0, Math.floor(t)); const m = Math.floor(t / 60), s = t % 60; return m + ':' + String(s).padStart(2, '0'); }
 function bossSortieName(bossKey) {
-  const m = /^boss_([1-8])_(a|b|boss)/.exec(bossKey || '');
+  const m = /^boss_([1-8])_(boss|a|b)/.exec(bossKey || '');
   if (!m) return bossKey;
   const st = BOSS_STAGES[+m[1] - 1]; const idx = BOSS_ROLE_KEYS.indexOf(m[2]);
   return (st && st.bosses[idx]) ? st.bosses[idx].name : bossKey;
@@ -2385,7 +2380,7 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
   sorties.forEach(s => { liveByDeck[s.deck_no] = Object.assign({ s }, bossLivePhase(s, clockOffset, now)); });
   // 現在の面に出撃中のロール → ノード busy 表示
   const busyRoleOnStage = {};
-  sorties.forEach(s => { const m = /^boss_([1-8])_(a|b|boss)/.exec(s.boss_key); if (m && +m[1] === stage) busyRoleOnStage[m[2]] = true; });
+  sorties.forEach(s => { const m = /^boss_([1-8])_(boss|a|b)/.exec(s.boss_key); if (m && +m[1] === stage) busyRoleOnStage[m[2]] = true; });
 
   return (
     <div style={bossRoot}>
@@ -2937,6 +2932,8 @@ function CardPopup({ card, onClose }) {
 
 function ExchangeTab({ profile, cards, refreshAll, flash }) {
   const [rates, setRates] = useState([]);
+  const [decks, setDecks] = useState([]);
+  useEffect(() => { (async () => { try { setDecks(await ChikarianAPI.getDecks() || []); } catch (e) {} })(); }, []);
   const [sel, setSel] = useState({});
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
@@ -2944,17 +2941,19 @@ function ExchangeTab({ profile, cards, refreshAll, flash }) {
   const [detailCard, setDetailCard] = useState(null); // カード詳細ポップアップ
   useEffect(() => { (async () => { try { setRates(await ChikarianAPI.getExchangeRates() || []); } catch (e) { setRates([]); } })(); }, []);
 
-  // 交換可能カード（ロック中・探索/ボス出撃中は除外）
-  const list = (cards || []).filter(c => !c.locked && c.tansaku_deck_no == null && c.boss_deck_no == null);
+  // 全カード表示。交換不可（ロック/編成中/出撃中/探索中）はグレーアウト＋ラベルで非選択化。
+  const deckIds = new Set(); (decks || []).forEach(d => [d.slot1_card_id, d.slot2_card_id, d.slot3_card_id].forEach(id => { if (id) deckIds.add(id); }));
+  const lockReason = (c) => c.locked ? 'lock' : (deckIds.has(c.id) ? '編成中' : (c.boss_deck_no != null ? '出撃中' : (c.tansaku_deck_no != null ? '探索中' : null)));
+  const list = (cards || []);
   const rateOf = (c) => (rates || []).find(r => r.rarity === parseCardKey(c.card_key).rarity) || null;
-  const estOf = (c) => { const r = rateOf(c); return r ? { color: r.crystal_color, count: Math.max(0, Math.round(r.base_value_blue * (1 + (r.star_coeff || 0) * (c.star || 0)) / (r.divisor || 1))) } : null; };
+  const estOf = (c) => { const r = rateOf(c); return r ? { color: r.crystal_color, count: Math.round((r.base_value || 0) * Math.pow(2, c.star || 0)) } : null; };
 
   const selIds = Object.keys(sel).filter(id => sel[id]);
   const tot = { blue: 0, red: 0, rainbow: 0 };
   selIds.forEach(id => { const c = (cards || []).find(x => x.id === id); if (!c) return; const e = estOf(c); if (e) tot[e.color] = (tot[e.color] || 0) + e.count; });
 
   const toggle = (id) => setSel(s => ({ ...s, [id]: !s[id] }));
-  const selectAll = () => { const m = {}; list.forEach(c => { m[c.id] = true; }); setSel(m); };
+  const selectAll = () => { const m = {}; list.forEach(c => { if (!lockReason(c)) m[c.id] = true; }); setSel(m); };
   const clearSel = () => setSel({});
 
   async function doExchange() {
@@ -2984,12 +2983,12 @@ function ExchangeTab({ profile, cards, refreshAll, flash }) {
         ? <div style={exS.empty}>交換できるカードがありません</div>
         : <div style={exS.grid}>
             {list.map(c => {
-              const e = estOf(c); const on = !!sel[c.id]; const info = parseCardKey(c.card_key);
+              const e = estOf(c); const on = !!sel[c.id]; const info = parseCardKey(c.card_key); const reason = lockReason(c);
               return (
-                <button key={c.id} onClick={() => toggle(c.id)} style={{ ...exS.card, ...(on ? exS.cardOn : {}) }}>
-                  <div style={exS.cardArt}><DeckSlotArt cardKey={c.card_key} />{on && <div style={exS.check}>✓</div>}<div onClick={(e) => { e.stopPropagation(); setDetailCard(c); }} style={{ position: 'absolute', left: 3, bottom: 3, width: 20, height: 20, borderRadius: '50%', background: 'rgba(10,6,9,.82)', border: '1px solid rgba(232,194,90,.5)', color: '#fff3c8', fontSize: 12, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 3 }}>ⓘ</div></div>
+                <button key={c.id} onClick={() => { if (!reason) toggle(c.id); }} disabled={!!reason} style={{ ...exS.card, ...(on ? exS.cardOn : {}), ...(reason ? { opacity: .5, cursor: 'default' } : {}) }}>
+                  <div style={exS.cardArt}><DeckSlotArt cardKey={c.card_key} />{reason ? <div style={{ position: 'absolute', top: 4, right: 4, fontSize: 9, fontWeight: 800, color: '#1a1014', background: reason === 'lock' ? 'rgba(210,130,130,.95)' : 'rgba(232,194,90,.95)', borderRadius: 5, padding: '1px 5px', zIndex: 3 }}>{reason === 'lock' ? '🔒' : reason}</div> : (on && <div style={exS.check}>✓</div>)}<div onClick={(e) => { e.stopPropagation(); setDetailCard(c); }} style={{ position: 'absolute', left: 3, bottom: 3, width: 20, height: 20, borderRadius: '50%', background: 'rgba(10,6,9,.82)', border: '1px solid rgba(232,194,90,.5)', color: '#fff3c8', fontSize: 12, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 3 }}>ⓘ</div></div>
                   <div style={exS.cardName}>{RAR_LABEL[info.rarity]} Lv{c.lv || 1}{(c.star || 0) > 0 ? ' ★' + (c.star || 0) : ''}</div>
-                  <div style={exS.cardCx}>{e ? COLOR_JA[e.color] + '+' + e.count : '—'}</div>
+                  <div style={exS.cardCx}>{reason ? (reason === 'lock' ? 'ロック中' : reason) : (e ? COLOR_JA[e.color] + '+' + e.count : '—')}</div>
                 </button>
               );
             })}
@@ -3884,7 +3883,7 @@ function ExchangeView({ base, refreshAll, onBack, flash }) {
   useEffect(() => { (async () => { try { setRates(await ChikarianAPI.getExchangeRates() || []); } catch (e) { setRates([]); } })(); }, []);
 
   const rate = (rates || []).find(r => r.rarity === info.rarity) || null;
-  const est = rate ? { color: rate.crystal_color, count: Math.round(rate.base_value_blue * (1 + (rate.star_coeff || 0) * (base.star || 0)) / (rate.divisor || 1)) } : null;
+  const est = rate ? { color: rate.crystal_color, count: Math.round((rate.base_value || 0) * Math.pow(2, base.star || 0)) } : null;
 
   async function exchange() {
     if (busy) return; setBusy(true);
@@ -4102,7 +4101,7 @@ function MissionScreen({ profile, cards, refreshAll, back, flash }) {
 /* =================================================================== 報告書 */
 // 表示のみ。battle_logs は書き換えない。数値はログ保存値をそのまま表示（再計算・推定しない）。
 function parseBossKey(k) {
-  const m = /^boss_([1-8])_(a|b|boss)(?:_r([0-9]+))?$/.exec(k || '');
+  const m = /^boss_([1-8])_(boss|a|b)(?:_r([0-9]+))?$/.exec(k || '');
   if (!m) return null;
   return { stage: +m[1], role: m[2], round: m[3] ? +m[3] : 1 };
 }
