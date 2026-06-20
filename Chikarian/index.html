@@ -3848,6 +3848,8 @@ function SkillView({ base, cards, profile, skillMap, refreshAll, onBack, flash }
   const [dstSlot, setDstSlot] = useState(null);
   const [confirm, setConfirm] = useState(false);
   const [tResult, setTResult] = useState(null);
+  const [tSort, setTSort] = useState('rarity');   // 転移素材の並び替え
+  const [tDir, setTDir] = useState('desc');
 
   async function loadBase() { try { setSkills(await ChikarianAPI.getCardSkills(base.id) || []); } catch (e) { flash(errMsg(e)); setSkills([]); } }
   useEffect(() => { loadBase(); }, [base.id]);
@@ -3950,13 +3952,27 @@ function SkillView({ base, cards, profile, skillMap, refreshAll, onBack, flash }
           <div className="sk-hint" style={{ color: '#b6a890' }}>受け側：{bInfo.name}（移植枠は2つ・埋まっている枠は上書き＝元のスキルは消えます）</div>
           {<>
                 <div className="sk-seclabel">素材カードを選ぶ（ロック/SPは不可・素材は消滅）</div>
-                <div className="sk-grid">
-                  {(cards || []).filter(c => c.id !== base.id && !c.locked && !c.card_key.endsWith('_sp') && c.boss_deck_no == null && c.tansaku_deck_no == null).map(c => (
-                    <div key={c.id} style={{ outline: srcId === c.id ? '2px solid #c7a14e' : 'none', borderRadius: 10 }}>
-                      <CardThumb card={c} small onClick={() => pickSrc(c.id)} />
-                      <div style={{ fontSize: 8, lineHeight: 1.2, textAlign: 'center', color: '#cdb488', marginTop: 1 }}>{cardFullName(c)}</div>
-                    </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', margin: '0 0 6px' }}>
+                  <span style={{ fontSize: 10, color: '#7d7160' }}>並び替え</span>
+                  {[['rarity', 'レア'], ['lv', 'Lv'], ['body', '本体'], ['attr', '属性'], ['weap', '武器']].map(([k, l]) => (
+                    <button key={k} onClick={() => { if (tSort === k) setTDir(d => d === 'asc' ? 'desc' : 'asc'); else { setTSort(k); setTDir('desc'); } }} style={{ fontFamily: 'inherit', fontSize: 11, fontWeight: 700, padding: '4px 9px', borderRadius: 10, cursor: 'pointer', border: '1px solid ' + (tSort === k ? '#c7a14e' : '#3a2c22'), background: tSort === k ? 'linear-gradient(180deg,#ecd28a,#c7a14e)' : '#181210', color: tSort === k ? '#0c0a09' : '#b6a890' }}>{l}{tSort === k ? (tDir === 'asc' ? ' ▲' : ' ▼') : ''}</button>
                   ))}
+                </div>
+                <div className="sk-grid">
+                  {(() => {
+                    const RR = { n: 0, r: 1, sr: 2, ssr: 3, sp: 4 }, AO = { hana: 0, ha: 1, shin: 2 }, WO = { ken: 0, tate: 1, tsue: 2 };
+                    const dir = tDir === 'asc' ? 1 : -1, key = ['lv', 'body', 'attr', 'weap'].includes(tSort) ? tSort : 'rar';
+                    return (cards || [])
+                      .filter(c => c.id !== base.id && !c.locked && !c.card_key.endsWith('_sp') && c.boss_deck_no == null && c.tansaku_deck_no == null)
+                      .map(c => { const pk = parseCardKey(c.card_key); const pt = (c.card_key || '').split('_'); return { c, body: computeStats(c).body, rar: RR[pk.rarity] != null ? RR[pk.rarity] : 0, attr: AO[pk.attrKey] != null ? AO[pk.attrKey] : 9, weap: WO[pt[3]] != null ? WO[pt[3]] : 9, lv: c.lv || 1 }; })
+                      .sort((a, b) => { const d = (a[key] - b[key]) * dir; return d !== 0 ? d : (b.body - a.body); })
+                      .map(({ c }) => (
+                        <div key={c.id} style={{ outline: srcId === c.id ? '2px solid #c7a14e' : 'none', borderRadius: 10 }}>
+                          <CardThumb card={c} small onClick={() => pickSrc(c.id)} />
+                          <div style={{ fontSize: 8, lineHeight: 1.2, textAlign: 'center', color: '#cdb488', marginTop: 1 }}>{cardFullName(c)}</div>
+                        </div>
+                      ));
+                  })()}
                 </div>
 
                 {srcId && (srcSkills === null ? <div style={{ marginTop: 10 }}><div className="spin" /></div>
