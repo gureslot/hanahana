@@ -1714,6 +1714,15 @@ const cpS = {
   expBtnOff: { opacity: .4, cursor: 'default' },
   expEv: { fontSize: 10, color: '#8fd3a0' },
   expHave: { fontSize: 10, color: '#b6a890' },
+  modalBack: { position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(0,0,0,.66)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 },
+  modal: { width: '100%', maxWidth: 360, background: 'linear-gradient(180deg,#1a0f15,#120a10)', border: '1px solid rgba(232,194,90,.4)', borderRadius: 16, padding: '16px 16px 14px', boxShadow: '0 12px 40px rgba(0,0,0,.6)' },
+  modalTitle: { fontSize: 15, fontWeight: 800, color: GOLD_HI, letterSpacing: 1, textAlign: 'center', marginBottom: 8 },
+  modalCard: { fontSize: 12, color: '#d8c19a', textAlign: 'center', marginBottom: 10 },
+  qtyRow: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, margin: '10px 0' },
+  qtyLab: { fontSize: 11, color: '#b6a890' },
+  qtyBtn: { fontFamily: 'inherit', fontSize: 16, fontWeight: 800, color: GOLD_HI, background: PANEL, border: BORDER, borderRadius: 8, width: 34, height: 34, cursor: 'pointer' },
+  qtyInput: { width: 56, textAlign: 'center', fontFamily: 'inherit', fontSize: 15, fontWeight: 700, color: GOLD_HI, background: 'rgba(0,0,0,.3)', border: BORDER, borderRadius: 8, padding: '6px 4px' },
+  modalClose: { width: '100%', marginTop: 12, fontFamily: 'inherit', fontSize: 13, fontWeight: 700, color: '#d8c19a', background: 'rgba(255,255,255,.06)', border: '1px solid rgba(232,194,90,.3)', borderRadius: 10, padding: '9px 0', cursor: 'pointer' },
   ph: { color: '#a98f66', fontSize: 14, textAlign: 'center', padding: '40px 10px', lineHeight: 1.8 },
   dArt: { width: 120, height: 180, margin: '0 auto 10px', borderRadius: 10, overflow: 'hidden', boxShadow: '0 4px 18px rgba(0,0,0,.5)' },
   dName: { fontFamily: "'Shippori Mincho',serif", fontSize: 16, fontWeight: 700, color: '#efe2c8', textAlign: 'center', marginBottom: 10, overflowWrap: 'anywhere' },
@@ -1743,6 +1752,8 @@ function CardPicker({ title, cards, getStatus, chooseLabel, onChoose, onClear, a
   const [sortDir, setSortDir] = useState('desc');
   const [skillMap, setSkillMap] = useState({});
   const [selSkills, setSelSkills] = useState(null);
+  const [expOpen, setExpOpen] = useState(false);
+  const [expQty, setExpQty] = useState(1);
   const cardById = {}; (cards || []).forEach(c => { cardById[c.id] = c; });
 
   useEffect(() => { (async () => { try { const sm = await ChikarianAPI.getSkillMaster(); const m = {}; (sm || []).forEach(s => { m[s.skill_key] = s; }); setSkillMap(m); } catch (e) {} })(); }, []);
@@ -1846,26 +1857,18 @@ function CardPicker({ title, cards, getStatus, chooseLabel, onChoose, onClear, a
                             );
                           })}
                         </div>}
-                    {onUseBook && books && (() => {
-                      const lv = selCard.lv || 1; const atCap = lv >= selStats.cap;
-                      const need = 20 * lv; const cur = selCard.exp || 0;
-                      const SZ = [['s', '小', 10], ['m', '中', 50], ['l', '大', 200], ['xl', '特大', 1000]];
-                      return (
-                        <div style={cpS.expBox}>
-                          <div style={cpS.expTitle}>経験の書でレベルアップ</div>
-                          {atCap
-                            ? <div style={cpS.expCap}>Lv上限に到達しています</div>
-                            : <><div style={cpS.expProg}>次のLvまで {cur} / {need}</div><div style={cpS.expBar}><div style={{ ...cpS.expFill, width: Math.min(100, Math.round(cur / need * 100)) + '%' }} /></div></>}
-                          <div style={cpS.expBtns}>
-                            {SZ.map(([k, lab, ev]) => { const n = books[k] || 0; const off = busy || atCap || n <= 0; return <button key={k} onClick={() => onUseBook(selCard, k)} disabled={off} style={{ ...cpS.expBtn, ...(off ? cpS.expBtnOff : {}) }}>{lab}<span style={cpS.expEv}>+{ev}</span><span style={cpS.expHave}>残{n}</span></button>; })}
-                          </div>
-                        </div>
-                      );
-                    })()}
                   </div>
                   <div style={cpS.rightFoot}>
                     {actions
-                      ? actions(selCard).map((a, i) => <button key={i} onClick={a.onClick} disabled={a.disabled} style={{ ...cpS.actBtn, ...(a.tone === 'lock' ? cpS.actLock : {}), ...(a.disabled ? cpS.actOff : {}) }}>{a.label}</button>)
+                      ? (onUseBook && books
+                          ? (() => { const acts = actions(selCard); const first = acts[0]; const rest = acts.slice(1); return <>
+                              <div style={{ display: 'flex', gap: 8 }}>
+                                {first && <button onClick={first.onClick} disabled={first.disabled} style={{ ...cpS.actBtn, flex: 1, ...(first.disabled ? cpS.actOff : {}) }}>{first.label}</button>}
+                                <button onClick={() => { setExpQty(1); setExpOpen(true); }} disabled={busy} style={{ ...cpS.actBtn, flex: 1, ...(busy ? cpS.actOff : {}) }}>経験値付与</button>
+                              </div>
+                              {rest.map((a, i) => <button key={i} onClick={a.onClick} disabled={a.disabled} style={{ ...cpS.actBtn, ...(a.tone === 'lock' ? cpS.actLock : {}), ...(a.disabled ? cpS.actOff : {}) }}>{a.label}</button>)}
+                            </>; })()
+                          : actions(selCard).map((a, i) => <button key={i} onClick={a.onClick} disabled={a.disabled} style={{ ...cpS.actBtn, ...(a.tone === 'lock' ? cpS.actLock : {}), ...(a.disabled ? cpS.actOff : {}) }}>{a.label}</button>))
                       : (selStatus.disabled
                           ? <div style={cpS.dLock}>{selStatus.reason || selStatus.tag || '選べません'}</div>
                           : <button onClick={() => onChoose(selCard)} disabled={busy} style={{ ...cpS.choose, ...(busy ? { opacity: .5 } : {}) }}>{typeof chooseLabel === 'function' ? chooseLabel(selCard) : chooseLabel}</button>)}
@@ -1877,6 +1880,36 @@ function CardPicker({ title, cards, getStatus, chooseLabel, onChoose, onClear, a
         <div style={{ flex: 'none', marginTop: 12, display: 'flex', justifyContent: backCenter ? 'center' : 'flex-start' }}>
           <button onClick={back} style={backCenter ? { fontFamily: 'inherit', fontSize: 14, fontWeight: 800, color: GOLD_HI, background: PANEL, border: BORDER, borderRadius: 22, padding: '11px 28px', cursor: 'pointer' } : { ...S.lineBtn, padding: '8px 16px' }}>{backLabel}</button>
         </div>
+        {expOpen && selCard && books && onUseBook && (() => {
+          const lv = selCard.lv || 1; const atCap = lv >= selStats.cap;
+          const thr = 10 * lv * (lv - 1); const prog = Math.max(0, (selCard.exp || 0) - thr); const need = 20 * lv;
+          const SZ = [['s', '小', 10], ['m', '中', 50], ['l', '大', 200], ['xl', '特大', 1000]];
+          const maxHave = Math.max(books.s || 0, books.m || 0, books.l || 0, books.xl || 0);
+          return (
+            <div style={cpS.modalBack} onClick={() => setExpOpen(false)}>
+              <div style={cpS.modal} onClick={e => e.stopPropagation()}>
+                <div style={cpS.modalTitle}>経験の書でレベルアップ</div>
+                <div style={cpS.modalCard}>{RAR_LABEL[selInfo.rarity]} {selInfo.name}　Lv {lv} / {selStats.cap}</div>
+                {atCap
+                  ? <div style={cpS.expCap}>Lv上限に到達しています</div>
+                  : <>
+                      <div style={cpS.expProg}>次のLvまで {prog} / {need}</div>
+                      <div style={cpS.expBar}><div style={{ ...cpS.expFill, width: Math.min(100, Math.round(prog / need * 100)) + '%' }} /></div>
+                      <div style={cpS.qtyRow}>
+                        <span style={cpS.qtyLab}>個数</span>
+                        <button style={cpS.qtyBtn} onClick={() => setExpQty(q => Math.max(1, q - 1))} disabled={busy}>−</button>
+                        <input type="number" value={expQty} min={1} onChange={e => setExpQty(Math.max(1, parseInt(e.target.value, 10) || 1))} style={cpS.qtyInput} />
+                        <button style={cpS.qtyBtn} onClick={() => setExpQty(q => Math.min(Math.max(1, maxHave), q + 1))} disabled={busy}>＋</button>
+                      </div>
+                      <div style={cpS.expBtns}>
+                        {SZ.map(([k, lab, ev]) => { const n = books[k] || 0; const off = busy || n < expQty; return <button key={k} onClick={() => onUseBook(selCard, k, expQty)} disabled={off} style={{ ...cpS.expBtn, ...(off ? cpS.expBtnOff : {}) }}>{lab}<span style={cpS.expEv}>+{ev}</span><span style={cpS.expHave}>残{n}</span></button>; })}
+                      </div>
+                    </>}
+                <button style={cpS.modalClose} onClick={() => setExpOpen(false)}>閉じる</button>
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );
@@ -1964,7 +1997,7 @@ function DeckScreen({ profile, cards, refreshAll, back, flash, initialDeckNo }) 
   async function releaseBoss() {
     if (busy) return; setBusy(true);
     try { await ChikarianAPI.cancelBossSortie(deckNo); await loadDecks(); await refreshAll(); flash('引き返します（帰還中）'); }
-    catch (e) { flash(errMsg(e)); } finally { setBusy(false); }
+    catch (e) { if (String((e && e.message) || e).includes('ALREADY_RETURNING')) { await loadDecks(); await refreshAll(); flash('このデッキは既に帰還中です'); } else { flash(errMsg(e)); } } finally { setBusy(false); }
   }
   async function releaseTansaku() {
     if (busy) return; setBusy(true);
@@ -2688,14 +2721,14 @@ function KyokaScreen({ cards, profile, refreshAll, back, flash }) {
     setBusy(true);
     try { await ChikarianAPI.setCardLock(c.id, !c.locked); await refreshAll(); } catch (e) { flash(errMsg(e)); } finally { setBusy(false); }
   }
-  async function useBook(c, size) {
+  async function useBook(c, size, qty = 1) {
     setBusy(true);
-    try { await ChikarianAPI.useExpBook(c.id, size, 1); await refreshAll(); } catch (e) { flash(errMsg(e)); } finally { setBusy(false); }
+    try { await ChikarianAPI.useExpBook(c.id, size, qty); await refreshAll(); } catch (e) { flash(errMsg(e)); } finally { setBusy(false); }
   }
   const actions = (c) => {
     const isSp = c.card_key.endsWith('_sp');
     return [
-      { label: '★強化' + (c.locked ? '（ロック中）' : ''), disabled: busy || !!c.locked, onClick: () => { setCard(c); setMode('kyoka'); } },
+      { label: '★強化', disabled: busy, onClick: () => { setCard(c); setMode('kyoka'); } },
       { label: 'スキル強化・転移' + (isSp ? '（SP不可）' : ''), disabled: busy || isSp, onClick: () => { setCard(c); setMode('skill'); } },
       { label: c.locked ? '🔒 ロック解除' : '🔓 ロックする', tone: 'lock', disabled: busy || !LOCK_RPC_AVAILABLE, onClick: () => toggleLock(c) },
     ];
