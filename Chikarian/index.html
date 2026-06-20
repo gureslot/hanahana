@@ -1703,6 +1703,17 @@ const cpS = {
   right: { flex: '1 1 0', minWidth: 0, boxSizing: 'border-box', height: '66vh', border: '1px solid rgba(232,194,90,.2)', borderRadius: 12, background: 'rgba(14,9,12,.55)', display: 'flex', flexDirection: 'column', overflow: 'hidden' },
   rightScroll: { flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', padding: 12 },
   rightFoot: { padding: '10px 12px', borderTop: '1px solid rgba(232,194,90,.18)', background: 'rgba(10,6,9,.6)', display: 'flex', flexDirection: 'column', gap: 8 },
+  expBox: { marginTop: 12, padding: '10px 12px', border: '1px solid rgba(232,194,90,.25)', borderRadius: 10, background: 'rgba(0,0,0,.25)' },
+  expTitle: { fontSize: 12, fontWeight: 800, color: GOLD_HI, letterSpacing: 1, marginBottom: 6 },
+  expCap: { fontSize: 12, color: '#b6a890', textAlign: 'center', padding: '6px 0' },
+  expProg: { fontSize: 11, color: '#d8c19a', marginBottom: 4 },
+  expBar: { height: 6, borderRadius: 4, background: 'rgba(255,255,255,.08)', overflow: 'hidden', marginBottom: 8 },
+  expFill: { height: '100%', background: 'linear-gradient(90deg,#e8b54d,#ffe39a)' },
+  expBtns: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 },
+  expBtn: { fontFamily: 'inherit', fontSize: 12, fontWeight: 700, color: GOLD_HI, background: PANEL, border: BORDER, borderRadius: 10, padding: '7px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 },
+  expBtnOff: { opacity: .4, cursor: 'default' },
+  expEv: { fontSize: 10, color: '#8fd3a0' },
+  expHave: { fontSize: 10, color: '#b6a890' },
   ph: { color: '#a98f66', fontSize: 14, textAlign: 'center', padding: '40px 10px', lineHeight: 1.8 },
   dArt: { width: 120, height: 180, margin: '0 auto 10px', borderRadius: 10, overflow: 'hidden', boxShadow: '0 4px 18px rgba(0,0,0,.5)' },
   dName: { fontFamily: "'Shippori Mincho',serif", fontSize: 16, fontWeight: 700, color: '#efe2c8', textAlign: 'center', marginBottom: 10, overflowWrap: 'anywhere' },
@@ -1724,7 +1735,7 @@ const cpS = {
   actOff: { opacity: .4, cursor: 'default' },
 };
 
-function CardPicker({ title, cards, getStatus, chooseLabel, onChoose, onClear, actions, back, busy, flash, backLabel = '‹ 戻る', backCenter = false }) {
+function CardPicker({ title, cards, getStatus, chooseLabel, onChoose, onClear, actions, back, busy, flash, backLabel = '‹ 戻る', backCenter = false, books = null, onUseBook = null }) {
   const [sel, setSel] = useState(null);
   const [facet, setFacet] = useState('attr');
   const [fval, setFval] = useState('all');
@@ -1835,6 +1846,22 @@ function CardPicker({ title, cards, getStatus, chooseLabel, onChoose, onClear, a
                             );
                           })}
                         </div>}
+                    {onUseBook && books && (() => {
+                      const lv = selCard.lv || 1; const atCap = lv >= selStats.cap;
+                      const need = 20 * lv; const cur = selCard.exp || 0;
+                      const SZ = [['s', '小', 10], ['m', '中', 50], ['l', '大', 200], ['xl', '特大', 1000]];
+                      return (
+                        <div style={cpS.expBox}>
+                          <div style={cpS.expTitle}>経験の書でレベルアップ</div>
+                          {atCap
+                            ? <div style={cpS.expCap}>Lv上限に到達しています</div>
+                            : <><div style={cpS.expProg}>次のLvまで {cur} / {need}</div><div style={cpS.expBar}><div style={{ ...cpS.expFill, width: Math.min(100, Math.round(cur / need * 100)) + '%' }} /></div></>}
+                          <div style={cpS.expBtns}>
+                            {SZ.map(([k, lab, ev]) => { const n = books[k] || 0; const off = busy || atCap || n <= 0; return <button key={k} onClick={() => onUseBook(selCard, k)} disabled={off} style={{ ...cpS.expBtn, ...(off ? cpS.expBtnOff : {}) }}>{lab}<span style={cpS.expEv}>+{ev}</span><span style={cpS.expHave}>残{n}</span></button>; })}
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                   <div style={cpS.rightFoot}>
                     {actions
@@ -2661,6 +2688,10 @@ function KyokaScreen({ cards, profile, refreshAll, back, flash }) {
     setBusy(true);
     try { await ChikarianAPI.setCardLock(c.id, !c.locked); await refreshAll(); } catch (e) { flash(errMsg(e)); } finally { setBusy(false); }
   }
+  async function useBook(c, size) {
+    setBusy(true);
+    try { await ChikarianAPI.useExpBook(c.id, size, 1); await refreshAll(); } catch (e) { flash(errMsg(e)); } finally { setBusy(false); }
+  }
   const actions = (c) => {
     const isSp = c.card_key.endsWith('_sp');
     return [
@@ -2669,7 +2700,7 @@ function KyokaScreen({ cards, profile, refreshAll, back, flash }) {
       { label: c.locked ? '🔒 ロック解除' : '🔓 ロックする', tone: 'lock', disabled: busy || !LOCK_RPC_AVAILABLE, onClick: () => toggleLock(c) },
     ];
   };
-  return <CardPicker title="強化するカードを選ぶ" cards={cards} getStatus={getStatus} actions={actions} back={back} busy={busy} flash={flash} backLabel="ホームへ戻る" backCenter={true} />;
+  return <CardPicker title="強化するカードを選ぶ" cards={cards} getStatus={getStatus} actions={actions} back={back} busy={busy} flash={flash} backLabel="ホームへ戻る" backCenter={true} books={{ s: (profile && profile.exp_book_s) || 0, m: (profile && profile.exp_book_m) || 0, l: (profile && profile.exp_book_l) || 0, xl: (profile && profile.exp_book_xl) || 0 }} onUseBook={useBook} />;
 }
 
 function KyokaView({ base, cards, profile, refreshAll, onBack, flash }) {
