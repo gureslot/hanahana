@@ -107,7 +107,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_mjEggLBf6A3HjR8UqiEDOw_cJeam2aK";
 const GOLD = "#e8c25a", GOLD_HI = "#fff3c8";
 const PANEL = "rgba(20,10,16,.72)", BORDER = "1.5px solid rgba(232,194,90,.55)";
 const DAILY_MAX = 1000;
-const LOCK_RPC_AVAILABLE = false;   // ロック切替RPC(0023)が本番適用されたら true に。強化合成のactionsがこれを参照しており、未定義だとカード選択時に真っ暗になる
+const LOCK_RPC_AVAILABLE = true;    // 0023(set_card_lock) 適用済み＝有効。強化合成のactions/ロックボタンが参照
 const SAISHU_FILL_SEC = 10;   // 検出中(locked)に連続充填して上限到達までの目安秒数（balance §8・連続式）
 
 // ===== エラーコード→和文 =====
