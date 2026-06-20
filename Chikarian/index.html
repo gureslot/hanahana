@@ -3125,8 +3125,24 @@ function RenkidenTab({ profile, refreshAll, flash }) {
     catch (e) { flash(errMsg(e)); }
     finally { setBusy(false); }
   }
-  const invest = () => { const m = parseInt(investAmt, 10); if (!(m > 0)) { flash('投資額を入力してください'); return; } run(() => ChikarianAPI.investRenkiden(m), 'メダルを投資しました'); setInvestAmt(''); };
-  const instant = () => { const n = parseInt(instantN, 10); if (!(n > 0)) { flash('生産量を入力してください'); return; } run(() => ChikarianAPI.instantRenkiden(n), '即時生産しました'); setInstantN(''); };
+  const invest = () => {
+    const m0 = parseInt(investAmt, 10);
+    if (!(m0 > 0)) { flash('投資額を入力してください'); return; }
+    const maxI = Math.max(0, Math.ceil(Math.max(0, rk.cap - rk.buki) * 5) - rk.fuel);  // 満タンまでに必要なメダル（投資中分を差引）
+    if (maxI <= 0) { flash('武気は満タンです（投資中のメダルで充足）。回収してから投資してください'); return; }
+    const m = Math.min(m0, maxI);
+    run(() => ChikarianAPI.investRenkiden(m), m < m0 ? `満タンまでの ${m.toLocaleString()} メダルのみ投資しました` : 'メダルを投資しました');
+    setInvestAmt('');
+  };
+  const instant = () => {
+    const n0 = parseInt(instantN, 10);
+    if (!(n0 > 0)) { flash('生産量を入力してください'); return; }
+    const maxN = Math.floor(Math.max(0, rk.cap - rk.buki));  // 残り枠（個）
+    if (maxN <= 0) { flash('武気は満タンです'); return; }
+    const n = Math.min(n0, maxN);
+    run(() => ChikarianAPI.instantRenkiden(n), n < n0 ? `上限までの ${n} 個のみ即生産しました` : '即時生産しました');
+    setInstantN('');
+  };
   const collect = () => run(() => ChikarianAPI.collectRenkiden(), '武気を回収しました');
   const upgrade = () => run(() => ChikarianAPI.upgradeRenkiden(), '練気殿をLvアップ');
 
@@ -3135,6 +3151,10 @@ function RenkidenTab({ profile, refreshAll, flash }) {
   const pct = rk.cap > 0 ? Math.min(100, rk.buki / rk.cap * 100) : 0;
   const running = rk.fuel > 0 && rk.buki < rk.cap;
   const instNum = parseInt(instantN, 10);
+  const invNum = parseInt(investAmt, 10);
+  const roomBuki = Math.max(0, rk.cap - rk.buki);                   // 残り枠（武気）
+  const maxInvest = Math.max(0, Math.ceil(roomBuki * 5) - rk.fuel); // 満タンまで投資できるメダル
+  const maxInstant = Math.floor(roomBuki);                         // 即生産の上限（個）
 
   return (
     <div className="tat-fac renki">
@@ -3156,19 +3176,22 @@ function RenkidenTab({ profile, refreshAll, flash }) {
         <div className="tat-ilab">投資するメダル（自由入力）</div>
         <div className="tat-irow">
           <input type="number" min="1" value={investAmt} onChange={e => setInvestAmt(e.target.value)} placeholder="投資メダル" />
-          <button className="tat-allbtn" onClick={() => setInvestAmt(String(medal))}>全額</button>
+          <button className="tat-allbtn" onClick={() => setInvestAmt(String(Math.min(medal, maxInvest)))}>上限まで</button>
         </div>
+        {maxInvest > 0
+          ? <div className="tat-est"><div className="row2"><span>満タンまで投資できる</span><span className="b">{maxInvest.toLocaleString()} メダル</span></div>{invNum > maxInvest && <div className="note">※超過分（{(invNum - maxInvest).toLocaleString()} メダル）は練成されないため投資されません</div>}</div>
+          : <div className="tat-est"><div className="note">※武気は満タン（投資中のメダルで充足）。回収すると再び投資できます。</div></div>}
         <div className="tat-fbtns">
-          <button className="tat-fb primary" disabled={busy} onClick={invest}>投資して練る</button>
+          <button className="tat-fb primary" disabled={busy || maxInvest <= 0} onClick={invest}>投資して練る</button>
         </div>
 
         <div className="tat-ilab" style={{ marginTop: 12 }}>即生産する武気（メダル15/個）</div>
         <div className="tat-irow">
           <input type="number" min="1" value={instantN} onChange={e => setInstantN(e.target.value)} placeholder="即生産する武気" />
         </div>
-        {instNum > 0 && <div className="tat-est"><div className="row2"><span>必要メダル 目安</span><span className="b">{(instNum * 15).toLocaleString()}</span></div><div className="note">※上限超過はサーバが拒否。</div></div>}
+        {instNum > 0 && <div className="tat-est"><div className="row2"><span>必要メダル 目安</span><span className="b">{(instNum * 15).toLocaleString()}</span></div><div className="row2"><span>残り枠</span><span className="b">{maxInstant.toLocaleString()} 個</span></div>{instNum > maxInstant && <div className="note">※残り枠（{maxInstant.toLocaleString()} 個）までに調整して生産します。</div>}</div>}
         <div className="tat-fbtns">
-          <button className="tat-fb gold" disabled={busy} onClick={instant}>即生産（×15）</button>
+          <button className="tat-fb gold" disabled={busy || maxInstant <= 0} onClick={instant}>即生産（×15）</button>
           <button className="tat-fb" disabled={busy} onClick={collect}>回収 / 更新</button>
         </div>
       </div>
