@@ -1624,13 +1624,15 @@ const cpS = {
   split: { display: 'flex', gap: 8, flex: 1, minHeight: 0, width: '100%', minWidth: 0, marginTop: 4 },
   left: { flex: '0 0 38%', maxWidth: 196, minWidth: 0, boxSizing: 'border-box', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6, paddingRight: 4, maxHeight: '66vh' },
   empty: { color: '#a98f66', fontSize: 13, padding: 20, textAlign: 'center' },
-  li: { display: 'flex', gap: 8, alignItems: 'center', padding: 6, borderRadius: 10, border: '1px solid rgba(232,194,90,.18)', background: 'rgba(20,12,16,.5)', cursor: 'pointer', textAlign: 'left', width: '100%', boxSizing: 'border-box' },
+  li: { display: 'flex', gap: 8, alignItems: 'center', padding: 5, borderRadius: 10, border: '1px solid rgba(232,194,90,.18)', background: 'rgba(20,12,16,.5)', cursor: 'pointer', textAlign: 'left', width: '100%', boxSizing: 'border-box' },
   liSel: { borderColor: '#e8c25a', background: 'rgba(232,194,90,.14)', boxShadow: '0 0 8px rgba(232,194,90,.25)' },
   liArt: { width: 54, height: 81, flex: '0 0 54px', borderRadius: 7, overflow: 'hidden', position: 'relative' },
   liInfo: { display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 },
   liLv: { fontSize: 12, fontWeight: 700, color: '#efe2c8', whiteSpace: 'nowrap' },
   liTag: { fontSize: 10, color: '#cdb488', padding: '1px 6px', borderRadius: 6, border: '1px solid rgba(232,194,90,.25)', alignSelf: 'flex-start', whiteSpace: 'nowrap' },
-  right: { flex: '1 1 0', minWidth: 0, boxSizing: 'border-box', overflowY: 'auto', overflowX: 'hidden', maxHeight: '66vh', border: '1px solid rgba(232,194,90,.2)', borderRadius: 12, background: 'rgba(14,9,12,.55)', padding: 12 },
+  right: { flex: '1 1 0', minWidth: 0, boxSizing: 'border-box', maxHeight: '66vh', border: '1px solid rgba(232,194,90,.2)', borderRadius: 12, background: 'rgba(14,9,12,.55)', display: 'flex', flexDirection: 'column', overflow: 'hidden' },
+  rightScroll: { flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', padding: 12 },
+  rightFoot: { padding: '10px 12px', borderTop: '1px solid rgba(232,194,90,.18)', background: 'rgba(10,6,9,.6)', display: 'flex', flexDirection: 'column', gap: 8 },
   ph: { color: '#a98f66', fontSize: 14, textAlign: 'center', padding: '40px 10px', lineHeight: 1.8 },
   dArt: { width: 120, height: 180, margin: '0 auto 10px', borderRadius: 10, overflow: 'hidden', boxShadow: '0 4px 18px rgba(0,0,0,.5)' },
   dName: { fontFamily: "'Shippori Mincho',serif", fontSize: 16, fontWeight: 700, color: '#efe2c8', textAlign: 'center', marginBottom: 10, overflowWrap: 'anywhere' },
@@ -1645,11 +1647,14 @@ const cpS = {
   skName: { fontSize: 13, fontWeight: 700, color: '#efe2c8', overflowWrap: 'anywhere' },
   skEff: { fontSize: 11, color: '#cdb488', marginTop: 2, lineHeight: 1.5, overflowWrap: 'anywhere', wordBreak: 'break-word' },
   skEmpty: { fontSize: 12, color: '#7a6750' },
-  choose: { marginTop: 14, width: '100%', padding: 12, borderRadius: 10, border: 'none', background: 'linear-gradient(180deg,#e8c25a,#b8901f)', color: '#1a1014', fontWeight: 800, fontSize: 15, cursor: 'pointer' },
-  dLock: { marginTop: 14, padding: 11, borderRadius: 10, border: '1px solid rgba(200,80,80,.4)', background: 'rgba(60,20,24,.4)', color: '#e9a6a6', fontSize: 13, textAlign: 'center' },
+  choose: { width: '100%', padding: 12, borderRadius: 10, border: 'none', background: 'linear-gradient(180deg,#e8c25a,#b8901f)', color: '#1a1014', fontWeight: 800, fontSize: 15, cursor: 'pointer' },
+  dLock: { padding: 11, borderRadius: 10, border: '1px solid rgba(200,80,80,.4)', background: 'rgba(60,20,24,.4)', color: '#e9a6a6', fontSize: 13, textAlign: 'center' },
+  actBtn: { width: '100%', padding: 11, borderRadius: 10, border: 'none', background: 'linear-gradient(180deg,#e8c25a,#b8901f)', color: '#1a1014', fontWeight: 800, fontSize: 14, cursor: 'pointer' },
+  actLock: { background: 'rgba(20,12,16,.85)', color: GOLD_HI, border: '1.5px solid rgba(232,194,90,.5)' },
+  actOff: { opacity: .4, cursor: 'default' },
 };
 
-function CardPicker({ title, cards, getStatus, chooseLabel, onChoose, onClear, back, busy, flash }) {
+function CardPicker({ title, cards, getStatus, chooseLabel, onChoose, onClear, actions, back, busy, flash }) {
   const [sel, setSel] = useState(null);
   const [facet, setFacet] = useState('attr');
   const [fval, setFval] = useState('all');
@@ -1736,33 +1741,39 @@ function CardPicker({ title, cards, getStatus, chooseLabel, onChoose, onClear, b
             {!selCard
               ? <div style={cpS.ph}>← 左の一覧から<br />カードを選ぶと<br />詳細が出ます</div>
               : <>
-                  <div style={cpS.dArt}><DeckSlotArt cardKey={selCard.card_key} /></div>
-                  <div style={cpS.dName}>{RAR_LABEL[selInfo.rarity]} {selInfo.name}</div>
-                  <div style={cpS.dRow}><span>レベル</span><span style={cpS.dv}>Lv {selCard.lv || 1} / 上限 {selStats.cap}</span></div>
-                  <div style={cpS.dRow}><span>強化値</span><span style={cpS.dv}>★{selCard.star || 0}</span></div>
-                  <div style={cpS.dRow}><span>本体戦闘力</span><span style={cpS.dv}>{selStats.body.toLocaleString()}</span></div>
-                  {!selStats.isSp && <div style={cpS.dRow}><span>充填（武気）</span><span style={cpS.dv}>{(selCard.loaded_buki || 0)} / {selCap} 枠</span></div>}
-                  <div style={{ ...cpS.dRow, borderBottom: 'none' }}><span>コスト</span><span style={cpS.dv}>{COST_BY_RAR[selInfo.rarity] || 0}</span></div>
-                  <div style={cpS.skTitle}>スキル</div>
-                  {selSkills === null
-                    ? <div style={cpS.skMuted}>読込中…</div>
-                    : <div style={cpS.skList}>
-                        {[0, 1, 2].map(slot => {
-                          if (selStats.isSp && slot > 0) return null;
-                          const row = bySlot[slot]; const m = row ? skillMap[row.skill_key] : null;
-                          return (
-                            <div key={slot} style={cpS.skItem}>
-                              <div style={cpS.skHead}>{slot === 0 ? '固定スキル' : '移植スロット' + slot}{row && <span style={cpS.skLv}>・Lv{row.skill_lv}</span>}</div>
-                              {row
-                                ? <><div style={cpS.skName}>{m ? m.display_name : row.skill_key}</div>{m && m.notes && <div style={cpS.skEff}>{m.notes}</div>}</>
-                                : <div style={cpS.skEmpty}>（空き）</div>}
-                            </div>
-                          );
-                        })}
-                      </div>}
-                  {selStatus.disabled
-                    ? <div style={cpS.dLock}>{selStatus.reason || selStatus.tag || '選べません'}</div>
-                    : <button onClick={() => onChoose(selCard)} disabled={busy} style={{ ...cpS.choose, ...(busy ? { opacity: .5 } : {}) }}>{typeof chooseLabel === 'function' ? chooseLabel(selCard) : chooseLabel}</button>}
+                  <div style={cpS.rightScroll}>
+                    <div style={cpS.dArt}><DeckSlotArt cardKey={selCard.card_key} /></div>
+                    <div style={cpS.dName}>{RAR_LABEL[selInfo.rarity]} {selInfo.name}</div>
+                    <div style={cpS.dRow}><span>レベル</span><span style={cpS.dv}>Lv {selCard.lv || 1} / 上限 {selStats.cap}</span></div>
+                    <div style={cpS.dRow}><span>強化値</span><span style={cpS.dv}>★{selCard.star || 0}</span></div>
+                    <div style={cpS.dRow}><span>本体戦闘力</span><span style={cpS.dv}>{selStats.body.toLocaleString()}</span></div>
+                    {!selStats.isSp && <div style={cpS.dRow}><span>充填（武気）</span><span style={cpS.dv}>{(selCard.loaded_buki || 0)} / {selCap} 枠</span></div>}
+                    <div style={{ ...cpS.dRow, borderBottom: 'none' }}><span>コスト</span><span style={cpS.dv}>{COST_BY_RAR[selInfo.rarity] || 0}</span></div>
+                    <div style={cpS.skTitle}>スキル</div>
+                    {selSkills === null
+                      ? <div style={cpS.skMuted}>読込中…</div>
+                      : <div style={cpS.skList}>
+                          {[0, 1, 2].map(slot => {
+                            if (selStats.isSp && slot > 0) return null;
+                            const row = bySlot[slot]; const m = row ? skillMap[row.skill_key] : null;
+                            return (
+                              <div key={slot} style={cpS.skItem}>
+                                <div style={cpS.skHead}>{slot === 0 ? '固定スキル' : '移植スロット' + slot}{row && <span style={cpS.skLv}>・Lv{row.skill_lv}</span>}</div>
+                                {row
+                                  ? <><div style={cpS.skName}>{m ? m.display_name : row.skill_key}</div>{m && m.notes && <div style={cpS.skEff}>{m.notes}</div>}</>
+                                  : <div style={cpS.skEmpty}>（空き）</div>}
+                              </div>
+                            );
+                          })}
+                        </div>}
+                  </div>
+                  <div style={cpS.rightFoot}>
+                    {actions
+                      ? actions(selCard).map((a, i) => <button key={i} onClick={a.onClick} disabled={a.disabled} style={{ ...cpS.actBtn, ...(a.tone === 'lock' ? cpS.actLock : {}), ...(a.disabled ? cpS.actOff : {}) }}>{a.label}</button>)
+                      : (selStatus.disabled
+                          ? <div style={cpS.dLock}>{selStatus.reason || selStatus.tag || '選べません'}</div>
+                          : <button onClick={() => onChoose(selCard)} disabled={busy} style={{ ...cpS.choose, ...(busy ? { opacity: .5 } : {}) }}>{typeof chooseLabel === 'function' ? chooseLabel(selCard) : chooseLabel}</button>)}
+                  </div>
                 </>}
           </div>
         </div>
@@ -1799,6 +1810,7 @@ function DeckScreen({ profile, cards, refreshAll, back, flash, initialDeckNo }) 
   const [spSet, setSpSet] = useState(null);     // {card_id:true} 本日離脱中
   const [deckNo, setDeckNo] = useState(initialDeckNo || 1);
   const [picking, setPicking] = useState(null); // 編集中の枠 index or null
+  const [detailCard, setDetailCard] = useState(null); // カード詳細ポップアップ
   const [busy, setBusy] = useState(false);      // 即コミット中（二重防止）
   const [moveConfirm, setMoveConfirm] = useState(null); // {cardId, slot, fromDeckNo} 他デッキ移動の確認
   const [recallConfirm, setRecallConfirm] = useState(null); // {kind:'boss'|'tansaku', deckNo} 帰還/回収の確認
@@ -1916,6 +1928,7 @@ function DeckScreen({ profile, cards, refreshAll, back, flash, initialDeckNo }) 
             </div>
           );
         })()}
+        {detailCard && <CardPopup card={detailCard} onClose={() => setDetailCard(null)} />}
       </>
     );
   }
@@ -1966,6 +1979,7 @@ function DeckScreen({ profile, cards, refreshAll, back, flash, initialDeckNo }) 
                   ? <>
                       <div onClick={(e) => { e.stopPropagation(); if (!busy && !deckSortie) commit(withSlot(slot, null)); }} style={deckS.rm}>×</div>
                       <DeckSlotArt cardKey={c.card_key} />
+                      <div onClick={(e) => { e.stopPropagation(); setDetailCard(c); }} style={{ position: 'absolute', left: 4, top: 4, width: 22, height: 22, borderRadius: '50%', background: 'rgba(10,6,9,.8)', border: '1px solid rgba(232,194,90,.55)', color: '#fff3c8', fontSize: 13, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 3 }}>ⓘ</div>
                       {sp && <div style={badge('#ff6a7a')}>離脱中</div>}
                     </>
                   : <div style={deckS.empty}>＋<small style={deckS.emptySmall}>枠 {slot + 1}</small></div>}
@@ -2462,12 +2476,7 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
       </div>
 
       {/* カードタップ→詳細（スキル＋武気充填）。戻るで出撃シートに復帰 */}
-      {detailCard && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 200, overflowY: 'auto', background: '#0a0608' }}>
-          <CardDetail card={detailCard} cards={cards} profile={profile} skillMap={skillMap} refreshAll={onRefresh} onSelect={setDetailCard} flash={flash}
-            back={async () => { setDetailCard(null); try { await onRefresh(); } catch (e) {} }} />
-        </div>
-      )}
+      {detailCard && <CardPopup card={detailCard} onClose={() => setDetailCard(null)} />}
 
       {/* 編成ボタン→DeckScreen。戻るでデッキ内容を反映して出撃シートに復帰 */}
       {editDeckNo !== null && (
@@ -2543,17 +2552,31 @@ const kyokaS = {
   rHome: { marginTop: 22, fontFamily: 'inherit', fontWeight: 800, fontSize: 15, letterSpacing: 2, color: '#2a160a', border: 'none', padding: '12px 30px', borderRadius: 26, cursor: 'pointer', background: 'linear-gradient(180deg,#ffe49a,#e8b54d 60%,#b9842f)' },
 };
 function KyokaScreen({ cards, profile, refreshAll, back, flash }) {
-  const [baseCard, setBaseCard] = useState(null);
+  const [card, setCard] = useState(null);
+  const [mode, setMode] = useState(null);
   const [skillMap, setSkillMap] = useState({});
+  const [busy, setBusy] = useState(false);
   const cardById = {}; (cards || []).forEach(c => { cardById[c.id] = c; });
   useEffect(() => { (async () => { try { const sm = await ChikarianAPI.getSkillMaster(); const m = {}; (sm || []).forEach(s => { m[s.skill_key] = s; }); setSkillMap(m); } catch (e) {} })(); }, []);
-  // 強化合成＝カードを選ぶ→カード詳細（★強化／スキル強化・転移）。refreshAll 後も最新を反映するため cardById から都度引く。
-  const cur = baseCard ? cardById[baseCard.id] : null;
-  if (cur) {
-    return <CardDetail card={cur} cards={cards} profile={profile} skillMap={skillMap} refreshAll={refreshAll} back={() => setBaseCard(null)} onSelect={setBaseCard} flash={flash} />;
+  // 強化合成＝カードを選ぶ→右パネルの操作ボタン（★強化／スキル強化・転移／ロック）を直接実行。中間のカード詳細ページは廃止。
+  const cur = card ? cardById[card.id] : null;
+  if (mode === 'kyoka' && cur) return <KyokaView base={cur} cards={cards} profile={profile} refreshAll={refreshAll} onBack={() => setMode(null)} flash={flash} />;
+  if (mode === 'skill' && cur) return <SkillView base={cur} cards={cards} profile={profile} skillMap={skillMap} refreshAll={refreshAll} onBack={() => setMode(null)} flash={flash} />;
+  const getStatus = (c) => ({ disabled: false, dim: false, tag: c.locked ? 'ロック中' : null });
+  async function toggleLock(c) {
+    if (!LOCK_RPC_AVAILABLE) { flash('ロック切替には専用RPCが必要です（0023適用後に有効化）'); return; }
+    setBusy(true);
+    try { await ChikarianAPI.setCardLock(c.id, !c.locked); await refreshAll(); } catch (e) { flash(errMsg(e)); } finally { setBusy(false); }
   }
-  const getStatus = (c) => { const locked = !!c.locked; return { disabled: locked, dim: locked, tag: locked ? 'ロック中' : null }; };
-  return <CardPicker title="強化するカードを選ぶ" cards={cards} getStatus={getStatus} chooseLabel="このカードを選ぶ" onChoose={(c) => setBaseCard(c)} back={back} flash={flash} />;
+  const actions = (c) => {
+    const isSp = c.card_key.endsWith('_sp');
+    return [
+      { label: '★強化' + (c.locked ? '（ロック中）' : ''), disabled: busy || !!c.locked, onClick: () => { setCard(c); setMode('kyoka'); } },
+      { label: 'スキル強化・転移' + (isSp ? '（SP不可）' : ''), disabled: busy || isSp, onClick: () => { setCard(c); setMode('skill'); } },
+      { label: c.locked ? '🔒 ロック解除' : '🔓 ロックする', tone: 'lock', disabled: busy || !LOCK_RPC_AVAILABLE, onClick: () => toggleLock(c) },
+    ];
+  };
+  return <CardPicker title="強化するカードを選ぶ" cards={cards} getStatus={getStatus} actions={actions} back={back} busy={busy} flash={flash} />;
 }
 
 function KyokaView({ base, cards, profile, refreshAll, onBack, flash }) {
@@ -2809,12 +2832,78 @@ const exS = {
   exOff: { opacity: .45, cursor: 'default' },
 };
 
+const popS = {
+  scrim: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,.74)', display: 'grid', placeItems: 'center', zIndex: 120, padding: 16 },
+  box: { position: 'relative', width: 'min(360px, 94vw)', maxHeight: '88vh', overflowY: 'auto', background: '#160a13', border: '1.5px solid rgba(232,194,90,.5)', borderRadius: 14, padding: '16px 16px 18px', boxShadow: '0 12px 40px rgba(0,0,0,.7)' },
+  close: { position: 'absolute', top: 8, right: 10, width: 30, height: 30, borderRadius: '50%', border: '1px solid rgba(232,194,90,.4)', background: 'rgba(20,12,16,.8)', color: GOLD_HI, fontSize: 18, cursor: 'pointer', lineHeight: 1, zIndex: 2 },
+  art: { width: 132, height: 198, margin: '4px auto 10px', borderRadius: 10, overflow: 'hidden', boxShadow: '0 4px 18px rgba(0,0,0,.5)' },
+  name: { fontFamily: "'Shippori Mincho',serif", fontSize: 17, fontWeight: 700, color: '#efe2c8', textAlign: 'center', marginBottom: 10, overflowWrap: 'anywhere' },
+  row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '7px 2px', borderBottom: '1px solid rgba(232,194,90,.12)', fontSize: 13, color: '#cdb488' },
+  v: { color: '#efe2c8', fontWeight: 700, textAlign: 'right' },
+  skTitle: { marginTop: 12, marginBottom: 6, fontSize: 13, fontWeight: 700, color: GOLD_HI },
+  skMuted: { fontSize: 12, color: '#a98f66', padding: '4px 0' },
+  skList: { display: 'flex', flexDirection: 'column', gap: 6 },
+  skItem: { padding: '7px 9px', borderRadius: 9, border: '1px solid rgba(232,194,90,.16)', background: 'rgba(20,12,16,.5)' },
+  skHead: { fontSize: 10, color: '#a98f66', marginBottom: 2 },
+  skLv: { color: '#cdb488' },
+  skName: { fontSize: 13, fontWeight: 700, color: '#efe2c8' },
+  skEff: { fontSize: 11, color: '#cdb488', marginTop: 2, lineHeight: 1.5, overflowWrap: 'anywhere' },
+  skEmpty: { fontSize: 12, color: '#7a6750' },
+};
+
+function CardPopup({ card, onClose }) {
+  const [skillMap, setSkillMap] = useState({});
+  const [skills, setSkills] = useState(null);
+  useEffect(() => { (async () => { try { const sm = await ChikarianAPI.getSkillMaster(); const m = {}; (sm || []).forEach(s => { m[s.skill_key] = s; }); setSkillMap(m); } catch (e) {} })(); }, []);
+  useEffect(() => {
+    let live = true; setSkills(null);
+    if (card) { (async () => { try { const s = await ChikarianAPI.getCardSkills(card.id) || []; if (live) setSkills(s); } catch (e) { if (live) setSkills([]); } })(); }
+    return () => { live = false; };
+  }, [card && card.id]);
+  if (!card) return null;
+  const info = parseCardKey(card.card_key);
+  const st = computeStats(card);
+  const cap = bukiCapacity(card);
+  const bySlot = {}; (skills || []).forEach(s => { bySlot[s.slot] = s; });
+  return (
+    <div style={popS.scrim} onClick={onClose}>
+      <div style={popS.box} onClick={e => e.stopPropagation()}>
+        <button style={popS.close} onClick={onClose}>×</button>
+        <div style={popS.art}><DeckSlotArt cardKey={card.card_key} /></div>
+        <div style={popS.name}>{RAR_LABEL[info.rarity]} {info.name}</div>
+        <div style={popS.row}><span>レベル</span><span style={popS.v}>Lv {card.lv || 1} / 上限 {st.cap}</span></div>
+        <div style={popS.row}><span>強化値</span><span style={popS.v}>★{card.star || 0}</span></div>
+        <div style={popS.row}><span>本体戦闘力</span><span style={popS.v}>{st.body.toLocaleString()}</span></div>
+        {!st.isSp && <div style={popS.row}><span>充填（武気）</span><span style={popS.v}>{(card.loaded_buki || 0)} / {cap} 枠</span></div>}
+        <div style={{ ...popS.row, borderBottom: 'none' }}><span>コスト</span><span style={popS.v}>{COST_BY_RAR[info.rarity] || 0}</span></div>
+        <div style={popS.skTitle}>スキル</div>
+        {skills === null
+          ? <div style={popS.skMuted}>読込中…</div>
+          : <div style={popS.skList}>
+              {[0, 1, 2].map(slot => {
+                if (st.isSp && slot > 0) return null;
+                const r = bySlot[slot]; const m = r ? skillMap[r.skill_key] : null;
+                return (
+                  <div key={slot} style={popS.skItem}>
+                    <div style={popS.skHead}>{slot === 0 ? '固定スキル' : '移植スロット' + slot}{r && <span style={popS.skLv}>・Lv{r.skill_lv}</span>}</div>
+                    {r ? <><div style={popS.skName}>{m ? m.display_name : r.skill_key}</div>{m && m.notes && <div style={popS.skEff}>{m.notes}</div>}</> : <div style={popS.skEmpty}>（空き）</div>}
+                  </div>
+                );
+              })}
+            </div>}
+      </div>
+    </div>
+  );
+}
+
+
 function ExchangeTab({ profile, cards, refreshAll, flash }) {
   const [rates, setRates] = useState([]);
   const [sel, setSel] = useState({});
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
   const [confirm, setConfirm] = useState(false);
+  const [detailCard, setDetailCard] = useState(null); // カード詳細ポップアップ
   useEffect(() => { (async () => { try { setRates(await ChikarianAPI.getExchangeRates() || []); } catch (e) { setRates([]); } })(); }, []);
 
   // 交換可能カード（ロック中・探索/ボス出撃中は除外）
@@ -2860,8 +2949,8 @@ function ExchangeTab({ profile, cards, refreshAll, flash }) {
               const e = estOf(c); const on = !!sel[c.id]; const info = parseCardKey(c.card_key);
               return (
                 <button key={c.id} onClick={() => toggle(c.id)} style={{ ...exS.card, ...(on ? exS.cardOn : {}) }}>
-                  <div style={exS.cardArt}><DeckSlotArt cardKey={c.card_key} />{on && <div style={exS.check}>✓</div>}</div>
-                  <div style={exS.cardName}>{RAR_LABEL[info.rarity]}{(c.star || 0) > 0 ? '★' + (c.star || 0) : ''}</div>
+                  <div style={exS.cardArt}><DeckSlotArt cardKey={c.card_key} />{on && <div style={exS.check}>✓</div>}<div onClick={(e) => { e.stopPropagation(); setDetailCard(c); }} style={{ position: 'absolute', left: 3, top: 3, width: 20, height: 20, borderRadius: '50%', background: 'rgba(10,6,9,.82)', border: '1px solid rgba(232,194,90,.5)', color: '#fff3c8', fontSize: 12, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 3 }}>ⓘ</div></div>
+                  <div style={exS.cardName}>{RAR_LABEL[info.rarity]} Lv{c.lv || 1}{(c.star || 0) > 0 ? ' ★' + (c.star || 0) : ''}</div>
                   <div style={exS.cardCx}>{e ? COLOR_JA[e.color] + '+' + e.count : '—'}</div>
                 </button>
               );
@@ -2883,6 +2972,7 @@ function ExchangeTab({ profile, cards, refreshAll, flash }) {
           </div>
         </div>
       )}
+      {detailCard && <CardPopup card={detailCard} onClose={() => setDetailCard(null)} />}
     </div>
   );
 }
