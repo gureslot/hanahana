@@ -3110,7 +3110,17 @@ function RenkidenTab({ profile, refreshAll, flash }) {
   const [investAmt, setInvestAmt] = useState('');
   const [instantN, setInstantN] = useState('');
   const [busy, setBusy] = useState(false);
+  const [now, setNow] = useState(Date.now());
+  const rkAtRef = useRef(Date.now());
   const medal = profile ? (profile.medal || 0) : 0;
+  // 自動生産のライブ補間（表示/ガード用・サーバが正、操作と再取得で再同期）。武気1＝メダル5。
+  const liveSnap = (t) => {
+    if (!rk) return { b: 0, f: 0 };
+    const el = Math.max(0, (t - rkAtRef.current) / 1000);
+    let b = rk.buki, f = rk.fuel;
+    if (rk.fuel > 0 && rk.buki < rk.cap) { const p = Math.min(rk.rate * el, rk.cap - rk.buki, rk.fuel / 5); b += p; f -= p * 5; }
+    return { b, f };
+  };
 
   async function load() {
     // 表示の正＝collect の返り値（時刻計算済み）。行が無ければ collect が作成する想定。
@@ -3118,6 +3128,8 @@ function RenkidenTab({ profile, refreshAll, flash }) {
     catch (e) { try { setRk(normalizeRk(await ChikarianAPI.getRenkiden())); } catch (e2) { flash(errMsg(e)); } }
   }
   useEffect(() => { load(); }, []);
+  useEffect(() => { rkAtRef.current = Date.now(); }, [rk]);
+  useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
 
   async function run(fn, okMsg) {
     if (busy) return; setBusy(true);
@@ -3128,7 +3140,8 @@ function RenkidenTab({ profile, refreshAll, flash }) {
   const invest = () => {
     const m0 = parseInt(investAmt, 10);
     if (!(m0 > 0)) { flash('投資額を入力してください'); return; }
-    const maxI = Math.max(0, Math.ceil(Math.max(0, rk.cap - rk.buki) * 5) - rk.fuel);  // 満タンまでに必要なメダル（投資中分を差引）
+    const { b: lb, f: lf } = liveSnap(Date.now());
+    const maxI = Math.max(0, Math.ceil(Math.max(0, rk.cap - lb) * 5) - lf);  // 満タンまでに必要なメダル（投資中分を差引・ライブ）
     if (maxI <= 0) { flash('武気は満タンです（投資中のメダルで充足）。回収してから投資してください'); return; }
     const m = Math.min(m0, maxI);
     run(() => ChikarianAPI.investRenkiden(m), m < m0 ? `満タンまでの ${m.toLocaleString()} メダルのみ投資しました` : 'メダルを投資しました');
@@ -3137,23 +3150,24 @@ function RenkidenTab({ profile, refreshAll, flash }) {
   const instant = () => {
     const n0 = parseInt(instantN, 10);
     if (!(n0 > 0)) { flash('生産量を入力してください'); return; }
-    const maxN = Math.floor(Math.max(0, rk.cap - rk.buki));  // 残り枠（個）
+    const { b: lb } = liveSnap(Date.now());
+    const maxN = Math.floor(Math.max(0, rk.cap - lb));  // 残り枠（個・ライブ）
     if (maxN <= 0) { flash('武気は満タンです'); return; }
     const n = Math.min(n0, maxN);
     run(() => ChikarianAPI.instantRenkiden(n), n < n0 ? `上限までの ${n} 個のみ即生産しました` : '即時生産しました');
     setInstantN('');
   };
-  const collect = () => run(() => ChikarianAPI.collectRenkiden(), '最新の状態に更新しました');
   const upgrade = () => run(() => ChikarianAPI.upgradeRenkiden(), '練気殿をLvアップ');
 
   if (!rk) return <Booting />;
   const upFee = 8000 * rk.lv;   // balance §11
-  const pct = rk.cap > 0 ? Math.min(100, rk.buki / rk.cap * 100) : 0;
-  const running = rk.fuel > 0 && rk.buki < rk.cap;
+  const { b: liveBuki, f: liveFuel } = liveSnap(now);
+  const pct = rk.cap > 0 ? Math.min(100, liveBuki / rk.cap * 100) : 0;
+  const running = liveFuel > 0 && liveBuki < rk.cap;
   const instNum = parseInt(instantN, 10);
   const invNum = parseInt(investAmt, 10);
-  const roomBuki = Math.max(0, rk.cap - rk.buki);                   // 残り枠（武気）
-  const maxInvest = Math.max(0, Math.ceil(roomBuki * 5) - rk.fuel); // 満タンまで投資できるメダル
+  const roomBuki = Math.max(0, rk.cap - liveBuki);                  // 残り枠（武気）
+  const maxInvest = Math.max(0, Math.ceil(roomBuki * 5) - liveFuel); // 満タンまで投資できるメダル
   const maxInstant = Math.floor(roomBuki);                         // 即生産の上限（個）
 
   return (
@@ -3166,10 +3180,10 @@ function RenkidenTab({ profile, refreshAll, flash }) {
         </div>
       </div>
       <div className="tat-fstat">
-        <div className="tat-st"><span className="k">武気</span><b>{Math.floor(rk.buki).toLocaleString()} / {rk.cap.toLocaleString()}</b></div>
+        <div className="tat-st"><span className="k">武気</span><b>{Math.floor(liveBuki).toLocaleString()} / {rk.cap.toLocaleString()}</b></div>
         <div className="tat-gauge"><div style={{ width: pct + '%' }} /></div>
         <div className="tat-st"><span className="k">練成レート</span><b>毎秒 {rk.rate}（時間 武気1＝メダル5）</b></div>
-        <div className="tat-st"><span className="k">投資中のメダル</span><b>{rk.fuel.toLocaleString()}{rk.fuel > 0 ? '（尽きるまで毎秒練成）' : ''}</b></div>
+        <div className="tat-st"><span className="k">投資中のメダル</span><b>{Math.floor(liveFuel).toLocaleString()}{liveFuel > 0 ? '（尽きるまで毎秒練成）' : ''}</b></div>
       </div>
 
       <div className="tat-invest">
@@ -3192,7 +3206,6 @@ function RenkidenTab({ profile, refreshAll, flash }) {
         {instNum > 0 && <div className="tat-est"><div className="row2"><span>必要メダル 目安</span><span className="b">{(instNum * 15).toLocaleString()}</span></div><div className="row2"><span>残り枠</span><span className="b">{maxInstant.toLocaleString()} 個</span></div>{instNum > maxInstant && <div className="note">※残り枠（{maxInstant.toLocaleString()} 個）までに調整して生産します。</div>}</div>}
         <div className="tat-fbtns">
           <button className="tat-fb gold" disabled={busy || maxInstant <= 0} onClick={instant}>即生産（×15）</button>
-          <button className="tat-fb" disabled={busy} onClick={collect}>更新</button>
         </div>
       </div>
 
