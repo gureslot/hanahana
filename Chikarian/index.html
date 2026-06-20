@@ -227,7 +227,7 @@ class ErrBoundary extends React.Component {
         <div style={{ position: 'relative', zIndex: 2, minHeight: '100dvh', padding: '60px 22px', color: '#efe2c8', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: 12 }}>
           <div style={{ fontSize: 15, fontWeight: 800, color: '#ff9a8a' }}>この画面の描画でエラーが発生しました</div>
           <div style={{ fontSize: 11, color: '#cdb488', whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxWidth: 360, lineHeight: 1.6, background: 'rgba(60,20,24,.4)', border: '1px solid rgba(255,120,120,.35)', borderRadius: 10, padding: '10px 12px' }}>{m}</div>
-          <button onClick={() => { this.setState({ err: null }); if (this.props.onReset) this.props.onReset(); }} style={{ marginTop: 8, fontFamily: 'inherit', fontSize: 13, fontWeight: 800, color: '#1a0f06', background: 'linear-gradient(180deg,#ffd98a,#e8a23b)', border: 'none', borderRadius: 12, padding: '11px 24px', cursor: 'pointer' }}>‹ ホームに戻る</button>
+          <button onClick={() => { this.setState({ err: null }); if (this.props.onReset) this.props.onReset(); }} style={{ marginTop: 8, fontFamily: 'inherit', fontSize: 13, fontWeight: 800, color: '#1a0f06', background: 'linear-gradient(180deg,#ffd98a,#e8a23b)', border: 'none', borderRadius: 12, padding: '11px 24px', cursor: 'pointer' }}>ホームへ戻る</button>
         </div>
       );
     }
@@ -846,7 +846,7 @@ function Placeholder({ name, back, logout }) {
     <div style={{ ...S.bg, ...S.centerFull }}>
       <div style={{ fontSize: 22, color: GOLD_HI, fontWeight: 800, letterSpacing: 2 }}>{LABELS[name] || name}</div>
       <div style={{ fontSize: 13, color: '#cdb488', marginTop: 10 }}>この画面は準備中です（次のフェーズで実装）</div>
-      <button onClick={back} style={{ ...S.bigBtn, marginTop: 30 }}>ホームに戻る</button>
+      <button onClick={back} style={{ ...S.bigBtn, marginTop: 30 }}>ホームへ戻る</button>
       {name === 'settings' && <button onClick={logout} style={{ ...S.lineBtn, marginTop: 14 }}>ログアウト</button>}
     </div>
   );
@@ -1050,7 +1050,7 @@ function Saishu({ profile, onExit, flash }) {
         </div>
 
         <button onClick={handleBack} disabled={submitting} style={{ ...S.bigBtn, marginTop: 6 }}>
-          {submitting ? '記録中…' : 'ホームに戻る'}
+          {submitting ? '記録中…' : 'ホームへ戻る'}
         </button>
       </div>
     </div>
@@ -1191,7 +1191,7 @@ function Gacha({ profile, onRefresh, back, flash }) {
         </div>
 
         <button onClick={draw} disabled={drawing} style={S.bigBtn}>{drawing ? '排出中…' : '引く（300）'}</button>
-        <button onClick={back} disabled={drawing} style={{ ...S.lineBtn, marginTop: 16 }}>ホームに戻る</button>
+        <button onClick={back} disabled={drawing} style={{ ...S.lineBtn, display: 'block', margin: '16px auto 0' }}>ホームへ戻る</button>
       </div>
     </div>
   );
@@ -1447,7 +1447,7 @@ function ZukanScreen({ cards, profile, refreshAll, back, flash, initialTab }) {
               })}
             </div>}
         <div style={zS.botBar}>
-          <button style={zS.back2} onClick={back}>‹ 戻る</button>
+          <button style={zS.back2} onClick={back}>ホームへ戻る</button>
           <div style={{ flex: 1 }} />
           {totalPages > 1 && <>
             <button style={{ ...zS.pgBtn, ...(pg <= 0 ? zS.pgOff : {}) }} disabled={pg <= 0} onClick={() => setPage(pg - 1)}>‹ 前</button>
@@ -1724,7 +1724,7 @@ const cpS = {
   actOff: { opacity: .4, cursor: 'default' },
 };
 
-function CardPicker({ title, cards, getStatus, chooseLabel, onChoose, onClear, actions, back, busy, flash }) {
+function CardPicker({ title, cards, getStatus, chooseLabel, onChoose, onClear, actions, back, busy, flash, backLabel = '‹ 戻る', backCenter = false }) {
   const [sel, setSel] = useState(null);
   const [facet, setFacet] = useState('attr');
   const [fval, setFval] = useState('all');
@@ -1776,7 +1776,6 @@ function CardPicker({ title, cards, getStatus, chooseLabel, onChoose, onClear, a
       <div style={S.bg} /><div style={S.vignette} />
       <div style={cpS.wrap}>
         <div style={cpS.head}>
-          <button onClick={back} style={{ ...S.lineBtn, padding: '6px 14px' }}>‹ 戻る</button>
           <div style={cpS.title}>{title}</div>
         </div>
         <div style={cpS.facetRow}>
@@ -1848,6 +1847,9 @@ function CardPicker({ title, cards, getStatus, chooseLabel, onChoose, onClear, a
           </div>
         </div>
         {onClear && <button onClick={onClear} disabled={busy} style={{ ...S.lineBtn, marginTop: 12, alignSelf: 'center', ...(busy ? { opacity: .45 } : {}) }}>この枠を空にする</button>}
+        <div style={{ flex: 'none', marginTop: 12, display: 'flex', justifyContent: backCenter ? 'center' : 'flex-start' }}>
+          <button onClick={back} style={backCenter ? { fontFamily: 'inherit', fontSize: 14, fontWeight: 800, color: GOLD_HI, background: PANEL, border: BORDER, borderRadius: 22, padding: '11px 28px', cursor: 'pointer' } : { ...S.lineBtn, padding: '8px 16px' }}>{backLabel}</button>
+        </div>
       </div>
     </div>
   );
@@ -2083,7 +2085,7 @@ function DeckScreen({ profile, cards, refreshAll, back, flash, initialDeckNo }) 
           <div style={deckS.autoSave}>編成は自動で保存されます</div>
         </div>
 
-        <button onClick={back} style={{ ...S.lineBtn, marginTop: 16, alignSelf: 'center' }}>ホームに戻る</button>
+        <button onClick={back} style={{ ...S.lineBtn, marginTop: 16, alignSelf: 'center' }}>ホームへ戻る</button>
       </div>
 
         {/* 武気充填の微調整モーダル（質・±・最大・空） */}
@@ -2200,7 +2202,7 @@ const BOSS_CSS = `
 .boss-witem.locked{color:#8a7c60; cursor:default;}
 .boss-tries{margin-top:6px; background:rgba(18,10,14,.9); border:1.5px solid rgba(232,194,90,.55); border-radius:12px; padding:6px 12px; text-align:center; font-size:11px; color:#cdb488; letter-spacing:1px;}
 .boss-tries b{color:#ffe39a; font-weight:800;}
-.boss-back{position:absolute; z-index:7; left:14px; bottom:16px; font-family:inherit; font-size:14px; letter-spacing:1px; color:#fff3c8; background:rgba(18,10,14,.9); border:1.5px solid rgba(232,194,90,.55); border-radius:22px; padding:11px 22px; cursor:pointer;}
+.boss-back{position:absolute; z-index:7; left:50%; transform:translateX(-50%); bottom:16px; font-family:inherit; font-size:14px; letter-spacing:1px; color:#fff3c8; background:rgba(18,10,14,.9); border:1.5px solid rgba(232,194,90,.55); border-radius:22px; padding:11px 22px; cursor:pointer;}
 .boss-scrim{position:absolute; inset:0; z-index:8; background:rgba(0,0,0,.45); opacity:0; pointer-events:none; transition:.3s;}
 .boss-scrim.show{opacity:1; pointer-events:auto;}
 .boss-sheet{position:absolute; z-index:9; left:0; right:0; bottom:0; transform:translateY(110%); max-width:480px; margin:0 auto; transition:transform .35s cubic-bezier(.2,.8,.25,1); background:rgba(18,10,14,.94); border-top:1.5px solid rgba(232,194,90,.55); border-left:1.5px solid rgba(232,194,90,.55); border-right:1.5px solid rgba(232,194,90,.55); border-radius:18px 18px 0 0; padding:16px 18px 22px; box-shadow:0 -8px 24px rgba(0,0,0,.6); max-height:84vh; overflow-y:auto;}
@@ -2488,7 +2490,7 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
       {/* 界ドロップダウンの外側タップで閉じる */}
       {worldOpen && <div className="boss-wscrim" onClick={() => setWorldOpen(false)} />}
 
-      <button className="boss-back" onClick={back}>‹ 戻る</button>
+      <button className="boss-back" onClick={back}>ホームへ戻る</button>
 
       <div className={'boss-scrim' + (openNode !== null ? ' show' : '')} onClick={closeSheet} />
 
@@ -2667,7 +2669,7 @@ function KyokaScreen({ cards, profile, refreshAll, back, flash }) {
       { label: c.locked ? '🔒 ロック解除' : '🔓 ロックする', tone: 'lock', disabled: busy || !LOCK_RPC_AVAILABLE, onClick: () => toggleLock(c) },
     ];
   };
-  return <CardPicker title="強化するカードを選ぶ" cards={cards} getStatus={getStatus} actions={actions} back={back} busy={busy} flash={flash} />;
+  return <CardPicker title="強化するカードを選ぶ" cards={cards} getStatus={getStatus} actions={actions} back={back} busy={busy} flash={flash} backLabel="ホームへ戻る" backCenter={true} />;
 }
 
 function KyokaView({ base, cards, profile, refreshAll, onBack, flash }) {
@@ -2806,7 +2808,7 @@ function KyokaView({ base, cards, profile, refreshAll, onBack, flash }) {
             </div>
             <div style={{ display: 'flex', gap: 10, marginTop: 22 }}>
               <button onClick={() => { setResult(null); setMatId(null); setHoshou(0); }} style={kyokaS.rHome}>つづけて強化</button>
-              <button onClick={onBack} style={{ ...kyokaS.rHome, background: 'rgba(20,10,16,.9)', color: GOLD_HI, border: BORDER }}>カードに戻る</button>
+              <button onClick={onBack} style={{ ...kyokaS.rHome, background: 'rgba(20,10,16,.9)', color: GOLD_HI, border: BORDER }}>‹ 戻る</button>
             </div>
           </div>
         );
@@ -3114,7 +3116,7 @@ function TatemonoScreen({ profile, cards, refreshAll, back, flash }) {
         {tab === 'shurenjo' && <ShurenjoView profile={profile} cards={cards} flash={flash} />}
         {tab === 'exchange' && <ExchangeTab profile={profile} cards={cards} refreshAll={refreshAll} flash={flash} />}
 
-        <div className="tat-backlink" onClick={back}>‹ ホームへ戻る</div>
+        <div className="tat-backlink" onClick={back}>ホームへ戻る</div>
       </div>
     </div>
   );
@@ -3339,7 +3341,7 @@ const TAN_CSS = `
 .tan-area{flex:1; text-align:center; font-size:16px; font-weight:800; letter-spacing:2px; text-shadow:0 2px 6px #000, 0 0 14px rgba(255,180,80,.4);}
 .tan-res{display:flex; gap:6px; align-items:center; background:rgba(18,10,14,.88); border:1.5px solid rgba(232,194,90,.55); border-radius:14px; padding:5px 12px; font-size:13px;}
 .tan-res b{color:#ffe39a; font-weight:800;}
-.tan-back{position:absolute; z-index:9; left:14px; bottom:16px; font-family:inherit; font-size:14px; letter-spacing:1px; color:#fff3c8; background:rgba(18,10,14,.88); border:1.5px solid rgba(232,194,90,.55); border-radius:22px; padding:11px 22px; cursor:pointer;}
+.tan-back{position:absolute; z-index:9; left:50%; transform:translateX(-50%); bottom:16px; font-family:inherit; font-size:14px; letter-spacing:1px; color:#fff3c8; background:rgba(18,10,14,.88); border:1.5px solid rgba(232,194,90,.55); border-radius:22px; padding:11px 22px; cursor:pointer;}
 .tan-scrim{position:absolute; inset:0; z-index:7; background:rgba(0,0,0,.4); opacity:0; pointer-events:none; transition:.3s;}
 .tan-scrim.show{opacity:1; pointer-events:auto;}
 .tan-sheet{position:absolute; z-index:8; left:0; right:0; bottom:0; transform:translateY(110%); transition:transform .35s cubic-bezier(.2,.8,.25,1); background:rgba(18,10,14,.88); border-top:1.5px solid rgba(232,194,90,.55); border-left:1.5px solid rgba(232,194,90,.55); border-right:1.5px solid rgba(232,194,90,.55); border-radius:18px 18px 0 0; padding:16px 18px 22px; box-shadow:0 -8px 24px rgba(0,0,0,.6); max-width:480px; margin:0 auto;}
@@ -3494,7 +3496,7 @@ function TansakuScreen({ profile, refreshAll, back, flash }) {
         </div>
       )}
 
-      <button className="tan-back" onClick={back}>‹ 戻る</button>
+      <button className="tan-back" onClick={back}>ホームへ戻る</button>
     </div>
   );
 }
@@ -3576,7 +3578,7 @@ function HouchiScreen({ profile, refreshAll, back, flash }) {
             );
           })}
         </div>
-        <button onClick={back} style={{ ...S.lineBtn, marginTop: 16, alignSelf: 'center' }}>ホームに戻る</button>
+        <button onClick={back} style={{ ...S.lineBtn, marginTop: 16, alignSelf: 'center' }}>ホームへ戻る</button>
       </div>
     </div>
   );
@@ -3713,7 +3715,7 @@ function EquipView({ base, refreshAll, onBack, flash }) {
             {result.pool_remaining != null && <>武気プール残 {Number(result.pool_remaining).toLocaleString()}</>}
           </div>
           <button onClick={() => { setResult(null); }} className="sb-cta" style={{ maxWidth: 280 }}>つづけて調整</button>
-          <button onClick={onBack} className="sb-back">‹ カードに戻る</button>
+          <button onClick={onBack} className="sb-back">‹ 戻る</button>
         </div>
       </div>
     );
@@ -3782,7 +3784,7 @@ function EquipView({ base, refreshAll, onBack, flash }) {
         </div>
 
         <button onClick={equip} disabled={busy} className="sb-cta">{busy ? '装備中…' : (amt === 0 ? 'アンロード（全返却）' : '装備する')}</button>
-        <button onClick={onBack} className="sb-back">‹ カードに戻る</button>
+        <button onClick={onBack} className="sb-back">‹ 戻る</button>
         <div className="sb-foot">数値は本番 computeStats 準拠（本体×0.80・★0.10・枠攻撃力10/15/22/34）。武気は練気殿で練成・保管。質は鍛冶屋で解放。</div>
       </div>
     </div>
@@ -4018,7 +4020,7 @@ function SkillView({ base, cards, profile, skillMap, refreshAll, onBack, flash }
               </>}
         </>}
 
-        <button onClick={onBack} className="sk-back">‹ カードに戻る</button>
+        <button onClick={onBack} className="sk-back">‹ 戻る</button>
       </div>
 
       {/* 転移 確認ポップアップ */}
@@ -4149,7 +4151,7 @@ const misS = {
   claimBtn: { fontFamily: 'inherit', fontWeight: 800, fontSize: 12, color: '#2a160a', border: 'none', padding: '7px 16px', borderRadius: 16, cursor: 'pointer', background: 'linear-gradient(180deg,#ffe49a,#e8b54d 60%,#b9842f)', marginLeft: 'auto' },
   claimOff: { filter: 'grayscale(.6) brightness(.8)', cursor: 'default' },
   note: { fontSize: 9, color: '#a98f66', marginTop: 6 },
-  back: { position: 'absolute', zIndex: 7, left: 14, bottom: 14, fontFamily: 'inherit', fontSize: 14, color: GOLD_HI, background: PANEL, border: BORDER, borderRadius: 22, padding: '10px 20px', cursor: 'pointer' },
+  back: { position: 'absolute', zIndex: 7, left: '50%', transform: 'translateX(-50%)', bottom: 14, fontFamily: 'inherit', fontSize: 14, color: GOLD_HI, background: PANEL, border: BORDER, borderRadius: 22, padding: '10px 20px', cursor: 'pointer' },
 };
 function MissionScreen({ profile, cards, refreshAll, back, flash }) {
   const [tab, setTab] = useState('daily');
@@ -4260,7 +4262,7 @@ function MissionScreen({ profile, cards, refreshAll, back, flash }) {
           })}
         </div>
       </div>
-      <button onClick={back} style={misS.back}>‹ 戻る</button>
+      <button onClick={back} style={misS.back}>ホームへ戻る</button>
     </div>
   );
 }
@@ -4427,7 +4429,7 @@ function BattleLogView({ back, flash }) {
                 </button>
               ))}
         </div>
-        <div style={repS.footer}><button onClick={back} style={repS.footBack}>‹ ホームに戻る</button></div>
+        <div style={repS.footer}><button onClick={back} style={repS.footBack}>ホームへ戻る</button></div>
       </div>
     </div>
   );
@@ -4563,7 +4565,7 @@ const setS = {
   small: { fontFamily: 'inherit', fontSize: 12, color: GOLD_HI, background: 'rgba(255,255,255,.05)', border: '1px solid rgba(232,194,90,.4)', borderRadius: 14, padding: '7px 14px', cursor: 'pointer', flex: 'none' },
   uid: { fontSize: 11, color: '#9a8c70', marginTop: 4, wordBreak: 'break-all' },
   ver: { textAlign: 'center', fontSize: 10, color: '#6a5a4a', marginTop: 18, lineHeight: 1.8 },
-  back: { position: 'absolute', zIndex: 7, left: 14, bottom: 14, fontFamily: 'inherit', fontSize: 14, color: GOLD_HI, background: PANEL, border: BORDER, borderRadius: 22, padding: '10px 20px', cursor: 'pointer' },
+  back: { position: 'absolute', zIndex: 7, left: '50%', transform: 'translateX(-50%)', bottom: 14, fontFamily: 'inherit', fontSize: 14, color: GOLD_HI, background: PANEL, border: BORDER, borderRadius: 22, padding: '10px 20px', cursor: 'pointer' },
 };
 function SettingsScreen({ bgmOn, setBgmOn, volume, setVolume, logout, playOpening, back }) {
   const seAvail = !!window.CKSound;   // SE は cksound.js が担当（無ければ項目を出さない）
@@ -4617,7 +4619,7 @@ function SettingsScreen({ bgmOn, setBgmOn, volume, setVolume, logout, playOpenin
         </div>
       </div>
 
-      <button onClick={back} style={setS.back}>‹ 戻る</button>
+      <button onClick={back} style={setS.back}>ホームへ戻る</button>
 
       {confirm && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.7)', display: 'grid', placeItems: 'center', zIndex: 60, padding: 24 }}>
