@@ -1418,6 +1418,44 @@ function ZukanScreen({ cards, profile, refreshAll, back, flash, initialTab }) {
   );
 }
 
+const SK_GROUP_JA = { hana: '花', ha: '葉', shin: '芯', ken: '剣', tate: '盾', tsue: '杖' };
+const SK_ATTR_SET = { hana: 1, ha: 1, shin: 1 };
+function skillGroupLabel(g) { const ja = SK_GROUP_JA[g] || g || ''; return ja ? (SK_ATTR_SET[g] ? ja + '属性' : ja + '武器') : ''; }
+// skill_master の構造データ（effect_type/target_group/base_value/per_lv_value）から自然文＋強調用の数値を生成。
+function skillEffectParts(sk, lv) {
+  if (!sk) return null;
+  const L = Math.max(1, lv || 1);
+  const base = Number(sk.base_value) || 0, perLv = Number(sk.per_lv_value) || 0;
+  const val = base + perLv * (L - 1);
+  const pct = Math.round(val * 1000) / 10;
+  const g1 = skillGroupLabel(sk.target_group), g2 = skillGroupLabel(sk.target_group2);
+  switch (sk.effect_type) {
+    case 'sougou_pct': return { pre: g1 + 'の味方の総合戦闘力を', num: pct + '%', post: '上昇' };
+    case 'hontai_pct': return { pre: g1 + 'の味方の本体戦闘力を', num: pct + '%', post: '上昇' };
+    case 'soubi_pct': return { pre: g1 + 'の味方の装備項を', num: pct + '%', post: '上昇' };
+    case 'kyousou_pct': return { pre: g1 + 'と' + g2 + 'の味方の総合戦闘力を', num: pct + '%', post: '上昇' };
+    case 'meshibe_group_pct': return { pre: '芯属性または杖武器の味方の総合戦闘力を', num: pct + '%', post: '上昇' };
+    case 'deck_sougou_pct': return { pre: 'デッキ全体の総合戦闘力を', num: pct + '%', post: '上昇' };
+    case 'deck_sougou_mult': return { pre: 'デッキ全体の総合戦闘力を', num: '×' + val, post: '' };
+    case 'self_burst': return { pre: '自身の本体戦闘力を', num: '×' + val, post: '' };
+    case 'advantage_scaling': return { pre: '格上の敵ほど効果増・総合戦闘力を最大', num: pct + '%', post: '上昇' };
+    case 'meta_amplify': return { pre: '同時発動した他スキルの効果量を', num: pct + '%', post: '増幅' };
+    case 'per_skill_count': return { pre: '同時発動した他スキル1つにつき総合戦闘力を', num: pct + '%', post: '上昇' };
+    default: return sk.notes ? { pre: '', num: '', post: sk.notes } : null;
+  }
+}
+function SkillEffect({ sk, lv, style }) {
+  const d = skillEffectParts(sk, lv);
+  if (!d) return null;
+  const rate = sk && Number(sk.activation_rate);
+  return (
+    <span style={style}>
+      {d.pre}{d.num ? <b style={{ color: GOLD_HI, fontWeight: 800 }}>{d.num}</b> : null}{d.post}
+      {rate != null && rate < 1 ? <span style={{ color: '#a98f66' }}>（発動{Math.round(rate * 100)}%）</span> : null}
+    </span>
+  );
+}
+
 function CardDetail({ card, cards, profile, skillMap, refreshAll, back, flash, onSelect }) {
   const [skills, setSkills] = useState(null);
   const [mode, setMode] = useState(null);   // null | 'kyoka'
@@ -1451,7 +1489,7 @@ function CardDetail({ card, cards, profile, skillMap, refreshAll, back, flash, o
         {row
           ? <div>
               <div style={{ fontSize: 14, fontWeight: 700, color: GOLD_HI }}>{m ? m.display_name : row.skill_key} <span style={{ fontSize: 11, color: '#cdb488' }}>Lv{row.skill_lv}</span></div>
-              {m && m.notes && <div style={{ fontSize: 11, color: '#cdb488', marginTop: 2 }}>{m.notes}</div>}
+              {m && <div style={{ fontSize: 11, color: '#cdb488', marginTop: 2 }}><SkillEffect sk={m} lv={row.skill_lv} /></div>}
             </div>
           : <div style={{ fontSize: 11, color: '#a98f66' }}>空き（転移で付与）</div>}
       </div>
@@ -1630,7 +1668,7 @@ const cpS = {
   liInfo: { display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 },
   liLv: { fontSize: 12, fontWeight: 700, color: '#efe2c8', whiteSpace: 'nowrap' },
   liTag: { fontSize: 10, color: '#cdb488', padding: '1px 6px', borderRadius: 6, border: '1px solid rgba(232,194,90,.25)', alignSelf: 'flex-start', whiteSpace: 'nowrap' },
-  right: { flex: '1 1 0', minWidth: 0, boxSizing: 'border-box', maxHeight: '66vh', border: '1px solid rgba(232,194,90,.2)', borderRadius: 12, background: 'rgba(14,9,12,.55)', display: 'flex', flexDirection: 'column', overflow: 'hidden' },
+  right: { flex: '1 1 0', minWidth: 0, boxSizing: 'border-box', height: '66vh', border: '1px solid rgba(232,194,90,.2)', borderRadius: 12, background: 'rgba(14,9,12,.55)', display: 'flex', flexDirection: 'column', overflow: 'hidden' },
   rightScroll: { flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', padding: 12 },
   rightFoot: { padding: '10px 12px', borderTop: '1px solid rgba(232,194,90,.18)', background: 'rgba(10,6,9,.6)', display: 'flex', flexDirection: 'column', gap: 8 },
   ph: { color: '#a98f66', fontSize: 14, textAlign: 'center', padding: '40px 10px', lineHeight: 1.8 },
@@ -1760,7 +1798,7 @@ function CardPicker({ title, cards, getStatus, chooseLabel, onChoose, onClear, a
                               <div key={slot} style={cpS.skItem}>
                                 <div style={cpS.skHead}>{slot === 0 ? '固定スキル' : '移植スロット' + slot}{row && <span style={cpS.skLv}>・Lv{row.skill_lv}</span>}</div>
                                 {row
-                                  ? <><div style={cpS.skName}>{m ? m.display_name : row.skill_key}</div>{m && m.notes && <div style={cpS.skEff}>{m.notes}</div>}</>
+                                  ? <><div style={cpS.skName}>{m ? m.display_name : row.skill_key}</div>{m && <div style={cpS.skEff}><SkillEffect sk={m} lv={row.skill_lv} /></div>}</>
                                   : <div style={cpS.skEmpty}>（空き）</div>}
                               </div>
                             );
@@ -1979,7 +2017,7 @@ function DeckScreen({ profile, cards, refreshAll, back, flash, initialDeckNo }) 
                   ? <>
                       <div onClick={(e) => { e.stopPropagation(); if (!busy && !deckSortie) commit(withSlot(slot, null)); }} style={deckS.rm}>×</div>
                       <DeckSlotArt cardKey={c.card_key} />
-                      <div onClick={(e) => { e.stopPropagation(); setDetailCard(c); }} style={{ position: 'absolute', left: 4, top: 4, width: 22, height: 22, borderRadius: '50%', background: 'rgba(10,6,9,.8)', border: '1px solid rgba(232,194,90,.55)', color: '#fff3c8', fontSize: 13, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 3 }}>ⓘ</div>
+                      <div onClick={(e) => { e.stopPropagation(); setDetailCard(c); }} style={{ position: 'absolute', left: 4, bottom: 4, width: 22, height: 22, borderRadius: '50%', background: 'rgba(10,6,9,.8)', border: '1px solid rgba(232,194,90,.55)', color: '#fff3c8', fontSize: 13, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 3 }}>ⓘ</div>
                       {sp && <div style={badge('#ff6a7a')}>離脱中</div>}
                     </>
                   : <div style={deckS.empty}>＋<small style={deckS.emptySmall}>枠 {slot + 1}</small></div>}
@@ -2886,7 +2924,7 @@ function CardPopup({ card, onClose }) {
                 return (
                   <div key={slot} style={popS.skItem}>
                     <div style={popS.skHead}>{slot === 0 ? '固定スキル' : '移植スロット' + slot}{r && <span style={popS.skLv}>・Lv{r.skill_lv}</span>}</div>
-                    {r ? <><div style={popS.skName}>{m ? m.display_name : r.skill_key}</div>{m && m.notes && <div style={popS.skEff}>{m.notes}</div>}</> : <div style={popS.skEmpty}>（空き）</div>}
+                    {r ? <><div style={popS.skName}>{m ? m.display_name : r.skill_key}</div>{m && <div style={popS.skEff}><SkillEffect sk={m} lv={r.skill_lv} /></div>}</> : <div style={popS.skEmpty}>（空き）</div>}
                   </div>
                 );
               })}
@@ -2949,7 +2987,7 @@ function ExchangeTab({ profile, cards, refreshAll, flash }) {
               const e = estOf(c); const on = !!sel[c.id]; const info = parseCardKey(c.card_key);
               return (
                 <button key={c.id} onClick={() => toggle(c.id)} style={{ ...exS.card, ...(on ? exS.cardOn : {}) }}>
-                  <div style={exS.cardArt}><DeckSlotArt cardKey={c.card_key} />{on && <div style={exS.check}>✓</div>}<div onClick={(e) => { e.stopPropagation(); setDetailCard(c); }} style={{ position: 'absolute', left: 3, top: 3, width: 20, height: 20, borderRadius: '50%', background: 'rgba(10,6,9,.82)', border: '1px solid rgba(232,194,90,.5)', color: '#fff3c8', fontSize: 12, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 3 }}>ⓘ</div></div>
+                  <div style={exS.cardArt}><DeckSlotArt cardKey={c.card_key} />{on && <div style={exS.check}>✓</div>}<div onClick={(e) => { e.stopPropagation(); setDetailCard(c); }} style={{ position: 'absolute', left: 3, bottom: 3, width: 20, height: 20, borderRadius: '50%', background: 'rgba(10,6,9,.82)', border: '1px solid rgba(232,194,90,.5)', color: '#fff3c8', fontSize: 12, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 3 }}>ⓘ</div></div>
                   <div style={exS.cardName}>{RAR_LABEL[info.rarity]} Lv{c.lv || 1}{(c.star || 0) > 0 ? ' ★' + (c.star || 0) : ''}</div>
                   <div style={exS.cardCx}>{e ? COLOR_JA[e.color] + '+' + e.count : '—'}</div>
                 </button>
@@ -3749,7 +3787,7 @@ function SkillView({ base, cards, profile, skillMap, refreshAll, onBack, flash }
               <button key={slot} onClick={() => upg && setSelSlot(slot)} disabled={!upg} className={'sk-slot' + (sel ? ' sel' : '') + (!upg ? ' off' : '')}>
                 <span className="pin">{slot === 0 ? '固定' : '空き' + slot}</span>
                 <div className="sk-sn">{skName(row.skill_key)} <span style={{ fontSize: 11, color: '#c7a14e' }}>Lv{row.skill_lv}{!upg ? '・強化不可' : ''}</span></div>
-                {m && m.notes && <div className="sk-sm">{m.notes}</div>}
+                {m && <div className="sk-sm"><SkillEffect sk={m} lv={row.skill_lv} /></div>}
               </button>
             );
           })}
