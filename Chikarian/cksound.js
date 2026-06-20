@@ -54,6 +54,8 @@
   window.addEventListener('pointerdown', _seUnlock);
   window.addEventListener('touchstart', _seUnlock);
   window.addEventListener('keydown', _seUnlock);
+  // 起動時に先読みデコード開始（初回タップ前にバッファを用意＝最初のタップも即時化）。decodeAudioData は AudioContext が suspended でも実行可。
+  _PRELOAD.forEach(function (n) { _decode(n).catch(function () {}); });
 
   var CKSound = {
     isOn: function () { return localStorage.getItem(KEY) !== '0'; }, // 未設定はオン

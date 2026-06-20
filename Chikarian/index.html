@@ -3182,7 +3182,7 @@ function KajiyaTab({ profile, refreshAll, flash }) {
           ? (() => {
               const ms = new Date(inProgress.done_at).getTime() - now;
               const ready = ms <= 0;
-              return <button className="tat-fb gold" disabled={busy || !ready} onClick={() => run(() => ChikarianAPI.claimKajiya(inProgress.id), '解放しました')}>{ready ? '受け取る（解放）' : `依頼中：${QUALITY_JA[inProgress.quality]}（残り ${fmtRemain(ms)}）`}</button>;
+              return <button className="tat-fb gold" disabled={busy || !ready} onClick={() => run(async () => { const _r = await ChikarianAPI.claimKajiya(inProgress.id); if (window.CKSound) CKSound.play('se_enhance_success'); return _r; }, '解放しました')}>{ready ? '受け取る（解放）' : `依頼中：${QUALITY_JA[inProgress.quality]}（残り ${fmtRemain(ms)}）`}</button>;
             })()
           : nextQ
             ? <button className="tat-fb gold" disabled={busy} onClick={() => run(() => ChikarianAPI.placeKajiyaOrder(nextQ), '依頼しました')}>強化＝「{QUALITY_JA[nextQ]}」を鍛造依頼（メダル{fee.toLocaleString()}・作業{KAJIYA_HOURS[nextQ]}h）</button>
@@ -3731,7 +3731,7 @@ function SkillView({ base, cards, profile, skillMap, refreshAll, onBack, flash }
 
   async function rensei() {
     if (busy || selSlot == null) return; setBusy(true);
-    try { const res = await ChikarianAPI.doSkillRensei(base.id, selSlot, color); setRResult(res); await loadBase(); await refreshAll(); }
+    try { const res = await ChikarianAPI.doSkillRensei(base.id, selSlot, color); if (window.CKSound) CKSound.play(res && res.success ? 'se_enhance_success' : 'se_enhance_fail'); setRResult(res); await loadBase(); await refreshAll(); }
     catch (e) { flash(errMsg(e)); } finally { setBusy(false); }
   }
   async function pickSrc(id) { setSrcId(id); setSrcSlot(null); setSrcSkills(null); try { setSrcSkills(await ChikarianAPI.getCardSkills(id) || []); } catch (e) { flash(errMsg(e)); setSrcSkills([]); } }
@@ -3739,6 +3739,7 @@ function SkillView({ base, cards, profile, skillMap, refreshAll, onBack, flash }
     if (busy || srcId == null || srcSlot == null || dstSlot == null) return; setBusy(true);
     try {
       const res = await ChikarianAPI.doSkillTeni(srcId, srcSlot, base.id, dstSlot);
+      if (window.CKSound) CKSound.play('se_enhance_success');  // 転移成功（失敗は throw→catch されるため SE なし）
       setTResult(res); setConfirm(false);
       setSrcId(null); setSrcSkills(null); setSrcSlot(null); setDstSlot(null);
       await loadBase(); await refreshAll();
