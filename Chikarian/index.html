@@ -2902,7 +2902,7 @@ const TAT_CSS = `
 .tat-backlink{display:block; text-align:center; margin-top:18px; font-size:12px; color:#b6a890; cursor:pointer; letter-spacing:.08em;}
 `;
 const exS = {
-  wrap: { padding: '4px 2px 96px' },
+  wrap: { padding: '4px 2px 16px' },
   head: { marginBottom: 8 },
   title: { fontFamily: "'Shippori Mincho',serif", fontSize: 18, fontWeight: 700, color: GOLD_HI },
   sub: { fontSize: 12, color: '#a98f66', marginTop: 2, lineHeight: 1.5 },
@@ -2911,7 +2911,7 @@ const exS = {
   actions: { display: 'flex', gap: 8, margin: '8px 0 6px' },
   lineBtn: { padding: '5px 12px', borderRadius: 8, border: '1px solid rgba(232,194,90,.4)', background: 'rgba(20,12,16,.6)', color: '#d8c19a', fontSize: 12, cursor: 'pointer' },
   empty: { color: '#a98f66', fontSize: 13, padding: 24, textAlign: 'center' },
-  grid: { display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'flex-start' },
+  grid: { display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'flex-start', alignContent: 'flex-start', maxHeight: 'calc(100dvh - 470px)', minHeight: 180, overflowY: 'auto', padding: 6, borderRadius: 8, border: '1px solid rgba(232,194,90,.12)', background: 'rgba(12,8,11,.35)' },
   card: { width: 90, padding: 4, borderRadius: 10, border: '1px solid rgba(232,194,90,.2)', background: 'rgba(20,12,16,.5)', cursor: 'pointer', textAlign: 'center', boxSizing: 'border-box' },
   cardOn: { borderColor: '#e8c25a', background: 'rgba(232,194,90,.16)', boxShadow: '0 0 8px rgba(232,194,90,.3)' },
   cardArt: { position: 'relative', width: 82, height: 123, borderRadius: 7, overflow: 'hidden', margin: '0 auto' },
@@ -2991,6 +2991,8 @@ function CardPopup({ card, onClose }) {
 
 function ExchangeTab({ profile, cards, refreshAll, flash }) {
   const [rates, setRates] = useState([]);
+  const [xSort, setXSort] = useState('rarity');   // 交換所の並び替え
+  const [xDir, setXDir] = useState('desc');
   const [decks, setDecks] = useState([]);
   useEffect(() => { (async () => { try { setDecks(await ChikarianAPI.getDecks() || []); } catch (e) {} })(); }, []);
   const [sel, setSel] = useState({});
@@ -3003,7 +3005,14 @@ function ExchangeTab({ profile, cards, refreshAll, flash }) {
   // 全カード表示。交換不可（ロック/編成中/出撃中/探索中）はグレーアウト＋ラベルで非選択化。
   const deckIds = new Set(); (decks || []).forEach(d => [d.slot1_card_id, d.slot2_card_id, d.slot3_card_id].forEach(id => { if (id) deckIds.add(id); }));
   const lockReason = (c) => c.locked ? 'lock' : (deckIds.has(c.id) ? '編成中' : (c.boss_deck_no != null ? '出撃中' : (c.tansaku_deck_no != null ? '探索中' : null)));
-  const list = (cards || []);
+  const list = (() => {
+    const RR = { n: 0, r: 1, sr: 2, ssr: 3, sp: 4 }, AO = { hana: 0, ha: 1, shin: 2 }, WO = { ken: 0, tate: 1, tsue: 2 };
+    const dir = xDir === 'asc' ? 1 : -1, key = ['lv', 'body', 'attr', 'weap'].includes(xSort) ? xSort : 'rar';
+    return (cards || [])
+      .map(c => { const pk = parseCardKey(c.card_key); const pt = (c.card_key || '').split('_'); return { c, body: computeStats(c).body, rar: RR[pk.rarity] != null ? RR[pk.rarity] : 0, attr: AO[pk.attrKey] != null ? AO[pk.attrKey] : 9, weap: WO[pt[3]] != null ? WO[pt[3]] : 9, lv: c.lv || 1 }; })
+      .sort((a, b) => { const d = (a[key] - b[key]) * dir; return d !== 0 ? d : (b.body - a.body); })
+      .map(x => x.c);
+  })();
   const rateOf = (c) => (rates || []).find(r => r.rarity === parseCardKey(c.card_key).rarity) || null;
   const estOf = (c) => { const r = rateOf(c); return r ? { color: r.crystal_color, count: Math.round((r.base_value || 0) * Math.pow(2, c.star || 0)) } : null; };
 
@@ -3037,6 +3046,12 @@ function ExchangeTab({ profile, cards, refreshAll, flash }) {
       <div style={exS.actions}>
         <button onClick={selectAll} style={exS.lineBtn} disabled={busy || list.length === 0}>全選択</button>
         <button onClick={clearSel} style={exS.lineBtn} disabled={busy || selIds.length === 0}>選択解除</button>
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', margin: '0 0 8px' }}>
+        <span style={{ fontSize: 10, color: '#7d7160' }}>並び替え</span>
+        {[['rarity', 'レア'], ['lv', 'Lv'], ['body', '本体'], ['attr', '属性'], ['weap', '武器']].map(([k, l]) => (
+          <button key={k} onClick={() => { if (xSort === k) setXDir(d => d === 'asc' ? 'desc' : 'asc'); else { setXSort(k); setXDir('desc'); } }} style={{ fontFamily: 'inherit', fontSize: 11, fontWeight: 700, padding: '4px 9px', borderRadius: 10, cursor: 'pointer', border: '1px solid ' + (xSort === k ? '#c7a14e' : '#3a2c22'), background: xSort === k ? 'linear-gradient(180deg,#ecd28a,#c7a14e)' : '#181210', color: xSort === k ? '#0c0a09' : '#b6a890' }}>{l}{xSort === k ? (xDir === 'asc' ? ' ▲' : ' ▼') : ''}</button>
+        ))}
       </div>
       {list.length === 0
         ? <div style={exS.empty}>交換できるカードがありません</div>
