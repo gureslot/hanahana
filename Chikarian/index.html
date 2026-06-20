@@ -1797,7 +1797,7 @@ function CardPicker({ title, cards, getStatus, chooseLabel, onChoose, onClear, a
               : items.map(c => {
                   const st = getStatus(c);
                   return (
-                    <button key={c.id} onClick={() => setSel(c.id)} style={{ ...cpS.li, ...(sel === c.id ? cpS.liSel : {}), ...(st.dim ? { opacity: .45 } : {}) }}>
+                    <button key={c.id} onClick={() => { if (!st.disabled) setSel(c.id); }} disabled={!!st.disabled} style={{ ...cpS.li, ...(sel === c.id ? cpS.liSel : {}), ...(st.dim ? { opacity: .45 } : {}), ...(st.disabled ? { cursor: 'default' } : {}) }}>
                       <div style={cpS.liArt}><DeckSlotArt cardKey={c.card_key} /></div>
                       <div style={cpS.liInfo}>
                         <span style={cpS.liLv}>Lv{c.lv || 1}{(c.star || 0) > 0 ? ' ★' + (c.star || 0) : ''}</span>
@@ -2526,7 +2526,19 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
                         {members.map((c, si) => c
                           ? <div key={si} className="boss-deck2Card" style={{ position: 'relative', cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); setDetailCard(c); }}>
                               <div style={spSet[c.id] ? { opacity: .35, filter: 'grayscale(1)' } : undefined}><CardThumb card={c} small /></div>
-                              {(() => { const f = cardSukumiVsBoss(c, bm); if (Math.abs(f - 1) < 0.001) return null; const adv = f > 1; return <div style={{ position: 'absolute', top: 3, right: 3, zIndex: 3, fontSize: 9, fontWeight: 800, padding: '1px 5px', borderRadius: 6, color: '#fff', background: adv ? 'rgba(38,132,58,.94)' : 'rgba(168,40,52,.94)', border: '1px solid ' + (adv ? 'rgba(150,230,160,.7)' : 'rgba(255,150,150,.7)'), boxShadow: '0 1px 3px rgba(0,0,0,.6)' }}>{adv ? '有利' : '不利'}</div>; })()}
+                              {(() => {
+                                if (/_sp$/.test(c.card_key || '') || !bm) return null;
+                                const p = (c.card_key || '').split('_');
+                                const mAttr = p[1] === 'meshibe' ? 'shin' : p[2];
+                                const mWeap = p[1] === 'meshibe' ? 'tsue' : p[3];
+                                let aF = 1, wF = 1;
+                                (bm.attrs || []).forEach(ea => { aF *= sukumiFactor(mAttr, ea); });
+                                (bm.weapons || []).forEach(ew => { wF *= sukumiFactor(mWeap, ew); });
+                                const chip = (label, f) => { if (Math.abs(f - 1) < 0.001) return null; const adv = f > 1; return <span style={{ fontSize: 8, fontWeight: 800, padding: '1px 4px', borderRadius: 5, color: '#fff', whiteSpace: 'nowrap', background: adv ? 'rgba(38,132,58,.95)' : 'rgba(168,40,52,.95)', border: '1px solid ' + (adv ? 'rgba(150,230,160,.7)' : 'rgba(255,150,150,.7)'), boxShadow: '0 1px 2px rgba(0,0,0,.6)' }}>{label}{adv ? '有利' : '不利'}</span>; };
+                                const aC = chip('属', aF), wC = chip('武', wF);
+                                if (!aC && !wC) return null;
+                                return <div style={{ position: 'absolute', top: 3, right: 3, zIndex: 3, display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'flex-end' }}>{aC}{wC}</div>;
+                              })()}
                               {spSet[c.id] && <div style={{ position: 'absolute', top: 3, left: 0, right: 0, textAlign: 'center', fontSize: 9, fontWeight: 800, color: '#fff', textShadow: '0 1px 2px #000' }}>離脱中</div>}
                               <div className="boss-deck2Nm">{cardFullName(c)}</div>
                               {(() => { if (/_sp$/.test(c.card_key || '')) return <div style={{ fontSize: 8, color: '#8a7a9a', textAlign: 'center', marginTop: 3 }}>武気なし</div>;
@@ -2637,7 +2649,11 @@ function KyokaScreen({ cards, profile, refreshAll, back, flash }) {
   const cur = card ? cardById[card.id] : null;
   if (mode === 'kyoka' && cur) return <KyokaView base={cur} cards={cards} profile={profile} refreshAll={refreshAll} onBack={() => setMode(null)} flash={flash} />;
   if (mode === 'skill' && cur) return <SkillView base={cur} cards={cards} profile={profile} skillMap={skillMap} refreshAll={refreshAll} onBack={() => setMode(null)} flash={flash} />;
-  const getStatus = (c) => ({ disabled: false, dim: false, tag: c.locked ? 'ロック中' : null });
+  const getStatus = (c) => {
+    if (c.boss_deck_no != null) return { disabled: true, dim: true, tag: '出撃中', reason: 'ボスに出撃中のため強化・転移できません' };
+    if (c.tansaku_deck_no != null) return { disabled: true, dim: true, tag: '探索中', reason: '探索に出撃中のため強化・転移できません' };
+    return { disabled: false, dim: false, tag: c.locked ? 'ロック中' : null };
+  };
   async function toggleLock(c) {
     if (!LOCK_RPC_AVAILABLE) { flash('ロック切替には専用RPCが必要です（0023適用後に有効化）'); return; }
     setBusy(true);
@@ -2670,6 +2686,7 @@ function KyokaView({ base, cards, profile, refreshAll, onBack, flash }) {
   // 候補: 同レア同★（SPは同名同★）／ロック除外／本体自身除外（クライアント目安・最終判定はサーバ）
   const candidates = (cards || []).filter(c => {
     if (c.id === base.id || c.locked) return false;
+    if (c.boss_deck_no != null || c.tansaku_deck_no != null) return false;
     if ((c.star || 0) !== star) return false;
     if (isSp) return c.card_key === base.card_key;
     const r = parseCardKey(c.card_key).rarity;
@@ -3777,9 +3794,9 @@ function SkillView({ base, cards, profile, skillMap, refreshAll, onBack, flash }
   }
   async function pickSrc(id) { setSrcId(id); setSrcSlot(null); setSrcSkills(null); try { setSrcSkills(await ChikarianAPI.getCardSkills(id) || []); } catch (e) { flash(errMsg(e)); setSrcSkills([]); } }
   async function teni() {
-    if (busy || srcId == null || srcSlot == null || dstSlot == null) return; setBusy(true);
+    if (busy || srcId == null || srcSlot == null || emptySlots.length === 0) return; setBusy(true);
     try {
-      const res = await ChikarianAPI.doSkillTeni(srcId, srcSlot, base.id, dstSlot);
+      const res = await ChikarianAPI.doSkillTeni(srcId, srcSlot, base.id, emptySlots[0]);
       if (window.CKSound) CKSound.play('se_enhance_success');  // 転移成功（失敗は throw→catch されるため SE なし）
       setTResult(res); setConfirm(false);
       setSrcId(null); setSrcSkills(null); setSrcSlot(null); setDstSlot(null);
@@ -3862,7 +3879,7 @@ function SkillView({ base, cards, profile, skillMap, refreshAll, onBack, flash }
             : <>
                 <div className="sk-seclabel">素材カードを選ぶ（ロック/SPは不可・素材は消滅）</div>
                 <div className="sk-grid">
-                  {(cards || []).filter(c => c.id !== base.id && !c.locked && !c.card_key.endsWith('_sp')).map(c => (
+                  {(cards || []).filter(c => c.id !== base.id && !c.locked && !c.card_key.endsWith('_sp') && c.boss_deck_no == null && c.tansaku_deck_no == null).map(c => (
                     <div key={c.id} style={{ outline: srcId === c.id ? '2px solid #c7a14e' : 'none', borderRadius: 10 }}>
                       <CardThumb card={c} small onClick={() => pickSrc(c.id)} />
                       <div style={{ fontSize: 8, lineHeight: 1.2, textAlign: 'center', color: '#cdb488', marginTop: 1 }}>{cardFullName(c)}</div>
@@ -3878,18 +3895,12 @@ function SkillView({ base, cards, profile, skillMap, refreshAll, onBack, flash }
                           <button key={s.slot} onClick={() => setSrcSlot(s.slot)} className={'sk-slot' + (srcSlot === s.slot ? ' sel' : '')}>
                             <span className="pin">{s.slot === 0 ? '固定' : '空き' + s.slot}</span>
                             <div className="sk-sn">{skName(s.skill_key)} <span style={{ fontSize: 11, color: '#c7a14e' }}>Lv{s.skill_lv}</span></div>
+                            {(() => { const m = skillMap[s.skill_key]; return m ? <div style={{ fontSize: 11, color: '#cdb488', marginTop: 3, lineHeight: 1.5, textAlign: 'left' }}><SkillEffect sk={m} lv={s.skill_lv} /></div> : null; })()}
                           </button>
                         ))}
                     </>)}
 
-                {srcId && srcSlot != null && <>
-                  <div className="sk-seclabel">受け側の空き枠</div>
-                  <div className="sk-dst">
-                    {emptySlots.map(s => <div key={s} className={'sk-dstb' + (dstSlot === s ? ' on' : '')} onClick={() => setDstSlot(s)}>枠{s}</div>)}
-                  </div>
-                </>}
-
-                <button onClick={() => setConfirm(true)} disabled={busy || srcId == null || srcSlot == null || dstSlot == null} className="sk-cta">転移する（メダル{TENI_COST.toLocaleString()}）</button>
+                <button onClick={() => setConfirm(true)} disabled={busy || srcId == null || srcSlot == null || emptySlots.length === 0} className="sk-cta">転移する（メダル{TENI_COST.toLocaleString()}）</button>
               </>}
         </>}
 
