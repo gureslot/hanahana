@@ -29,7 +29,7 @@
   .screen{display:none; flex-direction:column;}
   .screen.on{display:flex;}
   /* 育成画面：ボタン下〜URL欄の余白を使い、中身を縦中央へ寄せる（本番でヒント文が消えても自動で釣り合う） */
-  #scr-train.on{ min-height:calc(100dvh - 28px); justify-content:center; }
+  #scr-train.on{ min-height:calc(100dvh - 28px); }   /* 全高。中身は上詰め＝タイトルは上のまま */
 
   h1{font-size:17px; font-weight:900; margin:2px 4px 2px; letter-spacing:.03em;}
   .lvtag{font-size:12px; color:var(--sub); margin:0 4px 10px; font-weight:700;}
@@ -83,8 +83,8 @@
   .lock.locked .lb>i{background:linear-gradient(90deg,#1fc46a,#9dffce);}
 
   /* 育成：カメラ＋大きいちかり＋左ゲージを重ねる舞台 */
-  .train-arena{position:relative; width:100%; aspect-ratio:1/1.18; margin-top:8px; overflow:hidden; border-radius:18px 18px 0 0;}
-  .train-arena .camslot{position:absolute; top:0; left:0; right:0; z-index:1;}
+  .train-arena{position:relative; width:100%; flex:1 1 auto; min-height:0; margin-top:10px; overflow:hidden; border-radius:18px 18px 0 0;}
+  .train-arena .camslot{position:absolute; top:0; left:0; right:0; aspect-ratio:4/3; z-index:1;}
   /* ちかり：右下に大きく、カメラに少し乗る。下は舞台で見切れる */
   .mini-stage{position:absolute; right:-4%; bottom:-6%; width:66%; background:transparent; z-index:5; /* aspect-ratioはJSが画像から設定 */}
   .mini-stage canvas{position:absolute; inset:0; width:100%; height:100%;}
@@ -183,12 +183,6 @@
       <button class="btn primary" id="holdBtn" onclick="toggleHold()">▶ かざす（点滅）</button>
       <button class="btn ghost" style="flex:.6" onclick="leaveTrain()">戻る</button>
     </div>
-    <p class="hint">
-      <span class="k" style="color:var(--gold)">●胸ゆれ</span>
-      <span class="k" style="color:var(--teal)">●なびき</span>
-      点滅のたびに揺れて、経験値が +10。立ち絵タップでつつけます。
-    </p>
-
     <div class="done" id="train-done">
       <div class="t">今日はここまで</div>
       <div class="s">経験値は0時にリセットされます</div>
