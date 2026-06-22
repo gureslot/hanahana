@@ -1,162 +1,522 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
-
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>グレイト・プレ・善太のハナハナサイト</title>
-<meta name="description" content="グレイト・プレ・善太のサイト。ハナハナのリール配列確認や最速目押しの紹介、Sparebeatで制作した自作譜面をプレイできます。">
-
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>ちかりちゃん育成</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
 <style>
-body{
-  margin:0;
-  font-family:sans-serif;
-  background:#000;
-  color:#fff;
-}
-
-header{
-  padding:20px 20px 0 20px;
-}
-
-header img{
-  width:100%;
-  max-width:1200px;
-  height:auto;
-  display:block;
-  margin:0 auto;
-  border-radius:12px;
-}
-
-.container{
-  display:flex;
-  max-width:1200px;
-  margin:40px auto;
-  padding:0 20px;
-  gap:30px;
-  align-items:flex-start;
-}
-
-.left{
-  width:35%;
-}
-
-.right{
-  width:65%;
-  background:#0b0b0b;
-  border:1px solid #222;
-  border-radius:14px;
-  padding:20px;
-}
-
-.menu{
-  display:flex;
-  flex-direction:column;
-  gap:20px;
-}
-
-.menu a{
-  display:block;
-  padding:25px;
-  background:#111;
-  border:2px solid #ff2a6d;
-  text-decoration:none;
-  color:#fff;
-  font-size:20px;
-  font-weight:bold;
-  border-radius:14px;
-  transition:0.2s;
-}
-
-.menu a:hover{
-  background:#ff2a6d;
-  color:#000;
-}
-
-.twitter-tweet{
-  margin:0 0 30px 0;
-}
-
-@media(max-width:768px){
-  .container{
-    flex-direction:column;
+  :root{
+    --bg0:#f4ebe3; --bg1:#fff7f1; --ink:#4a3a3a; --sub:#9c867f;
+    --pink:#ff6f9c; --teal:#2fa8be; --gold:#e0a330;
+    --card:rgba(255,255,255,.72); --line:rgba(120,90,80,.16);
+    --font:"Zen Maru Gothic", system-ui, sans-serif;
   }
-  .left,
-  .right{
-    width:100%;
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; height:100%;}
+  body{
+    font-family:var(--font); color:var(--ink);
+    background:
+      radial-gradient(120% 60% at 50% 0%, rgba(255,200,180,.4), transparent 60%),
+      radial-gradient(90% 70% at 85% 25%, rgba(170,210,220,.28), transparent 60%),
+      linear-gradient(180deg,var(--bg1),var(--bg0) 80%);
+    display:flex; justify-content:center; min-height:100%; padding:14px;
   }
-}
+  .wrap{width:100%; max-width:430px; position:relative;}
+
+  .screen{display:none; flex-direction:column;}
+  .screen.on{display:flex;}
+
+  h1{font-size:17px; font-weight:900; margin:2px 4px 2px; letter-spacing:.03em;}
+  .lvtag{font-size:12px; color:var(--sub); margin:0 4px 10px; font-weight:700;}
+  .lvtag b{color:var(--gold); font-variant-numeric:tabular-nums;}
+
+  /* ホームの立ち絵カード（背景画像＝シーン、その上にキャラ） */
+  .stage{position:relative; border-radius:20px; overflow:hidden; aspect-ratio:3/4;
+    background:linear-gradient(180deg,#fff7f1,#fdf3ee); background-size:cover; background-position:center;
+    border:1px solid rgba(255,255,255,.85);
+    box-shadow:0 22px 54px -22px rgba(120,80,70,.5), inset 0 1px 0 rgba(255,255,255,.9);
+    touch-action:manipulation;}
+  .stage canvas{position:absolute; inset:0; width:100%; height:100%; display:block;}
+  .stage .vignette{position:absolute; inset:0; pointer-events:none;
+    background:radial-gradient(120% 90% at 50% 35%, transparent 60%, rgba(120,80,70,.10));}
+
+  .soliloquy{position:absolute; left:12px; right:12px; bottom:12px; z-index:4;
+    font-size:14px; font-weight:700; color:#5a4640; line-height:1.5;
+    background:rgba(255,255,255,.7); backdrop-filter:blur(5px);
+    border:1px solid rgba(255,255,255,.8); border-radius:14px; padding:11px 14px;
+    box-shadow:0 6px 18px -10px rgba(120,80,70,.5);
+    opacity:0; transform:translateY(6px); transition:opacity .5s, transform .5s;}
+  .soliloquy.show{opacity:1; transform:none;}
+
+  .bar{display:flex; gap:9px; margin-top:12px;}
+  .btn{font-family:var(--font); font-weight:700; font-size:15px; border:none; border-radius:14px;
+    padding:14px 12px; cursor:pointer; color:#fff; transition:transform .06s, filter .12s;}
+  .btn:active{transform:translateY(2px);}
+  .btn.primary{background:linear-gradient(180deg,#ff8fae,#ec5e87); flex:1; box-shadow:0 10px 22px -12px rgba(236,94,135,.9);}
+  .btn.sub{background:linear-gradient(180deg,#7ab8c6,#3f93a6); flex:1;}
+  .btn.ghost{background:rgba(120,90,80,.12); color:var(--ink);}
+  .btn.wide{width:100%;}
+
+  .gaugewrap{margin-top:14px;}
+  .glabel{display:flex; justify-content:space-between; font-size:12.5px; font-weight:700; color:var(--sub); margin:0 2px 6px;}
+  .glabel span{color:var(--teal); font-variant-numeric:tabular-nums;}
+  .gbar{height:12px; border-radius:99px; background:rgba(120,90,80,.16); overflow:hidden;}
+  .gbar>i{display:block; height:100%; width:0; border-radius:99px; background:linear-gradient(90deg,#ffd08a,#ffaecb); transition:width .2s ease;}
+  .gbar.exp>i{background:linear-gradient(90deg,#8fd0dc,#5fb9cb);}
+
+  /* 育成のカメラ枠（今は仮） */
+  .camslot{position:relative; border-radius:18px; overflow:hidden; aspect-ratio:4/3;
+    background:linear-gradient(160deg,#2a1822,#140b13); color:#e7d3a6;
+    border:1px solid rgba(232,194,90,.3); display:flex; align-items:center; justify-content:center; text-align:center;}
+  .camslot .ph{padding:18px; font-size:12px; line-height:1.7; color:#cdb488;}
+  .camslot .ph b{color:#ffe28a; font-weight:700;}
+  .lock{position:absolute; left:14px; right:14px; bottom:12px; z-index:3;}
+  .lock .ll{font-size:11.5px; font-weight:700; letter-spacing:.5px; margin-bottom:5px; color:#ffd98a;}
+  .lock .ll.ok{color:#7dffb0;}
+  .lock .lb{height:10px; border-radius:8px; background:rgba(0,0,0,.45); overflow:hidden; border:1px solid rgba(232,194,90,.4);}
+  .lock .lb>i{display:block; height:100%; width:0; background:linear-gradient(90deg,#ff9500,#ffe28a); transition:width .12s;}
+  .lock.locked .lb>i{background:linear-gradient(90deg,#1fc46a,#9dffce);}
+
+  .train-pile{display:flex; flex-direction:column; gap:12px; margin-top:12px;}
+  /* 育成のちかり：背景なし（ページに直接立つ） */
+  .mini-stage{position:relative; overflow:hidden; aspect-ratio:3/4; max-width:200px; margin:0 auto; width:100%; background:transparent;}
+  .mini-stage canvas{position:absolute; inset:0; width:100%; height:100%;}
+
+  .hint{font-size:11.5px; color:var(--sub); line-height:1.6; margin:4px 4px 0; text-align:center;}
+  .hint .k{display:inline-block; background:rgba(120,90,80,.1); border-radius:5px; padding:0 5px; font-weight:700;}
+
+  .panel{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px; backdrop-filter:blur(6px); margin-top:12px;}
+  .stat-hero{display:flex; align-items:center; gap:14px;}
+  .stat-hero .lvnum{font-size:46px; font-weight:900; color:var(--gold); line-height:1; font-variant-numeric:tabular-nums;}
+  .stat-hero .lvnum small{font-size:14px; color:var(--sub); font-weight:700;}
+  .stat-hero .nm{font-size:18px; font-weight:900;}
+  .rows{margin-top:6px;}
+  .row{display:flex; justify-content:space-between; padding:11px 2px; border-top:1px solid var(--line); font-size:13.5px; font-weight:700;}
+  .row:first-child{border-top:none;}
+  .row .v{color:var(--teal); font-variant-numeric:tabular-nums;}
+  .tiny{font-size:10.5px; color:var(--sub); text-align:center; margin-top:14px; line-height:1.6;}
+  .tiny a{color:var(--sub); text-decoration:underline; cursor:pointer;}
+
+  .done{position:absolute; inset:0; z-index:9; display:none; flex-direction:column; align-items:center; justify-content:center; gap:10px;
+    background:rgba(255,247,241,.86); backdrop-filter:blur(3px); border-radius:20px; text-align:center; padding:24px;}
+  .done.show{display:flex;}
+  .done .t{font-size:16px; font-weight:900;}
+  .done .s{font-size:12.5px; color:var(--sub); line-height:1.6;}
 </style>
 </head>
-
 <body>
+<div class="wrap">
 
-<header>
-  <img src="header.jpg" alt="header">
-</header>
-
-<div class="container">
-
-  <div class="left">
-    <div class="menu">
-      <a href="profile.html">プロフィール</a>
-      <a href="hanahana.html">ハナハナ関連</a>
-      <a href="sparebeat.html">スペアビート</a>
+  <!-- ═══════ ホーム ═══════ -->
+  <section class="screen on" id="scr-home">
+    <h1>ちかりちゃん</h1>
+    <div class="lvtag">Lv <b id="home-lv">1</b></div>
+    <div class="stage" id="home-stage">
+      <div class="vignette"></div>
+      <div class="soliloquy" id="home-line"></div>
     </div>
-  </div>
+    <div class="bar">
+      <button class="btn primary" onclick="go('train')">育てる</button>
+      <button class="btn sub" onclick="go('status')">ステータス</button>
+    </div>
+  </section>
 
-  <div class="right">
+  <!-- ═══════ 育成（採取） ═══════ -->
+  <section class="screen" id="scr-train">
+    <h1>育てる</h1>
+    <div class="lvtag" id="train-lvtag">Lv 1</div>
 
-    <!-- 1番上：スターガバガバ -->
-    <blockquote class="twitter-tweet">
-      <p lang="ja" dir="ltr">
-        スターガバガバ 
-        <a href="https://t.co/lLnt8z5KqP">pic.twitter.com/lLnt8z5KqP</a>
+    <div class="camslot" id="camslot">
+      <div class="ph" id="cam-ph">
+        ここに<b>カメラ</b>が入ります<br>（ハイビスカスランプの点滅を認識）<br><br>
+        ※プレビューでは <b>下のボタン</b>で点滅をシミュレートします
+      </div>
+      <div class="lock" id="lockwrap">
+        <div class="ll" id="lock-label">かざすと はじまります</div>
+        <div class="lb"><i id="lock-fill"></i></div>
+      </div>
+    </div>
+
+    <div class="train-pile">
+      <div class="mini-stage" id="train-stage"></div>
+
+      <div class="gaugewrap">
+        <div class="glabel"><span>本日の経験値</span><span id="today-txt">0 / 100</span></div>
+        <div class="gbar"><i id="today-bar"></i></div>
+      </div>
+      <div class="gaugewrap">
+        <div class="glabel"><span>次のレベルまで</span><span id="next-txt">0 / 100</span></div>
+        <div class="gbar exp"><i id="next-bar"></i></div>
+      </div>
+
+      <div class="bar">
+        <button class="btn primary" id="holdBtn" onclick="toggleHold()">▶ かざす（点滅）</button>
+        <button class="btn ghost" style="flex:.6" onclick="leaveTrain()">戻る</button>
+      </div>
+      <p class="hint">
+        <span class="k" style="color:var(--gold)">●胸ゆれ</span>
+        <span class="k" style="color:var(--teal)">●なびき</span>
+        点滅のたびに揺れて、経験値が +10。立ち絵タップでつつけます。
       </p>
-      &mdash; グレイト・プレ・善太🌺👆💫 (@GreatPresenter)
-      <a href="https://twitter.com/GreatPresenter/status/2024491486499524765?ref_src=twsrc%5Etfw">
-        February 19, 2026
-      </a>
-    </blockquote>
+    </div>
 
-    <!-- 2番目：ドラゴンvsホウオウ -->
-    <blockquote class="twitter-tweet">
-      <p lang="ja" dir="ltr">
-        ドラゴンvsホウオウ 
-        <a href="https://t.co/ILMe7CnjXI">pic.twitter.com/ILMe7CnjXI</a>
-      </p>
-      &mdash; グレイト・プレ・善太🌺👆💫 (@GreatPresenter)
-      <a href="https://twitter.com/GreatPresenter/status/2023421549878071433?ref_src=twsrc%5Etfw">
-        February 16, 2026
-      </a>
-    </blockquote>
+    <div class="done" id="train-done">
+      <div class="t">今日はここまで</div>
+      <div class="s">経験値は0時にリセットされます</div>
+      <button class="btn primary wide" onclick="leaveTrain()">ホームに戻る</button>
+    </div>
+  </section>
 
-    <!-- 3番目：Super D'station39飯塚店 -->
-    <blockquote class="twitter-tweet">
-      <p lang="ja" dir="ltr">
-        Super D&#39;station39飯塚店<br>
-        高咲たぬち来店<br>
-        3の日<br><br>
-        Lニューキングハナハナ<br>
-        +10700枚<br><br>
-        2連続リプ音遅れで大連続確定は痺れました。<br><br>
-        …と午前中にポスト用のメモしてたらそれどころではありませんでした。<br>
-        (リプ重は今日だけで3回引きました)<br><br>
-        ハナハナ初万枚！🌺🙌<br><br>
-        周りもめっちゃ強かったですね👀 
-        <a href="https://t.co/SBqjqVQ9CT">pic.twitter.com/SBqjqVQ9CT</a>
-      </p>
-      &mdash; グレイト・プレ・善太🌺👆💫 (@GreatPresenter)
-      <a href="https://twitter.com/GreatPresenter/status/2022319162853572754?ref_src=twsrc%5Etfw">
-        February 13, 2026
-      </a>
-    </blockquote>
-
-  </div>
+  <!-- ═══════ ステータス ═══════ -->
+  <section class="screen" id="scr-status">
+    <h1>ステータス</h1>
+    <div class="lvtag">そっと見守るための記録</div>
+    <div class="panel">
+      <div class="stat-hero">
+        <div class="lvnum"><span id="st-lv">1</span><small> Lv</small></div>
+        <div class="nm">ちかり</div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="gaugewrap" style="margin-top:0">
+        <div class="glabel"><span>次のレベルまで</span><span id="st-next-txt">0 / 100</span></div>
+        <div class="gbar exp"><i id="st-next-bar"></i></div>
+      </div>
+      <div class="rows">
+        <div class="row"><span>累計の経験値</span><span class="v" id="st-total">0</span></div>
+        <div class="row"><span>本日の経験値</span><span class="v" id="st-today">0 / 100</span></div>
+        <div class="row"><span>育てはじめてから</span><span class="v" id="st-days">1 日目</span></div>
+      </div>
+    </div>
+    <div class="bar" style="margin-top:14px">
+      <button class="btn sub wide" onclick="go('home')">ホームに戻る</button>
+    </div>
+    <p class="tiny">数値は端末に保存されます（公開後は日をまたいでも保持）。<br><a onclick="wipeSave()">セーブを消す（テスト用）</a></p>
+  </section>
 
 </div>
 
-<script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+<script>
+/* ════════════════════════════════════════════════════════════
+   ちかりちゃん育成 — chikarichan/index.html
+   実画像読み込み版。サウンドなし。点滅はプレビュー用にシミュレート。
+   ════════════════════════════════════════════════════════════ */
+const $ = id => document.getElementById(id);
 
+/* ───────── 設定の数値 ───────── */
+const PER_BLINK = 10;     // ロック後 1点滅あたりの経験値
+const DAILY_MAX = 100;    // 1日の上限EXP（NO_LIMIT=false のとき有効）
+const LOCK_MS   = 1000;   // 判定中の長さ
+const SIM_HZ    = 8;      // プレビュー点滅の周波数（実機は採取の5.5〜12Hz判定）
+const expToNext = lv => lv * 100;   // 必要EXPの階段：100,200,300…
+
+/* ★★★ テスト用フラグ ★★★
+   true  … 1日の上限を無効（レベルを一気に上げて確認できる）← テスト中はこれ
+   false … 上限100EXP/日を有効（本番公開時はこちら） */
+const NO_LIMIT = true;
+
+/* ───────── 画像ファイル（chikarichan/images/ に置く） ─────────
+   キャラ絵 … chikari_01.png（Lv1）, chikari_02.png（Lv2）… 1レベル1枚・透過PNG
+              無いレベルは直前の絵を流用。まずは 01 だけでもOK。
+   背景    … home_bg.png（ホーム画面の背景。育成画面は背景なし） */
+const IMG_DIR      = 'images/';
+const CHARA_FILE   = lv => 'chikari_' + String(lv).padStart(2,'0') + '.png';
+const HOME_BG_FILE = 'home_bg.png';
+
+/* ───────── 揺れ領域（ピッカーのJSONをここに差し替え） ─────────
+   いまは仮配置。本物の絵に合わせてピッカーで作った points をそのまま貼る。
+   左上原点・正規化0..1・y下向き。type = bounce(縦)/sway(横)/jelly(全方向) */
+const RIG_POINTS = [
+  { name:'hair',  type:'sway',   cx:0.50, cy:0.22, rx:0.34, ry:0.20, strength:0.85 },
+  { name:'chest', type:'bounce', cx:0.50, cy:0.56, rx:0.19, ry:0.12, strength:1.00 },
+  { name:'skirt', type:'jelly',  cx:0.50, cy:0.82, rx:0.26, ry:0.11, strength:0.6  },
+];
+
+/* ───────── セーブ ───────── */
+const _mem={}; const store={
+  get(k){ try{return localStorage.getItem(k);}catch(e){return (k in _mem)?_mem[k]:null;} },
+  set(k,v){ try{localStorage.setItem(k,v);}catch(e){_mem[k]=v;} }
+};
+const SAVE_KEY='chikari_save_v1';
+function todayKey(){ const d=new Date(); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
+let S={ level:1, expInto:0, dailyGot:0, total:0, lastDate:todayKey(), firstDate:todayKey() };
+(function load(){
+  try{ const raw=store.get(SAVE_KEY); if(raw) S=Object.assign(S,JSON.parse(raw)); }catch(e){}
+  if(S.lastDate!==todayKey()){ S.dailyGot=0; S.lastDate=todayKey(); }
+  if(!S.firstDate) S.firstDate=todayKey();
+  save();
+})();
+function save(){ store.set(SAVE_KEY,JSON.stringify(S)); }
+function daysPlayed(){ const a=new Date(S.firstDate+'T00:00:00'), b=new Date(todayKey()+'T00:00:00');
+  return Math.max(1, Math.round((b-a)/86400000)+1); }
+
+/* ───────── セリフ（独白。本物の10×3＋育成後10に差し替え） ───────── */
+const LINES={
+  morning:['ん…もう朝か。','…おはよ。','ふぁ…まだ眠い。'],
+  afternoon:['お腹、すいたな。','ふぅ、ひと息。','今日は何しよう。'],
+  evening:['今日もおしまい。','…ねむ。','お風呂、入ろ。'],
+  trained:['…なんだか、少し変わった気がする。気のせいかな。','うーん…前より、ちょっとだけ。…わかんないけど。','ん。…なんでもない。','…ふぅ。なんだろ、この感じ。'],
+};
+function loginSlot(){ const h=new Date().getHours(); return h<11?'morning':h<17?'afternoon':'evening'; }
+const pick=a=>a[(Math.random()*a.length)|0];
+let cameFromTraining=false;
+function showHomeLine(){
+  const txt=cameFromTraining?pick(LINES.trained):pick(LINES[loginSlot()]); cameFromTraining=false;
+  const el=$('home-line'); el.classList.remove('show'); el.textContent=txt;
+  requestAnimationFrame(()=>setTimeout(()=>el.classList.add('show'),60));
+}
+
+/* ════════════════════════════════════════════════════════════
+   立ち絵の揺れ（WebGLメッシュ変形）＋ ゆっくりした待機モーション
+   ════════════════════════════════════════════════════════════ */
+const chikariCv=document.createElement('canvas');
+let gl=null, prog, aPos, aUv, uv, posArr, base, idx, posBuf, tex, NV, NX, NY, glOK=false;
+const GX=16, GY=22, OVS=1.05;
+
+class Spring{ constructor(k=.16,d=.82){this.v=0;this.vel=0;this.k=k;this.d=d;}
+  update(t){ this.vel+=(t-this.v)*this.k; this.vel*=this.d; this.v+=this.vel; return this.v; } }
+const dip=new Spring(.18,.80);
+RIG_POINTS.forEach(p=>{ p.sV=new Spring(.16,.82); p.sH=new Spring(.15,.86); });
+
+/* プレースホルダ立ち絵（画像が無いときの保険）。本画像が来たら使われない。 */
+const texCanvas=document.createElement('canvas'); texCanvas.width=360; texCanvas.height=480;
+const tctx=texCanvas.getContext('2d');
+const HAIR =['#7a5b4c','#8a4f3a','#5a4636','#a8704a','#6b4a6a','#caa15a','#9a5a7a','#4a6a8a','#3f7a6a','#b05a5a'];
+const DRESS=['#e8a0b4','#9fccd6','#c8b0e0','#f0c27a','#a8d8b0','#e89aa0','#b0c0e8','#d8c0a0','#9ad0c0','#e0a8b8'];
+function drawPlaceholder(level){
+  const W=texCanvas.width,H=texCanvas.height,cx=W/2; tctx.clearRect(0,0,W,H);
+  const hair=HAIR[(level-1)%HAIR.length], dress=DRESS[(level-1)%DRESS.length];
+  tctx.fillStyle=dress; tctx.beginPath();
+  tctx.moveTo(cx-58,H*0.92); tctx.quadraticCurveTo(cx-66,H*0.58,cx-40,H*0.50);
+  tctx.lineTo(cx+40,H*0.50); tctx.quadraticCurveTo(cx+66,H*0.58,cx+58,H*0.92); tctx.closePath(); tctx.fill();
+  tctx.fillStyle='#f6d3bf'; tctx.fillRect(cx-14,H*0.44,28,28);
+  tctx.fillStyle=hair; tctx.beginPath(); tctx.ellipse(cx,H*0.34,70,86,0,0,7); tctx.fill();
+  tctx.fillStyle='#fde0cf'; tctx.beginPath(); tctx.ellipse(cx,H*0.32,52,58,0,0,7); tctx.fill();
+  tctx.fillStyle=hair; tctx.beginPath();
+  tctx.moveTo(cx-54,H*0.30); tctx.quadraticCurveTo(cx-58,H*0.14,cx,H*0.12);
+  tctx.quadraticCurveTo(cx+58,H*0.14,cx+54,H*0.30); tctx.quadraticCurveTo(cx+30,H*0.20,cx+8,H*0.27);
+  tctx.quadraticCurveTo(cx-18,H*0.20,cx-54,H*0.30); tctx.closePath(); tctx.fill();
+  tctx.fillStyle='#4a3a3a';
+  tctx.beginPath(); tctx.ellipse(cx-20,H*0.33,6,8,0,0,7); tctx.fill();
+  tctx.beginPath(); tctx.ellipse(cx+20,H*0.33,6,8,0,0,7); tctx.fill();
+  tctx.fillStyle='rgba(255,150,150,.45)';
+  tctx.beginPath(); tctx.ellipse(cx-28,H*0.37,9,5,0,0,7); tctx.fill();
+  tctx.beginPath(); tctx.ellipse(cx+28,H*0.37,9,5,0,0,7); tctx.fill();
+  tctx.strokeStyle='#c98'; tctx.lineWidth=2; tctx.beginPath(); tctx.arc(cx,H*0.385,7,0.15*Math.PI,0.85*Math.PI); tctx.stroke();
+}
+
+/* テクスチャ供給源（画像 or プレースホルダcanvas） */
+let currentSource=texCanvas;
+function applyAspect(w,h){ const ar=w+'/'+h; $('home-stage').style.aspectRatio=ar; $('train-stage').style.aspectRatio=ar; requestAnimationFrame(resizeChikari); }
+function setTexture(src){ currentSource=src; if(glOK) uploadTex(src); else fallback2D(); }
+function loadChara(level, isBoot){
+  const im=new Image();
+  im.onload =()=>{ applyAspect(im.naturalWidth, im.naturalHeight); setTexture(im); };
+  im.onerror=()=>{ if(isBoot){ drawPlaceholder(level); applyAspect(texCanvas.width,texCanvas.height); setTexture(texCanvas); } /* 上位レベルの画像が無いだけなら現状維持 */ };
+  im.src=IMG_DIR+CHARA_FILE(level);
+}
+function setHomeBg(){
+  const s=$('home-stage').style;
+  s.backgroundImage="url('"+IMG_DIR+HOME_BG_FILE+"'), linear-gradient(180deg,#fff7f1,#fdf3ee)";
+  s.backgroundSize="cover, cover"; s.backgroundPosition="center, center";
+}
+
+function initGL(){
+  gl=chikariCv.getContext('webgl',{alpha:true,premultipliedAlpha:false,antialias:true});
+  if(!gl) return false;
+  const sh=(t,s)=>{const x=gl.createShader(t);gl.shaderSource(x,s);gl.compileShader(x);return x;};
+  prog=gl.createProgram();
+  gl.attachShader(prog,sh(gl.VERTEX_SHADER,'attribute vec2 a_pos;attribute vec2 a_uv;varying vec2 v;void main(){v=a_uv;gl_Position=vec4(a_pos,0.,1.);}'));
+  gl.attachShader(prog,sh(gl.FRAGMENT_SHADER,'precision mediump float;varying vec2 v;uniform sampler2D t;void main(){gl_FragColor=texture2D(t,v);}'));
+  gl.linkProgram(prog); gl.useProgram(prog);
+  aPos=gl.getAttribLocation(prog,'a_pos'); aUv=gl.getAttribLocation(prog,'a_uv');
+  NX=GX+1; NY=GY+1; NV=NX*NY;
+  uv=new Float32Array(NV*2); posArr=new Float32Array(NV*2); base=new Float32Array(NV*2);
+  let i=0; for(let gy=0;gy<NY;gy++)for(let gx=0;gx<NX;gx++){ const u=gx/GX,vv=gy/GY;
+    uv[i*2]=u; uv[i*2+1]=vv; base[i*2]=(u*2-1)*OVS; base[i*2+1]=(vv*2-1)*OVS; i++; }
+  const ix=[]; for(let gy=0;gy<GY;gy++)for(let gx=0;gx<GX;gx++){ const a=gy*NX+gx,b=a+1,c=a+NX,d=c+1; ix.push(a,b,c,b,d,c); }
+  idx=new Uint16Array(ix);
+  const ub=gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER,ub); gl.bufferData(gl.ARRAY_BUFFER,uv,gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(aUv); gl.vertexAttribPointer(aUv,2,gl.FLOAT,false,0,0);
+  posBuf=gl.createBuffer();
+  const ib=gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,idx,gl.STATIC_DRAW);
+  tex=gl.createTexture();
+  gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
+  return true;
+}
+function uploadTex(src){
+  gl.bindTexture(gl.TEXTURE_2D,tex);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);
+  gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,false);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,src);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+}
+const clamp=(x,a,b)=>x<a?a:x>b?b:x;
+
+function resizeChikari(){
+  const r=chikariCv.getBoundingClientRect(); if(!r.width) return;
+  const dpr=Math.min(window.devicePixelRatio||1,2.5);
+  chikariCv.width=Math.round(r.width*dpr); chikariCv.height=Math.round(r.height*dpr);
+  if(gl) gl.viewport(0,0,chikariCv.width,chikariCv.height);
+}
+function mountChikari(c){ if(chikariCv.parentNode!==c) c.appendChild(chikariCv); requestAnimationFrame(resizeChikari); }
+
+/* 点滅1回ぶんのインパルス（“つつく”相当） */
+function pulse(strength=1){
+  dip.vel+=4.5*strength;
+  RIG_POINTS.forEach(p=>{
+    if(p.type==='bounce'||p.type==='jelly') p.sV.vel+=6.0*strength*p.strength;
+    if(p.type==='sway'  ||p.type==='jelly') p.sH.vel+=4.0*strength*p.strength;
+  });
+}
+
+let lastT=performance.now(), nowT=0;
+function loop(t){
+  const dt=Math.min(.05,(t-lastT)/1000); lastT=t; nowT+=dt;
+  if(glOK){
+    const breath=Math.sin(nowT*1.4);
+    // ゆっくりした待機モーション（生きてる感じ）
+    const idleSway = Math.sin(nowT*0.55) + Math.sin(nowT*0.23+1.1)*0.45;  // 全身の左右ゆれ
+    const idleBob  = Math.sin(nowT*0.70+0.5);                             // 微かな上下
+    const hairDrift= Math.sin(nowT*0.55+0.6);                             // 髪・上半身の遅れた揺れ
+    const ang=idleSway*0.018;                                             // 足元支点の傾き
+    const ca=Math.cos(ang), sa=Math.sin(ang);
+    dip.update(0); RIG_POINTS.forEach(p=>{ p.sV.update(0); p.sH.update(0); });
+    for(let k=0;k<NV;k++){
+      const u=uv[k*2], vv=uv[k*2+1];
+      let x=base[k*2], y=base[k*2+1];
+      const bs=1+breath*.008; x*=bs; y*=bs;            // 呼吸（全体の微かな伸縮）
+      for(let pi=0;pi<RIG_POINTS.length;pi++){ const p=RIG_POINTS[pi];
+        const pcv=1-p.cy;                              // 左上原点→下原点
+        const du=u-p.cx, dv=vv-pcv;
+        const w=Math.exp(-(du*du/(2*p.rx*p.rx)+dv*dv/(2*p.ry*p.ry)));
+        if(w<.003) continue;
+        if(p.type==='bounce'){ y+=p.sV.v*.0050*w; y+=(y-(pcv*2-1))*clamp(p.sV.vel*.02,-.18,.18)*w; }
+        else if(p.type==='sway'){ x+=p.sH.v*.50*w; }
+        else { y+=p.sV.v*.0034*w; x+=p.sH.v*.42*w; }
+      }
+      const tw=Math.pow(Math.max(0,(vv-.40)/.60),1.4);  // 上ほど揺れる
+      x += hairDrift*0.022*tw;
+      y += dip.v*.004 + idleBob*0.004;                  // 全体の小さな上下
+      let ry=y+1, nx=x*ca-ry*sa, ny=x*sa+ry*ca; x=nx; y=-1+ny;  // 足元支点で僅かに傾ける
+      posArr[k*2]=clamp(x,-1.7,1.7); posArr[k*2+1]=clamp(y,-1.7,1.7);
+    }
+    gl.clearColor(0,0,0,0); gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.bindBuffer(gl.ARRAY_BUFFER,posBuf); gl.bufferData(gl.ARRAY_BUFFER,posArr,gl.DYNAMIC_DRAW);
+    gl.enableVertexAttribArray(aPos); gl.vertexAttribPointer(aPos,2,gl.FLOAT,false,0,0);
+    gl.bindTexture(gl.TEXTURE_2D,tex);
+    gl.drawElements(gl.TRIANGLES,idx.length,gl.UNSIGNED_SHORT,0);
+  }
+  requestAnimationFrame(loop);
+}
+function fallback2D(){
+  const c=chikariCv.getContext('2d'); if(!c) return;
+  const r=chikariCv.getBoundingClientRect(); const dpr=Math.min(window.devicePixelRatio||1,2);
+  chikariCv.width=Math.max(1,r.width*dpr); chikariCv.height=Math.max(1,r.height*dpr);
+  c.clearRect(0,0,chikariCv.width,chikariCv.height);
+  try{ c.drawImage(currentSource,0,0,chikariCv.width,chikariCv.height); }catch(e){}
+}
+
+/* ════════════════════════════════════════════════════════════
+   経験値・レベル
+   ════════════════════════════════════════════════════════════ */
+function onLevelUp(){ loadChara(S.level,false); pulse(1.6); }   // 画像差し替え＋ひと揺れ
+function gainExp(){
+  if(!NO_LIMIT && S.dailyGot>=DAILY_MAX) return false;
+  const add = NO_LIMIT ? PER_BLINK : Math.min(PER_BLINK, DAILY_MAX-S.dailyGot);
+  S.dailyGot+=add; S.total+=add; S.expInto+=add;
+  while(S.expInto>=expToNext(S.level)){ S.expInto-=expToNext(S.level); S.level++; onLevelUp(); }
+  save(); updateAllUI();
+  return true;
+}
+
+/* ════════════════════════════════════════════════════════════
+   点滅シミュレート（プレビュー専用）
+   実機では カメラの onPeak → onBlink() に置き換える
+   ════════════════════════════════════════════════════════════ */
+let holding=false, lockTimer=null, blinkTimer=null, lockStart=0;
+function onBlink(){ pulse(1); if(!gainExp()) finishTrain(); }
+function toggleHold(){ holding?stopHold():startHold(); }
+function startHold(){
+  if(!NO_LIMIT && S.dailyGot>=DAILY_MAX){ finishTrain(); return; }
+  holding=true; $('holdBtn').textContent='■ やめる'; lockStart=performance.now();
+  const wrap=$('lockwrap'), label=$('lock-label');
+  wrap.classList.remove('locked'); label.classList.remove('ok'); label.textContent='光を認識中…';
+  cancelAnimationFrame(lockTimer);
+  (function fill(){ const p=Math.min(1,(performance.now()-lockStart)/LOCK_MS); $('lock-fill').style.width=(p*100)+'%';
+    if(p<1&&holding) lockTimer=requestAnimationFrame(fill); else if(holding) locked(); })();
+}
+function locked(){
+  $('lockwrap').classList.add('locked'); $('lock-label').classList.add('ok'); $('lock-label').textContent='採取中';
+  $('cam-ph').innerHTML='<b>採取中</b><br>点滅に合わせて<br>ちかりが揺れています';
+  clearInterval(blinkTimer); blinkTimer=setInterval(onBlink,1000/SIM_HZ);
+}
+function stopHold(){
+  holding=false; clearInterval(blinkTimer); cancelAnimationFrame(lockTimer);
+  $('holdBtn').textContent='▶ かざす（点滅）';
+  $('lockwrap').classList.remove('locked'); $('lock-label').classList.remove('ok');
+  $('lock-label').textContent='かざすと はじまります'; $('lock-fill').style.width='0%';
+  $('cam-ph').innerHTML='ここに<b>カメラ</b>が入ります<br>（ハイビスカスランプの点滅を認識）<br><br>※プレビューでは <b>下のボタン</b>で点滅をシミュレートします';
+}
+function finishTrain(){ stopHold(); $('train-done').classList.add('show'); }
+function leaveTrain(){ stopHold(); $('train-done').classList.remove('show'); cameFromTraining=(S.dailyGot>0); go('home'); }
+
+/* ════════════════════════════════════════════════════════════
+   UI更新
+   ════════════════════════════════════════════════════════════ */
+function updateAllUI(){
+  const need=expToNext(S.level);
+  $('home-lv').textContent=S.level;
+  $('train-lvtag').innerHTML = NO_LIMIT
+    ? 'Lv <b>'+S.level+'</b> ・ <b style="color:var(--gold)">テスト：上限OFF</b>'
+    : 'Lv <b>'+S.level+'</b> ・ 本日 <b>'+S.dailyGot+'</b>/'+DAILY_MAX;
+  $('today-bar').style.width=Math.min(100,S.dailyGot/DAILY_MAX*100)+'%';
+  $('today-txt').textContent=NO_LIMIT?(S.dailyGot+' （上限OFF）'):(S.dailyGot+' / '+DAILY_MAX);
+  $('next-bar').style.width=Math.min(100,S.expInto/need*100)+'%';
+  $('next-txt').textContent=S.expInto+' / '+need;
+  $('st-lv').textContent=S.level;
+  $('st-next-bar').style.width=Math.min(100,S.expInto/need*100)+'%';
+  $('st-next-txt').textContent=S.expInto+' / '+need;
+  $('st-total').textContent=S.total.toLocaleString();
+  $('st-today').textContent=NO_LIMIT?(S.dailyGot+' （上限OFF）'):(S.dailyGot+' / '+DAILY_MAX);
+  $('st-days').textContent=daysPlayed()+' 日目';
+}
+
+/* ════════════════════════════════════════════════════════════
+   画面遷移
+   ════════════════════════════════════════════════════════════ */
+function go(name){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
+  $('scr-'+name).classList.add('on');
+  if(name==='home'){ mountChikari($('home-stage')); showHomeLine(); }
+  if(name==='train'){ mountChikari($('train-stage')); $('train-done').classList.remove('show'); }
+  updateAllUI(); requestAnimationFrame(resizeChikari);
+}
+function wipeSave(){
+  if(!confirm('セーブを消してLv1からやり直します。よろしいですか？')) return;
+  try{ localStorage.removeItem(SAVE_KEY); }catch(e){}
+  S={ level:1, expInto:0, dailyGot:0, total:0, lastDate:todayKey(), firstDate:todayKey() };
+  save(); loadChara(1,true); updateAllUI(); go('home');
+}
+
+/* ───────── 起動 ───────── */
+chikariCv.addEventListener('pointerdown', ()=>pulse(1.2));   // 立ち絵をつつく（EXPなし）
+window.addEventListener('resize', resizeChikari);
+(function boot(){
+  glOK=initGL();
+  setHomeBg();
+  drawPlaceholder(S.level); applyAspect(texCanvas.width,texCanvas.height); setTexture(texCanvas); // 仮を即表示
+  loadChara(S.level, true);                                  // 本画像に差し替え（あれば）
+  if(glOK) requestAnimationFrame(loop);
+  mountChikari($('home-stage'));
+  updateAllUI(); showHomeLine();
+})();
+</script>
 </body>
 </html>
