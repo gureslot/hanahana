@@ -256,7 +256,7 @@ function App() {
   const [screen, setScreen] = useState('home');
   const [toast, setToast] = useState(null);
   const [authed, setAuthed] = useState(false);  // セッション有無（タイトルのタップ分岐に使用）
-  const [bgmOn, setBgmOn] = useState(true);     // BGM音声状態（単一ソース・設定画面と共有）
+  const [bgmOn, setBgmOn] = useState(false);   // 既定OFF（SEは別系統 ck_sound_on＝既定ONのまま）
   const [volume, setVolume] = useState(0.45);   // 0..1（セッション内のみ・localStorage不使用）
   const audioRef = useRef(null);
   const bgmStarted = useRef(false);
@@ -2078,7 +2078,7 @@ function DeckSlotArt({ cardKey }) {
   return <img src={'./images/' + cardKey + '.png'} alt="" onError={() => setErr(true)} style={deckS.slotImg} />;
 }
 
-function DeckScreen({ profile, cards, refreshAll, back, flash, initialDeckNo }) {
+function DeckScreen({ profile, cards, refreshAll, back, flash, initialDeckNo, backLabel = 'ホームへ戻る' }) {
   const maxDecks = Math.min(2 + Math.floor(((profile && profile.cleared_stage) || 0) / 2), 6); // balance §10
   const [decks, setDecks] = useState(null);
   const [spSet, setSpSet] = useState(null);     // {card_id:true} 本日離脱中
@@ -2306,7 +2306,7 @@ function DeckScreen({ profile, cards, refreshAll, back, flash, initialDeckNo }) 
           <div style={deckS.autoSave}>編成は自動で保存されます</div>
         </div>
 
-        <button onClick={back} style={{ ...S.lineBtn, marginTop: 16, alignSelf: 'center' }}>ホームへ戻る</button>
+        <button onClick={back} style={{ ...S.lineBtn, marginTop: 16, alignSelf: 'center' }}>{backLabel}</button>
       </div>
 
         {/* 武気充填の微調整モーダル（質・±・最大・空） */}
@@ -2443,7 +2443,7 @@ const BOSS_CSS = `
 .boss-wscrim{position:absolute; inset:0; z-index:6;}
 /* 出撃シート内のデッキ選択（内容つき） */
 .boss-decks2{display:flex; flex-direction:column; gap:8px; margin-bottom:4px;}
-.boss-deck2{border:1.5px solid rgba(232,194,90,.4); border-radius:12px; padding:8px 10px; cursor:pointer; background:rgba(255,235,180,.04);}
+.boss-deck2{border:1.5px solid rgba(232,194,90,.4); border-radius:12px; padding:8px 10px; background:rgba(255,235,180,.04);}
 .boss-deck2.sel{border-color:#ffd98a; background:linear-gradient(180deg,rgba(255,228,154,.16),rgba(232,181,77,.08)); box-shadow:0 0 12px rgba(255,200,90,.3);}
 .boss-deck2.busy{opacity:.5; cursor:default;}
 .boss-deck2Top{display:flex; justify-content:space-between; font-size:12px; font-weight:800; color:#fff3c8; margin-bottom:6px;}
@@ -2732,12 +2732,13 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
               <div className="boss-subt">{i < 2 ? '中ボス' : '面ボス'} ・ {curStage.world}</div>
               {bm
                 ? <>
-                    <div className="boss-stat"><span className="k">敵の戦力</span><span className="v">{Number(bm.base_power).toLocaleString()}（1周目・balance §6-1）</span></div>
+                    <div className="boss-stat"><span className="k">敵の戦力</span><span className="v">{Number(bm.base_power).toLocaleString()}</span></div>
                     <div className="boss-stat"><span className="k">属性</span><span className="v">{arrJA(bm.attrs, ATTR_JA)}</span></div>
                     <div className="boss-stat"><span className="k">武器</span><span className="v">{arrJA(bm.weapons, WEAP_JA)}</span></div>
                   </>
                 : <div className="boss-stat"><span className="k">敵情報</span><span className="v" style={{ color: '#ff6a7a' }}>boss_master にデータがありません</span></div>}
-              <div className="boss-note">出撃すると約30分（テスト中30秒）デッキが出払う。帰還で自動解放＝結果は戦闘報告書へ。三すくみ 有利×1.2／不利×0.8。勝敗・損失・報酬はサーバ判定。</div>
+              {/* 所要時間＝テスト値（start_boss_battle と同期。本番は a=1200/b=1500/boss=1800＝約20/25/30分） */}
+              <div className="boss-stat"><span className="k">所要時間</span><span className="v">{({ a: '約10秒', b: '約15秒', boss: '約30秒' })[role] || '約30秒'}</span></div>
 
               <div className="boss-secTitle">メインデッキ（デッキ1）</div>
               <div className="boss-decks2">
@@ -2745,7 +2746,7 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
                   const lock = deckLock(n); const blocked = lock !== null; const members = deckMembers(n);
                   const topRight = lock === 'boss' ? '出撃中' : (lock === 'tansaku' ? '探索中' : '総合 ' + deckTotal(n).toLocaleString());
                   return (
-                    <div key={n} className={'boss-deck2' + (n === deckNo ? ' sel' : '') + (blocked ? ' busy' : '')} onClick={() => { if (!blocked) setDeckNo(n); }}>
+                    <div key={n} className={'boss-deck2' + (n === deckNo ? ' sel' : '') + (blocked ? ' busy' : '')}>
                       <div className="boss-deck2Top">
                         <span>デッキ{n}<button onClick={(e) => { e.stopPropagation(); setEditDeckNo(n); }} style={{ marginLeft: 8, fontFamily: 'inherit', fontSize: 10, fontWeight: 800, color: '#ffe39a', background: 'rgba(60,40,80,.6)', border: '1px solid rgba(232,194,90,.5)', borderRadius: 8, padding: '2px 8px', cursor: 'pointer' }}>✎ 編成</button><button onClick={(e) => { e.stopPropagation(); maxFillDeck(n); }} disabled={blocked || fillingDeck !== null || emptyingDeck !== null} style={{ marginLeft: 6, fontFamily: 'inherit', fontSize: 10, fontWeight: 800, color: (blocked || fillingDeck !== null || emptyingDeck !== null) ? '#7a6a8a' : '#bfe3ff', background: 'rgba(40,60,80,.6)', border: '1px solid rgba(120,200,255,.45)', borderRadius: 8, padding: '2px 8px', cursor: (blocked || fillingDeck !== null || emptyingDeck !== null) ? 'default' : 'pointer' }}>{fillingDeck === n ? '充填中…' : '⚡ 最大充填'}</button><button onClick={(e) => { e.stopPropagation(); emptyDeck(n); }} disabled={blocked || fillingDeck !== null || emptyingDeck !== null} style={{ marginLeft: 6, fontFamily: 'inherit', fontSize: 10, fontWeight: 800, color: (blocked || fillingDeck !== null || emptyingDeck !== null) ? '#7a6a8a' : '#ffc7b0', background: 'rgba(70,40,30,.6)', border: '1px solid rgba(255,150,110,.45)', borderRadius: 8, padding: '2px 8px', cursor: (blocked || fillingDeck !== null || emptyingDeck !== null) ? 'default' : 'pointer' }}>{emptyingDeck === n ? '解除中…' : '空にする'}</button></span>
                         <span>{topRight}</span>
@@ -2754,7 +2755,6 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
                         {members.map((c, si) => c
                           ? <div key={si} className="boss-deck2Card" style={{ position: 'relative', cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); setDetailCard(c); }}>
                               <div style={spSet[c.id] ? { opacity: .35, filter: 'grayscale(1)' } : undefined}><CardThumb card={c} small /></div>
-                              <div onClick={(e) => { e.stopPropagation(); setDetailCard(c); }} style={{ position: 'absolute', left: 4, bottom: 4, width: 20, height: 20, borderRadius: '50%', background: 'rgba(10,6,9,.82)', border: '1px solid rgba(232,194,90,.5)', color: '#fff3c8', fontSize: 12, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 3 }}>ⓘ</div>
                               {(() => {
                                 if (/_sp$/.test(c.card_key || '') || !bm) return null;
                                 const p = (c.card_key || '').split('_');
@@ -2797,7 +2797,7 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
       {/* 編成ボタン→DeckScreen。戻るでデッキ内容を反映して出撃シートに復帰 */}
       {editDeckNo !== null && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 200, overflowY: 'auto', background: '#0a0608' }}>
-          <DeckScreen profile={profile} cards={cards} refreshAll={onRefresh} flash={flash} initialDeckNo={editDeckNo}
+          <DeckScreen profile={profile} cards={cards} refreshAll={onRefresh} flash={flash} initialDeckNo={editDeckNo} backLabel="戻る"
             back={async () => { setEditDeckNo(null); try { setDecks(await ChikarianAPI.getDecks() || []); } catch (e) {} await refetchSorties(); try { await onRefresh(); } catch (e) {} }} />
         </div>
       )}
@@ -3700,6 +3700,9 @@ function TansakuScreen({ profile, cards, refreshAll, back, flash }) {
   // 成功時のみシートを閉じる。ゲート拒否はシート内にエラー表示（最終判定はサーバ start_tansaku=0064）。
   const doStart = async () => {
     if (!openStep || busy) return;
+    // 探索中デッキの切り替え確認：選択デッキが探索中なら「回収して切り替え」を確認（OKで開始＝サーバが既存分を自動回収）
+    const isExploring = (states || []).some(s => s.deck_no === deckNo);
+    if (isExploring && !(await uiConfirm('デッキ' + deckNo + ' は別の場所を探索中です。回収して切り替えますか？'))) return;
     const a = openStep.area, d = openStep.depth;
     setStartErr(null); setBusy(true);
     try {
@@ -3852,7 +3855,7 @@ function TansakuScreen({ profile, cards, refreshAll, back, flash }) {
                 const a = openStep.area, d = openStep.depth;
                 if (a === 4) {
                   const need = d === 1 ? 3000 : d === 2 ? 6000 : 9000;
-                  return <div className="tan-stat"><span className="k">必要条件</span><span className="v">本体戦力の合計 {need.toLocaleString()} 以上（武気・★不問／枚数不問）</span></div>;
+                  return <div className="tan-stat"><span className="k">必要条件</span><span className="v">本体戦力の合計 {need.toLocaleString()} 以上</span></div>;
                 }
                 if (a === 7) {
                   const attr = d === 1 ? '芯' : d === 2 ? '葉' : '花';
@@ -3863,7 +3866,7 @@ function TansakuScreen({ profile, cards, refreshAll, back, flash }) {
                 }
                 return <div className="tan-stat"><span className="k">属性要求</span><span className="v attr-none">なし</span></div>;
               })()}
-              <div className="tan-secTitle">時間で蓄積（上限なし・張り付き不要）</div>
+              <div className="tan-secTitle">時間で蓄積</div>
               <div className="tan-stat"><span className="k">メダル</span><span className="v">{rate.medal.toFixed(2)} /分</span></div>
               <div className="tan-stat"><span className="k">各カードEXP</span><span className="v">{rate.exp.toFixed(2)} /分</span></div>
               <div className="tan-deckTitle">派遣するデッキ</div>
@@ -3895,7 +3898,7 @@ function TansakuScreen({ profile, cards, refreshAll, back, flash }) {
                       disabled={busy || cc === 0 || !deckGate(deckNo).ok}>
                 {cc === 0 ? 'デッキにカードがありません'
                   : (!deckGate(deckNo).ok ? deckGate(deckNo).badReason
-                    : (busyDeck ? '出発（既存分は自動回収）' : '出発'))}
+                    : (busyDeck ? '出発' : '出発'))}
               </button>
               <div className="tan-note">レートは現在の周回（{round}周目）基準の目安。増減・時刻計算・Lv反映はサーバ。</div>
             </>
