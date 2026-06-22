@@ -114,6 +114,21 @@
   .done.show{display:flex;}
   .done .t{font-size:16px; font-weight:900;}
   .done .s{font-size:12.5px; color:var(--sub); line-height:1.6;}
+
+  /* ═══ 揺れ調整パネル（値が決まったら削除可）═══ */
+  #wbPanel{position:fixed; right:8px; top:8px; z-index:50; font-family:system-ui,sans-serif;}
+  #wbToggle{background:rgba(20,12,18,.85); color:#ffd08a; border:1px solid #e0a330; border-radius:10px; padding:7px 11px; font-size:12px; font-weight:700; cursor:pointer;}
+  #wbBody{display:none; position:absolute; right:0; top:38px; width:236px; background:rgba(18,12,16,.96); border:1px solid #5a4a44; border-radius:12px; padding:12px;}
+  #wbBody.open{display:block;}
+  #wbBody label{display:block; font-size:11px; color:#e7d3a6; margin:9px 0 0; font-weight:700;}
+  #wbBody label b{color:#ffd08a; float:right; font-variant-numeric:tabular-nums;}
+  #wbBody input[type=range]{width:100%; margin-top:4px;}
+  .wbout{margin-top:11px; font-size:10.5px; color:#9fe7d2; background:rgba(0,0,0,.35); border-radius:8px; padding:7px; word-break:break-all; font-family:ui-monospace,Menlo,monospace;}
+  .wbrow{display:flex; gap:7px; margin-top:9px;}
+  .wbrow button{flex:1; padding:8px; border-radius:8px; font-size:11.5px; font-weight:700; border:none; cursor:pointer;}
+  #wbCopy{background:#3f93a6; color:#fff;}
+  #wbReset{background:#3a2a2a; color:#f0b8a8; border:1px solid #6a4a44;}
+  .wbmsg{font-size:10.5px; color:#9dffce; margin-top:6px; min-height:13px; text-align:center;}
 </style>
 </head>
 <body>
@@ -210,6 +225,23 @@
 
 </div>
 
+<!-- ═══ 揺れ調整パネル（値が決まったら、この #wbPanel と <style>の #wb… と末尾の wbPanelInit を削除）═══ -->
+<div id="wbPanel">
+  <button id="wbToggle">⚙ ゆれ調整</button>
+  <div id="wbBody">
+    <label>大きさ <b id="wb-amp">3.5</b><input type="range" id="s-amp" min="0.5" max="8" step="0.1"></label>
+    <label>はずみ <b id="wb-damp">0.86</b><input type="range" id="s-damp" min="0.7" max="0.97" step="0.005"></label>
+    <label>かたさ <b id="wb-stiff">0.13</b><input type="range" id="s-stiff" min="0.04" max="0.30" step="0.005"></label>
+    <label>1点滅の強さ <b id="wb-kick">10</b><input type="range" id="s-kick" min="2" max="24" step="0.5"></label>
+    <div id="wb-out" class="wbout"></div>
+    <div class="wbrow">
+      <button id="wbCopy">数値をコピー</button>
+      <button id="wbReset">初期値</button>
+    </div>
+    <div id="wbMsg" class="wbmsg"></div>
+  </div>
+</div>
+
 <script>
 /* ════════════════════════════════════════════════════════════
    ちかりちゃん育成 — chikarichan/index.html
@@ -299,6 +331,12 @@ class Spring{ constructor(k=.16,d=.82){this.v=0;this.vel=0;this.k=k;this.d=d;}
   update(t){ this.vel+=(t-this.v)*this.k; this.vel*=this.d; this.v+=this.vel; return this.v; } }
 const dip=new Spring(.18,.80);
 [RIG_HOME, RIG_TRAIN].forEach(arr=>arr.forEach(p=>{ if(!p.sV){ p.sV=new Spring(.16,.82); p.sH=new Spring(.15,.86); } }));
+
+/* ═══ 揺れの強さ調整（このWBと、下の調整パネルは値が決まったら削除可）═══ */
+const WB_DEFAULT = { amp:3.5, stiff:0.13, damp:0.86, kick:10 };  // amp=大きさ stiff=かたさ damp=はずみ kick=1点滅の強さ
+let WB = Object.assign({}, WB_DEFAULT);
+try{ const s=localStorage.getItem('chikari_wb'); if(s) WB=Object.assign({},WB_DEFAULT,JSON.parse(s)); }catch(e){}
+function saveWB(){ try{ localStorage.setItem('chikari_wb', JSON.stringify(WB)); }catch(e){} }
 
 /* プレースホルダ立ち絵（画像が無いときの保険）。本画像が来たら使われない。 */
 const texCanvas=document.createElement('canvas'); texCanvas.width=360; texCanvas.height=480;
@@ -414,8 +452,8 @@ function mountChikari(c){ if(chikariCv.parentNode!==c) c.appendChild(chikariCv);
 function pulse(strength=1){
   dip.vel+=4.5*strength;
   RIG_POINTS.forEach(p=>{
-    if(p.type==='bounce'||p.type==='jelly') p.sV.vel+=6.0*strength*p.strength;
-    if(p.type==='sway'  ||p.type==='jelly') p.sH.vel+=4.0*strength*p.strength;
+    if(p.type==='bounce'||p.type==='jelly') p.sV.vel+=WB.kick*strength*p.strength;
+    if(p.type==='sway'  ||p.type==='jelly') p.sH.vel+=WB.kick*0.66*strength*p.strength;
   });
 }
 
@@ -431,7 +469,7 @@ function loop(t){
     const hairDrift= onHome ? Math.sin(nowT*0.55+0.6) : 0;                                // 髪・上半身の遅れた揺れ
     const ang=idleSway*0.018;                                                             // 足元支点の傾き（育成では0）
     const ca=Math.cos(ang), sa=Math.sin(ang);
-    dip.update(0); RIG_POINTS.forEach(p=>{ p.sV.update(0); p.sH.update(0); });
+    dip.update(0); RIG_POINTS.forEach(p=>{ p.sV.k=WB.stiff; p.sV.d=WB.damp; p.sH.k=WB.stiff*0.9; p.sH.d=WB.damp; p.sV.update(0); p.sH.update(0); });
     for(let k=0;k<NV;k++){
       const u=uv[k*2], vv=uv[k*2+1];
       let x=base[k*2], y=base[k*2+1];
@@ -441,9 +479,9 @@ function loop(t){
         const du=u-p.cx, dv=vv-pcv;
         const w=Math.exp(-(du*du/(2*p.rx*p.rx)+dv*dv/(2*p.ry*p.ry)));
         if(w<.003) continue;
-        if(p.type==='bounce'){ y+=p.sV.v*.0050*w; y+=(y-(pcv*2-1))*clamp(p.sV.vel*.02,-.18,.18)*w; }
-        else if(p.type==='sway'){ x+=p.sH.v*.50*w; }
-        else { y+=p.sV.v*.0034*w; x+=p.sH.v*.42*w; }
+        if(p.type==='bounce'){ y+=p.sV.v*.0050*WB.amp*w; y+=(y-(pcv*2-1))*clamp(p.sV.vel*.02,-.18,.18)*w; }
+        else if(p.type==='sway'){ x+=p.sH.v*.50*WB.amp*w; }
+        else { y+=p.sV.v*.0034*WB.amp*w; x+=p.sH.v*.42*WB.amp*w; }
       }
       const tw=Math.pow(Math.max(0,(vv-.40)/.60),1.4);  // 上ほど揺れる
       x += hairDrift*0.022*tw;
@@ -561,6 +599,20 @@ window.addEventListener('resize', resizeChikari);
   if(glOK) requestAnimationFrame(loop);
   mountChikari($('home-stage'));
   updateAllUI(); showHomeLine();
+})();
+
+/* ═══ 揺れ調整パネルのJS（値が決まったら削除）═══ */
+(function wbPanelInit(){
+  const fmt=()=>`揺れ調整: amp=${(+WB.amp).toFixed(2)}, stiff=${(+WB.stiff).toFixed(3)}, damp=${(+WB.damp).toFixed(3)}, kick=${(+WB.kick).toFixed(1)}`;
+  const map=[['s-amp','wb-amp','amp',2],['s-damp','wb-damp','damp',3],['s-stiff','wb-stiff','stiff',3],['s-kick','wb-kick','kick',1]];
+  function sync(){ for(const [sid,vid,key,dec] of map){ $(sid).value=WB[key]; $(vid).textContent=(+WB[key]).toFixed(dec); } $('wb-out').textContent=fmt(); }
+  $('wbToggle').onclick=()=>$('wbBody').classList.toggle('open');
+  for(const [sid,vid,key,dec] of map){
+    $(sid).addEventListener('input',()=>{ WB[key]=+$(sid).value; $(vid).textContent=(+WB[key]).toFixed(dec); $('wb-out').textContent=fmt(); saveWB(); });
+  }
+  $('wbCopy').onclick=async()=>{ const t=fmt(); try{ await navigator.clipboard.writeText(t); $('wbMsg').textContent='コピーしました'; }catch(e){ $('wbMsg').textContent=t; } setTimeout(()=>$('wbMsg').textContent='',2500); };
+  $('wbReset').onclick=()=>{ WB=Object.assign({},WB_DEFAULT); saveWB(); sync(); };
+  sync();
 })();
 </script>
 </body>
