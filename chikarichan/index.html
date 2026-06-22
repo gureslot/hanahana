@@ -221,7 +221,8 @@ const $ = id => document.getElementById(id);
 const PER_BLINK = 10;     // ロック後 1点滅あたりの経験値
 const DAILY_MAX = 100;    // 1日の上限EXP（NO_LIMIT=false のとき有効）
 const LOCK_MS   = 1000;   // 判定中の長さ
-const SIM_HZ    = 8;      // プレビュー点滅の周波数（実機は採取の5.5〜12Hz判定）
+const SIM_HZ    = 6;      // プレビュー点滅の周波数（実機の点滅 ≈6Hz に合わせる）
+const WOBBLE_EVERY = 1;   // 揺れを何ピークに1回出すか。1=毎ピーク / 2=2ピークで1回（ゆったり・位置確認向き）。EXPは毎ピーク加算
 const expToNext = lv => lv * 100;   // 必要EXPの階段：100,200,300…
 
 /* ★★★ テスト用フラグ ★★★
@@ -472,8 +473,8 @@ function gainExp(){
    点滅シミュレート（プレビュー専用）
    実機では カメラの onPeak → onBlink() に置き換える
    ════════════════════════════════════════════════════════════ */
-let holding=false, lockTimer=null, blinkTimer=null, lockStart=0;
-function onBlink(){ pulse(1); if(!gainExp()) finishTrain(); }
+let holding=false, lockTimer=null, blinkTimer=null, lockStart=0, peakCount=0;
+function onBlink(){ if(++peakCount % WOBBLE_EVERY === 0) pulse(1); if(!gainExp()) finishTrain(); }
 function toggleHold(){ holding?stopHold():startHold(); }
 function startHold(){
   if(!NO_LIMIT && S.dailyGot>=DAILY_MAX){ finishTrain(); return; }
