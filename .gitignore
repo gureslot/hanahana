@@ -1,1 +1,35 @@
 *.local.bak
+
+# 設計・作業資料（Googleドライブ管理／GitHubに上げない）
+Chikarian/canon-*.md
+Chikarian/*-spec-*.md
+Chikarian/balance-*.md
+Chikarian/hikitsugi-*.md
+Chikarian/skills-*.md
+Chikarian/cards-*.md
+Chikarian/chikarian-skills-*.md
+Chikarian/chikarian-skill-*.md
+Chikarian/chikarian-crystal-exchange.md
+Chikarian/chikarian-worldview.md
+Chikarian/design-updates-*.md
+Chikarian/boss-attr-sukumi-*.md
+Chikarian/boss-map-prompts-*.md
+Chikarian/balance-gacha-rate-update-*.md
+Chikarian/chatgpt-naming-prompt.md
+Chikarian/chikarian-sql-schedule.md
+Chikarian/meta-changelog*.md
+Chikarian/feedback-tracker*.md
+Chikarian/repo-operating-notes-*.md
+Chikarian/skill-db-spec-*.md
+Chikarian/sim-instructions-*.md
+Chikarian/tansaku-ladder-spec-*.md
+Chikarian/tansaku_ladder_client.md
+Chikarian/boss_node_sequential_client.md
+Chikarian/_filelist.md
+Chikarian/*_instruction.md
+Chikarian/*_batch.md
+Chikarian/*-patch-*.md
+# dev/認証テスト用html（配信に不要・GitHubに上げない）
+Chikarian/auth-test-v2.html
+Chikarian/chikarian-dev.html
+Chikarian/dev/
