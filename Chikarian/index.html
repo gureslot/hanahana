@@ -136,6 +136,7 @@ const ERR_JA = {
   'EXPLORE_POWER_LOCKED': '本体戦力の合計が足りません',
   'EXPLORE_ATTR_LOCKED': '編成3枚を同じ属性で揃えてください',
   'EXPLORE_STAR_LOCKED': '編成3枚を★2以上で揃えてください',
+  'CARD_IN_TANSAKU': 'このカードは別のデッキで探索に出ています',
   // 装備充填（equip_buki）※RPCはrepo外＝タスク記載のコードに対応
   'SP_NO_EQUIP': 'SPは装備できません',
   'QUALITY_LOCKED': 'その質はまだ解放されていません（鍛冶屋）',
@@ -372,7 +373,7 @@ function App() {
     else if (screen === 'boss') body = <BossScreen profile={profile} cards={cards} onRefresh={refreshAll} back={() => setScreen('home')} flash={flash} />;
     else if (screen === 'kyoka') body = <KyokaScreen cards={cards} profile={profile} refreshAll={refreshAll} back={() => setScreen('home')} flash={flash} />;
     else if (screen === 'tatemono') body = <TatemonoScreen profile={profile} cards={cards} refreshAll={refreshAll} back={() => setScreen('home')} flash={flash} />;
-    else if (screen === 'tansaku') body = <TansakuScreen profile={profile} refreshAll={refreshAll} back={() => setScreen('home')} flash={flash} />;
+    else if (screen === 'tansaku') body = <TansakuScreen profile={profile} cards={cards} refreshAll={refreshAll} back={() => setScreen('home')} flash={flash} />;
     else if (screen === 'houchi') body = <HouchiScreen profile={profile} refreshAll={refreshAll} back={() => setScreen('home')} flash={flash} />;
     else if (screen === 'mission') body = <MissionScreen profile={profile} cards={cards} refreshAll={refreshAll} back={() => setScreen('home')} flash={flash} />;
     else if (screen === 'report') body = <BattleLogView back={() => setScreen('home')} flash={flash} />;
@@ -3570,6 +3571,13 @@ const TAN_CSS = `
 .tan-witem.cur{background:rgba(255,228,154,.16);}
 .tan-witem.locked{color:#8a7c60; cursor:default;}
 .tan-wscrim{position:absolute; inset:0; z-index:6;}
+.tan-startErr{margin:8px 0 0; padding:8px 10px; font-size:11px; line-height:1.5; color:#ffd0c4; background:rgba(120,30,30,.35); border:1px solid rgba(255,120,120,.5); border-radius:10px;}
+.tan-deck.bad{filter:grayscale(1) brightness(.6); opacity:.5; pointer-events:none;}
+.tan-dCards{display:flex; gap:4px; justify-content:center; margin:6px 0 4px;}
+.tan-dCard{position:relative; width:30%;}
+.tan-dInfo{position:absolute; left:2px; bottom:2px; width:18px; height:18px; border-radius:50%; background:rgba(10,6,9,.82); border:1px solid rgba(232,194,90,.5); color:#fff3c8; font-size:11px; line-height:1; display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:3;}
+.tan-dEmpty{width:30%; aspect-ratio:3/4; display:flex; align-items:center; justify-content:center; font-size:10px; color:#7a6a8a; border:1px dashed rgba(232,194,90,.3); border-radius:8px;}
+.tan-dp.bad{color:#ff8f86;}
 `;
 // ノード座標＝mockup の検出座標。depth キー（shallow/mid/deep）に対応（本番の深さ3種＝3ノード）。
 const TAN_NODES = {
@@ -3577,11 +3585,12 @@ const TAN_NODES = {
   mid: { left: '49.9%', top: '51.3%', name: '中域 ・ 苔生す祭壇' },
   deep: { left: '52.6%', top: '79.3%', name: '深域 ・ 霧底の遺構' },
 };
-function TansakuScreen({ profile, refreshAll, back, flash }) {
+function TansakuScreen({ profile, cards, refreshAll, back, flash }) {
   const maxDecks = Math.min(2 + Math.floor(((profile && profile.cleared_stage) || 0) / 2), 6);
   const round = Math.max(1, (profile && profile.boss_round) || 1);
   const cleared = (profile && profile.cleared_stage) || 0;
   const gate = (cleared * 3) + ((profile && profile.boss_round_role) || 0);
+  const cardById = {}; (cards || []).forEach(c => { cardById[c.id] = c; });
   const [states, setStates] = useState(null);
   const [decks, setDecks] = useState([]);
   const [deckNo, setDeckNo] = useState(1);
@@ -3591,6 +3600,8 @@ function TansakuScreen({ profile, refreshAll, back, flash }) {
   const [busy, setBusy] = useState(false);
   const [now, setNow] = useState(Date.now());
   const [toast, setToast] = useState(null);
+  const [startErr, setStartErr] = useState(null);    // 出発失敗をシート内に表示（閉じない）
+  const [detailCard, setDetailCard] = useState(null);
 
   async function load() { try { setStates(await ChikarianAPI.getTansaku() || []); } catch (e) { flash(errMsg(e)); setStates([]); } }
   useEffect(() => { load(); const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
@@ -3603,16 +3614,73 @@ function TansakuScreen({ profile, refreshAll, back, flash }) {
     finally { setBusy(false); }
   }
   const DEPTH_KEY = { 1: 'shallow', 2: 'mid', 3: 'deep' };
-  const doStart = () => { if (!openStep) return; const a = openStep.area, d = openStep.depth; setOpenStep(null); run(() => ChikarianAPI.startTansaku(deckNo, a, DEPTH_KEY[d]), '探索を開始しました'); };
+  const closeSheet = () => { setOpenStep(null); setStartErr(null); };
+  // 成功時のみシートを閉じる。ゲート拒否はシート内にエラー表示（最終判定はサーバ start_tansaku=0064）。
+  const doStart = async () => {
+    if (!openStep || busy) return;
+    const a = openStep.area, d = openStep.depth;
+    setStartErr(null); setBusy(true);
+    try {
+      await ChikarianAPI.startTansaku(deckNo, a, DEPTH_KEY[d]);
+      flash('探索を開始しました');
+      closeSheet();
+      await load(); await refreshAll();
+    } catch (e) { setStartErr(errMsg(e)); }
+    finally { setBusy(false); }
+  };
   const doCollect = async (dno) => {
     const r = await run(() => ChikarianAPI.collectTansaku(dno));
-    setOpenStep(null);
+    closeSheet();
     if (r) { setToast({ medal: Number(r.medal_gain || 0), exp: r.exp_gain_per_card }); setTimeout(() => setToast(null), 1800); }
   };
 
   if (!states) return <Booting />;
   const stepOwner = {}; (states || []).forEach(s => { const di = depthInfo(s.depth); if (di) stepOwner[(((s.area || 1) - 1) * 3) + di.n] = s; });
   const byDeck = {}; states.forEach(s => { byDeck[s.deck_no] = s; });
+
+  // ★非依存の本体（_chikarian_card_body = 0064 と同式）。computeStats.body は★倍率込み＝使わない。
+  const rawBody = (c) => {
+    if (!c) return 0;
+    const key = c.card_key || '';
+    let base, cap;
+    if (key.endsWith('_sp')) { base = 3200; cap = 50; }
+    else { const b = CARD_BASE[(parseCardKey(key) || {}).rarity] || CARD_BASE.n; base = b.base; cap = b.cap; }
+    const lv = Math.min(c.lv || 1, cap);
+    return base * (1 + (lv - 1) * 2 / (cap - 1));
+  };
+  // 属性キー（_chikarian_card_attr = 0064 と同式：sp→null, meshibe→shin, それ以外は3要素目）
+  const attrKeyOf = (c) => {
+    if (!c) return null;
+    const key = c.card_key || '';
+    if (key.endsWith('_sp')) return null;
+    const p = key.split('_');
+    return p[1] === 'meshibe' ? 'shin' : p[2];
+  };
+  const ATTR_JA_REQ = { shin: '芯', ha: '葉', hana: '花' };
+  // 開いているノード(openStep)に対するデッキ n の適合（クライアントのグレーアウト用・サーバ 0064 と同式）。
+  function deckGate(n) {
+    const row = (decks || []).find(x => x.deck_no === n);
+    const ids = row ? [row.slot1_card_id, row.slot2_card_id, row.slot3_card_id] : [null, null, null];
+    const mem = ids.map(id => (id ? cardById[id] : null));
+    const filled = mem.filter(Boolean).length;
+    const a = openStep && openStep.area, d = openStep && openStep.depth;
+    if (a === 4) {
+      const th = { 1: 3000, 2: 6000, 3: 9000 }[d];
+      const sum = Math.round(mem.reduce((acc, c) => acc + rawBody(c), 0));
+      const ok = sum >= th;
+      return { ok, label: '本体 ' + sum.toLocaleString() + '/' + th.toLocaleString(), badReason: ok ? null : '本体が足りません' };
+    }
+    if (a === 7) {
+      const req = { 1: 'shin', 2: 'ha', 3: 'hana' }[d];
+      const ok = filled === 3 && mem.every(c => attrKeyOf(c) === req);
+      return { ok, label: ATTR_JA_REQ[req] + '3枚', badReason: ok ? null : (ATTR_JA_REQ[req] + '属性3枚が必要') };
+    }
+    if (a === 8) {
+      const ok = filled === 3 && mem.every(c => (c && (c.star || 0)) >= 2);
+      return { ok, label: '★2+×3', badReason: ok ? null : '★2以上を3枚' };
+    }
+    return { ok: filled > 0, label: filled ? '待機' : 'カードなし', badReason: filled ? null : 'カードがありません' };
+  }
 
   return (
     <div className="tan-col2">
@@ -3663,7 +3731,7 @@ function TansakuScreen({ profile, refreshAll, back, flash }) {
           return (
             <div key={depth} className={cls}
               style={{ left: pos.left, top: pos.top }}
-              onClick={unlocked ? () => { if (owner) setDeckNo(owner.deck_no); setOpenStep({ area, depth, step, name: '面' + area + ' ' + di.label }); } : undefined}>
+              onClick={unlocked ? () => { if (owner) setDeckNo(owner.deck_no); setStartErr(null); setOpenStep({ area, depth, step, name: '面' + area + ' ' + di.label }); } : undefined}>
               <div className="tan-dot" />
               <div className="tan-lbl">{di.label}{owner ? '（デッキ' + owner.deck_no + '）' : ''}{!unlocked ? ' 🔒' : ''}</div>
             </div>
@@ -3671,7 +3739,7 @@ function TansakuScreen({ profile, refreshAll, back, flash }) {
         })}
       </div>
 
-      <div className={'tan-scrim' + (openStep ? ' show' : '')} onClick={() => setOpenStep(null)} />
+      <div className={'tan-scrim' + (openStep ? ' show' : '')} onClick={closeSheet} />
       <div className={'tan-sheet' + (openStep ? ' show' : '')}>
         {openStep && (() => {
           const owner = stepOwner[openStep.step];
@@ -3680,7 +3748,7 @@ function TansakuScreen({ profile, refreshAll, back, flash }) {
             const oe = tansakuEstimate(owner, now, round);
             return (
               <>
-                <span className="tan-close" onClick={() => setOpenStep(null)}>×</span>
+                <span className="tan-close" onClick={closeSheet}>×</span>
                 <h3>{openStep.name}（探索中・デッキ{owner.deck_no}）</h3>
                 <div className="tan-reward">
                   <div className="tan-col"><div className="tan-amt">{oe ? oe.medal.toLocaleString() : '0'}</div><div className="tan-cap">メダル（目安）</div></div>
@@ -3696,7 +3764,7 @@ function TansakuScreen({ profile, refreshAll, back, flash }) {
           const busyDeck = byDeck[deckNo];
           return (
             <>
-              <span className="tan-close" onClick={() => setOpenStep(null)}>×</span>
+              <span className="tan-close" onClick={closeSheet}>×</span>
               <h3>{openStep.name}</h3>
               {(() => {
                 const a = openStep.area, d = openStep.depth;
@@ -3720,16 +3788,33 @@ function TansakuScreen({ profile, refreshAll, back, flash }) {
               <div className="tan-decks">
                 {Array.from({ length: maxDecks }, (_, i) => i + 1).map(n => {
                   const st = byDeck[n]; const di = st && depthInfo(st.depth);
-                  const drn = (decks || []).find(x => x.deck_no === n); const ccn = drn ? [drn.slot1_card_id, drn.slot2_card_id, drn.slot3_card_id].filter(Boolean).length : 0;
+                  const drn = (decks || []).find(x => x.deck_no === n);
+                  const mem = drn ? [drn.slot1_card_id, drn.slot2_card_id, drn.slot3_card_id].map(id => id ? cardById[id] : null) : [null, null, null];
+                  const g = deckGate(n);
                   return (
-                    <div key={n} className={'tan-deck' + (n === deckNo ? ' sel' : '')} onClick={() => setDeckNo(n)}>
-                      <div className="tan-dn">デッキ{n}</div>
-                      <div className="tan-dp">{di ? '面' + (st.area || 1) + di.label + '中' : (ccn === 0 ? 'カードなし' : '待機')}</div>
+                    <div key={n} className={'tan-deck' + (n === deckNo ? ' sel' : '') + (g.ok ? '' : ' bad')}
+                         onClick={() => { if (g.ok) setDeckNo(n); }}>
+                      <div className="tan-dn">デッキ{n}{di ? '（面' + (st.area || 1) + di.label + '中）' : ''}</div>
+                      <div className="tan-dCards">
+                        {mem.map((c, si) => c
+                          ? <div key={si} className="tan-dCard">
+                              <CardThumb card={c} small />
+                              <div className="tan-dInfo" onClick={(e) => { e.stopPropagation(); setDetailCard(c); }}>ⓘ</div>
+                            </div>
+                          : <div key={si} className="tan-dEmpty">空</div>)}
+                      </div>
+                      <div className={'tan-dp' + (g.ok ? '' : ' bad')}>{g.label}</div>
                     </div>
                   );
                 })}
               </div>
-              <button className="tan-go" onClick={doStart} disabled={busy || cc === 0}>{cc === 0 ? 'デッキにカードがありません' : (busyDeck ? '出発（既存分は自動回収）' : '出発')}</button>
+              {startErr && <div className="tan-startErr">{startErr}</div>}
+              <button className="tan-go" onClick={doStart}
+                      disabled={busy || cc === 0 || !deckGate(deckNo).ok}>
+                {cc === 0 ? 'デッキにカードがありません'
+                  : (!deckGate(deckNo).ok ? deckGate(deckNo).badReason
+                    : (busyDeck ? '出発（既存分は自動回収）' : '出発'))}
+              </button>
               <div className="tan-note">レートは現在の周回（{round}周目）基準の目安。増減・時刻計算・Lv反映はサーバ。</div>
             </>
           );
@@ -3745,6 +3830,8 @@ function TansakuScreen({ profile, refreshAll, back, flash }) {
       )}
 
       <button className="tan-back" onClick={back}>ホームへ戻る</button>
+
+      {detailCard && <CardPopup card={detailCard} onClose={() => setDetailCard(null)} />}
     </div>
   );
 }
