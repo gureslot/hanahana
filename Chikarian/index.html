@@ -4996,6 +4996,10 @@ const shurS = {
   sumV: { fontSize: 24, fontWeight: 800, color: '#ecd28a' },
   actions: { display: 'flex', gap: 10, marginTop: 18 },
   foot: { fontSize: 10, color: '#7d7160', marginTop: 16, lineHeight: 1.7 },
+  deckFrame: { display: 'flex', gap: 8, justifyContent: 'center', marginTop: 6 },
+  deckCard: { position: 'relative', flex: 1, maxWidth: 110, aspectRatio: '2/3', borderRadius: 9, border: '1px solid rgba(232,194,90,.3)', background: '#120a14', overflow: 'hidden' },
+  deckInfo: { position: 'absolute', left: 4, bottom: 4, width: 22, height: 22, borderRadius: '50%', background: 'rgba(10,6,9,.8)', border: '1px solid rgba(232,194,90,.55)', color: '#fff3c8', fontSize: 13, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 3 },
+  deckEmpty: { position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: 'rgba(232,194,90,.3)', fontSize: 24 },
 };
 
 function ShurResult({ result, kAttr, kWeap, onRetry, onFinish }) {
@@ -5067,6 +5071,7 @@ function ShurenjoView({ profile, cards, flash }) {
   const [screen, setScreen] = useState('set');     // 'set' | 'result'
   const [casting, setCasting] = useState(false);
   const [result, setResult] = useState(null);
+  const [detailCard, setDetailCard] = useState(null);   // カード詳細ポップアップ（CardPopup 流用）
 
   useEffect(() => { (async () => {
     try { setDecks(await ChikarianAPI.getDecks() || []); } catch (e) { flash(errMsg(e)); setDecks([]); }
@@ -5133,10 +5138,25 @@ function ShurenjoView({ profile, cards, flash }) {
           </div>
 
           <div style={shurS.seclabel}>測定するデッキ</div>
+          {/* デッキ切替タブ（カード枠の上） */}
           <div style={shurS.chips}>
             {Array.from({ length: maxDecks }, (_, i) => i + 1).map(n => (
               <div key={n} onClick={() => setDeckNo(n)} style={{ ...shurS.chip, ...(n === deckNo ? shurS.chipOn : {}) }}>デッキ{n}</div>
             ))}
+          </div>
+          {/* 選択デッキのカード3枚イラスト＋左下ⓘ（詳細） */}
+          <div style={shurS.deckFrame}>
+            {ids.map((id, i) => {
+              const c = id ? cardById[id] : null;
+              return (
+                <div key={i} style={shurS.deckCard}>
+                  {c
+                    ? <><DeckSlotArt cardKey={c.card_key} />
+                        <div onClick={(e) => { e.stopPropagation(); setDetailCard(c); }} style={shurS.deckInfo}>ⓘ</div></>
+                    : <div style={shurS.deckEmpty}>＋</div>}
+                </div>
+              );
+            })}
           </div>
 
           {members.length === 0 && <div style={{ ...shurS.note, color: '#d08a8a', marginTop: 10 }}>このデッキは未編成です</div>}
@@ -5149,6 +5169,7 @@ function ShurenjoView({ profile, cards, flash }) {
           onRetry={challenge} onFinish={() => { setScreen('set'); setResult(null); }} />}
 
       {casting && <div style={shurS.ov}><div style={shurS.ring}>◎</div><div style={shurS.lbl}>測 定 中</div></div>}
+      {detailCard && <CardPopup card={detailCard} onClose={() => setDetailCard(null)} />}
     </div>
   );
 }
