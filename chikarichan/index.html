@@ -80,10 +80,15 @@
   .lock .lb>i{display:block; height:100%; width:0; background:linear-gradient(90deg,#ff9500,#ffe28a); transition:width .12s;}
   .lock.locked .lb>i{background:linear-gradient(90deg,#1fc46a,#9dffce);}
 
-  .train-pile{display:flex; flex-direction:column; gap:12px; margin-top:12px;}
-  /* 育成のちかり：背景なし（ページに直接立つ） */
-  .mini-stage{position:relative; overflow:hidden; aspect-ratio:3/4; max-width:200px; margin:0 auto; width:100%; background:transparent;}
+  /* 育成のちかり：背景なし。大きく右下に置き、下を見切れさせて迫力を出す */
+  .train-scene{position:relative; margin-top:12px; height:340px; overflow:hidden;}
+  .mini-stage{position:absolute; top:0; right:-5%; height:128%; background:transparent; /* aspect-ratioはJSが画像から設定 */}
   .mini-stage canvas{position:absolute; inset:0; width:100%; height:100%;}
+  .train-gauges{position:absolute; left:0; bottom:8px; width:40%; z-index:2;
+    display:flex; flex-direction:column; gap:14px;
+    background:rgba(255,247,241,.5); backdrop-filter:blur(3px); border-radius:14px; padding:12px 12px;}
+  .train-gauges .gaugewrap{margin-top:0;}
+  .train-gauges .glabel{font-size:11px;}
 
   .hint{font-size:11.5px; color:var(--sub); line-height:1.6; margin:4px 4px 0; text-align:center;}
   .hint .k{display:inline-block; background:rgba(120,90,80,.1); border-radius:5px; padding:0 5px; font-weight:700;}
@@ -140,28 +145,29 @@
       </div>
     </div>
 
-    <div class="train-pile">
+    <div class="train-scene">
       <div class="mini-stage" id="train-stage"></div>
-
-      <div class="gaugewrap">
-        <div class="glabel"><span>本日の経験値</span><span id="today-txt">0 / 100</span></div>
-        <div class="gbar"><i id="today-bar"></i></div>
+      <div class="train-gauges">
+        <div class="gaugewrap">
+          <div class="glabel"><span>本日</span><span id="today-txt">0</span></div>
+          <div class="gbar"><i id="today-bar"></i></div>
+        </div>
+        <div class="gaugewrap">
+          <div class="glabel"><span>次のLvまで</span><span id="next-txt">0 / 100</span></div>
+          <div class="gbar exp"><i id="next-bar"></i></div>
+        </div>
       </div>
-      <div class="gaugewrap">
-        <div class="glabel"><span>次のレベルまで</span><span id="next-txt">0 / 100</span></div>
-        <div class="gbar exp"><i id="next-bar"></i></div>
-      </div>
-
-      <div class="bar">
-        <button class="btn primary" id="holdBtn" onclick="toggleHold()">▶ かざす（点滅）</button>
-        <button class="btn ghost" style="flex:.6" onclick="leaveTrain()">戻る</button>
-      </div>
-      <p class="hint">
-        <span class="k" style="color:var(--gold)">●胸ゆれ</span>
-        <span class="k" style="color:var(--teal)">●なびき</span>
-        点滅のたびに揺れて、経験値が +10。立ち絵タップでつつけます。
-      </p>
     </div>
+
+    <div class="bar">
+      <button class="btn primary" id="holdBtn" onclick="toggleHold()">▶ かざす（点滅）</button>
+      <button class="btn ghost" style="flex:.6" onclick="leaveTrain()">戻る</button>
+    </div>
+    <p class="hint">
+      <span class="k" style="color:var(--gold)">●胸ゆれ</span>
+      <span class="k" style="color:var(--teal)">●なびき</span>
+      点滅のたびに揺れて、経験値が +10。立ち絵タップでつつけます。
+    </p>
 
     <div class="done" id="train-done">
       <div class="t">今日はここまで</div>
@@ -219,13 +225,13 @@ const expToNext = lv => lv * 100;   // 必要EXPの階段：100,200,300…
 const NO_LIMIT = true;
 
 /* ───────── 画像ファイル（chikarichan/images/ に置く） ─────────
-   キャラ絵 … chikari_01.png（Lv1）, chikari_02.png（Lv2）… 1レベル1枚・透過PNG
-              無いレベルは直前の絵を流用。まずは 01 だけでもOK。
-   背景    … home_bg.png（ホーム画面の背景。育成画面は背景なし） */
+   ホームのキャラ絵 … chikari_01.png（Lv1）, chikari_02.png（Lv2）… 1レベル1枚・透過PNG。無いレベルは直前の絵を流用
+   育成のキャラ絵   … chikari_train_01.png, chikari_train_02.png …（任意。無ければホームの絵を流用）
+   背景（時間帯別） … home_bg_morning.png（朝）, home_bg_noon.png（昼）, home_bg_night.png（夜）。育成画面は背景なし */
 const IMG_DIR      = 'images/';
 const CHARA_FILE   = lv => 'chikari_' + String(lv).padStart(2,'0') + '.png';        // ホームのキャラ絵
 const TRAIN_FILE   = lv => 'chikari_train_' + String(lv).padStart(2,'0') + '.png';  // 育成画面のキャラ絵
-const HOME_BG_FILE = 'home_bg.png';
+const HOME_BG_FILE = slot => 'home_bg_' + slot + '.png';   // slot = morning / noon / night
 
 /* ───────── 揺れ領域（ピッカーのJSONをここに差し替え） ─────────
    いまは仮配置。本物の絵に合わせてピッカーで作った points をそのまま貼る。
@@ -262,6 +268,7 @@ const LINES={
   trained:['…なんだか、少し変わった気がする。気のせいかな。','うーん…前より、ちょっとだけ。…わかんないけど。','ん。…なんでもない。','…ふぅ。なんだろ、この感じ。'],
 };
 function loginSlot(){ const h=new Date().getHours(); return h<11?'morning':h<17?'afternoon':'evening'; }
+function bgSlot(){ const s=loginSlot(); return s==='afternoon'?'noon':s==='evening'?'night':'morning'; }   // 朝〜11時 / 昼11–17時 / 夜17時〜
 const pick=a=>a[(Math.random()*a.length)|0];
 let cameFromTraining=false;
 function showHomeLine(){
@@ -335,7 +342,7 @@ function loadTrain(level){
 }
 function setHomeBg(){
   const s=$('home-stage').style;
-  s.backgroundImage="url('"+IMG_DIR+HOME_BG_FILE+"'), linear-gradient(180deg,#fff7f1,#fdf3ee)";
+  s.backgroundImage="url('"+IMG_DIR+HOME_BG_FILE(bgSlot())+"'), linear-gradient(180deg,#fff7f1,#fdf3ee)";
   s.backgroundSize="cover, cover"; s.backgroundPosition="center, center";
 }
 
@@ -492,7 +499,7 @@ function updateAllUI(){
     ? 'Lv <b>'+S.level+'</b> ・ <b style="color:var(--gold)">テスト：上限OFF</b>'
     : 'Lv <b>'+S.level+'</b> ・ 本日 <b>'+S.dailyGot+'</b>/'+DAILY_MAX;
   $('today-bar').style.width=Math.min(100,S.dailyGot/DAILY_MAX*100)+'%';
-  $('today-txt').textContent=NO_LIMIT?(S.dailyGot+' （上限OFF）'):(S.dailyGot+' / '+DAILY_MAX);
+  $('today-txt').textContent=NO_LIMIT?String(S.dailyGot):(S.dailyGot+' / '+DAILY_MAX);
   $('next-bar').style.width=Math.min(100,S.expInto/need*100)+'%';
   $('next-txt').textContent=S.expInto+' / '+need;
   $('st-lv').textContent=S.level;
@@ -510,7 +517,7 @@ function go(name){
   screenName=name;
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
   $('scr-'+name).classList.add('on');
-  if(name==='home'){ mountChikari($('home-stage')); showHomeLine(); }
+  if(name==='home'){ setHomeBg(); mountChikari($('home-stage')); showHomeLine(); }
   if(name==='train'){ mountChikari($('train-stage')); $('train-done').classList.remove('show'); }
   if(name!=='status') refreshActiveTexture();
   updateAllUI(); requestAnimationFrame(resizeChikari);
