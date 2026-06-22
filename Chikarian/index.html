@@ -3562,6 +3562,8 @@ const TAN_CSS = `
 .tan-witem{padding:9px 12px; font-size:12px; letter-spacing:1px; border-bottom:1px solid rgba(232,194,90,.18); cursor:pointer; color:#fff3c8; display:flex; justify-content:space-between; align-items:center; gap:6px;}
 .tan-witem:last-child{border-bottom:none;}
 .tan-witem.cur{background:rgba(255,228,154,.16);}
+.tan-witem.locked{color:#8a7c60; cursor:default;}
+.tan-wscrim{position:absolute; inset:0; z-index:6;}
 `;
 // ノード座標＝mockup の検出座標。depth キー（shallow/mid/deep）に対応（本番の深さ3種＝3ノード）。
 const TAN_NODES = {
@@ -3572,7 +3574,8 @@ const TAN_NODES = {
 function TansakuScreen({ profile, refreshAll, back, flash }) {
   const maxDecks = Math.min(2 + Math.floor(((profile && profile.cleared_stage) || 0) / 2), 6);
   const round = Math.max(1, (profile && profile.boss_round) || 1);
-  const gate = (((profile && profile.cleared_stage) || 0) * 3) + ((profile && profile.boss_round_role) || 0);
+  const cleared = (profile && profile.cleared_stage) || 0;
+  const gate = (cleared * 3) + ((profile && profile.boss_round_role) || 0);
   const [states, setStates] = useState(null);
   const [decks, setDecks] = useState([]);
   const [deckNo, setDeckNo] = useState(1);
@@ -3635,13 +3638,18 @@ function TansakuScreen({ profile, refreshAll, back, flash }) {
         <div className={'tan-worldsel' + (worldOpen ? ' open' : '')}>
           <div className="tan-wbtn" onClick={() => setWorldOpen(o => !o)}><span className="tan-wn">{WORLD_NAMES[area]}</span><span className="tan-ar">▾</span></div>
           <div className="tan-wlist">
-            {Array.from({ length: 8 }, (_, i) => i + 1).map(n => (
-              <div key={n} className={'tan-witem' + (n === area ? ' cur' : '')} onClick={() => { setArea(n); setWorldOpen(false); }}>
-                <span>面{n} ・ {WORLD_NAMES[n]}</span>
-              </div>
-            ))}
+            {Array.from({ length: 8 }, (_, i) => i + 1).map(n => {
+              const locked = n > cleared + 1;   // ボスと同式＝その面の浅域が到達可能になるまでロック（表示のみ）
+              return (
+                <div key={n} className={'tan-witem' + (n === area ? ' cur' : '') + (locked ? ' locked' : '')}
+                  onClick={() => { if (locked) return; setArea(n); setWorldOpen(false); }}>
+                  <span>面{n} ・ {WORLD_NAMES[n]}</span>{locked && <span>🔒</span>}
+                </div>
+              );
+            })}
           </div>
         </div>
+        {worldOpen && <div className="tan-wscrim" onClick={() => setWorldOpen(false)} />}
         {[1, 2, 3].map(depth => {
           const key = DEPTH_KEY[depth];
           const pos = TAN_NODES[key];
