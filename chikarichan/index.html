@@ -28,6 +28,8 @@
 
   .screen{display:none; flex-direction:column;}
   .screen.on{display:flex;}
+  /* 育成画面：ボタン下〜URL欄の余白を使い、中身を縦中央へ寄せる（本番でヒント文が消えても自動で釣り合う） */
+  #scr-train.on{ min-height:calc(100dvh - 28px); justify-content:center; }
 
   h1{font-size:17px; font-weight:900; margin:2px 4px 2px; letter-spacing:.03em;}
   .lvtag{font-size:12px; color:var(--sub); margin:0 4px 10px; font-weight:700;}
