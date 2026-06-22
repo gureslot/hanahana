@@ -117,20 +117,18 @@
   .done .t{font-size:16px; font-weight:900;}
   .done .s{font-size:12.5px; color:var(--sub); line-height:1.6;}
 
-  /* ═══ 揺れ調整パネル（値が決まったら削除可）═══ */
-  #wbPanel{position:fixed; right:8px; top:8px; z-index:50; font-family:system-ui,sans-serif;}
-  #wbToggle{background:rgba(20,12,18,.85); color:#ffd08a; border:1px solid #e0a330; border-radius:10px; padding:7px 11px; font-size:12px; font-weight:700; cursor:pointer;}
-  #wbBody{display:none; position:absolute; right:0; top:38px; width:236px; background:rgba(18,12,16,.96); border:1px solid #5a4a44; border-radius:12px; padding:12px;}
-  #wbBody.open{display:block;}
-  #wbBody label{display:block; font-size:11px; color:#e7d3a6; margin:9px 0 0; font-weight:700;}
-  #wbBody label b{color:#ffd08a; float:right; font-variant-numeric:tabular-nums;}
-  #wbBody input[type=range]{width:100%; margin-top:4px;}
-  .wbout{margin-top:11px; font-size:10.5px; color:#9fe7d2; background:rgba(0,0,0,.35); border-radius:8px; padding:7px; word-break:break-all; font-family:ui-monospace,Menlo,monospace;}
-  .wbrow{display:flex; gap:7px; margin-top:9px;}
-  .wbrow button{flex:1; padding:8px; border-radius:8px; font-size:11.5px; font-weight:700; border:none; cursor:pointer;}
-  #wbCopy{background:#3f93a6; color:#fff;}
-  #wbReset{background:#3a2a2a; color:#f0b8a8; border:1px solid #6a4a44;}
-  .wbmsg{font-size:10.5px; color:#9dffce; margin-top:6px; min-height:13px; text-align:center;}
+  /* ═══ テスト用パネル（公開時は削除可）═══ */
+  #devPanel{position:fixed; right:8px; top:8px; z-index:50; font-family:system-ui,sans-serif;}
+  #devToggle{background:rgba(20,12,18,.85); color:#ffd08a; border:1px solid #e0a330; border-radius:10px; padding:7px 11px; font-size:12px; font-weight:700; cursor:pointer;}
+  #devBody{display:none; position:absolute; right:0; top:38px; width:188px; background:rgba(18,12,16,.96); border:1px solid #5a4a44; border-radius:12px; padding:12px;}
+  #devBody.open{display:block;}
+  .devlv{display:flex; align-items:center; justify-content:space-between; gap:8px;}
+  .devlv span{font-size:13px; color:#e7d3a6; font-weight:700;}
+  .devlv b{color:#ffd08a; font-variant-numeric:tabular-nums;}
+  .devlv button{width:42px; height:38px; font-size:20px; font-weight:700; color:#fff; background:#3f93a6; border:none; border-radius:9px; cursor:pointer;}
+  .devlv button:disabled{opacity:.35; cursor:not-allowed;}
+  .devtiny{font-size:10.5px; color:#a98f8a; margin:10px 0 0; line-height:1.6; text-align:center;}
+  .devtiny a{color:#ffb0a0; text-decoration:underline; cursor:pointer;}
 </style>
 </head>
 <body>
@@ -227,21 +225,16 @@
 
 </div>
 
-<!-- ═══ 揺れ調整パネル（値が決まったら、この #wbPanel と <style>の #wb… と末尾の wbPanelInit を削除）═══ -->
-<div id="wbPanel">
-  <button id="wbToggle">⚙ ゆれ調整</button>
-  <div id="wbBody">
-    <label>レベル <b id="wb-lv">1</b><input type="range" id="s-lv" min="1" max="40" step="1"></label>
-    <label>大きさ <b id="wb-amp">3.5</b><input type="range" id="s-amp" min="0.5" max="8" step="0.1"></label>
-    <label>はずみ <b id="wb-damp">0.86</b><input type="range" id="s-damp" min="0.7" max="0.97" step="0.005"></label>
-    <label>かたさ <b id="wb-stiff">0.13</b><input type="range" id="s-stiff" min="0.04" max="0.30" step="0.005"></label>
-    <label>1点滅の強さ <b id="wb-kick">10</b><input type="range" id="s-kick" min="2" max="24" step="0.5"></label>
-    <div id="wb-out" class="wbout"></div>
-    <div class="wbrow">
-      <button id="wbCopy">数値をコピー</button>
-      <button id="wbReset">初期値</button>
+<!-- ═══ テスト用パネル（公開時はこの #devPanel と <style>の #dev… と末尾の devPanelInit を削除）═══ -->
+<div id="devPanel">
+  <button id="devToggle">⚙ Lv切替</button>
+  <div id="devBody">
+    <div class="devlv">
+      <button id="lvDown" type="button">‹</button>
+      <span>Lv <b id="dev-lv">1</b> / 5</span>
+      <button id="lvUp" type="button">›</button>
     </div>
-    <div id="wbMsg" class="wbmsg"></div>
+    <p class="devtiny">各段階のイラストと揺れを確認できます。<br><a onclick="wipeSave()">セーブを消す（Lv1へ）</a></p>
   </div>
 </div>
 
@@ -259,6 +252,7 @@ const LOCK_MS   = 1000;   // 判定中の長さ
 const SIM_HZ    = 6;      // プレビュー点滅の周波数（実機の点滅 ≈6Hz に合わせる）
 const WOBBLE_EVERY = 1;   // 揺れを何ピークに1回出すか。1=毎ピーク / 2=2ピークで1回（ゆったり・位置確認向き）。EXPは毎ピーク加算
 const expToNext = lv => lv * 100;   // 必要EXPの階段：100,200,300…
+const MAX_LEVEL = 5;                 // イラスト5段階。Lv5でMAX（以降レベルは上がらない）
 
 /* ★★★ テスト用フラグ ★★★
    true  … 1日の上限を無効（レベルを一気に上げて確認できる）← テスト中はこれ
@@ -281,29 +275,48 @@ const HOME_BG_FILE = slot => 'home_bg_' + slot + '.png';   // slot = morning / n
      座標が無いレベルは（画像と同じ考え方で）「一番近い下のレベル」を自動で流用する。 */
 function ensureSprings(arr){ arr.forEach(p=>{ if(!p.sV){ p.sV=new Spring(); p.sH=new Spring(); } }); return arr; }
 
-const RIG_TRAIN_LEVELS = {
-  // キー = そのレベル以降で使う座標。例) 1:Lv1の絵 / 10:Lv10で絵が変わったらその座標 …
-  // ↓今はこの1セットだけ（あなたが最高段階の絵で取った座標）。Lv1など各段階の座標が来たら追加する。
-  1: [
-    { name:'P1', type:'bounce', cx:0.612, cy:0.770, rx:0.100, ry:0.080, strength:1 },
-    { name:'P2', type:'bounce', cx:0.180, cy:0.799, rx:0.059, ry:0.058, strength:1 },
-  ],
+const RIG_TRAIN_LEVELS = {   // 各段階の絵に合わせた揺れ領域（ツールで採取）。無いレベルは近い下のレベルを流用
+  1: [ { name:'P1', type:'bounce', cx:0.322, cy:0.764, rx:0.047, ry:0.045, strength:1 },
+       { name:'P2', type:'bounce', cx:0.566, cy:0.752, rx:0.065, ry:0.042, strength:1 } ],
+  2: [ { name:'P1', type:'bounce', cx:0.269, cy:0.769, rx:0.051, ry:0.051, strength:1 },
+       { name:'P2', type:'bounce', cx:0.545, cy:0.748, rx:0.072, ry:0.051, strength:1 } ],
+  3: [ { name:'P1', type:'bounce', cx:0.213, cy:0.774, rx:0.063, ry:0.049, strength:1 },
+       { name:'P2', type:'bounce', cx:0.538, cy:0.739, rx:0.084, ry:0.065, strength:1 } ],
+  4: [ { name:'P1', type:'bounce', cx:0.190, cy:0.792, rx:0.063, ry:0.056, strength:1 },
+       { name:'P2', type:'bounce', cx:0.550, cy:0.759, rx:0.109, ry:0.079, strength:1 } ],
+  5: [ { name:'P1', type:'bounce', cx:0.190, cy:0.792, rx:0.063, ry:0.063, strength:1 },
+       { name:'P2', type:'bounce', cx:0.587, cy:0.772, rx:0.109, ry:0.079, strength:1 } ],
 };
-function rigForLevel(lv){            // そのレベル以下で一番大きいキーの座標を返す（無ければ最小キー）
-  let best=null,bestKey=-1,minKey=Infinity,minArr=null;
-  for(const k in RIG_TRAIN_LEVELS){ const kn=+k;
-    if(kn<minKey){ minKey=kn; minArr=RIG_TRAIN_LEVELS[k]; }
-    if(kn<=lv && kn>bestKey){ bestKey=kn; best=RIG_TRAIN_LEVELS[k]; } }
-  return ensureSprings(best||minArr);
-}
+const WB_TRAIN_LEVELS = {    // 各段階の揺れ物理（ツールで採取。amp/stiff/damp/kick）
+  1: { amp:1.2, stiff:0.220, damp:0.845, kick:13.0 },
+  2: { amp:2.0, stiff:0.220, damp:0.860, kick:13.0 },
+  3: { amp:2.4, stiff:0.240, damp:0.885, kick:14.5 },
+  4: { amp:2.4, stiff:0.240, damp:0.885, kick:14.5 },
+  5: { amp:2.5, stiff:0.255, damp:0.890, kick:14.5 },
+};
+const HOME_WB = { amp:2.5, stiff:0.200, damp:0.860, kick:13.0 };   // ホームは待機モーション主体（rigは静止）なので体感差は小
 
-const RIG_HOME = [   // ホーム画面のキャラ用（今は仮。ホームの絵に合わせた座標が来たら差し替え）
+const RIG_HOME = [   // ホーム画面のキャラ用（仮。ホームに揺れ領域が要るなら後で差し替え）
   { name:'hair',  type:'sway',   cx:0.50, cy:0.22, rx:0.34, ry:0.20, strength:0.85 },
   { name:'chest', type:'bounce', cx:0.50, cy:0.56, rx:0.19, ry:0.12, strength:1.00 },
   { name:'skirt', type:'jelly',  cx:0.50, cy:0.82, rx:0.26, ry:0.11, strength:0.6  },
 ];
-let RIG_POINTS = RIG_HOME;                                      // 現在アクティブな配列
-function applyRig(){ RIG_POINTS = (screenName==='train') ? rigForLevel(S.level) : RIG_HOME; }
+function pickByLevel(map, lv){       // そのレベル以下で一番大きいキーの値（無ければ最小キー）
+  let best=null,bestKey=-1,minKey=Infinity,minV=null;
+  for(const k in map){ const kn=+k;
+    if(kn<minKey){ minKey=kn; minV=map[k]; }
+    if(kn<=lv && kn>bestKey){ bestKey=kn; best=map[k]; } }
+  return best||minV;
+}
+function rigForLevel(lv){ return ensureSprings(pickByLevel(RIG_TRAIN_LEVELS, lv)); }
+function wbForLevel(lv){ return pickByLevel(WB_TRAIN_LEVELS, lv); }
+
+let RIG_POINTS = RIG_HOME;            // 現在アクティブな揺れ領域
+let actWB = HOME_WB;                  // 現在アクティブな揺れ物理（育成は段階別 / ホームはHOME_WB）
+function applyRig(){
+  if(screenName==='train'){ RIG_POINTS=rigForLevel(S.level); actWB=wbForLevel(S.level); }
+  else { RIG_POINTS=RIG_HOME; actWB=HOME_WB; }
+}
 
 /* ───────── セーブ ───────── */
 const _mem={}; const store={
@@ -317,6 +330,8 @@ let S={ level:1, expInto:0, dailyGot:0, total:0, lastDate:todayKey(), firstDate:
   try{ const raw=store.get(SAVE_KEY); if(raw) S=Object.assign(S,JSON.parse(raw)); }catch(e){}
   if(S.lastDate!==todayKey()){ S.dailyGot=0; S.lastDate=todayKey(); }
   if(!S.firstDate) S.firstDate=todayKey();
+  if(S.level>MAX_LEVEL){ S.level=MAX_LEVEL; S.expInto=0; }   // 旧テストでLv5超えのセーブを補正
+  if(S.level<1) S.level=1;
   save();
 })();
 function save(){ store.set(SAVE_KEY,JSON.stringify(S)); }
@@ -352,11 +367,7 @@ class Spring{ constructor(k=.16,d=.82){this.v=0;this.vel=0;this.k=k;this.d=d;}
 const dip=new Spring(.18,.80);
 ensureSprings(RIG_HOME);   // 育成レベル別のrigは rigForLevel() 内で必要時に初期化
 
-/* ═══ 揺れの強さ調整（このWBと、下の調整パネルは値が決まったら削除可）═══ */
-const WB_DEFAULT = { amp:3.5, stiff:0.15, damp:0.86, kick:13 };  // amp=大きさ stiff=かたさ damp=はずみ kick=1点滅の強さ
-let WB = Object.assign({}, WB_DEFAULT);
-try{ const s=localStorage.getItem('chikari_wb'); if(s) WB=Object.assign({},WB_DEFAULT,JSON.parse(s)); }catch(e){}
-function saveWB(){ try{ localStorage.setItem('chikari_wb', JSON.stringify(WB)); }catch(e){} }
+/* 揺れ物理は段階別（WB_TRAIN_LEVELS）。実際に効くのは applyRig() がセットする actWB */
 
 /* プレースホルダ立ち絵（画像が無いときの保険）。本画像が来たら使われない。 */
 const texCanvas=document.createElement('canvas'); texCanvas.width=360; texCanvas.height=480;
@@ -472,8 +483,8 @@ function mountChikari(c){ if(chikariCv.parentNode!==c) c.appendChild(chikariCv);
 function pulse(strength=1){
   dip.vel+=4.5*strength;
   RIG_POINTS.forEach(p=>{
-    if(p.type==='bounce'||p.type==='jelly') p.sV.vel+=WB.kick*strength*p.strength;
-    if(p.type==='sway'  ||p.type==='jelly') p.sH.vel+=WB.kick*0.66*strength*p.strength;
+    if(p.type==='bounce'||p.type==='jelly') p.sV.vel+=actWB.kick*strength*p.strength;
+    if(p.type==='sway'  ||p.type==='jelly') p.sH.vel+=actWB.kick*0.66*strength*p.strength;
   });
 }
 
@@ -489,7 +500,7 @@ function loop(t){
     const hairDrift= onHome ? Math.sin(nowT*0.55+0.6) : 0;                                // 髪・上半身の遅れた揺れ
     const ang=idleSway*0.018;                                                             // 足元支点の傾き（育成では0）
     const ca=Math.cos(ang), sa=Math.sin(ang);
-    dip.update(0); RIG_POINTS.forEach(p=>{ p.sV.k=WB.stiff; p.sV.d=WB.damp; p.sH.k=WB.stiff*0.9; p.sH.d=WB.damp; p.sV.update(0); p.sH.update(0); });
+    dip.update(0); RIG_POINTS.forEach(p=>{ p.sV.k=actWB.stiff; p.sV.d=actWB.damp; p.sH.k=actWB.stiff*0.9; p.sH.d=actWB.damp; p.sV.update(0); p.sH.update(0); });
     for(let k=0;k<NV;k++){
       const u=uv[k*2], vv=uv[k*2+1];
       let x=base[k*2], y=base[k*2+1];
@@ -499,9 +510,9 @@ function loop(t){
         const du=u-p.cx, dv=vv-pcv;
         const w=Math.exp(-(du*du/(2*p.rx*p.rx)+dv*dv/(2*p.ry*p.ry)));
         if(w<.003) continue;
-        if(p.type==='bounce'){ y+=p.sV.v*.0050*WB.amp*w; y+=(y-(pcv*2-1))*clamp(p.sV.vel*.02,-.18,.18)*w; }
-        else if(p.type==='sway'){ x+=p.sH.v*.50*WB.amp*w; }
-        else { y+=p.sV.v*.0034*WB.amp*w; x+=p.sH.v*.42*WB.amp*w; }
+        if(p.type==='bounce'){ y+=p.sV.v*.0050*actWB.amp*w; y+=(y-(pcv*2-1))*clamp(p.sV.vel*.02,-.18,.18)*w; }
+        else if(p.type==='sway'){ x+=p.sH.v*.50*actWB.amp*w; }
+        else { y+=p.sV.v*.0034*actWB.amp*w; x+=p.sH.v*.42*actWB.amp*w; }
       }
       const tw=Math.pow(Math.max(0,(vv-.40)/.60),1.4);  // 上ほど揺れる
       x += hairDrift*0.022*tw;
@@ -528,12 +539,16 @@ function fallback2D(){
 /* ════════════════════════════════════════════════════════════
    経験値・レベル
    ════════════════════════════════════════════════════════════ */
-function onLevelUp(){ loadHome(S.level,false); loadTrain(S.level); pulse(1.6); }   // 画像差し替え＋ひと揺れ
+function onLevelUp(){ loadHome(S.level,false); loadTrain(S.level); applyRig(); pulse(1.6); }   // 画像＋揺れ(座標/物理)を新段階へ＋ひと揺れ
 function gainExp(){
   if(!NO_LIMIT && S.dailyGot>=DAILY_MAX) return false;
   const add = NO_LIMIT ? PER_BLINK : Math.min(PER_BLINK, DAILY_MAX-S.dailyGot);
-  S.dailyGot+=add; S.total+=add; S.expInto+=add;
-  while(S.expInto>=expToNext(S.level)){ S.expInto-=expToNext(S.level); S.level++; onLevelUp(); }
+  S.dailyGot+=add; S.total+=add;
+  if(S.level < MAX_LEVEL){                          // MAX未満のときだけ経験値を溜めてレベルアップ
+    S.expInto+=add;
+    while(S.level < MAX_LEVEL && S.expInto>=expToNext(S.level)){ S.expInto-=expToNext(S.level); S.level++; onLevelUp(); }
+    if(S.level>=MAX_LEVEL) S.expInto=0;             // MAX到達。次のレベルバーは満杯表示
+  }
   save(); updateAllUI();
   return true;
 }
@@ -573,23 +588,26 @@ function leaveTrain(){ stopHold(); $('train-done').classList.remove('show'); cam
    UI更新
    ════════════════════════════════════════════════════════════ */
 function updateAllUI(){
+  const isMax = S.level>=MAX_LEVEL;
   const need=expToNext(S.level);
+  const nextPct = isMax?100:Math.min(100,S.expInto/need*100);
+  const nextTxt = isMax?'MAX':(S.expInto+' / '+need);
+  const lvLabel = 'Lv <b>'+S.level+'</b>'+(isMax?'（MAX）':'');
   $('home-lv').textContent=S.level;
   $('train-lvtag').innerHTML = NO_LIMIT
-    ? 'Lv <b>'+S.level+'</b> ・ <b style="color:var(--gold)">テスト：上限OFF</b>'
-    : 'Lv <b>'+S.level+'</b> ・ 本日 <b>'+S.dailyGot+'</b>/'+DAILY_MAX;
+    ? lvLabel+' ・ <b style="color:var(--gold)">テスト：上限OFF</b>'
+    : lvLabel+' ・ 本日 <b>'+S.dailyGot+'</b>/'+DAILY_MAX;
   $('today-bar').style.width=Math.min(100,S.dailyGot/DAILY_MAX*100)+'%';
   $('today-txt').textContent=NO_LIMIT?String(S.dailyGot):(S.dailyGot+' / '+DAILY_MAX);
-  $('next-bar').style.width=Math.min(100,S.expInto/need*100)+'%';
-  $('next-txt').textContent=S.expInto+' / '+need;
-  $('st-lv').textContent=S.level;
-  $('st-next-bar').style.width=Math.min(100,S.expInto/need*100)+'%';
-  $('st-next-txt').textContent=S.expInto+' / '+need;
+  $('next-bar').style.width=nextPct+'%';
+  $('next-txt').textContent=nextTxt;
+  $('st-lv').textContent=S.level+(isMax?'（MAX）':'');
+  $('st-next-bar').style.width=nextPct+'%';
+  $('st-next-txt').textContent=nextTxt;
   $('st-total').textContent=S.total.toLocaleString();
   $('st-today').textContent=NO_LIMIT?(S.dailyGot+' （上限OFF）'):(S.dailyGot+' / '+DAILY_MAX);
   $('st-days').textContent=daysPlayed()+' 日目';
-  const lvEl=document.getElementById('s-lv');   // 調整パネルがあればレベル表示も合わせる
-  if(lvEl){ lvEl.value=S.level; const b=document.getElementById('wb-lv'); if(b) b.textContent=S.level; }
+  syncDevLv();
 }
 
 /* ════════════════════════════════════════════════════════════
@@ -611,13 +629,18 @@ function wipeSave(){
   S={ level:1, expInto:0, dailyGot:0, total:0, lastDate:todayKey(), firstDate:todayKey() };
   save(); loadHome(1,true); loadTrain(1); applyRig(); updateAllUI(); go('home');
 }
-/* 調整パネル用：レベル(イラスト段階)を自由に変える。画像も揺れ座標もそのレベルのものに切り替わる */
+/* テスト用：レベル(イラスト段階)を1〜MAXで切替。画像も揺れ（座標・物理）もその段階に切り替わる */
 function setDevLevel(n){
-  S.level = Math.max(1, Math.round(n));
+  S.level = Math.max(1, Math.min(MAX_LEVEL, Math.round(n)));
   S.expInto = 0; save();
   loadHome(S.level, true); loadTrain(S.level);   // 画像（無いレベルは近い下のレベルを流用）
-  applyRig();                                     // その段階の揺れ座標
+  applyRig();                                     // その段階の揺れ（座標＋物理）
   updateAllUI();
+}
+function syncDevLv(){   // テストパネルのLv表示と＜＞の有効/無効を合わせる
+  const b=document.getElementById('dev-lv'); if(b) b.textContent=S.level;
+  const dn=document.getElementById('lvDown'), up=document.getElementById('lvUp');
+  if(dn) dn.disabled=(S.level<=1); if(up) up.disabled=(S.level>=MAX_LEVEL);
 }
 
 /* ───────── 起動 ───────── */
@@ -632,20 +655,12 @@ window.addEventListener('resize', resizeChikari);
   updateAllUI(); showHomeLine();
 })();
 
-/* ═══ 揺れ調整パネルのJS（値が決まったら削除）═══ */
-(function wbPanelInit(){
-  const fmt=()=>`揺れ調整: amp=${(+WB.amp).toFixed(2)}, stiff=${(+WB.stiff).toFixed(3)}, damp=${(+WB.damp).toFixed(3)}, kick=${(+WB.kick).toFixed(1)}`;
-  const map=[['s-amp','wb-amp','amp',2],['s-damp','wb-damp','damp',3],['s-stiff','wb-stiff','stiff',3],['s-kick','wb-kick','kick',1]];
-  function sync(){ for(const [sid,vid,key,dec] of map){ $(sid).value=WB[key]; $(vid).textContent=(+WB[key]).toFixed(dec); } $('wb-out').textContent=fmt(); }
-  function syncLv(){ $('s-lv').value=S.level; $('wb-lv').textContent=S.level; }
-  $('s-lv').addEventListener('input',()=>{ setDevLevel(+$('s-lv').value); $('wb-lv').textContent=S.level; });
-  $('wbToggle').onclick=()=>$('wbBody').classList.toggle('open');
-  for(const [sid,vid,key,dec] of map){
-    $(sid).addEventListener('input',()=>{ WB[key]=+$(sid).value; $(vid).textContent=(+WB[key]).toFixed(dec); $('wb-out').textContent=fmt(); saveWB(); });
-  }
-  $('wbCopy').onclick=async()=>{ const t=fmt(); try{ await navigator.clipboard.writeText(t); $('wbMsg').textContent='コピーしました'; }catch(e){ $('wbMsg').textContent=t; } setTimeout(()=>$('wbMsg').textContent='',2500); };
-  $('wbReset').onclick=()=>{ WB=Object.assign({},WB_DEFAULT); saveWB(); sync(); };
-  sync(); syncLv();
+/* ═══ テスト用パネルのJS（公開時は削除）═══ */
+(function devPanelInit(){
+  $('devToggle').onclick=()=>$('devBody').classList.toggle('open');
+  $('lvDown').onclick=()=>setDevLevel(S.level-1);
+  $('lvUp').onclick=()=>setDevLevel(S.level+1);
+  syncDevLv();
 })();
 </script>
 </body>
