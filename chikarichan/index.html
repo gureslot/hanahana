@@ -229,6 +229,7 @@
 <div id="wbPanel">
   <button id="wbToggle">⚙ ゆれ調整</button>
   <div id="wbBody">
+    <label>レベル <b id="wb-lv">1</b><input type="range" id="s-lv" min="1" max="40" step="1"></label>
     <label>大きさ <b id="wb-amp">3.5</b><input type="range" id="s-amp" min="0.5" max="8" step="0.1"></label>
     <label>はずみ <b id="wb-damp">0.86</b><input type="range" id="s-damp" min="0.7" max="0.97" step="0.005"></label>
     <label>かたさ <b id="wb-stiff">0.13</b><input type="range" id="s-stiff" min="0.04" max="0.30" step="0.005"></label>
@@ -271,19 +272,36 @@ const CHARA_FILE   = lv => 'chikari_' + String(lv).padStart(2,'0') + '.png';    
 const TRAIN_FILE   = lv => 'chikari_train_' + String(lv).padStart(2,'0') + '.png';  // 育成画面のキャラ絵
 const HOME_BG_FILE = slot => 'home_bg_' + slot + '.png';   // slot = morning / noon / night
 
-/* ───────── 揺れ領域（ピッカーのJSONをここに差し替え） ─────────
+/* ───────── 揺れ領域（ピッカーのJSONをここに） ─────────
    左上原点・正規化0..1・y下向き。type = bounce(縦)/sway(横)/jelly(全方向)
-   画面ごとに別配列。育成＝RIG_TRAIN（実座標）。ホーム＝RIG_HOME（絵が別なら座標も差し替え） */
-const RIG_HOME = [   // ホーム画面のキャラ用（ピッカー座標が来たら差し替え。今は仮）
+   ★育成はレベル(イラスト段階)ごとに絵が変わり、揺れる位置も変わるので「レベル別」に持つ。
+     各段階の絵でピッカー座標を取り、そのレベルをキーにして下のRIG_TRAIN_LEVELSへ追加していく。
+     座標が無いレベルは（画像と同じ考え方で）「一番近い下のレベル」を自動で流用する。 */
+function ensureSprings(arr){ arr.forEach(p=>{ if(!p.sV){ p.sV=new Spring(); p.sH=new Spring(); } }); return arr; }
+
+const RIG_TRAIN_LEVELS = {
+  // キー = そのレベル以降で使う座標。例) 1:Lv1の絵 / 10:Lv10で絵が変わったらその座標 …
+  // ↓今はこの1セットだけ（あなたが最高段階の絵で取った座標）。Lv1など各段階の座標が来たら追加する。
+  1: [
+    { name:'P1', type:'bounce', cx:0.612, cy:0.770, rx:0.100, ry:0.080, strength:1 },
+    { name:'P2', type:'bounce', cx:0.180, cy:0.799, rx:0.059, ry:0.058, strength:1 },
+  ],
+};
+function rigForLevel(lv){            // そのレベル以下で一番大きいキーの座標を返す（無ければ最小キー）
+  let best=null,bestKey=-1,minKey=Infinity,minArr=null;
+  for(const k in RIG_TRAIN_LEVELS){ const kn=+k;
+    if(kn<minKey){ minKey=kn; minArr=RIG_TRAIN_LEVELS[k]; }
+    if(kn<=lv && kn>bestKey){ bestKey=kn; best=RIG_TRAIN_LEVELS[k]; } }
+  return ensureSprings(best||minArr);
+}
+
+const RIG_HOME = [   // ホーム画面のキャラ用（今は仮。ホームの絵に合わせた座標が来たら差し替え）
   { name:'hair',  type:'sway',   cx:0.50, cy:0.22, rx:0.34, ry:0.20, strength:0.85 },
   { name:'chest', type:'bounce', cx:0.50, cy:0.56, rx:0.19, ry:0.12, strength:1.00 },
   { name:'skirt', type:'jelly',  cx:0.50, cy:0.82, rx:0.26, ry:0.11, strength:0.6  },
 ];
-const RIG_TRAIN = [  // 育成画面のキャラ用（ピッカー座標）
-  { name:'P1', type:'bounce', cx:0.612, cy:0.770, rx:0.100, ry:0.080, strength:1 },
-  { name:'P2', type:'bounce', cx:0.180, cy:0.799, rx:0.059, ry:0.058, strength:1 },
-];
-let RIG_POINTS = RIG_HOME;   // 現在アクティブな配列（go()で画面ごとに切替）
+let RIG_POINTS = RIG_HOME;                                      // 現在アクティブな配列
+function applyRig(){ RIG_POINTS = (screenName==='train') ? rigForLevel(S.level) : RIG_HOME; }
 
 /* ───────── セーブ ───────── */
 const _mem={}; const store={
@@ -330,10 +348,10 @@ const GX=16, GY=22, OVS=1.05;
 class Spring{ constructor(k=.16,d=.82){this.v=0;this.vel=0;this.k=k;this.d=d;}
   update(t){ this.vel+=(t-this.v)*this.k; this.vel*=this.d; this.v+=this.vel; return this.v; } }
 const dip=new Spring(.18,.80);
-[RIG_HOME, RIG_TRAIN].forEach(arr=>arr.forEach(p=>{ if(!p.sV){ p.sV=new Spring(.16,.82); p.sH=new Spring(.15,.86); } }));
+ensureSprings(RIG_HOME);   // 育成レベル別のrigは rigForLevel() 内で必要時に初期化
 
 /* ═══ 揺れの強さ調整（このWBと、下の調整パネルは値が決まったら削除可）═══ */
-const WB_DEFAULT = { amp:3.5, stiff:0.13, damp:0.86, kick:10 };  // amp=大きさ stiff=かたさ damp=はずみ kick=1点滅の強さ
+const WB_DEFAULT = { amp:3.5, stiff:0.15, damp:0.86, kick:13 };  // amp=大きさ stiff=かたさ damp=はずみ kick=1点滅の強さ
 let WB = Object.assign({}, WB_DEFAULT);
 try{ const s=localStorage.getItem('chikari_wb'); if(s) WB=Object.assign({},WB_DEFAULT,JSON.parse(s)); }catch(e){}
 function saveWB(){ try{ localStorage.setItem('chikari_wb', JSON.stringify(WB)); }catch(e){} }
@@ -568,6 +586,8 @@ function updateAllUI(){
   $('st-total').textContent=S.total.toLocaleString();
   $('st-today').textContent=NO_LIMIT?(S.dailyGot+' （上限OFF）'):(S.dailyGot+' / '+DAILY_MAX);
   $('st-days').textContent=daysPlayed()+' 日目';
+  const lvEl=document.getElementById('s-lv');   // 調整パネルがあればレベル表示も合わせる
+  if(lvEl){ lvEl.value=S.level; const b=document.getElementById('wb-lv'); if(b) b.textContent=S.level; }
 }
 
 /* ════════════════════════════════════════════════════════════
@@ -577,8 +597,9 @@ function go(name){
   screenName=name;
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
   $('scr-'+name).classList.add('on');
-  if(name==='home'){ RIG_POINTS=RIG_HOME; setHomeBg(); mountChikari($('home-stage')); showHomeLine(); }
-  if(name==='train'){ RIG_POINTS=RIG_TRAIN; mountChikari($('train-stage')); $('train-done').classList.remove('show'); }
+  if(name==='home'){ setHomeBg(); mountChikari($('home-stage')); showHomeLine(); }
+  if(name==='train'){ mountChikari($('train-stage')); $('train-done').classList.remove('show'); }
+  applyRig();
   if(name!=='status') refreshActiveTexture();
   updateAllUI(); requestAnimationFrame(resizeChikari);
 }
@@ -586,7 +607,15 @@ function wipeSave(){
   if(!confirm('セーブを消してLv1からやり直します。よろしいですか？')) return;
   try{ localStorage.removeItem(SAVE_KEY); }catch(e){}
   S={ level:1, expInto:0, dailyGot:0, total:0, lastDate:todayKey(), firstDate:todayKey() };
-  save(); loadHome(1,true); loadTrain(1); updateAllUI(); go('home');
+  save(); loadHome(1,true); loadTrain(1); applyRig(); updateAllUI(); go('home');
+}
+/* 調整パネル用：レベル(イラスト段階)を自由に変える。画像も揺れ座標もそのレベルのものに切り替わる */
+function setDevLevel(n){
+  S.level = Math.max(1, Math.round(n));
+  S.expInto = 0; save();
+  loadHome(S.level, true); loadTrain(S.level);   // 画像（無いレベルは近い下のレベルを流用）
+  applyRig();                                     // その段階の揺れ座標
+  updateAllUI();
 }
 
 /* ───────── 起動 ───────── */
@@ -606,13 +635,15 @@ window.addEventListener('resize', resizeChikari);
   const fmt=()=>`揺れ調整: amp=${(+WB.amp).toFixed(2)}, stiff=${(+WB.stiff).toFixed(3)}, damp=${(+WB.damp).toFixed(3)}, kick=${(+WB.kick).toFixed(1)}`;
   const map=[['s-amp','wb-amp','amp',2],['s-damp','wb-damp','damp',3],['s-stiff','wb-stiff','stiff',3],['s-kick','wb-kick','kick',1]];
   function sync(){ for(const [sid,vid,key,dec] of map){ $(sid).value=WB[key]; $(vid).textContent=(+WB[key]).toFixed(dec); } $('wb-out').textContent=fmt(); }
+  function syncLv(){ $('s-lv').value=S.level; $('wb-lv').textContent=S.level; }
+  $('s-lv').addEventListener('input',()=>{ setDevLevel(+$('s-lv').value); $('wb-lv').textContent=S.level; });
   $('wbToggle').onclick=()=>$('wbBody').classList.toggle('open');
   for(const [sid,vid,key,dec] of map){
     $(sid).addEventListener('input',()=>{ WB[key]=+$(sid).value; $(vid).textContent=(+WB[key]).toFixed(dec); $('wb-out').textContent=fmt(); saveWB(); });
   }
   $('wbCopy').onclick=async()=>{ const t=fmt(); try{ await navigator.clipboard.writeText(t); $('wbMsg').textContent='コピーしました'; }catch(e){ $('wbMsg').textContent=t; } setTimeout(()=>$('wbMsg').textContent='',2500); };
   $('wbReset').onclick=()=>{ WB=Object.assign({},WB_DEFAULT); saveWB(); sync(); };
-  sync();
+  sync(); syncLv();
 })();
 </script>
 </body>
