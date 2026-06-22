@@ -380,7 +380,7 @@ function App() {
     else if (screen === 'tansaku') body = <TansakuScreen profile={profile} cards={cards} refreshAll={refreshAll} back={() => setScreen('home')} flash={flash} />;
     else if (screen === 'houchi') body = <HouchiScreen profile={profile} refreshAll={refreshAll} back={() => setScreen('home')} flash={flash} />;
     else if (screen === 'mission') body = <MissionScreen profile={profile} cards={cards} refreshAll={refreshAll} back={() => setScreen('home')} flash={flash} />;
-    else if (screen === 'report') body = <BattleLogView back={() => setScreen('home')} flash={flash} />;
+    else if (screen === 'report') body = <BattleLogView cards={cards} back={() => setScreen('home')} flash={flash} />;
     else if (screen === 'settings') body = <SettingsScreen bgmOn={bgmOn} setBgmOn={setBgmOn} volume={volume} setVolume={setVolume} logout={logout} playOpening={() => setPhase('opening')} back={() => setScreen('home')} />;
     else body = <Placeholder name={screen} back={() => setScreen('home')} logout={logout} />;
   }
@@ -4773,7 +4773,7 @@ const repS = {
   dnav: { position: 'absolute', left: 0, right: 0, bottom: 0, padding: '12px 14px 18px', background: 'linear-gradient(0deg,#0a0509 60%,transparent)', display: 'flex', gap: 8 },
   navBtn: { fontFamily: 'inherit', fontSize: 13, letterSpacing: 1, borderRadius: 22, padding: '11px 0', cursor: 'pointer', background: PANEL, border: BORDER, color: GOLD_HI },
 };
-function BattleLogView({ back, flash }) {
+function BattleLogView({ cards, back, flash }) {
   const [logs, setLogs] = useState(null);
   const [err, setErr] = useState(null);
   const [skillMap, setSkillMap] = useState({});
@@ -4786,6 +4786,7 @@ function BattleLogView({ back, flash }) {
     })();
   }, []);
   const skName = k => (skillMap[k] && skillMap[k].display_name) || k;
+  const cardById = {}; (cards || []).forEach(c => { cardById[c.id] = c; });
   const fmtDt = ts => { try { return new Date(ts).toLocaleString('ja-JP'); } catch (e) { return ts; } };
   // ボス名は STAGES（マップと同じ名前テーブル）から。界・役割は補足に併記。
   const bossLabel = k => { const b = parseBossKey(k); return b ? `${bossSortieName(k)}${b.round > 1 ? `(${b.round}周)` : ''}` : k; };
@@ -4843,12 +4844,26 @@ function BattleLogView({ back, flash }) {
 
             {deck.length > 0 && <div style={repS.sec}>
               <div style={repS.secT}>デッキ（記録）</div>
-              {deck.map((c, i) => (
-                <div key={i} style={repS.drow}>
-                  <span>{c.is_sp ? 'SP（装備なし）' : 'カード'}{c.sukumi != null ? `　三すくみ×${c.sukumi}` : ''}</span>
-                  <span style={{ color: GOLD_HI, fontWeight: 700 }}>{c.sougou != null ? '総合 ' + Number(c.sougou).toLocaleString() : '—'}</span>
-                </div>
-              ))}
+              {deck.map((c, i) => {
+                const lc = c.card_id ? cardById[c.card_id] : null;
+                const ci = lc ? parseCardKey(lc.card_key) : null;
+                const spC = !!c.is_sp;
+                const nm = ci ? ci.name : (spC ? 'SP' : 'カード');
+                const real = Math.round(Number(c.sougou || 0) * Number(c.sukumi || 1));
+                const rowS = { display: 'flex', justifyContent: 'space-between', fontSize: 11, padding: '2px 0' };
+                return (
+                  <div key={i} style={{ background: 'rgba(20,12,16,.5)', border: '1px solid rgba(232,194,90,.18)', borderRadius: 10, padding: '9px 11px', marginBottom: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 5 }}>
+                      <span style={{ fontSize: 9, fontWeight: 800, color: '#1a0f06', background: ci ? (RAR_COL[ci.rarity] || '#888') : '#888', borderRadius: 5, padding: '1px 6px' }}>{ci ? RAR_LABEL[ci.rarity] : (spC ? 'SP' : '?')}</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: '#fff3c8' }}>{nm}</span>
+                      {ci && ci.rarity !== 'sp' ? <span style={{ fontSize: 10, color: '#cdb488', marginLeft: 'auto' }}>{ci.attr}・{ci.weap}</span> : null}
+                    </div>
+                    <div style={rowS}><span style={{ color: '#a98f66' }}>素の総合</span><span style={{ color: '#efe6d5' }}>{Number(c.sougou || 0).toLocaleString()}</span></div>
+                    <div style={rowS}><span style={{ color: '#a98f66' }}>三すくみ補正</span><span style={{ color: '#efe6d5' }}>×{c.sukumi != null ? c.sukumi : '—'}</span></div>
+                    <div style={rowS}><span style={{ color: '#a98f66' }}>実戦闘力</span><span style={{ color: GOLD_HI, fontWeight: 800 }}>{real.toLocaleString()}</span></div>
+                  </div>
+                );
+              })}
               {/* per-card 武気損失/残存・カード絵は battle_logs 未保存 // TODO: 記録できたら mockup の武気表を完全再現 */}
               <div style={repS.noteSm}>※ 消耗するのは武気のみ。本体戦闘力は無傷（練気殿で補充）。損失率＝0.5×(敵戦力÷自軍戦力)・下限10%〜上限100%。</div>
             </div>}
