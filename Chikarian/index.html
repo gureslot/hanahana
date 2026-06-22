@@ -4808,6 +4808,10 @@ const SHUR_CAST_MS = SHUR_REDUCE_MOTION ? 450 : 3000;   // spec §2-3：約3秒�
 const SHUR_KEYFRAMES = '@keyframes shurMeas{0%,100%{transform:scale(1);filter:brightness(1)}50%{transform:scale(1.12);filter:brightness(1.5)}}';
 const KAKASHI_ATTRS = ['花', '葉', '芯', '無属性'];
 const KAKASHI_WEAPS = ['剣', '盾', '杖', 'なし'];
+const SHUR_ATTR_KEY = { '花': 'hana', '葉': 'ha', '芯': 'shin' };   // 無属性はアイコンなし（ATTR_IC は流用）
+// 修練場は「精製（refined）」トリオを使用。命名＝ic_weap_<品質>_<タイプ>.png（品質=crude/refined/enchanted/holy、タイプ=ken/tate/tsue）。画像未アップ時は onError でテキストに退避。
+const WEAP_IC = { ken: './images/ic_weap_refined_ken.png', tate: './images/ic_weap_refined_tate.png', tsue: './images/ic_weap_refined_tsue.png' };
+const SHUR_WEAP_KEY = { '剣': 'ken', '盾': 'tate', '杖': 'tsue' };   // なしはアイコンなし
 // canon-05 §2：属性 花→芯→葉→花（各が次を喰う＝有利）／武器 剣→杖→盾→剣（盾>剣・剣>杖・杖>盾＝0028）。有利×1.2・不利×0.8・中立×1.0。
 const SHUR_ATTR_CYCLE = ['花', '芯', '葉'];
 const SHUR_WEAP_CYCLE = ['剣', '杖', '盾'];
@@ -4932,11 +4936,17 @@ function ShurResult({ result, kAttr, kWeap, onRetry, onFinish }) {
             </div>
             <div style={shurS.cline}><span style={shurS.ck}>素の総合戦力</span><span style={shurS.cv}>{r.st.sougou.toLocaleString()}</span></div>
             <div style={shurS.cline}><span style={shurS.ck}>三すくみ補正</span><span style={shurS.cv}>属 <b style={{ color: shurMultColor(r.ta) }}>×{r.ta.toFixed(1)}</b>　・　装 <b style={{ color: shurMultColor(r.tw) }}>×{r.tw.toFixed(1)}</b></span></div>
-            <div style={shurS.skills}>発動スキル：{r.fired.length === 0
-              ? <span style={{ color: '#7d7160' }}>なし（不発）</span>
-              : r.fired.map((fr, j) => (
-                  <span key={j}>{j > 0 ? ' / ' : ''}{fr.sk.display_name || fr.key} <SkillEffect sk={fr.sk} lv={fr.lv} />{SHUR_INFO_ONLY[fr.sk.effect_type] ? <span style={{ color: '#7d7160' }}>（ボス戦で効果）</span> : null}</span>
-                ))}</div>
+            <div style={shurS.skills}>
+              <div style={{ color: '#c7a14e', marginBottom: 4 }}>発動スキル</div>
+              {r.fired.length === 0
+                ? <div style={{ color: '#7d7160' }}>なし（不発）</div>
+                : r.fired.map((fr, j) => (
+                    <div key={j} style={{ marginTop: j > 0 ? 4 : 0, lineHeight: 1.5 }}>
+                      {fr.sk.display_name || fr.key} <SkillEffect sk={fr.sk} lv={fr.lv} />
+                      {SHUR_INFO_ONLY[fr.sk.effect_type] ? <span style={{ color: '#7d7160' }}>（ボス戦で効果）</span> : null}
+                    </div>
+                  ))}
+            </div>
             <div style={shurS.final}><span style={shurS.finalK}>実戦闘力</span><span style={shurS.finalV}>{r.final.toLocaleString()}</span></div>
           </div>
         );
@@ -4999,26 +5009,35 @@ function ShurenjoView({ profile, cards, flash }) {
           <div style={shurS.note}>属性・装備を設定して実戦闘力を測る。強化なし・報酬なし・回数無制限。</div>
           <div style={shurS.dummy}>
             <div style={shurS.target}>{kErr ? '◎' : <img src="./images/kakashi.png" alt="" onError={() => setKErr(true)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain' }} />}</div>
-            <div style={shurS.dn}>カカシ（練習用の的）</div>
-            <div style={shurS.ds}>戦力0・必ず当たる／勝敗なし</div>
+            <div style={shurS.dn}>カカシ</div>
           </div>
 
           <div style={shurS.seclabel}>カカシの属性</div>
           <div style={shurS.chips}>
-            {KAKASHI_ATTRS.map(a => (
-              <div key={a} onClick={() => setKakashiAttr(a)} style={{ ...shurS.chip, ...(kakashiAttr === a ? shurS.chipOn : {}) }}>
-                {a === '無属性' ? '無' : a}{a === '無属性' && <small style={shurS.small}>中立</small>}
-              </div>
-            ))}
+            {KAKASHI_ATTRS.map(a => {
+              const k = SHUR_ATTR_KEY[a];
+              return (
+                <div key={a} onClick={() => setKakashiAttr(a)} style={{ ...shurS.chip, ...(kakashiAttr === a ? shurS.chipOn : {}) }}>
+                  {k
+                    ? <><img src={ATTR_IC[k]} alt="" onError={e => e.target.remove()} style={{ width: 30, height: 30, objectFit: 'contain', display: 'block', margin: '0 auto' }} /><div style={{ fontSize: 12, marginTop: 2 }}>{a}</div></>
+                    : <>{'無'}<small style={shurS.small}>中立</small></>}
+                </div>
+              );
+            })}
           </div>
 
           <div style={shurS.seclabel}>カカシの装備タイプ</div>
           <div style={shurS.chips}>
-            {KAKASHI_WEAPS.map(w => (
-              <div key={w} onClick={() => setKakashiWeap(w)} style={{ ...shurS.chip, ...(kakashiWeap === w ? shurS.chipOn : {}) }}>
-                {w}{w === 'なし' && <small style={shurS.small}>中立</small>}
-              </div>
-            ))}
+            {KAKASHI_WEAPS.map(w => {
+              const k = SHUR_WEAP_KEY[w];
+              return (
+                <div key={w} onClick={() => setKakashiWeap(w)} style={{ ...shurS.chip, ...(kakashiWeap === w ? shurS.chipOn : {}) }}>
+                  {k
+                    ? <><img src={WEAP_IC[k]} alt="" onError={e => e.target.remove()} style={{ width: 30, height: 30, objectFit: 'contain', display: 'block', margin: '0 auto' }} /><div style={{ fontSize: 12, marginTop: 2 }}>{w}</div></>
+                    : <>{'なし'}<small style={shurS.small}>中立</small></>}
+                </div>
+              );
+            })}
           </div>
 
           <div style={shurS.seclabel}>測定するデッキ</div>
