@@ -239,13 +239,18 @@ const TRAIN_FILE   = lv => 'chikari_train_' + String(lv).padStart(2,'0') + '.png
 const HOME_BG_FILE = slot => 'home_bg_' + slot + '.png';   // slot = morning / noon / night
 
 /* ───────── 揺れ領域（ピッカーのJSONをここに差し替え） ─────────
-   いまは仮配置。本物の絵に合わせてピッカーで作った points をそのまま貼る。
-   左上原点・正規化0..1・y下向き。type = bounce(縦)/sway(横)/jelly(全方向) */
-const RIG_POINTS = [
+   左上原点・正規化0..1・y下向き。type = bounce(縦)/sway(横)/jelly(全方向)
+   画面ごとに別配列。育成＝RIG_TRAIN（実座標）。ホーム＝RIG_HOME（絵が別なら座標も差し替え） */
+const RIG_HOME = [   // ホーム画面のキャラ用（ピッカー座標が来たら差し替え。今は仮）
   { name:'hair',  type:'sway',   cx:0.50, cy:0.22, rx:0.34, ry:0.20, strength:0.85 },
   { name:'chest', type:'bounce', cx:0.50, cy:0.56, rx:0.19, ry:0.12, strength:1.00 },
   { name:'skirt', type:'jelly',  cx:0.50, cy:0.82, rx:0.26, ry:0.11, strength:0.6  },
 ];
+const RIG_TRAIN = [  // 育成画面のキャラ用（ピッカー座標）
+  { name:'P1', type:'bounce', cx:0.612, cy:0.770, rx:0.100, ry:0.080, strength:1 },
+  { name:'P2', type:'bounce', cx:0.180, cy:0.799, rx:0.059, ry:0.058, strength:1 },
+];
+let RIG_POINTS = RIG_HOME;   // 現在アクティブな配列（go()で画面ごとに切替）
 
 /* ───────── セーブ ───────── */
 const _mem={}; const store={
@@ -292,7 +297,7 @@ const GX=16, GY=22, OVS=1.05;
 class Spring{ constructor(k=.16,d=.82){this.v=0;this.vel=0;this.k=k;this.d=d;}
   update(t){ this.vel+=(t-this.v)*this.k; this.vel*=this.d; this.v+=this.vel; return this.v; } }
 const dip=new Spring(.18,.80);
-RIG_POINTS.forEach(p=>{ p.sV=new Spring(.16,.82); p.sH=new Spring(.15,.86); });
+[RIG_HOME, RIG_TRAIN].forEach(arr=>arr.forEach(p=>{ if(!p.sV){ p.sV=new Spring(.16,.82); p.sH=new Spring(.15,.86); } }));
 
 /* プレースホルダ立ち絵（画像が無いときの保険）。本画像が来たら使われない。 */
 const texCanvas=document.createElement('canvas'); texCanvas.width=360; texCanvas.height=480;
@@ -522,8 +527,8 @@ function go(name){
   screenName=name;
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
   $('scr-'+name).classList.add('on');
-  if(name==='home'){ setHomeBg(); mountChikari($('home-stage')); showHomeLine(); }
-  if(name==='train'){ mountChikari($('train-stage')); $('train-done').classList.remove('show'); }
+  if(name==='home'){ RIG_POINTS=RIG_HOME; setHomeBg(); mountChikari($('home-stage')); showHomeLine(); }
+  if(name==='train'){ RIG_POINTS=RIG_TRAIN; mountChikari($('train-stage')); $('train-done').classList.remove('show'); }
   if(name!=='status') refreshActiveTexture();
   updateAllUI(); requestAnimationFrame(resizeChikari);
 }
