@@ -4819,7 +4819,7 @@ function BattleLogView({ back, flash }) {
 /* 修練場（ShurenjoView）＝shurenjo-mockup.html 準拠：set→測定中→result の3段。サーバ呼び出しなし＝資産不変・報酬なし。
    数値は computeStats（balance確定式）＋canon-05 §2 三すくみ＋実カードの実スキル（skill_master）のみ＝捏造UI禁止（運用§11）。 */
 const SHUR_REDUCE_MOTION = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-const SHUR_CAST_MS = SHUR_REDUCE_MOTION ? 450 : 3000;   // spec §2-3：約3秒の溜め
+const SHUR_CAST_MS = SHUR_REDUCE_MOTION ? 450 : 2000;   // 測定中の溜め＝約2秒（reduceMotion時は450ms据え置き）
 const SHUR_KEYFRAMES = '@keyframes shurMeas{0%,100%{transform:scale(1);filter:brightness(1)}50%{transform:scale(1.12);filter:brightness(1.5)}}';
 const KAKASHI_ATTRS = ['花', '葉', '芯', '無属性'];
 const KAKASHI_WEAPS = ['剣', '盾', '杖', 'なし'];
@@ -4839,7 +4839,7 @@ function shurMultColor(m) { return m > 1 ? '#7fb6ec' : (m < 1 ? '#d08a8a' : '#b6
 function runShurenjo(members, masterMap, skillsByCardId, kAttr, kWeap) {
   const valOf = r => (Number(r.sk.base_value) || 0) + (Number(r.sk.per_lv_value) || 0) * ((r.lv || 1) - 1);
   const cd = members.map((c, idx) => {
-    const st = computeStats(c);
+    const st = computeStats({ ...c, loaded_buki: bukiCapacity(c) });   // 武気は満充填想定で戦闘力を表示（SPは bukiCapacity=0＝不変）
     const p = (c.card_key || '').split('_');
     const groups = st.isSp ? [] : [st.info.attrKey, p[3]].filter(Boolean);   // 内部キー（hana/ha/shin・ken/tate/tsue）
     const rows = (skillsByCardId[c.id] || []).map(r => { const sk = masterMap[r.skill_key]; return sk ? { sk, key: r.skill_key, lv: r.skill_lv || 1, fired: false } : null; }).filter(Boolean);
@@ -4972,6 +4972,7 @@ function ShurResult({ result, kAttr, kWeap, onRetry, onFinish }) {
         <button style={{ ...shurS.cta, marginTop: 0, fontSize: 15, letterSpacing: '.14em' }} onClick={onRetry}>同じ設定で再挑戦</button>
       </div>
       <div style={shurS.foot}>
+        武気は満充填想定で計算します（実際の充填量に依りません）。<br />
         三すくみはカード1枚ごとに適用（canon-05 §2／有利×1.2・不利×0.8・中立×1.0）。SPは本体のみ・三すくみ中立。<br />
         表示の実戦闘力は、このデッキのスキルをこの場で1回試行抽選した目安です（保存しない／再挑戦で振れる）。実際の発動・補正・上振れ・勝敗はボス戦＝サーバで確定します。<br />
         SP固定スキル（竜気覚醒等）は実戦で発動すると当日デッキ離脱しますが、修練場はサーバを呼ばない＝離脱の対象外です。
