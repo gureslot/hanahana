@@ -339,17 +339,27 @@ function refreshActiveTexture(){
   applyAspectTo(screenName==='train'?$('train-stage'):$('home-stage'), d.w, d.h);
   setTexture(src);
 }
+/* level の画像が無ければ level-1, level-2 … と下のレベルへ遡り、ある絵を使う。
+   1枚も無ければ onNone（ホーム=プレースホルダ／育成=ホーム絵に委ねる）。 */
+function loadBestImage(fileFn, level, onFound, onNone){
+  let lv=level;
+  (function tryLv(){
+    if(lv<1){ if(onNone) onNone(); return; }
+    const im=new Image();
+    im.onload =()=>onFound(im);
+    im.onerror=()=>{ lv--; tryLv(); };
+    im.src=IMG_DIR+fileFn(lv);
+  })();
+}
 function loadHome(level, isBoot){
-  const im=new Image();
-  im.onload =()=>{ homeImg=im; refreshActiveTexture(); };
-  im.onerror=()=>{ if(isBoot){ drawPlaceholder(level); homeImg=texCanvas; refreshActiveTexture(); } };
-  im.src=IMG_DIR+CHARA_FILE(level);
+  loadBestImage(CHARA_FILE, level,
+    im=>{ homeImg=im; refreshActiveTexture(); },
+    ()=>{ drawPlaceholder(level); homeImg=texCanvas; refreshActiveTexture(); });
 }
 function loadTrain(level){
-  const im=new Image();
-  im.onload =()=>{ trainImg=im; refreshActiveTexture(); };
-  im.onerror=()=>{ /* 育成用が無ければホームの絵を使う＝現状維持 */ };
-  im.src=IMG_DIR+TRAIN_FILE(level);
+  loadBestImage(TRAIN_FILE, level,
+    im=>{ trainImg=im; refreshActiveTexture(); },
+    ()=>{ trainImg=null; refreshActiveTexture(); });   // 育成専用が1枚も無ければホーム絵を使う
 }
 function setHomeBg(){
   const s=$('home-stage').style;
