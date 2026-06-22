@@ -945,10 +945,12 @@ function Saishu({ profile, onExit, flash }) {
     function fxResize() { fx.width = fx.clientWidth; fx.height = fx.clientHeight; }   // 実ピクセルとCSSサイズを一致
     function spawnChikarium() {
       const W = fx.width, H = fx.height; if (!W || !H) return;
-      const x = W * (0.2 + Math.random() * 0.6), y = H * (0.3 + Math.random() * 0.4);
-      const ang = -Math.PI / 2 + (Math.random() - 0.5) * 1.2, sp = H * (0.012 + Math.random() * 0.012);
-      st.particles.push({ x, y, vx: Math.cos(ang) * sp * (0.6 + Math.random() * 0.8), vy: Math.sin(ang) * sp, life: 0, maxLife: 55 + Math.random() * 25, size: H * (0.04 + Math.random() * 0.03), rot: Math.random() * 6.28, vrot: (Math.random() - 0.5) * 0.3 });
-      if (st.particles.length > 100) st.particles.splice(0, st.particles.length - 100);
+      for (let k = 0; k < 2; k++) {
+        const x = W * (0.2 + Math.random() * 0.6), y = H * (0.3 + Math.random() * 0.4);
+        const ang = -Math.PI / 2 + (Math.random() - 0.5) * 1.2, sp = H * (0.012 + Math.random() * 0.012);
+        st.particles.push({ x, y, vx: Math.cos(ang) * sp * (0.6 + Math.random() * 0.8), vy: Math.sin(ang) * sp, life: 0, maxLife: 55 + Math.random() * 25, size: H * (0.12 + Math.random() * 0.06), rot: Math.random() * 6.28, vrot: (Math.random() - 0.5) * 0.3 });
+      }
+      if (st.particles.length > 120) st.particles.splice(0, st.particles.length - 120);
     }
     function drawP(p, al) {
       fxc.save(); fxc.globalAlpha = al; fxc.translate(p.x, p.y); fxc.rotate(p.rot); const r = p.size / 2;
@@ -1024,7 +1026,9 @@ function Saishu({ profile, onExit, flash }) {
 
       // ===== 判定の可視化（表示のみ・モック updateLockUI/updateStatus 相当）=====
       setLamps({ shape: shapeOK, red: petalRed, gap: colorGap, leaf: leafGreen, hz: hzOK });
-      setLockPct(Math.min(100, (rate / TUNE.LOCK_RATE) * 100));   // ロック閾値到達で満タン
+      const lockTarget = Math.min(100, (rate / TUNE.LOCK_RATE) * 100);
+      st.lockVis = isLocked ? 100 : ((st.lockVis || 0) + (lockTarget - (st.lockVis || 0)) * 0.15);
+      setLockPct(st.lockVis);
       setLockLabel(isLocked ? '採取中' : (rate > 0.15 ? 'パターン認識中…' : '光を探しています…'));
       // 診断：直近 STAT_WIN=40 フレームで最も不合格な条件を表示
       if (!st.statBufs) st.statBufs = { shape: [], red: [], gap: [], leaf: [], hz: [] };
