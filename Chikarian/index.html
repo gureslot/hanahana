@@ -3552,9 +3552,16 @@ const TAN_CSS = `
 .tan-stepRate{font-size:11px; color:#e7d3a6; text-align:right; white-space:nowrap;}
 .tan-stepLock{font-size:11px; color:#9a8c70; white-space:nowrap;}
 .tan-busyChip{font-size:11px; color:#cfeeff; background:rgba(120,200,255,.12); border:1px solid rgba(150,210,255,.55); border-radius:12px; padding:5px 10px; cursor:pointer; white-space:nowrap;}
-.tan-areaBar{flex:none; display:flex; align-items:center; gap:10px; padding:2px 12px 8px;}
-.tan-areaBtn{font-family:inherit; font-size:18px; color:#fff3c8; background:rgba(18,10,14,.88); border:1.5px solid rgba(232,194,90,.55); border-radius:12px; padding:4px 14px; cursor:pointer;}
-.tan-areaBtn:disabled{opacity:.35; cursor:default;}
+.tan-worldsel{position:absolute; z-index:7; top:14px; right:14px; width:152px;}
+.tan-wbtn{width:100%; background:rgba(18,10,14,.9); border:1.5px solid rgba(232,194,90,.55); border-radius:12px; padding:8px 12px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; gap:6px;}
+.tan-wn{font-size:13px; font-weight:800; color:#fff3c8; letter-spacing:1px;}
+.tan-ar{font-size:11px; color:#cdb488; transition:transform .25s;}
+.tan-worldsel.open .tan-ar{transform:rotate(180deg);}
+.tan-wlist{margin-top:6px; background:rgba(18,10,14,.9); border:1.5px solid rgba(232,194,90,.55); border-radius:12px; overflow:hidden; max-height:0; transition:max-height .3s ease;}
+.tan-worldsel.open .tan-wlist{max-height:60vh; overflow-y:auto;}
+.tan-witem{padding:9px 12px; font-size:12px; letter-spacing:1px; border-bottom:1px solid rgba(232,194,90,.18); cursor:pointer; color:#fff3c8; display:flex; justify-content:space-between; align-items:center; gap:6px;}
+.tan-witem:last-child{border-bottom:none;}
+.tan-witem.cur{background:rgba(255,228,154,.16);}
 `;
 // ノード座標＝mockup の検出座標。depth キー（shallow/mid/deep）に対応（本番の深さ3種＝3ノード）。
 const TAN_NODES = {
@@ -3570,6 +3577,7 @@ function TansakuScreen({ profile, refreshAll, back, flash }) {
   const [decks, setDecks] = useState([]);
   const [deckNo, setDeckNo] = useState(1);
   const [area, setArea] = useState(1); // 表示中の面 1..8
+  const [worldOpen, setWorldOpen] = useState(false); // 界選択ドロップダウンの開閉
   const [openStep, setOpenStep] = useState(null);
   const [busy, setBusy] = useState(false);
   const [now, setNow] = useState(Date.now());
@@ -3604,13 +3612,6 @@ function TansakuScreen({ profile, refreshAll, back, flash }) {
         <div className="t">探索</div>
         <div className="tan-res">メダル <b>{((profile && profile.medal) || 0).toLocaleString()}</b></div>
       </div>
-      {/* 面切替バー */}
-      <div className="tan-areaBar">
-        <button className="tan-areaBtn" onClick={() => setArea(a => Math.max(1, a - 1))} disabled={area <= 1}>◀</button>
-        <div className="tan-area">面{area} ・ {WORLD_NAMES[area]}</div>
-        <button className="tan-areaBtn" onClick={() => setArea(a => Math.min(8, a + 1))} disabled={area >= 8}>▶</button>
-      </div>
-
       {/* 探索中チップ列（他面の回収導線） */}
       {states.length > 0 && (
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', padding: '0 12px 8px' }}>
@@ -3630,6 +3631,17 @@ function TansakuScreen({ profile, refreshAll, back, flash }) {
       {/* 地図本体（ボス画面と同じ作り） */}
       <div className="tan-mapWrap" style={{ backgroundImage: `url(./images/tansaku_map_${area}.png)` }}>
         <div className="tan-mapDim" />
+        {/* 界選択（畳み式ドロップダウン・ボス画面と同じ作り） */}
+        <div className={'tan-worldsel' + (worldOpen ? ' open' : '')}>
+          <div className="tan-wbtn" onClick={() => setWorldOpen(o => !o)}><span className="tan-wn">{WORLD_NAMES[area]}</span><span className="tan-ar">▾</span></div>
+          <div className="tan-wlist">
+            {Array.from({ length: 8 }, (_, i) => i + 1).map(n => (
+              <div key={n} className={'tan-witem' + (n === area ? ' cur' : '')} onClick={() => { setArea(n); setWorldOpen(false); }}>
+                <span>面{n} ・ {WORLD_NAMES[n]}</span>
+              </div>
+            ))}
+          </div>
+        </div>
         {[1, 2, 3].map(depth => {
           const key = DEPTH_KEY[depth];
           const pos = TAN_NODES[key];
