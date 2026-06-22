@@ -1107,7 +1107,7 @@ function Saishu({ profile, onExit, flash }) {
         <div style={{ fontSize: 40, fontWeight: 800, color: GOLD_HI, textShadow: '0 0 16px rgba(255,200,90,.6)' }}>
           +{optimistic.toLocaleString()}<span style={{ fontSize: 16, color: '#cdb488' }}> / 残 {remaining.toLocaleString()}</span>
         </div>
-        <div style={{ width: 220, height: 6, background: 'rgba(0,0,0,.6)', border: '1px solid rgba(232,194,90,.5)', borderRadius: 4, overflow: 'hidden' }}>
+        <div style={{ width: 220, height: 6, flexShrink: 0, background: 'rgba(0,0,0,.6)', border: '1px solid rgba(232,194,90,.5)', borderRadius: 4, overflow: 'hidden' }}>
           <div style={{ height: '100%', width: `${Math.min(100, (serverDaily + optimistic) / DAILY_MAX * 100)}%`, background: 'linear-gradient(90deg,#ffb84d,#ffe28a)', transition: 'width .25s' }} />
         </div>
         <div style={{ fontSize: 13, color: '#e7d3a6' }}>所持 {(profile ? (profile.chikarium || 0) : 0).toLocaleString()}</div>
@@ -1121,7 +1121,7 @@ function Saishu({ profile, onExit, flash }) {
         <div style={{ fontSize: 13, letterSpacing: 1, color: locked ? '#3fe08a' : GOLD }}>{lockLabel}</div>
 
         {/* 判定ゲージ（合格率・#lockBar 相当。チカリウム残量ゲージとは別物） */}
-        <div style={{ width: 240, height: 12, background: 'rgba(0,0,0,.6)', border: `1.5px solid ${locked ? '#3fe08a' : 'rgba(232,194,90,.5)'}`, borderRadius: 8, overflow: 'hidden', boxShadow: locked ? '0 0 12px rgba(63,224,138,.5)' : 'none' }}>
+        <div style={{ width: 240, height: 12, flexShrink: 0, background: 'rgba(0,0,0,.6)', border: `1.5px solid ${locked ? '#3fe08a' : 'rgba(232,194,90,.5)'}`, borderRadius: 8, overflow: 'hidden', boxShadow: locked ? '0 0 12px rgba(63,224,138,.5)' : 'none' }}>
           <div style={{ height: '100%', width: `${lockPct}%`, background: locked ? 'linear-gradient(90deg,#1fc46a,#9dffce)' : 'linear-gradient(90deg,#ff9500,#ffe28a)', transition: 'width .6s ease-out' }} />
         </div>
 
