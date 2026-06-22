@@ -389,6 +389,7 @@ function App() {
     <div style={{ position: 'relative', width: '100%', maxWidth: 480, margin: '0 auto', minHeight: '100dvh', overflow: 'hidden', background: '#0a0509' }}>
       {/* 常駐 BGM（絶対にアンマウントしない） */}
       <audio ref={audioRef} src="sounds/bgm_home.mp3" loop preload="auto" muted={!bgmOn} />
+      <ConfirmHost />
       <ErrBoundary key={screen} onReset={() => setScreen('home')}>{body}</ErrBoundary>
       {toast && <div style={S.toast}>{toast}</div>}
     </div>
@@ -1185,6 +1186,44 @@ function cardFullName(card) {
 }
 
 // 三すくみ係数（サーバ public.sukumi_factor=0028 と同値）：花>芯>葉>花／盾>剣>杖>盾。c==e=1.0・有利1.2・不利0.8。
+// ===== ゲーム内スタイルの確認ダイアログ（window.confirm の置換）=====
+const confirmS = {
+  scrim: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,.74)', display: 'grid', placeItems: 'center', zIndex: 10000, padding: 24 },
+  box: { maxWidth: 340, width: '100%', background: '#160a13', border: '1.5px solid rgba(232,194,90,.55)', borderRadius: 14, padding: '20px 18px 16px', textAlign: 'center', boxShadow: '0 12px 40px rgba(0,0,0,.7)' },
+  msg: { fontSize: 13, color: '#ffe9c0', lineHeight: 1.8, marginBottom: 18, whiteSpace: 'pre-wrap' },
+  btns: { display: 'flex', gap: 10 },
+  ok: { flex: 1, fontFamily: 'inherit', fontWeight: 800, fontSize: 14, letterSpacing: 1, color: '#2a160a', border: 'none', borderRadius: 22, padding: '11px 0', cursor: 'pointer', background: 'linear-gradient(180deg,#ffe49a,#e8b54d 60%,#b9842f)' },
+  cancel: { flex: 1, fontFamily: 'inherit', fontWeight: 700, fontSize: 14, letterSpacing: 1, color: '#ffe9c0', background: 'rgba(20,10,16,.9)', border: '1.5px solid rgba(232,194,90,.55)', borderRadius: 22, padding: '11px 0', cursor: 'pointer' },
+};
+// Promise<boolean> を返す確認。ConfirmHost 未マウント時のみ window.confirm にフォールバック。
+let _ckConfirm = null;
+function uiConfirm(message, opts) {
+  if (_ckConfirm) return _ckConfirm(message, opts || {});
+  return Promise.resolve(window.confirm(message));
+}
+function ConfirmHost() {
+  const [st, setSt] = useState(null);   // { message, okLabel, cancelLabel, resolve }
+  useEffect(() => {
+    _ckConfirm = (message, opts) => new Promise(resolve => {
+      setSt({ message, okLabel: (opts && opts.okLabel) || 'OK', cancelLabel: (opts && opts.cancelLabel) || 'キャンセル', resolve });
+    });
+    return () => { _ckConfirm = null; };
+  }, []);
+  if (!st) return null;
+  const done = (v) => { const r = st.resolve; setSt(null); r(v); };
+  return (
+    <div style={confirmS.scrim} onClick={() => done(false)}>
+      <div style={confirmS.box} onClick={(e) => e.stopPropagation()}>
+        <div style={confirmS.msg}>{st.message}</div>
+        <div style={confirmS.btns}>
+          <button style={confirmS.cancel} onClick={() => done(false)}>{st.cancelLabel}</button>
+          <button style={confirmS.ok} onClick={() => done(true)}>{st.okLabel}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const SUKUMI_BEATS = { hana: 'shin', shin: 'ha', ha: 'hana', tate: 'ken', ken: 'tsue', tsue: 'tate' };
 function sukumiFactor(c, e) {
   if (!c || !e || c === e) return 1.0;
@@ -2528,7 +2567,7 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
     // 武気満タン確認（canon-06 §4-1）：メインデッキ(デッキ1)の非SPカードが満タンでなければ確認
     const mem = deckMembers(1).filter(c => c && !/_sp$/.test(c.card_key || ''));
     const notFull = mem.some(c => (c.loaded_buki || 0) < bukiCapacity(c));
-    if (notFull && !window.confirm('メインデッキの武気が満タンではありません。このまま出撃しますか？')) return;
+    if (notFull && !(await uiConfirm('メインデッキの武気が満タンではありません。このまま出撃しますか？'))) return;
     setBusy(true);
     try { await ChikarianAPI.startBossBattle(deckNo, 'boss_' + stage + '_' + role); setOpenNode(null); await refetchSorties(); await onRefresh(); flash('出撃しました'); }
     catch (e) { flash(errMsg(e)); }
@@ -2859,7 +2898,7 @@ function KyokaScreen({ cards, profile, refreshAll, back, flash }) {
         const sz = ({ s: '小', m: '中', l: '大', xl: '特大' })[size] || '';
         const msg = '最大レベルまで残り ' + r.gap_remaining + ' EXP。' + sz + '本を1冊使うと EXP ' + r.overshoot_waste
                   + ' が超過し、返却されません。最大まで詰めますか？';
-        if (window.confirm(msg)) {
+        if (await uiConfirm(msg)) {
           await ChikarianAPI.useExpBook(c.id, size, 1, true);          // 超過許可で最大へ（1冊）
           await refreshAll();
         }
