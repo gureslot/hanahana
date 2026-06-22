@@ -80,15 +80,19 @@
   .lock .lb>i{display:block; height:100%; width:0; background:linear-gradient(90deg,#ff9500,#ffe28a); transition:width .12s;}
   .lock.locked .lb>i{background:linear-gradient(90deg,#1fc46a,#9dffce);}
 
-  /* 育成のちかり：背景なし。大きく右下に置き、下を見切れさせて迫力を出す */
-  .train-scene{position:relative; margin-top:12px; height:340px; overflow:hidden;}
-  .mini-stage{position:absolute; top:0; right:-5%; height:128%; background:transparent; /* aspect-ratioはJSが画像から設定 */}
+  /* 育成：カメラ＋大きいちかり＋左ゲージを重ねる舞台 */
+  .train-arena{position:relative; width:100%; aspect-ratio:1/1.18; margin-top:8px; overflow:hidden; border-radius:18px 18px 0 0;}
+  .train-arena .camslot{position:absolute; top:0; left:0; right:0; z-index:1;}
+  /* ちかり：右下に大きく、カメラに少し乗る。下は舞台で見切れる */
+  .mini-stage{position:absolute; right:-4%; bottom:-6%; width:66%; background:transparent; z-index:5; /* aspect-ratioはJSが画像から設定 */}
   .mini-stage canvas{position:absolute; inset:0; width:100%; height:100%;}
-  .train-gauges{position:absolute; left:0; bottom:8px; width:40%; z-index:2;
-    display:flex; flex-direction:column; gap:14px;
-    background:rgba(255,247,241,.5); backdrop-filter:blur(3px); border-radius:14px; padding:12px 12px;}
+  /* ゲージ：左に小さくまとめる */
+  .train-gauges{position:absolute; left:3%; bottom:6%; width:38%; z-index:6;
+    display:flex; flex-direction:column; gap:12px;
+    background:rgba(255,247,241,.55); backdrop-filter:blur(3px); border-radius:14px; padding:11px 12px;}
   .train-gauges .gaugewrap{margin-top:0;}
-  .train-gauges .glabel{font-size:11px;}
+  .train-gauges .glabel{font-size:11px; margin-bottom:3px;}
+  .train-gauges .gbar{height:9px;}
 
   .hint{font-size:11.5px; color:var(--sub); line-height:1.6; margin:4px 4px 0; text-align:center;}
   .hint .k{display:inline-block; background:rgba(120,90,80,.1); border-radius:5px; padding:0 5px; font-weight:700;}
@@ -134,19 +138,18 @@
     <h1>育てる</h1>
     <div class="lvtag" id="train-lvtag">Lv 1</div>
 
-    <div class="camslot" id="camslot">
-      <div class="ph" id="cam-ph">
-        ここに<b>カメラ</b>が入ります<br>（ハイビスカスランプの点滅を認識）<br><br>
-        ※プレビューでは <b>下のボタン</b>で点滅をシミュレートします
+    <div class="train-arena" id="train-arena">
+      <div class="camslot" id="camslot">
+        <div class="ph" id="cam-ph">
+          ここに<b>カメラ</b>が入ります<br>（ハイビスカスランプの点滅を認識）<br><br>
+          ※プレビューでは <b>下のボタン</b>で点滅をシミュレートします
+        </div>
+        <div class="lock" id="lockwrap">
+          <div class="ll" id="lock-label">かざすと はじまります</div>
+          <div class="lb"><i id="lock-fill"></i></div>
+        </div>
       </div>
-      <div class="lock" id="lockwrap">
-        <div class="ll" id="lock-label">かざすと はじまります</div>
-        <div class="lb"><i id="lock-fill"></i></div>
-      </div>
-    </div>
 
-    <div class="train-scene">
-      <div class="mini-stage" id="train-stage"></div>
       <div class="train-gauges">
         <div class="gaugewrap">
           <div class="glabel"><span>本日</span><span id="today-txt">0</span></div>
@@ -157,6 +160,8 @@
           <div class="gbar exp"><i id="next-bar"></i></div>
         </div>
       </div>
+
+      <div class="mini-stage" id="train-stage"></div>
     </div>
 
     <div class="bar">
