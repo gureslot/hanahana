@@ -108,7 +108,10 @@ const GOLD = "#e8c25a", GOLD_HI = "#fff3c8";
 const PANEL = "rgba(20,10,16,.72)", BORDER = "1.5px solid rgba(232,194,90,.55)";
 const DAILY_MAX = 1000;
 const LOCK_RPC_AVAILABLE = true;    // 0023(set_card_lock) 適用済み＝有効。強化合成のactions/ロックボタンが参照
-const SAISHU_FILL_SEC = 10;   // 検出中(locked)に連続充填して上限到達までの目安秒数（balance §8・連続式）
+// 採取は点滅ベース（v3）。locked中にピーク（明滅）を検出するたび SAISHU_PER_PEAK を加算。
+const SAISHU_HARVEST_SEC = 9;                                              // 採取（locked中）で日次上限に達する目安秒数（v3）
+const SAISHU_BLINK_HZ = 6;                                                 // 計算上の点滅周波数（6点滅/秒）
+const SAISHU_PER_PEAK = DAILY_MAX / (SAISHU_BLINK_HZ * SAISHU_HARVEST_SEC); // 1ピーク加算 = 1000/54 ≈ 18.518（サーバのclaim単位10・上限1000は据え置き）
 
 // ===== エラーコード→和文 =====
 const ERR_JA = {
@@ -853,8 +856,10 @@ function Placeholder({ name, back, logout }) {
 }
 
 /* =================================================================== 採取（カメラ） */
-// saishu-test.html の検出ロジックを移植。検出した点滅数を blinksRef に貯め、
-// 退出時に claimSaishu(blinks) でサーバ確定（日次1000上限はサーバがクランプ）。
+// saishu-test.html の検出ロジックを移植。判定=率ベースロック（20フレーム窓・モックのまま）。
+// 採取=点滅ベース：locked中にピークを検出するたび SAISHU_PER_PEAK を acc に加算し、退出時に
+// claimSaishu(Math.round(acc/10)) でサーバ確定（日次1000上限はサーバがクランプ）。
+// 粒子演出（チカリウムの宝石）も saishu-test.html L374-404 から移植。
 const TUNE = { U_DIFF_MIN: 39, COLORGAP_MIN: 25, PETAL_H: 60, LEAF_H_LO: 15, LOCK_WIN: 20, LOCK_RATE: 0.60, HZ_LO: 5.5, HZ_HI: 12.0, HZ_WIN: 20, PEAK_WIN: 10 };
 const OUTER_L = {
   stamen: { x: 0.564, y: 0.075, w: 0.219, h: 0.280, c: '#ffd60a' },
@@ -901,18 +906,28 @@ function measure(img, W, H, inner) {
   return { r: inn.r, g: inn.g, b: inn.b, br: inn.br, h };
 }
 
+// 粒子演出用のチカリウム宝石画像（未読込時は drawP のフォールバック＝グラデ宝石を描画）
+const jewelImg = new Image(); let jewelReady = false;
+jewelImg.onload = () => { jewelReady = true; };
+jewelImg.src = './images/ic_chikarium_jewel.png';   // 実在確認済み（小文字 jewel）
+
 function Saishu({ profile, onExit, flash }) {
-  const videoRef = useRef(null), cvRef = useRef(null);
+  const videoRef = useRef(null), cvRef = useRef(null), fxRef = useRef(null);
   const [side, setSide] = useState('L');
   const [sessionGain, setSessionGain] = useState(0);
   const [locked, setLocked] = useState(false);
+  // 判定の可視化（表示のみ・判定計算は analyze の既存値を載せ替えるだけ）
+  const [lamps, setLamps] = useState({ shape: false, red: false, gap: false, leaf: false, hz: false });
+  const [lockPct, setLockPct] = useState(0);
+  const [lockLabel, setLockLabel] = useState('光を探しています…');
+  const [diagMsg, setDiagMsg] = useState('');
   const [camErr, setCamErr] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const blinksRef = useRef(0);
   const sideRef = useRef('L');
   const runningRef = useRef(false);
   const streamRef = useRef(null);
-  const stateRef = useRef({ brBuf: [], tBuf: [], udBuf: [], okBuf: [], prevBr: 0, rising: false, lastSpawn: 0, locked: false });
+  const stateRef = useRef({ brBuf: [], tBuf: [], udBuf: [], okBuf: [], prevBr: 0, rising: false, lastSpawn: 0, locked: false, acc: 0, particles: [] });
 
   useEffect(() => { sideRef.current = side; stateRef.current.okBuf = []; }, [side]);
 
@@ -920,9 +935,56 @@ function Saishu({ profile, onExit, flash }) {
   const remaining = Math.max(0, DAILY_MAX - serverDaily);
 
   useEffect(() => {
-    let tid = null;
-    const video = videoRef.current, cv = cvRef.current;
+    let tid = null, fxRaf = null;
+    const video = videoRef.current, cv = cvRef.current, fx = fxRef.current;
     const ctx = cv.getContext('2d', { willReadFrequently: true });
+    const fxc = fx.getContext('2d');
+    const st = stateRef.current;
+
+    // ===== 粒子演出（saishu-test.html L374-404 を移植）=====
+    function fxResize() { fx.width = fx.clientWidth; fx.height = fx.clientHeight; }   // 実ピクセルとCSSサイズを一致
+    function spawnChikarium() {
+      const W = fx.width, H = fx.height; if (!W || !H) return;
+      const x = W * (0.2 + Math.random() * 0.6), y = H * (0.3 + Math.random() * 0.4);
+      const ang = -Math.PI / 2 + (Math.random() - 0.5) * 1.2, sp = H * (0.012 + Math.random() * 0.012);
+      st.particles.push({ x, y, vx: Math.cos(ang) * sp * (0.6 + Math.random() * 0.8), vy: Math.sin(ang) * sp, life: 0, maxLife: 55 + Math.random() * 25, size: H * (0.04 + Math.random() * 0.03), rot: Math.random() * 6.28, vrot: (Math.random() - 0.5) * 0.3 });
+      if (st.particles.length > 100) st.particles.splice(0, st.particles.length - 100);
+    }
+    function drawP(p, al) {
+      fxc.save(); fxc.globalAlpha = al; fxc.translate(p.x, p.y); fxc.rotate(p.rot); const r = p.size / 2;
+      if (jewelReady) {
+        fxc.drawImage(jewelImg, -r, -r, r * 2, r * 2);
+      } else {
+        const g = fxc.createRadialGradient(0, 0, 0, 0, 0, r); g.addColorStop(0, '#fff7c0'); g.addColorStop(0.4, '#ffd60a'); g.addColorStop(1, 'rgba(255,149,0,0)');
+        fxc.fillStyle = g; fxc.beginPath(); fxc.arc(0, 0, r, 0, 6.28); fxc.fill();
+        fxc.globalAlpha = al * 0.9; fxc.strokeStyle = '#fffbe6'; fxc.lineWidth = Math.max(1, r * 0.12);
+        fxc.beginPath(); fxc.moveTo(-r * 0.9, 0); fxc.lineTo(r * 0.9, 0); fxc.moveTo(0, -r * 0.9); fxc.lineTo(0, r * 0.9); fxc.stroke();
+      }
+      fxc.restore();
+    }
+    function updateFx() {
+      const W = fx.width, H = fx.height; fxc.clearRect(0, 0, W, H); const grav = H * 0.0016;
+      for (let i = st.particles.length - 1; i >= 0; i--) {
+        const p = st.particles[i]; p.life++; p.vy += grav; p.x += p.vx; p.y += p.vy; p.rot += p.vrot;
+        if (p.life > p.maxLife || p.y > H + p.size) { st.particles.splice(i, 1); continue; }
+        const t = p.life / p.maxLife, al = t < 0.15 ? t / 0.15 : 1 - (t - 0.15) / 0.85; drawP(p, Math.max(0, Math.min(1, al)));
+      }
+    }
+    function fxLoop() { updateFx(); fxRaf = requestAnimationFrame(fxLoop); }
+
+    // ===== 採取（点滅ベース・locked中のみ）=====
+    function onPeak() {
+      if (st.acc >= remaining) return;                          // 残量到達＝完了（これ以上数えない）
+      st.acc = Math.min(st.acc + SAISHU_PER_PEAK, remaining);   // 1ピーク=DAILY_MAX/54、残り枠で頭打ち
+      blinksRef.current = st.acc / 10;                          // claim 用（点滅単位＝チカリウム/10）
+      setSessionGain(Math.floor(st.acc));
+      spawnChikarium();                                          // ピークごとに宝石が弾ける
+    }
+    function detectPeakAndSpawn(curBr) {                         // 明るさ上昇→下降でピーク（最短80ms間隔）
+      if (curBr > st.prevBr) st.rising = true;
+      else if (st.rising && curBr < st.prevBr) { st.rising = false; const now = Date.now(); if (now - st.lastSpawn > 80) { onPeak(); st.lastSpawn = now; } }
+      st.prevBr = curBr;
+    }
 
     function dominantHz() {
       const st = stateRef.current; const n = st.brBuf.length; if (n < TUNE.HZ_WIN) return 0;
@@ -934,7 +996,7 @@ function Saishu({ profile, onExit, flash }) {
       for (let f = 1; f <= 12; f += 0.1) { let re = 0, im = 0; for (let i = 0; i < m; i++) { const ph = -2 * Math.PI * f * (t[i] - t[0]) / 1000; re += w[i] * Math.cos(ph); im += w[i] * Math.sin(ph); } const mag = re * re + im * im; if (mag > bm) { bm = mag; best = f; } }
       return best;
     }
-    // 連続式に変更：点滅ごと加算(onPeak)は廃止。検出中の経過時間で充填する（下の analyze 内）。
+    // 判定=率ベースロック（モックのまま）。locked中は detectPeakAndSpawn でピーク加算（点滅ベース）。
     function analyze() {
       if (!video.videoWidth) return;
       ctx.drawImage(video, 0, 0, 320, 240);
@@ -959,24 +1021,29 @@ function Saishu({ profile, onExit, flash }) {
       const rate = st.okBuf.reduce((a, b) => a + b, 0) / st.okBuf.length;
       const isLocked = st.okBuf.length >= TUNE.LOCK_WIN && rate >= TUNE.LOCK_RATE;
       if (isLocked !== st.locked) { st.locked = isLocked; setLocked(isLocked); }
-      // 連続式：検出中(locked)は経過時間で充填（約 SAISHU_FILL_SEC 秒で1日上限）。点滅ごと加算はしない。
-      const nowT = Date.now();
-      if (isLocked) {
-        const dt = st.fillTick ? Math.min(nowT - st.fillTick, 250) / 1000 : 0;   // 秒（タブ復帰等の巨大dtは0.25sに制限）
-        st.fillTick = nowT;
-        st.acc = Math.min((st.acc || 0) + (DAILY_MAX / SAISHU_FILL_SEC) * dt, remaining);   // チカリウム換算で蓄積（残り枠で頭打ち）
-        blinksRef.current = st.acc / 10;                                          // claim 用（点滅単位＝チカリウム/10）
-        setSessionGain(Math.floor(st.acc));
-      } else {
-        st.fillTick = nowT;   // 非検出中は時計だけ進め、蓄積しない（一時停止）
-      }
+
+      // ===== 判定の可視化（表示のみ・モック updateLockUI/updateStatus 相当）=====
+      setLamps({ shape: shapeOK, red: petalRed, gap: colorGap, leaf: leafGreen, hz: hzOK });
+      setLockPct(Math.min(100, (rate / TUNE.LOCK_RATE) * 100));   // ロック閾値到達で満タン
+      setLockLabel(isLocked ? '採取中' : (rate > 0.15 ? 'パターン認識中…' : '光を探しています…'));
+      // 診断：直近 STAT_WIN=40 フレームで最も不合格な条件を表示
+      if (!st.statBufs) st.statBufs = { shape: [], red: [], gap: [], leaf: [], hz: [] };
+      const COND = [['shape', shapeOK, '形（光の出方）'], ['red', petalRed, '赤い光'], ['gap', colorGap, '色の違い'], ['leaf', leafGreen, '緑の部分'], ['hz', hzOK, '点滅の速さ']];
+      for (const [k, ok] of COND) { const b = st.statBufs[k]; b.push(ok ? 1 : 0); if (b.length > 40) b.shift(); }
+      let worst = null, worstRate = 1;
+      for (const [k, , label] of COND) { const b = st.statBufs[k]; if (b.length < 40) continue; const r = b.reduce((a, x) => a + x, 0) / b.length; if (r < worstRate) { worstRate = r; worst = label; } }
+      setDiagMsg(isLocked ? '' : ((worst && worstRate < 0.5) ? worst + 'が うまく認識できていません' : ''));
+
+      // 点滅ベース：検出中(locked)のみピーク（明滅）を数えて加算。光を外す(非locked)と数えない＝一時停止。
+      if (isLocked) detectPeakAndSpawn(P.br);
+      else { st.rising = false; st.prevBr = P.br; }
     }
 
     (async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } } });
         streamRef.current = stream; video.srcObject = stream; await video.play();
-        cv.width = 320; cv.height = 240;
+        cv.width = 320; cv.height = 240; fxResize();
         // 露出を下げる（点滅を捉えやすく）
         try {
           const track = stream.getVideoTracks()[0];
@@ -988,13 +1055,16 @@ function Saishu({ profile, onExit, flash }) {
             if (adv.length) await track.applyConstraints({ advanced: adv });
           }
         } catch (e) {}
-        runningRef.current = true; tid = setInterval(analyze, 50);
+        runningRef.current = true; tid = setInterval(analyze, 50); fxLoop();
       } catch (e) { setCamErr(e.message || String(e)); }
     })();
 
+    window.addEventListener('resize', fxResize);
     return () => {
       runningRef.current = false;
       if (tid) clearInterval(tid);
+      if (fxRaf) cancelAnimationFrame(fxRaf);
+      window.removeEventListener('resize', fxResize);
       if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
     };
   }, []);
@@ -1021,6 +1091,8 @@ function Saishu({ profile, onExit, flash }) {
       <div style={{ position: 'relative', width: '100%', aspectRatio: '4/3', background: '#000', overflow: 'hidden' }}>
         <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
         <canvas ref={cvRef} style={{ display: 'none' }} />
+        {/* 粒子演出オーバーレイ（video の上・タップ透過） */}
+        <canvas ref={fxRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }} />
         {/* 枠ガイド */}
         {Object.keys(rs.outer).map(k => { const r = rs.outer[k]; return <div key={'o' + k} style={{ position: 'absolute', left: `${r.x * 100}%`, top: `${r.y * 100}%`, width: `${r.w * 100}%`, height: `${r.h * 100}%`, border: `2px solid ${r.c}`, borderRadius: 3 }} />; })}
         {Object.keys(rs.inner).map(k => { const r = rs.inner[k]; return <div key={'i' + k} style={{ position: 'absolute', left: `${r.x * 100}%`, top: `${r.y * 100}%`, width: `${r.w * 100}%`, height: `${r.h * 100}%`, border: `1px dashed ${rs.outer[k].c}`, opacity: .7 }} />; })}
@@ -1042,9 +1114,27 @@ function Saishu({ profile, onExit, flash }) {
           <button onClick={() => setSide('R')} style={{ ...S.sideSwitch, ...(side === 'R' ? S.sideSwitchOn : {}) }}>右 ▶</button>
         </div>
 
-        <div style={{ fontSize: 13, letterSpacing: 1, color: locked ? '#3fe08a' : GOLD }}>
-          {locked ? '採取中' : '光を探しています…'}
+        {/* 判定ラベル */}
+        <div style={{ fontSize: 13, letterSpacing: 1, color: locked ? '#3fe08a' : GOLD }}>{lockLabel}</div>
+
+        {/* 判定ゲージ（合格率・#lockBar 相当。チカリウム残量ゲージとは別物） */}
+        <div style={{ width: 240, height: 12, background: 'rgba(0,0,0,.6)', border: `1.5px solid ${locked ? '#3fe08a' : 'rgba(232,194,90,.5)'}`, borderRadius: 8, overflow: 'hidden', boxShadow: locked ? '0 0 12px rgba(63,224,138,.5)' : 'none' }}>
+          <div style={{ height: '100%', width: `${lockPct}%`, background: locked ? 'linear-gradient(90deg,#1fc46a,#9dffce)' : 'linear-gradient(90deg,#ff9500,#ffe28a)', transition: 'width .15s' }} />
         </div>
+
+        {/* 5判定項目チップ */}
+        <div style={{ display: 'flex', gap: 4, justifyContent: 'center', flexWrap: 'wrap', marginTop: 4 }}>
+          {[['shape', '形'], ['red', '花の赤'], ['gap', '色の違い'], ['leaf', '葉の緑'], ['hz', '点滅']].map(([k, t]) => (
+            <span key={k} style={{ fontSize: 10, padding: '3px 7px', borderRadius: 5,
+              background: lamps[k] ? 'rgba(30,110,50,.5)' : 'rgba(120,30,30,.5)',
+              color: lamps[k] ? '#9f9' : '#e88',
+              border: `1px solid ${lamps[k] ? 'rgba(60,180,90,.5)' : 'rgba(180,60,60,.4)'}` }}>{t}</span>
+          ))}
+        </div>
+
+        {/* 診断文 */}
+        <div style={{ fontSize: 11, color: '#e8b04a', marginTop: 5, minHeight: 14, textAlign: 'center' }}>{diagMsg}</div>
+
         <div style={{ fontSize: 11, color: '#a98f66', textAlign: 'center', lineHeight: 1.6 }}>
           赤い光（一部に緑・黄）が、決まった速さで<br />点滅する光に全体をかざしてください
         </div>
