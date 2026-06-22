@@ -112,6 +112,7 @@ const LOCK_RPC_AVAILABLE = true;    // 0023(set_card_lock) 適用済み＝有効
 const SAISHU_HARVEST_SEC = 9;                                              // 採取（locked中）で日次上限に達する目安秒数（v3）
 const SAISHU_BLINK_HZ = 6;                                                 // 計算上の点滅周波数（6点滅/秒）
 const SAISHU_PER_PEAK = DAILY_MAX / (SAISHU_BLINK_HZ * SAISHU_HARVEST_SEC); // 1ピーク加算 = 1000/54 ≈ 18.518（サーバのclaim単位10・上限1000は据え置き）
+const SAISHU_TEST_NO_LIMIT = true;   // ★テスト用: 採取の日次1000上限を無視（本番前に false / 削除）
 
 // ===== エラーコード→和文 =====
 const ERR_JA = {
@@ -587,7 +588,7 @@ function Home({ profile, go, flash, onRefresh }) {
   const chikarium = profile ? (profile.chikarium || 0) : 0;
   const medal = profile ? (profile.medal || 0) : 0;
   const dailyGot = dailyGotOf(profile);
-  const reachedCap = dailyGot >= DAILY_MAX;
+  const reachedCap = !SAISHU_TEST_NO_LIMIT && dailyGot >= DAILY_MAX;
   const pct = Math.min(100, dailyGot / DAILY_MAX * 100);
   const [countdown, setCountdown] = useState(msUntilMidnight());
   useEffect(() => { const t = setInterval(() => setCountdown(msUntilMidnight()), 1000); return () => clearInterval(t); }, []);
@@ -931,7 +932,7 @@ function Saishu({ profile, onExit, flash }) {
 
   useEffect(() => { sideRef.current = side; stateRef.current.okBuf = []; }, [side]);
 
-  const serverDaily = dailyGotOf(profile);
+  const serverDaily = SAISHU_TEST_NO_LIMIT ? 0 : dailyGotOf(profile);
   const remaining = Math.max(0, DAILY_MAX - serverDaily);
 
   useEffect(() => {
