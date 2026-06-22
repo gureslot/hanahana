@@ -131,6 +131,11 @@ const ERR_JA = {
   'NOT_EXPLORING': 'このデッキは探索していません',
   'INVALID_DEPTH': '探索の深さが不正です',
   'INVALID_AREA': 'エリア指定が不正です',
+  'EXPLORE_LOCKED': 'この区域はまだ解放されていません（ボスを進めると解放されます）',
+  'EXPLORE_DECK_INCOMPLETE': '編成が3枚揃っていません（この区域は3枚必須です）',
+  'EXPLORE_POWER_LOCKED': '本体戦力の合計が足りません',
+  'EXPLORE_ATTR_LOCKED': '編成3枚を同じ属性で揃えてください',
+  'EXPLORE_STAR_LOCKED': '編成3枚を★2以上で揃えてください',
   // 装備充填（equip_buki）※RPCはrepo外＝タスク記載のコードに対応
   'SP_NO_EQUIP': 'SPは装備できません',
   'QUALITY_LOCKED': 'その質はまだ解放されていません（鍛冶屋）',
@@ -3508,7 +3513,7 @@ const TAN_CSS = `
 .tan-back{position:absolute; z-index:9; left:50%; transform:translateX(-50%); bottom:16px; font-family:inherit; font-size:14px; letter-spacing:1px; color:#fff3c8; background:rgba(18,10,14,.88); border:1.5px solid rgba(232,194,90,.55); border-radius:22px; padding:11px 22px; cursor:pointer;}
 .tan-scrim{position:absolute; inset:0; z-index:7; background:rgba(0,0,0,.4); opacity:0; pointer-events:none; transition:.3s;}
 .tan-scrim.show{opacity:1; pointer-events:auto;}
-.tan-sheet{position:absolute; z-index:8; left:0; right:0; bottom:0; transform:translateY(110%); transition:transform .35s cubic-bezier(.2,.8,.25,1); background:rgba(18,10,14,.88); border-top:1.5px solid rgba(232,194,90,.55); border-left:1.5px solid rgba(232,194,90,.55); border-right:1.5px solid rgba(232,194,90,.55); border-radius:18px 18px 0 0; padding:16px 18px 22px; box-shadow:0 -8px 24px rgba(0,0,0,.6); max-width:480px; margin:0 auto;}
+.tan-sheet{position:absolute; z-index:8; left:0; right:0; bottom:0; transform:translateY(110%); transition:transform .35s cubic-bezier(.2,.8,.25,1); background:rgba(18,10,14,.88); border-top:1.5px solid rgba(232,194,90,.55); border-left:1.5px solid rgba(232,194,90,.55); border-right:1.5px solid rgba(232,194,90,.55); border-radius:18px 18px 0 0; padding:16px 18px 22px; box-shadow:0 -8px 24px rgba(0,0,0,.6); max-width:480px; margin:0 auto; max-height:84vh; overflow-y:auto;}
 .tan-sheet.show{transform:translateY(0);}
 .tan-sheet h3{margin:2px 0 10px; font-size:18px; letter-spacing:2px; text-align:center; text-shadow:0 0 12px rgba(255,180,80,.4); color:#fff3c8;}
 .tan-stat{display:flex; justify-content:space-between; align-items:center; padding:7px 4px; border-bottom:1px dashed rgba(232,194,90,.25); font-size:14px;}
@@ -3538,7 +3543,7 @@ const TAN_CSS = `
 .tan-toast .tt{font-size:14px; letter-spacing:2px; color:#cdb488; margin-bottom:8px;}
 .tan-toast .ti{font-size:15px; margin:3px 0; color:#fff3c8;}
 .tan-toast .ti b{color:#ffe39a; font-weight:800;}
-.tan-col2{position:relative; width:100%; max-width:480px; margin:0 auto; min-height:100dvh; background:#070409; color:#fff3c8; display:flex; flex-direction:column;}
+.tan-col2{position:relative; width:100%; max-width:480px; margin:0 auto; height:100dvh; overflow:hidden; background:#070409; color:#fff3c8; display:flex; flex-direction:column;}
 .tan-hd{flex:none; display:flex; align-items:center; gap:10px; padding:14px 14px 10px;}
 .tan-hd .t{flex:1; text-align:center; font-size:18px; font-weight:800; letter-spacing:2px; text-shadow:0 2px 6px #000;}
 .tan-list{flex:1; overflow-y:auto; padding:2px 12px 84px;}
@@ -3696,7 +3701,21 @@ function TansakuScreen({ profile, refreshAll, back, flash }) {
             <>
               <span className="tan-close" onClick={() => setOpenStep(null)}>×</span>
               <h3>{openStep.name}</h3>
-              <div className="tan-stat"><span className="k">属性要求</span><span className="v attr-none">なし</span></div>
+              {(() => {
+                const a = openStep.area, d = openStep.depth;
+                if (a === 4) {
+                  const need = d === 1 ? 3000 : d === 2 ? 6000 : 9000;
+                  return <div className="tan-stat"><span className="k">必要条件</span><span className="v">本体戦力の合計 {need.toLocaleString()} 以上（武気・★不問／枚数不問）</span></div>;
+                }
+                if (a === 7) {
+                  const attr = d === 1 ? '芯' : d === 2 ? '葉' : '花';
+                  return <div className="tan-stat"><span className="k">必要条件</span><span className="v">編成3枚すべて「{attr}」属性</span></div>;
+                }
+                if (a === 8) {
+                  return <div className="tan-stat"><span className="k">必要条件</span><span className="v">編成3枚すべて★2以上</span></div>;
+                }
+                return <div className="tan-stat"><span className="k">属性要求</span><span className="v attr-none">なし</span></div>;
+              })()}
               <div className="tan-secTitle">時間で蓄積（上限なし・張り付き不要）</div>
               <div className="tan-stat"><span className="k">メダル</span><span className="v">{rate.medal.toFixed(2)} /分</span></div>
               <div className="tan-stat"><span className="k">各カードEXP</span><span className="v">{rate.exp.toFixed(2)} /分</span></div>
