@@ -140,6 +140,7 @@ const ERR_JA = {
   'NOT_MAIN_DECK': 'ボス出撃はメインデッキ（デッキ1）からのみ可能です',
   'CARD_NOT_IN_MAIN_DECK': '武気はメインデッキ（デッキ1）のカードにのみ込められます',
   'INVALID_DECK': 'デッキの指定が不正です',
+  'ALREADY_MAX_LEVEL': '既に最大レベルです',
   // 装備充填（equip_buki）※RPCはrepo外＝タスク記載のコードに対応
   'SP_NO_EQUIP': 'SPは装備できません',
   'QUALITY_LOCKED': 'その質はまだ解放されていません（鍛冶屋）',
@@ -2849,8 +2850,22 @@ function KyokaScreen({ cards, profile, refreshAll, back, flash }) {
     try { await ChikarianAPI.setCardLock(c.id, !c.locked); await refreshAll(); } catch (e) { flash(errMsg(e)); } finally { setBusy(false); }
   }
   async function useBook(c, size, qty = 1) {
-    setBusy(true);
-    try { await ChikarianAPI.useExpBook(c.id, size, qty); await refreshAll(); } catch (e) { flash(errMsg(e)); } finally { setBusy(false); }
+    if (busy) return; setBusy(true);
+    try {
+      const r = await ChikarianAPI.useExpBook(c.id, size, qty);        // 既定＝最大を超えない範囲のみ消費（無駄ゼロ）
+      await refreshAll();
+      if (r && r.would_overshoot) {
+        // 最大Lvまで詰めるには1冊オーバーが必要 → 超過量を示して確認
+        const sz = ({ s: '小', m: '中', l: '大', xl: '特大' })[size] || '';
+        const msg = '最大レベルまで残り ' + r.gap_remaining + ' EXP。' + sz + '本を1冊使うと EXP ' + r.overshoot_waste
+                  + ' が超過し、返却されません。最大まで詰めますか？';
+        if (window.confirm(msg)) {
+          await ChikarianAPI.useExpBook(c.id, size, 1, true);          // 超過許可で最大へ（1冊）
+          await refreshAll();
+        }
+      }
+    } catch (e) { flash(errMsg(e)); }
+    finally { setBusy(false); }
   }
   const actions = (c) => {
     const isSp = c.card_key.endsWith('_sp');

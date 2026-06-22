@@ -112,7 +112,7 @@
   const swapMainDeck    = (otherDeckNo)                    => rpc('swap_main_deck',    { p_other_deck_no: otherDeckNo }); // 0067: デッキ1↔対象を入れ替えてメイン昇格
   const startTansaku    = (deckNo, area, depth)            => rpc('start_tansaku',     { p_deck_no: deckNo, p_area: area, p_depth: depth });          // depth: 'shallow'|'mid'|'deep'
   const collectTansaku  = (deckNo)                         => rpc('collect_tansaku',   { p_deck_no: deckNo });
-  const useExpBook      = (cardId, size, count = 1)        => rpc('use_exp_book',      { p_card_id: cardId, p_size: size, p_count: count });          // size: 's'|'m'|'l'|'xl'
+  const useExpBook      = (cardId, size, count = 1, allowOvershoot = false) => rpc('use_exp_book', { p_card_id: cardId, p_size: size, p_count: count, p_allow_overshoot: allowOvershoot }); // size: 's'|'m'|'l'|'xl' / 0069: allowOvershoot で最大到達(超過1冊)
   const doCardExchange  = (cardId)                         => rpc('do_card_exchange',  { p_card_id: cardId });
   const doCardExchangeBulk = (cardIds)                     => rpc('do_card_exchange_bulk', { p_card_ids: cardIds }); // 0052: 一括交換
   const claimMission    = (missionKey)                     => rpc('claim_mission',     { p_mission_key: missionKey });
