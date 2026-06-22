@@ -423,12 +423,13 @@ let lastT=performance.now(), nowT=0;
 function loop(t){
   const dt=Math.min(.05,(t-lastT)/1000); lastT=t; nowT+=dt;
   if(glOK){
-    const breath=Math.sin(nowT*1.4);
-    // ゆっくりした待機モーション（生きてる感じ）
-    const idleSway = Math.sin(nowT*0.55) + Math.sin(nowT*0.23+1.1)*0.45;  // 全身の左右ゆれ
-    const idleBob  = Math.sin(nowT*0.70+0.5);                             // 微かな上下
-    const hairDrift= Math.sin(nowT*0.55+0.6);                             // 髪・上半身の遅れた揺れ
-    const ang=idleSway*0.018;                                             // 足元支点の傾き
+    // 待機モーション（生きてる感じ）はホームだけ。育成は止めて、揺れ領域(rig)だけ見せる
+    const onHome = (screenName!=='train');
+    const breath   = onHome ? Math.sin(nowT*1.4) : 0;
+    const idleSway = onHome ? (Math.sin(nowT*0.55) + Math.sin(nowT*0.23+1.1)*0.45) : 0;  // 全身の左右ゆれ
+    const idleBob  = onHome ? Math.sin(nowT*0.70+0.5) : 0;                                // 微かな上下
+    const hairDrift= onHome ? Math.sin(nowT*0.55+0.6) : 0;                                // 髪・上半身の遅れた揺れ
+    const ang=idleSway*0.018;                                                             // 足元支点の傾き（育成では0）
     const ca=Math.cos(ang), sa=Math.sin(ang);
     dip.update(0); RIG_POINTS.forEach(p=>{ p.sV.update(0); p.sH.update(0); });
     for(let k=0;k<NV;k++){
@@ -446,7 +447,7 @@ function loop(t){
       }
       const tw=Math.pow(Math.max(0,(vv-.40)/.60),1.4);  // 上ほど揺れる
       x += hairDrift*0.022*tw;
-      y += dip.v*.004 + idleBob*0.004;                  // 全体の小さな上下
+      y += (onHome?dip.v*.004:0) + idleBob*0.004;       // 全体の小さな上下（育成では0）
       let ry=y+1, nx=x*ca-ry*sa, ny=x*sa+ry*ca; x=nx; y=-1+ny;  // 足元支点で僅かに傾ける
       posArr[k*2]=clamp(x,-1.7,1.7); posArr[k*2+1]=clamp(y,-1.7,1.7);
     }
@@ -551,7 +552,6 @@ function wipeSave(){
 }
 
 /* ───────── 起動 ───────── */
-chikariCv.addEventListener('pointerdown', ()=>pulse(1.2));   // 立ち絵をつつく（EXPなし）
 window.addEventListener('resize', resizeChikari);
 (function boot(){
   glOK=initGL();
