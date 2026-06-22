@@ -3551,6 +3551,10 @@ const TAN_CSS = `
 .tan-stepRow.locked .tan-stepName{color:#9a8c70;}
 .tan-stepRate{font-size:11px; color:#e7d3a6; text-align:right; white-space:nowrap;}
 .tan-stepLock{font-size:11px; color:#9a8c70; white-space:nowrap;}
+.tan-busyChip{font-size:11px; color:#cfeeff; background:rgba(120,200,255,.12); border:1px solid rgba(150,210,255,.55); border-radius:12px; padding:5px 10px; cursor:pointer; white-space:nowrap;}
+.tan-areaBar{flex:none; display:flex; align-items:center; gap:10px; padding:2px 12px 8px;}
+.tan-areaBtn{font-family:inherit; font-size:18px; color:#fff3c8; background:rgba(18,10,14,.88); border:1.5px solid rgba(232,194,90,.55); border-radius:12px; padding:4px 14px; cursor:pointer;}
+.tan-areaBtn:disabled{opacity:.35; cursor:default;}
 `;
 // ノード座標＝mockup の検出座標。depth キー（shallow/mid/deep）に対応（本番の深さ3種＝3ノード）。
 const TAN_NODES = {
@@ -3565,6 +3569,7 @@ function TansakuScreen({ profile, refreshAll, back, flash }) {
   const [states, setStates] = useState(null);
   const [decks, setDecks] = useState([]);
   const [deckNo, setDeckNo] = useState(1);
+  const [area, setArea] = useState(1); // 表示中の面 1..8
   const [openStep, setOpenStep] = useState(null);
   const [busy, setBusy] = useState(false);
   const [now, setNow] = useState(Date.now());
@@ -3599,29 +3604,49 @@ function TansakuScreen({ profile, refreshAll, back, flash }) {
         <div className="t">探索</div>
         <div className="tan-res">メダル <b>{((profile && profile.medal) || 0).toLocaleString()}</b></div>
       </div>
-      <div className="tan-list">
-        {[1, 2, 3, 4, 5, 6, 7, 8].map(area => (
-          <div key={area} className="tan-faceGroup">
-            <div className="tan-faceHd">面{area} ・ {WORLD_NAMES[area]}</div>
-            {[1, 2, 3].map(depth => {
-              const step = (area - 1) * 3 + depth;
-              const unlocked = gate >= step - 1;
-              const owner = stepOwner[step];
-              const di = depthInfo(depth);
-              const rate = ladderRate(step, round);
-              return (
-                <div key={depth}
-                  className={'tan-stepRow' + (unlocked ? '' : ' locked') + (owner ? ' busy' : '')}
-                  onClick={unlocked ? () => { if (owner) setDeckNo(owner.deck_no); setOpenStep({ area, depth, step, name: '面' + area + ' ' + di.label }); } : undefined}>
-                  <div className="tan-stepName">{di.label}{owner ? '（デッキ' + owner.deck_no + '探索中）' : ''}</div>
-                  {unlocked
-                    ? <div className="tan-stepRate">メダル {rate.medal.toFixed(2)} ・ EXP {rate.exp.toFixed(2)} /分</div>
-                    : <div className="tan-stepLock">🔒 ボス進行で解放</div>}
-                </div>
-              );
-            })}
-          </div>
-        ))}
+      {/* 面切替バー */}
+      <div className="tan-areaBar">
+        <button className="tan-areaBtn" onClick={() => setArea(a => Math.max(1, a - 1))} disabled={area <= 1}>◀</button>
+        <div className="tan-area">面{area} ・ {WORLD_NAMES[area]}</div>
+        <button className="tan-areaBtn" onClick={() => setArea(a => Math.min(8, a + 1))} disabled={area >= 8}>▶</button>
+      </div>
+
+      {/* 探索中チップ列（他面の回収導線） */}
+      {states.length > 0 && (
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', padding: '0 12px 8px' }}>
+          {states.map(s => {
+            const di = depthInfo(s.depth); if (!di) return null;
+            const sa = s.area || 1;
+            return (
+              <div key={s.deck_no} className="tan-busyChip"
+                onClick={() => { setArea(sa); setDeckNo(s.deck_no); setOpenStep({ area: sa, depth: s.depth, step: (sa - 1) * 3 + di.n, name: '面' + sa + ' ' + di.label }); }}>
+                デッキ{s.deck_no} ・ 面{sa}{di.label}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* 地図本体（ボス画面と同じ作り） */}
+      <div className="tan-mapWrap" style={{ backgroundImage: `url(./images/tansaku_map_${area}.png)` }}>
+        <div className="tan-mapDim" />
+        {[1, 2, 3].map(depth => {
+          const key = DEPTH_KEY[depth];
+          const pos = TAN_NODES[key];
+          const di = depthInfo(depth);
+          const step = (area - 1) * 3 + depth;
+          const unlocked = gate >= step - 1;
+          const owner = stepOwner[step];
+          const cls = 'tan-node' + (unlocked ? '' : ' locked') + (owner ? ' busy' : '');
+          return (
+            <div key={depth} className={cls}
+              style={{ left: pos.left, top: pos.top }}
+              onClick={unlocked ? () => { if (owner) setDeckNo(owner.deck_no); setOpenStep({ area, depth, step, name: '面' + area + ' ' + di.label }); } : undefined}>
+              <div className="tan-dot" />
+              <div className="tan-lbl">{di.label}{owner ? '（デッキ' + owner.deck_no + '）' : ''}{!unlocked ? ' 🔒' : ''}</div>
+            </div>
+          );
+        })}
       </div>
 
       <div className={'tan-scrim' + (openStep ? ' show' : '')} onClick={() => setOpenStep(null)} />
