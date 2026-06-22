@@ -1886,12 +1886,16 @@ const cpS = {
   actOff: { opacity: .4, cursor: 'default' },
 };
 
-function CardPicker({ title, cards, getStatus, chooseLabel, onChoose, onClear, actions, back, busy, flash, backLabel = '‹ 戻る', backCenter = false, books = null, onUseBook = null }) {
+// CardPicker のソートをセッション中保持（開き直しでリセットしない）。既定＝レア→レベル(★優先)。
+const _pickerSort = { f1: 'rarity', d1: 'desc', f2: 'lv', d2: 'desc' };
+function CardPicker({ title, cards, getStatus, chooseLabel, onChoose, onClear, actions, back, busy, flash, backLabel = '‹ 戻る', backCenter = false, books = null, onUseBook = null, deckOf = null }) {
   const [sel, setSel] = useState(null);
   const [facet, setFacet] = useState('attr');
   const [fval, setFval] = useState('all');
-  const [sortField, setSortField] = useState('body');
-  const [sortDir, setSortDir] = useState('desc');
+  const [sort1, setSort1] = useState(() => _pickerSort.f1);
+  const [dir1, setDir1]   = useState(() => _pickerSort.d1);
+  const [sort2, setSort2] = useState(() => _pickerSort.f2);
+  const [dir2, setDir2]   = useState(() => _pickerSort.d2);
   const [skillMap, setSkillMap] = useState({});
   const [selSkills, setSelSkills] = useState(null);
   const [expOpen, setExpOpen] = useState(false);
@@ -1910,23 +1914,42 @@ function CardPicker({ title, cards, getStatus, chooseLabel, onChoose, onClear, a
   const rawWeap = k => k.endsWith('_sp') ? null : k.split('_')[3];
   const rawSpec = k => k.endsWith('_sp') ? 'sp' : k.split('_')[1];
   const RAR_ORD = { n: 0, r: 1, sr: 2, ssr: 3, sp: 4 };
+  const _deckNos = deckOf ? Array.from(new Set(Object.values(deckOf).filter(Boolean))).sort((a, b) => a - b) : [];
   const FACETS = {
     attr: { label: '属性', vals: [['hana', '花'], ['shin', '芯'], ['ha', '葉'], ['sp', 'SP']] },
     weap: { label: '武器', vals: [['ken', '剣'], ['tate', '盾'], ['tsue', '杖']] },
     rarity: { label: 'レア', vals: [['n', 'N'], ['r', 'R'], ['sr', 'SR'], ['ssr', 'SSR'], ['sp', 'SP']] },
     species: { label: '種族', vals: [['hibiscus', 'ハイビスカス'], ['meshibe', 'めしべ'], ['sp', 'SP']] },
+    deck: { label: 'デッキ', vals: _deckNos.map(n => [String(n), 'デッキ' + n]).concat([['none', '未編成']]) },
   };
-  const FACET_ORDER = ['attr', 'weap', 'rarity', 'species'];
-  const matchFacet = k => fval === 'all' ? true : facet === 'attr' ? rawAttr(k) === fval : facet === 'weap' ? rawWeap(k) === fval : facet === 'rarity' ? rawRar(k) === fval : rawSpec(k) === fval;
-  const items = (cards || []).filter(c => matchFacet(c.card_key));
+  const FACET_ORDER = ['attr', 'weap', 'rarity', 'species'].concat(deckOf ? ['deck'] : []);
+  const matchFacet = c => {
+    if (fval === 'all') return true;
+    const k = c.card_key;
+    if (facet === 'attr') return rawAttr(k) === fval;
+    if (facet === 'weap') return rawWeap(k) === fval;
+    if (facet === 'rarity') return rawRar(k) === fval;
+    if (facet === 'species') return rawSpec(k) === fval;
+    if (facet === 'deck') return fval === 'none' ? !(deckOf && deckOf[c.id]) : String(deckOf && deckOf[c.id]) === fval;
+    return true;
+  };
+  const items = (cards || []).filter(matchFacet);
   const bodyOf = c => computeStats(c).body;
-  const sval = c => sortField === 'rarity' ? (RAR_ORD[rawRar(c.card_key)] || 0) : sortField === 'lv' ? (c.lv || 1) : bodyOf(c);
-  const dir = sortDir === 'asc' ? 1 : -1;
-  items.sort((a, b) => (sval(a) - sval(b)) * dir || ((RAR_ORD[rawRar(b.card_key)] || 0) - (RAR_ORD[rawRar(a.card_key)] || 0)) || a.card_key.localeCompare(b.card_key));
+  // フィールド別の比較。レベルは★優先→Lv（desc なら ★1Lv1 が ★0LvMAX より上）。
+  const fieldCmp = (field) => field === 'lv'
+    ? (a, b) => ((a.star || 0) - (b.star || 0)) || ((a.lv || 1) - (b.lv || 1))
+    : field === 'rarity'
+      ? (a, b) => (RAR_ORD[rawRar(a.card_key)] || 0) - (RAR_ORD[rawRar(b.card_key)] || 0)
+      : (a, b) => bodyOf(a) - bodyOf(b);
+  const _s1 = dir1 === 'asc' ? 1 : -1, _s2 = dir2 === 'asc' ? 1 : -1;
+  const _c1 = fieldCmp(sort1), _c2 = sort2 === 'none' ? null : fieldCmp(sort2);
+  items.sort((a, b) => (_c1(a, b) * _s1) || (_c2 ? _c2(a, b) * _s2 : 0) || a.card_key.localeCompare(b.card_key));
 
   const SORTS = [['body', '本体戦闘力'], ['lv', 'レベル'], ['rarity', 'レア']];
-  const arrow = f => sortField === f ? (sortDir === 'asc' ? ' ▲' : ' ▼') : '';
-  const onSort = k => { if (sortField === k) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortField(k); setSortDir('desc'); } };
+  const cycle1 = (f) => { if (sort1 === f) { const d = dir1 === 'asc' ? 'desc' : 'asc'; setDir1(d); _pickerSort.d1 = d; } else { setSort1(f); setDir1('desc'); _pickerSort.f1 = f; _pickerSort.d1 = 'desc'; } };
+  const cycle2 = (f) => { if (f === 'none') { setSort2('none'); _pickerSort.f2 = 'none'; return; } if (sort2 === f) { const d = dir2 === 'asc' ? 'desc' : 'asc'; setDir2(d); _pickerSort.d2 = d; } else { setSort2(f); setDir2('desc'); _pickerSort.f2 = f; _pickerSort.d2 = 'desc'; } };
+  const arr1 = f => sort1 === f ? (dir1 === 'asc' ? ' ▲' : ' ▼') : '';
+  const arr2 = f => sort2 === f ? (dir2 === 'asc' ? ' ▲' : ' ▼') : '';
 
   const selCard = sel != null ? cardById[sel] : null;
   const selStatus = selCard ? getStatus(selCard) : null;
@@ -1950,8 +1973,13 @@ function CardPicker({ title, cards, getStatus, chooseLabel, onChoose, onClear, a
           {FACETS[facet].vals.map(([k, l]) => <button key={k} onClick={() => setFval(k)} style={{ ...cpS.chip, ...(fval === k ? cpS.chipSel : {}) }}>{l}</button>)}
         </div>
         <div style={cpS.facetRow}>
-          <span style={cpS.sortLab}>並び替え</span>
-          {SORTS.map(([k, l]) => <button key={k} onClick={() => onSort(k)} style={{ ...cpS.chip, ...(sortField === k ? cpS.chipSel : {}) }}>{l}{arrow(k)}</button>)}
+          <span style={cpS.sortLab}>第1</span>
+          {SORTS.map(([k, l]) => <button key={k} onClick={() => cycle1(k)} style={{ ...cpS.chip, ...(sort1 === k ? cpS.chipSel : {}) }}>{l}{arr1(k)}</button>)}
+        </div>
+        <div style={cpS.facetRow}>
+          <span style={cpS.sortLab}>第2</span>
+          <button onClick={() => cycle2('none')} style={{ ...cpS.chip, ...(sort2 === 'none' ? cpS.chipSel : {}) }}>なし</button>
+          {SORTS.map(([k, l]) => <button key={k} onClick={() => cycle2(k)} style={{ ...cpS.chip, ...(sort2 === k ? cpS.chipSel : {}) }}>{l}{arr2(k)}</button>)}
         </div>
         <div style={cpS.split}>
           <div style={cpS.left}>
@@ -1964,6 +1992,7 @@ function CardPicker({ title, cards, getStatus, chooseLabel, onChoose, onClear, a
                       <div style={cpS.liArt}><DeckSlotArt cardKey={c.card_key} /></div>
                       <div style={cpS.liInfo}>
                         <span style={cpS.liLv}>Lv{c.lv || 1}{(c.star || 0) > 0 ? ' ★' + (c.star || 0) : ''}</span>
+                        {deckOf && deckOf[c.id] ? <span style={{ fontSize: 9, fontWeight: 700, color: '#1a0f06', background: 'linear-gradient(180deg,#ffe49a,#e8b54d)', borderRadius: 6, padding: '1px 5px' }}>デッキ{deckOf[c.id]}</span> : null}
                         {st.tag && <span style={cpS.liTag}>{st.tag}</span>}
                       </div>
                     </button>
@@ -1979,6 +2008,7 @@ function CardPicker({ title, cards, getStatus, chooseLabel, onChoose, onClear, a
                     <div style={cpS.dName}>{RAR_LABEL[selInfo.rarity]} {selInfo.name}</div>
                     <div style={cpS.dRow}><span>レベル</span><span style={cpS.dv}>Lv {selCard.lv || 1} / 上限 {selStats.cap}</span></div>
                     <div style={cpS.dRow}><span>強化値</span><span style={cpS.dv}>★{selCard.star || 0}</span></div>
+                    {deckOf ? <div style={cpS.dRow}><span>所属</span><span style={cpS.dv}>{deckOf[selCard.id] ? 'デッキ' + deckOf[selCard.id] : '未編成'}</span></div> : null}
                     <div style={cpS.dRow}><span>本体戦闘力</span><span style={cpS.dv}>{selStats.body.toLocaleString()}</span></div>
                     {!selStats.isSp && <div style={cpS.dRow}><span>充填（武気）</span><span style={cpS.dv}>{(selCard.loaded_buki || 0)} / {selCap} 枠</span></div>}
                     <div style={{ ...cpS.dRow, borderBottom: 'none' }}><span>コスト</span><span style={cpS.dv}>{COST_BY_RAR[selInfo.rarity] || 0}</span></div>
@@ -2874,6 +2904,8 @@ function KyokaScreen({ cards, profile, refreshAll, back, flash }) {
   const [busy, setBusy] = useState(false);
   const cardById = {}; (cards || []).forEach(c => { cardById[c.id] = c; });
   useEffect(() => { (async () => { try { const sm = await ChikarianAPI.getSkillMaster(); const m = {}; (sm || []).forEach(s => { m[s.skill_key] = s; }); setSkillMap(m); } catch (e) {} })(); }, []);
+  const [decks, setDecks] = useState([]);
+  useEffect(() => { (async () => { try { setDecks(await ChikarianAPI.getDecks() || []); } catch (e) {} })(); }, []);
   // 強化合成＝カードを選ぶ→右パネルの操作ボタン（★強化／スキル強化・転移／ロック）を直接実行。中間のカード詳細ページは廃止。
   const cur = card ? cardById[card.id] : null;
   if (mode === 'kyoka' && cur) return <KyokaView base={cur} cards={cards} profile={profile} refreshAll={refreshAll} onBack={() => setMode(null)} flash={flash} />;
@@ -2914,7 +2946,8 @@ function KyokaScreen({ cards, profile, refreshAll, back, flash }) {
       { label: c.locked ? '🔒 ロック解除' : '🔓 ロックする', tone: 'lock', disabled: busy || !LOCK_RPC_AVAILABLE, onClick: () => toggleLock(c) },
     ];
   };
-  return <CardPicker title="強化するカードを選ぶ" cards={cards} getStatus={getStatus} actions={actions} back={back} busy={busy} flash={flash} backLabel="ホームへ戻る" backCenter={true} books={{ s: (profile && profile.exp_book_s) || 0, m: (profile && profile.exp_book_m) || 0, l: (profile && profile.exp_book_l) || 0, xl: (profile && profile.exp_book_xl) || 0 }} onUseBook={useBook} />;
+  const deckOf = {}; (decks || []).forEach(d => { [d.slot1_card_id, d.slot2_card_id, d.slot3_card_id].forEach(id => { if (id) deckOf[id] = d.deck_no; }); });
+  return <CardPicker title="強化するカードを選ぶ" cards={cards} getStatus={getStatus} actions={actions} back={back} busy={busy} flash={flash} backLabel="ホームへ戻る" backCenter={true} books={{ s: (profile && profile.exp_book_s) || 0, m: (profile && profile.exp_book_m) || 0, l: (profile && profile.exp_book_l) || 0, xl: (profile && profile.exp_book_xl) || 0 }} onUseBook={useBook} deckOf={deckOf} />;
 }
 
 function KyokaView({ base, cards, profile, refreshAll, onBack, flash }) {
