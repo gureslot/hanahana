@@ -33,3 +33,6 @@ Chikarian/*-patch-*.md
 Chikarian/auth-test-v2.html
 Chikarian/chikarian-dev.html
 Chikarian/dev/
+# Chikarian配下の.mdは全て設計/作業資料＝GitHubに上げない（配信に不要）
+Chikarian/*.md
+Chikarian/**/*.md
