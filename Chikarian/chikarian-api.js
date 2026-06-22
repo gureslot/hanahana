@@ -109,6 +109,7 @@
   const placeKajiyaOrder= (quality)                        => rpc('place_kajiya_order',{ p_quality: quality });   // 'refined'|'enchanted'|'holy'
   const claimKajiya     = (orderId)                        => rpc('claim_kajiya',      { p_order_id: orderId });
   const equipBuki       = (cardId, quality, amount)        => rpc('equip_buki',        { p_card_id: cardId, p_quality: quality, p_amount: amount }); // quality: crude|refined|enchanted|holy, amount=枠数
+  const swapMainDeck    = (otherDeckNo)                    => rpc('swap_main_deck',    { p_other_deck_no: otherDeckNo }); // 0067: デッキ1↔対象を入れ替えてメイン昇格
   const startTansaku    = (deckNo, area, depth)            => rpc('start_tansaku',     { p_deck_no: deckNo, p_area: area, p_depth: depth });          // depth: 'shallow'|'mid'|'deep'
   const collectTansaku  = (deckNo)                         => rpc('collect_tansaku',   { p_deck_no: deckNo });
   const useExpBook      = (cardId, size, count = 1)        => rpc('use_exp_book',      { p_card_id: cardId, p_size: size, p_count: count });          // size: 's'|'m'|'l'|'xl'
@@ -131,7 +132,7 @@
     // writes (0012-0021)
     doKyoka, doSkillTeni, doSkillRensei,
     investRenkiden, collectRenkiden, instantRenkiden, upgradeRenkiden,
-    placeKajiyaOrder, claimKajiya, equipBuki,
+    placeKajiyaOrder, claimKajiya, equipBuki, swapMainDeck,
     startTansaku, collectTansaku, useExpBook, doCardExchange, doCardExchangeBulk, claimMission,
     // writes (0023)
     setCardLock

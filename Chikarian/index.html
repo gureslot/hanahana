@@ -137,6 +137,9 @@ const ERR_JA = {
   'EXPLORE_ATTR_LOCKED': '編成3枚を同じ属性で揃えてください',
   'EXPLORE_STAR_LOCKED': '編成3枚を★2以上で揃えてください',
   'CARD_IN_TANSAKU': 'このカードは別のデッキで探索に出ています',
+  'NOT_MAIN_DECK': 'ボス出撃はメインデッキ（デッキ1）からのみ可能です',
+  'CARD_NOT_IN_MAIN_DECK': '武気はメインデッキ（デッキ1）のカードにのみ込められます',
+  'INVALID_DECK': 'デッキの指定が不正です',
   // 装備充填（equip_buki）※RPCはrepo外＝タスク記載のコードに対応
   'SP_NO_EQUIP': 'SPは装備できません',
   'QUALITY_LOCKED': 'その質はまだ解放されていません（鍛冶屋）',
@@ -2047,6 +2050,7 @@ function DeckScreen({ profile, cards, refreshAll, back, flash, initialDeckNo }) 
   const [recallConfirm, setRecallConfirm] = useState(null); // {kind:'boss'|'tansaku', deckNo} 帰還/回収の確認
   const [bukiEdit, setBukiEdit] = useState(null);   // 武気充填モーダル対象 card_id
   const [bukiBusy, setBukiBusy] = useState(false);
+  const [swapBusy, setSwapBusy] = useState(false);  // メインデッキ入れ替え中（0067）
   const [pool, setPool] = useState(null);           // renkiden 武気プール
   const [kajiyaLv, setKajiyaLv] = useState(1);       // 装備の質アンロック上限
   const [pickSel, setPickSel] = useState(null);      // ④ カード選択パネルで選択中の card_id
@@ -2102,6 +2106,13 @@ function DeckScreen({ profile, cards, refreshAll, back, flash, initialDeckNo }) 
     if (busy) return; setBusy(true);
     try { await ChikarianAPI.collectTansaku(deckNo); await loadDecks(); await refreshAll(); flash('回収しました'); }
     catch (e) { flash(errMsg(e)); } finally { setBusy(false); }
+  }
+  // メインデッキと入れ替える（canon-06 §4-1）。デッキ1↔現デッキの中身を入れ替え＝サーバ swap_main_deck。
+  async function swapMain() {
+    if (busy || bukiBusy || swapBusy) return; setSwapBusy(true);
+    try { await ChikarianAPI.swapMainDeck(deckNo); await loadDecks(); await refreshAll(); flash('デッキ' + deckNo + ' をメインデッキ（デッキ1）にしました'); setDeckNo(1); }
+    catch (e) { flash(errMsg(e)); }
+    finally { setSwapBusy(false); }
   }
 
   async function loadPool() { try { const r = normalizeRk(await ChikarianAPI.getRenkiden()); setPool(r ? r.buki : 0); } catch (e) {} }
@@ -2181,6 +2192,16 @@ function DeckScreen({ profile, cards, refreshAll, back, flash, initialDeckNo }) 
           })}
         </div>
 
+        {/* メインデッキ（デッキ1）表示／入れ替え（canon-06 §4-1・0067） */}
+        {!deckSortie && (deckNo === 1
+          ? <div style={{ textAlign: 'center', fontSize: 11, fontWeight: 800, color: '#ffe39a', margin: '4px 0 0' }}>★ メインデッキ（武気を込めてボス出撃するデッキ）</div>
+          : <div style={{ textAlign: 'center', margin: '6px 0 0' }}>
+              <button disabled={busy || bukiBusy || swapBusy} onClick={swapMain}
+                style={{ fontFamily: 'inherit', fontSize: 12, fontWeight: 800, color: '#1a1014', background: 'linear-gradient(180deg,#ffe39a,#e8b54d)', border: '1px solid rgba(232,194,90,.6)', borderRadius: 10, padding: '6px 14px', cursor: (busy || bukiBusy || swapBusy) ? 'default' : 'pointer', opacity: (busy || bukiBusy || swapBusy) ? .5 : 1 }}>
+                {swapBusy ? '入れ替え中…' : '★ メインデッキと入れ替える'}
+              </button>
+            </div>)}
+
         {/* 出撃/探索中バナー（編集ロック＝枠タップで picking を開かない・解除ボタン付き） */}
         {deckSortie && (
           <div style={deckS.sortieBanner}>
@@ -2192,8 +2213,9 @@ function DeckScreen({ profile, cards, refreshAll, back, flash, initialDeckNo }) 
           </div>
         )}
 
-        {/* デッキ単位の武気一括（最大充填 / 空にする）＋プール残 */}
-        {!deckSortie && <div style={bukiS.deckBtns}>
+        {/* デッキ単位の武気一括（最大充填 / 空にする）＋プール残＝メインデッキ(デッキ1)のみ */}
+        {!deckSortie && deckNo !== 1 && <div style={{ textAlign: 'center', fontSize: 11, color: '#cdb488', margin: '6px 0' }}>武気はメインデッキ（デッキ1）でのみ込められます。このデッキで武気を使うには「メインデッキと入れ替える」。</div>}
+        {!deckSortie && deckNo === 1 && <div style={bukiS.deckBtns}>
           <button disabled={bukiBusy || busy} onClick={() => fillDeck(false)} style={{ ...bukiS.fillBtn, ...((bukiBusy || busy) ? bukiS.off : {}) }}>{bukiBusy ? '処理中…' : '⚡ 最大充填'}</button>
           <button disabled={bukiBusy || busy} onClick={() => fillDeck(true)} style={{ ...bukiS.emptyBtn, ...((bukiBusy || busy) ? bukiS.off : {}) }}>武気を空にする</button>
           {pool != null && <span style={bukiS.poolTag}>プール {pool.toLocaleString()}</span>}
@@ -2220,7 +2242,7 @@ function DeckScreen({ profile, cards, refreshAll, back, flash, initialDeckNo }) 
         </div>
 
         {/* 各カードの充填ゲージ（タップで微調整モーダル）。SP は武気なし */}
-        {!deckSortie && <div style={bukiS.row}>
+        {!deckSortie && deckNo === 1 && <div style={bukiS.row}>
           {[0, 1, 2].map(slot => {
             const id = curSlots[slot]; const c = id ? cardById[id] : null;
             if (!c) return <div key={slot} style={bukiS.cell} />;
@@ -2501,7 +2523,12 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
 
   // 出撃（戦闘はまだ起きない・回数消費＋デッキ占有）。bossKey は従来形式。
   async function startSortie(role) {
-    if (busy) return; setBusy(true);
+    if (busy) return;
+    // 武気満タン確認（canon-06 §4-1）：メインデッキ(デッキ1)の非SPカードが満タンでなければ確認
+    const mem = deckMembers(1).filter(c => c && !/_sp$/.test(c.card_key || ''));
+    const notFull = mem.some(c => (c.loaded_buki || 0) < bukiCapacity(c));
+    if (notFull && !window.confirm('メインデッキの武気が満タンではありません。このまま出撃しますか？')) return;
+    setBusy(true);
     try { await ChikarianAPI.startBossBattle(deckNo, 'boss_' + stage + '_' + role); setOpenNode(null); await refetchSorties(); await onRefresh(); flash('出撃しました'); }
     catch (e) { flash(errMsg(e)); }
     finally { setBusy(false); }
@@ -2519,7 +2546,7 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
   const curStage = BOSS_STAGES[stage - 1];                              // 表示中の面（名前/界/ボス画像の正）
   const closeSheet = () => setOpenNode(null);
   const busyDecks = new Set(sorties.map(s => s.deck_no));               // 出撃中デッキ
-  function openSheet(i) { setOpenNode(i); const free = Array.from({ length: maxDecks }, (_, k) => k + 1).find(n => deckLock(n) === null && deckUsable(n) > 0); if (free) setDeckNo(free); }
+  function openSheet(i) { setOpenNode(i); setDeckNo(1); }   // メインデッキ(デッキ1)固定（canon-06 §4-1）
 
   // デッキ内容（CardThumb＋名前）と総合戦力（computeStats の総合の和）
   const cardById = {}; (cards || []).forEach(c => { cardById[c.id] = c; });
@@ -2672,9 +2699,9 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
                 : <div className="boss-stat"><span className="k">敵情報</span><span className="v" style={{ color: '#ff6a7a' }}>boss_master にデータがありません</span></div>}
               <div className="boss-note">出撃すると約30分（テスト中30秒）デッキが出払う。帰還で自動解放＝結果は戦闘報告書へ。三すくみ 有利×1.2／不利×0.8。勝敗・損失・報酬はサーバ判定。</div>
 
-              <div className="boss-secTitle">出撃するデッキ</div>
+              <div className="boss-secTitle">メインデッキ（デッキ1）</div>
               <div className="boss-decks2">
-                {Array.from({ length: maxDecks }, (_, k) => k + 1).map(n => {
+                {[1].map(n => {
                   const lock = deckLock(n); const blocked = lock !== null; const members = deckMembers(n);
                   const topRight = lock === 'boss' ? '出撃中' : (lock === 'tansaku' ? '探索中' : '総合 ' + deckTotal(n).toLocaleString());
                   return (
@@ -2687,6 +2714,7 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
                         {members.map((c, si) => c
                           ? <div key={si} className="boss-deck2Card" style={{ position: 'relative', cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); setDetailCard(c); }}>
                               <div style={spSet[c.id] ? { opacity: .35, filter: 'grayscale(1)' } : undefined}><CardThumb card={c} small /></div>
+                              <div onClick={(e) => { e.stopPropagation(); setDetailCard(c); }} style={{ position: 'absolute', left: 4, bottom: 4, width: 20, height: 20, borderRadius: '50%', background: 'rgba(10,6,9,.82)', border: '1px solid rgba(232,194,90,.5)', color: '#fff3c8', fontSize: 12, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 3 }}>ⓘ</div>
                               {(() => {
                                 if (/_sp$/.test(c.card_key || '') || !bm) return null;
                                 const p = (c.card_key || '').split('_');
