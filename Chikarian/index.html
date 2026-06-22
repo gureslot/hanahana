@@ -371,7 +371,7 @@ function App() {
   else {
     if (screen === 'home') body = <Home profile={profile} go={setScreen} flash={flash} onRefresh={refreshAll} />;
     else if (screen === 'saishu') body = <Saishu profile={profile} onExit={async () => { await refreshProfile(); setScreen('home'); }} flash={flash} />;
-    else if (screen === 'gacha') body = <Gacha profile={profile} onRefresh={refreshAll} back={() => setScreen('home')} flash={flash} />;
+    else if (screen === 'gacha') body = <Gacha profile={profile} cards={cards} onRefresh={refreshAll} back={() => setScreen('home')} flash={flash} />;
     else if (screen === 'zukan') body = <ZukanScreen cards={cards} profile={profile} refreshAll={refreshAll} back={() => setScreen('home')} flash={flash} />;
     else if (screen === 'deck') body = <DeckScreen profile={profile} cards={cards} refreshAll={refreshAll} back={() => setScreen('home')} flash={flash} />;
     else if (screen === 'boss') body = <BossScreen profile={profile} cards={cards} onRefresh={refreshAll} back={() => setScreen('home')} flash={flash} />;
@@ -1281,12 +1281,14 @@ const gachaS = {
   bg: { position: 'absolute', inset: 0, backgroundImage: "url('./images/gacha-bg.png'), radial-gradient(120% 90% at 50% 18%, #5a1f3a 0%, #2a1024 38%, #140913 68%, #090509 100%)", backgroundSize: 'cover, cover', backgroundPosition: 'center, center', backgroundRepeat: 'no-repeat, no-repeat', backgroundColor: '#070409' },
   vignette: { position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(70% 50% at 50% 38%, rgba(255,180,90,.16), transparent 60%), linear-gradient(180deg, rgba(0,0,0,.5), rgba(0,0,0,.15) 30%, rgba(0,0,0,.6))' },
 };
-function Gacha({ profile, onRefresh, back, flash }) {
+function Gacha({ profile, cards, onRefresh, back, flash }) {
   const [drawing, setDrawing] = useState(false);
   const [results, setResults] = useState(null);   // [{id, card_key, rarity, skill_key}]
   const [flipped, setFlipped] = useState([]);
   const [skillMap, setSkillMap] = useState({});
   const chikarium = profile ? (profile.chikarium || 0) : 0;
+  const cardCount = (cards || []).length;
+  const cardCap = Math.min(200 + 100 * ((profile && profile.cleared_stage) || 0), 1000);   // 所持枠＝サーバ0029と同式
 
   useEffect(() => {
     (async () => {
@@ -1325,8 +1327,7 @@ function Gacha({ profile, onRefresh, back, flash }) {
           <div style={S.resCol}><div style={S.resLabel}>所持チカリウム</div><div style={S.resVal}>{chikarium.toLocaleString()}</div></div>
         </div>
         <div style={{ fontSize: 11, color: '#cdb488', letterSpacing: 1, marginTop: 6 }}>1回 {GACHA_COST} チカリウム ・ 6枚排出</div>
-        {/* 排出率（balance §1 確定値） */}
-        <div style={{ fontSize: 10, color: '#a98f66', marginTop: 2 }}>排出率 N55.45 / R31.65 / SR9 / SP1.7 / SSR2.2 ％</div>
+        <div style={{ fontSize: 11, color: '#cdb488', letterSpacing: 1, marginTop: 4 }}>所持カード {cardCount} / {cardCap}</div>
 
         <div className="gstage" style={{ flex: 1, marginTop: 14, marginBottom: 14, minHeight: 220 }}>
           {results && results.map((c, i) => <GCard key={c.id} data={c} flipped={flipped[i]} skillName={skillMap[c.skill_key]} index={i} />)}
@@ -2998,7 +2999,6 @@ function KyokaView({ base, cards, profile, refreshAll, onBack, flash }) {
     <div style={S.root}>
       <div style={kyokaS.bg} />
       <div style={kyokaS.body}>
-        <button onClick={onBack} style={kyokaS.back}>‹ 戻る</button>
         <div style={kyokaS.head}><div style={kyokaS.title}>強化合成</div><div style={kyokaS.sub}>同じレアリティ・強化値のカードを合成して強化値を上げる</div></div>
 
         <div style={kyokaS.scroll}>
@@ -3068,6 +3068,7 @@ function KyokaView({ base, cards, profile, refreshAll, onBack, flash }) {
         {/* 強化ボタン（下部固定） */}
         <div style={kyokaS.doWrap}>
           <button onClick={enhance} disabled={busy || !matId} style={{ ...kyokaS.doBtn, ...((busy || !matId) ? kyokaS.doOff : {}) }}>{busy ? '強化中…' : (matId ? '強化する' : 'カードを選んでください')}</button>
+          <button onClick={onBack} style={{ ...S.lineBtn, display: 'block', margin: '10px auto 0' }}>‹ 戻る</button>
         </div>
       </div>
 
