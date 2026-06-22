@@ -3585,7 +3585,7 @@ function TansakuScreen({ profile, refreshAll, back, flash }) {
   const [states, setStates] = useState(null);
   const [decks, setDecks] = useState([]);
   const [deckNo, setDeckNo] = useState(1);
-  const [area, setArea] = useState(1); // 表示中の面 1..8
+  const [area, setArea] = useState(() => Math.min(((profile && profile.cleared_stage) || 0) + 1, 8)); // 既定＝最新の解放面（フロンティア・ボスの stage と同方式）
   const [worldOpen, setWorldOpen] = useState(false); // 界選択ドロップダウンの開閉
   const [openStep, setOpenStep] = useState(null);
   const [busy, setBusy] = useState(false);
