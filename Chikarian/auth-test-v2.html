@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>チカリアン 認証＋初期化テスト (v2)</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 480px; margin: 40px auto; padding: 0 16px; line-height: 1.6; }
+    button { font-size: 16px; padding: 10px 18px; border-radius: 8px; border: 1px solid #888; cursor: pointer; }
+    code { background: #f2f2f2; padding: 2px 6px; border-radius: 4px; word-break: break-all; }
+    .box { border: 1px solid #ddd; border-radius: 12px; padding: 20px; }
+    .err { color: #c00; white-space: pre-wrap; }
+    .ok { color: #167c2e; }
+  </style>
+</head>
+<body>
+  <h2>チカリアン 認証＋初期化テスト (v2)</h2>
+  <p>②Googleログイン と ③profiles初期化RPC を続けて確認する使い捨てページです（本番SPAは④で作成）。</p>
+  <div id="app" class="box">読み込み中…</div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // ▼▼▼ 自分の値に書き換える（v1と同じ値でOK。チャット・公開repoに値入りで貼らない）▼▼▼
+    const SUPABASE_URL      = "https://ufqnxpljakrzvivfgenk.supabase.co";   // 例: https://xxxxxxxx.supabase.co
+    const SUPABASE_ANON_KEY = "sb_publishable_mjEggLBf6A3HjR8UqiEDOw_cJeam2aK"; // ※公開前提キー。service_role は絶対に使わない
+    // ▲▲▲
+
+    const { createClient } = window.supabase;
+    const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const el = document.getElementById("app");
+
+    async function render() {
+      try {
+        const { data: { session } } = await sb.auth.getSession();
+        if (!session) {
+          el.innerHTML = '<p>未ログイン</p><button id="login">Google でログイン</button>';
+          document.getElementById("login").onclick = async () => {
+            const redirectTo = location.origin + location.pathname;
+            const { error } = await sb.auth.signInWithOAuth({ provider: "google", options: { redirectTo } });
+            if (error) showError(error.message);
+          };
+          return;
+        }
+
+        const u = session.user;
+        el.innerHTML =
+          '<p class="ok">✅ ログイン成功</p>' +
+          '<p>email: ' + (u.email ?? '(なし)') + '</p>' +
+          '<p>uid: <code>' + u.id + '</code></p>' +
+          '<p>profiles 初期化を実行中…</p>' +
+          '<button id="logout">ログアウト</button>';
+        document.getElementById("logout").onclick = doLogout;
+
+        // ③ profiles 初期化RPC（get-or-create）
+        const { data: prof, error: rpcErr } = await sb.rpc('initialize_profile');
+        if (rpcErr) {
+          el.insertAdjacentHTML('beforeend', '<p class="err">RPCエラー: ' + rpcErr.message + '</p>');
+          return;
+        }
+        const p = Array.isArray(prof) ? prof[0] : prof;  // 念のため両対応
+        el.innerHTML =
+          '<p class="ok">✅ ログイン＋初期化 成功</p>' +
+          '<p>email: ' + (u.email ?? '(なし)') + '</p>' +
+          '<p>uid: <code>' + u.id + '</code></p>' +
+          '<hr>' +
+          '<p class="ok">profiles 作成OK</p>' +
+          '<p>chikarium: <b>' + (p ? p.chikarium : '?') + '</b></p>' +
+          '<p>medal: ' + (p ? p.medal : '?') + ' / cleared_stage: ' + (p ? p.cleared_stage : '?') + '</p>' +
+          '<button id="logout2">ログアウト</button>';
+        document.getElementById("logout2").onclick = doLogout;
+
+      } catch (e) {
+        showError(String(e && e.message ? e.message : e));
+      }
+    }
+
+    async function doLogout() {
+      await sb.auth.signOut();
+      location.href = location.origin + location.pathname;
+    }
+    function showError(msg) { el.innerHTML = '<p class="err">エラー: ' + msg + '</p>'; }
+
+    sb.auth.onAuthStateChange(() => render());
+    render();
+  </script>
+
+  <!--
+    使い方:
+    1) 先に SQL Editor で 0002_initialize_profile.sql を実行（RPCを作る）
+    2) 上の2行を自分の値に書き換え（v1と同じ値）
+    3) ローカルで起動: フォルダで  python -m http.server 8000 --bind 127.0.0.1
+       ブラウザで  http://127.0.0.1:8000/auth-test.html （127.0.0.1。localhost不可だった環境向け）
+    4) Google でログイン → 「✅ ログイン＋初期化 成功 / chikarium: 300」が出れば③成功
+    5) 確認(任意): Supabase → Table Editor で profiles / renkiden / decks に自分の行が出ている
+       （decks は deck_no 1・2 の空デッキが2行）
+  -->
+</body>
+</html>

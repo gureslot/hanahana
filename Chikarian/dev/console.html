@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>チカリアン 開発コンソール（dev専用）</title>
+<!--
+================================================================================
+  チカリアン ローカル動作確認ページ（開発専用 / dev-only）
+================================================================================
+
+  【このページは何か】
+  Supabase の RPC（initialize_profile / claim_saishu）と Google OAuth を、
+  ローカルから手早く叩いて挙動を確認するためだけの使い捨て開発ページ。
+  単一HTML・依存は supabase-js（CDN）のみ。
+
+  ⚠️ 本番SPA（hikitsugi の ④ SPA化）では、ここで使っている
+     ・auth.lock の no-op 化
+     ・auth.persistSession: false
+     ・タブ固有 storageKey
+     は使わないこと。これらは「同一ローカルURLを何度も開き直すと
+     supabase-js v2 が Web Locks デッドロック＋Multiple GoTrueClient 警告で
+     getSession()/rpc() が pending のまま固まる」開発時の事故を避けるための
+     dev限定の回避策。本番では通常どおり persistSession:true・既定lockのままにする。
+
+  ⚠️ SUPABASE_URL / Publishable(anon)キー はプレースホルダーのまま repo に置く。
+     実値はローカルで各自が下の CONFIG に貼って使う（コミットしない）。
+     service_role キーは絶対にここに書かない（このページはブラウザ＝公開実行）。
+
+--------------------------------------------------------------------------------
+  【Windows での起動手順（127.0.0.1 で http サーバを立てる）】
+  file:// で開くと OAuth リダイレクトが通らないため、必ず http で配信する。
+  リポジトリの Chikarian フォルダで、いずれか1つを実行：
+
+    # Python があるなら（標準）
+    cd C:\Users\justi\projects\hanahana\Chikarian
+    python -m http.server 5500 --bind 127.0.0.1
+      → ブラウザで  http://127.0.0.1:5500/dev/console.html
+
+    # Node があるなら
+    npx http-server -a 127.0.0.1 -p 5500
+      → 同上のURL
+
+  ※ localhost ではなく 127.0.0.1 に統一すると、下の登録URLと一致してハマりにくい。
+
+--------------------------------------------------------------------------------
+  【Supabase 側に登録する Redirect URLs】
+  Dashboard → Authentication → URL Configuration → Redirect URLs に追加：
+    http://127.0.0.1:5500/dev/console.html
+  （Site URL は本番URL等のままでOK。Redirect URLs に上記を「追加」する）
+
+  【Google 側に登録（Google Cloud Console → OAuth クライアント）】
+  ・「承認済みの JavaScript 生成元」:
+      http://127.0.0.1:5500
+  ・「承認済みのリダイレクト URI」（Supabaseのコールバック。Provider設定で表示される値）:
+      https://<your-project-ref>.supabase.co/auth/v1/callback
+
+  ※ ポート番号(5500)は起動コマンドに合わせる。変えたら全登録も合わせて変える。
+
+--------------------------------------------------------------------------------
+  【supabase-js バージョン固定】
+  CDN: jsdelivr / 安定版 @2.45.4 の UMD ビルドに固定。
+       https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js
+       （200取得・グローバル名 `supabase`・lockオプション対応を確認済み）
+       @2 の最新追従は不安定回避のため使わない。
+================================================================================
+-->
+<style>
+  :root{--bg:#0a0509;--panel:#140913;--gold:#e8c25a;--gold-hi:#fff3c8;--ink:#e7d3a6;--red:#ff5566;--green:#3fe08a;--mut:#9a8460;}
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--gold-hi);font-family:'Yu Gothic','Segoe UI',system-ui,sans-serif;line-height:1.6;}
+  .wrap{max-width:680px;margin:0 auto;padding:18px 16px 60px;}
+  h1{font-size:18px;color:var(--gold);letter-spacing:1px;margin:0 0 2px;}
+  .tag{display:inline-block;font-size:11px;color:#0a0509;background:var(--gold);border-radius:5px;padding:1px 8px;margin-left:6px;vertical-align:2px;}
+  .sub{font-size:12px;color:var(--mut);margin:0 0 16px;}
+  .card{background:var(--panel);border:1px solid rgba(232,194,90,.28);border-radius:12px;padding:14px 16px;margin-bottom:14px;}
+  .card h2{font-size:13px;color:var(--gold);letter-spacing:1px;margin:0 0 10px;font-weight:700;}
+  button{font-family:inherit;font-size:14px;font-weight:700;color:var(--gold-hi);background:rgba(20,10,16,.9);border:1.5px solid rgba(232,194,90,.6);border-radius:10px;padding:9px 18px;cursor:pointer;}
+  button:active{filter:brightness(1.15);}
+  button:disabled{opacity:.4;cursor:not-allowed;}
+  button.primary{background:linear-gradient(180deg,#caa23e,#9a7a25);color:#1a0f06;border-color:var(--gold);}
+  input[type=number]{font-family:inherit;font-size:15px;width:90px;background:#0a0509;color:var(--gold-hi);border:1.5px solid rgba(232,194,90,.5);border-radius:8px;padding:8px 10px;text-align:right;}
+  label{font-size:13px;color:var(--ink);}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+  .who{font-size:12px;color:var(--ink);margin-left:auto;word-break:break-all;}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px 14px;}
+  .kv{display:flex;justify-content:space-between;font-size:13px;border-bottom:1px dotted rgba(232,194,90,.18);padding:4px 0;}
+  .kv .k{color:var(--mut);}
+  .kv .v{color:var(--gold-hi);font-weight:700;}
+  .saishu-res{font-size:13px;color:var(--green);min-height:20px;margin-top:8px;}
+  #log{font-family:ui-monospace,Consolas,monospace;font-size:11px;color:#9fce9f;background:#070a07;border:1px solid #1c2a1c;border-radius:8px;padding:10px;max-height:200px;overflow:auto;white-space:pre-wrap;word-break:break-all;}
+  .err{color:var(--red)!important;}
+  .warn{background:rgba(120,30,30,.25);border:1px solid rgba(180,60,60,.5);color:#ffb4b4;font-size:12px;border-radius:8px;padding:8px 12px;margin-bottom:14px;}
+  .hidden{display:none;}
+  .mut{color:var(--mut);font-size:12px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>チカリアン 開発コンソール<span class="tag">dev</span></h1>
+  <p class="sub">Supabase RPC（initialize_profile / claim_saishu）＋ Google OAuth のローカル確認専用ページ</p>
+
+  <div id="configWarn" class="warn hidden">
+    ⚠️ SUPABASE_URL / Publishable キーが未設定です。このHTML内の <b>CONFIG</b> に実値を貼ってください（コミットしないこと）。
+  </div>
+
+  <!-- 認証 -->
+  <div class="card">
+    <h2>認証</h2>
+    <div class="row">
+      <button id="btnLogin" class="primary">Google ログイン</button>
+      <button id="btnLogout" disabled>ログアウト</button>
+      <span id="who" class="who">未ログイン</span>
+    </div>
+  </div>
+
+  <!-- プロフィール -->
+  <div class="card">
+    <h2>プロフィール（initialize_profile）</h2>
+    <div class="row" style="margin-bottom:10px;">
+      <button id="btnRefresh" disabled>状態を更新</button>
+      <span class="mut">ログイン後に自動取得します</span>
+    </div>
+    <div id="profile" class="grid">
+      <div class="kv"><span class="k">チカリウム</span><span class="v" id="p_chikarium">-</span></div>
+      <div class="kv"><span class="k">本日採取</span><span class="v" id="p_saishu">-</span></div>
+      <div class="kv"><span class="k">メダル</span><span class="v" id="p_medal">-</span></div>
+      <div class="kv"><span class="k">クリア面</span><span class="v" id="p_stage">-</span></div>
+      <div class="kv"><span class="k">青クリスタル</span><span class="v" id="p_cblue">-</span></div>
+      <div class="kv"><span class="k">赤クリスタル</span><span class="v" id="p_cred">-</span></div>
+      <div class="kv"><span class="k">虹クリスタル</span><span class="v" id="p_crainbow">-</span></div>
+      <div class="kv"><span class="k">保証石</span><span class="v" id="p_hoshou">-</span></div>
+    </div>
+  </div>
+
+  <!-- 採取 -->
+  <div class="card">
+    <h2>採取（claim_saishu）</h2>
+    <div class="row">
+      <label for="n">回数 n</label>
+      <input type="number" id="n" min="1" max="100" step="1" value="1">
+      <span class="mut">×10 チカリウム</span>
+      <button id="btnSaishu" class="primary" disabled>採取する</button>
+    </div>
+    <div id="saishuRes" class="saishu-res"></div>
+  </div>
+
+  <!-- ログ -->
+  <div class="card">
+    <h2>ログ</h2>
+    <div id="log"></div>
+  </div>
+</div>
+
+<!-- supabase-js（安定版に固定。冒頭コメント参照） -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+//============================================================================
+// CONFIG : ローカルで実値を貼る。repo にはプレースホルダーのまま置く（コミット禁止）。
+//   - SUPABASE_URL      : https://ufqnxpljakrzvivfgenk.supabase.co
+//   - SUPABASE_KEY      : sb_publishable_mjEggLBf6A3HjR8UqiEDOw_cJeam2aK
+//   - service_role キーは絶対に使わない / 貼らない。
+//============================================================================
+const CONFIG = {
+  SUPABASE_URL: "https://ufqnxpljakrzvivfgenk.supabase.co",
+  SUPABASE_KEY: "sb_publishable_mjEggLBf6A3HjR8UqiEDOw_cJeam2aK",
+};
+
+// --- DOM ヘルパ -----------------------------------------------------------
+const $ = (id) => document.getElementById(id);
+const logEl = $("log");
+function log(msg, isErr) {
+  const t = new Date().toLocaleTimeString("ja-JP");
+  const line = `[${t}] ${msg}`;
+  const div = document.createElement("div");
+  if (isErr) div.className = "err";
+  div.textContent = line;
+  logEl.appendChild(div);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+// --- 設定チェック ---------------------------------------------------------
+const configured =
+  CONFIG.SUPABASE_URL.startsWith("http") && !CONFIG.SUPABASE_KEY.startsWith("__");
+if (!configured) {
+  $("configWarn").classList.remove("hidden");
+  log("CONFIG 未設定。SUPABASE_URL / Publishable キーを貼ってください。", true);
+}
+
+//============================================================================
+// createClient は1インスタンスだけ生成。onAuthStateChange は使わない。
+//   dev限定の固着回避オプション（本番では使わない）:
+//     auth.lock         : no-op（即 fn() 実行）→ Web Locks デッドロック回避
+//     auth.storageKey   : タブ固有ランダム → Multiple GoTrueClient 警告回避
+//     persistSession    : false（再読込でセッションは消える＝dev割り切り）
+//     autoRefreshToken  : false
+//     detectSessionInUrl: true（OAuth戻りのURLハッシュをメモリ上で解釈）
+//============================================================================
+let client = null;
+if (configured) {
+  client = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY, {
+    auth: {
+      lock: (_name, _acquireTimeout, fn) => fn(), // ← no-op ロック（dev限定）
+      storageKey: "chikarian-dev-" + Math.random().toString(36).slice(2),
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: true,
+    },
+  });
+}
+
+// --- 状態 -----------------------------------------------------------------
+let initialized = false;
+
+// --- UI 更新 --------------------------------------------------------------
+function setLoggedIn(session) {
+  const email = session?.user?.email || session?.user?.id || "(unknown)";
+  $("who").textContent = "ログイン中: " + email;
+  $("btnLogin").disabled = true;
+  $("btnLogout").disabled = false;
+  $("btnRefresh").disabled = false;
+  $("btnSaishu").disabled = false;
+}
+function setLoggedOut() {
+  $("who").textContent = "未ログイン";
+  $("btnLogin").disabled = !configured;
+  $("btnLogout").disabled = true;
+  $("btnRefresh").disabled = true;
+  $("btnSaishu").disabled = true;
+  clearProfile();
+}
+function clearProfile() {
+  ["p_chikarium","p_saishu","p_medal","p_stage","p_cblue","p_cred","p_crainbow","p_hoshou"]
+    .forEach((id) => ($(id).textContent = "-"));
+}
+function renderProfile(p) {
+  if (!p) return;
+  $("p_chikarium").textContent = p.chikarium ?? 0;
+  $("p_saishu").textContent = (p.saishu_today ?? 0) + " / 1000";
+  $("p_medal").textContent = p.medal ?? 0;
+  $("p_stage").textContent = p.cleared_stage ?? 0;
+  $("p_cblue").textContent = p.crystal_blue ?? 0;
+  $("p_cred").textContent = p.crystal_red ?? 0;
+  $("p_crainbow").textContent = p.crystal_rainbow ?? 0;
+  $("p_hoshou").textContent = p.hoshou_stone ?? 0;
+}
+
+// --- RPC: initialize_profile（get-or-create・引数なし）---------------------
+async function loadProfile() {
+  log("RPC initialize_profile() 呼び出し…");
+  const { data, error } = await client.rpc("initialize_profile");
+  if (error) {
+    log("initialize_profile エラー: " + error.message, true);
+    return;
+  }
+  // profiles を返す（1行 or 配列の可能性に両対応）
+  const p = Array.isArray(data) ? data[0] : data;
+  renderProfile(p);
+  log("プロフィール取得 OK（chikarium=" + (p?.chikarium ?? "?") + "）");
+}
+
+// --- RPC: claim_saishu(n) -------------------------------------------------
+async function claimSaishu() {
+  const n = parseInt($("n").value, 10);
+  if (!Number.isInteger(n) || n < 1) {
+    log("n は1以上の整数で。", true);
+    return;
+  }
+  $("btnSaishu").disabled = true;
+  log(`RPC claim_saishu(${n}) 呼び出し…`);
+  const { data, error } = await client.rpc("claim_saishu", { n });
+  $("btnSaishu").disabled = false;
+  if (error) {
+    log("claim_saishu エラー: " + error.message, true);
+    $("saishuRes").innerHTML = '<span class="err">エラー: ' + error.message + "</span>";
+    return;
+  }
+  // jsonb: granted / chikarium / saishu_today / daily_remaining
+  const granted = data?.granted ?? 0;
+  const remaining = data?.daily_remaining ?? "?";
+  $("saishuRes").textContent =
+    `+${granted} チカリウム獲得（本日残り上限 ${remaining}）`;
+  log(`採取OK: granted=${granted} / daily_remaining=${remaining} / chikarium=${data?.chikarium} / saishu_today=${data?.saishu_today}`);
+  // プロフィール表示も同期
+  $("p_chikarium").textContent = data?.chikarium ?? $("p_chikarium").textContent;
+  if (data?.saishu_today != null) $("p_saishu").textContent = data.saishu_today + " / 1000";
+}
+
+// --- 認証アクション -------------------------------------------------------
+async function login() {
+  log("Google OAuth 開始…");
+  const { error } = await client.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      // 戻り先＝このページ自身。Supabase の Redirect URLs に登録要（冒頭コメント参照）。
+      redirectTo: window.location.origin + window.location.pathname,
+    },
+  });
+  if (error) log("ログイン開始エラー: " + error.message, true);
+}
+async function logout() {
+  const { error } = await client.auth.signOut();
+  if (error) log("ログアウトエラー: " + error.message, true);
+  else log("ログアウトしました。");
+  setLoggedOut();
+}
+
+//============================================================================
+// 初期化は1回だけ。onAuthStateChange は使わず getSession() を1度だけ参照。
+//   detectSessionInUrl:true なので、OAuth から戻った直後の URL ハッシュは
+//   createClient 時点でメモリ上のセッションに解釈済み → getSession() で取れる。
+//============================================================================
+async function initOnce() {
+  if (initialized || !client) return;
+  initialized = true;
+
+  $("btnLogin").addEventListener("click", login);
+  $("btnLogout").addEventListener("click", logout);
+  $("btnRefresh").addEventListener("click", loadProfile);
+  $("btnSaishu").addEventListener("click", claimSaishu);
+
+  log("初期化（getSession 1回）…");
+  const { data, error } = await client.auth.getSession();
+  if (error) {
+    log("getSession エラー: " + error.message, true);
+    setLoggedOut();
+    return;
+  }
+  const session = data?.session;
+  if (session) {
+    setLoggedIn(session);
+    log("セッションあり → プロフィール取得");
+    // OAuth 戻りで URL にトークンが残っていれば消しておく（再読込時の混乱回避）
+    if (window.location.hash) {
+      history.replaceState(null, "", window.location.pathname);
+    }
+    await loadProfile();
+  } else {
+    setLoggedOut();
+    log("セッションなし（未ログイン）。");
+  }
+}
+
+if (configured) {
+  initOnce();
+} else {
+  setLoggedOut();
+}
+</script>
+</body>
+</html>
