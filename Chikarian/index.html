@@ -2014,14 +2014,14 @@ function CardPicker({ title, cards, getStatus, chooseLabel, onChoose, onClear, a
               : items.map(c => {
                   const st = getStatus(c);
                   return (
-                    <button key={c.id} onClick={(e) => { e.currentTarget.blur(); if (!st.disabled) setSel(c.id); }} disabled={!!st.disabled} style={{ ...cpS.li, ...(sel === c.id ? cpS.liSel : {}), ...(st.dim ? { opacity: .45 } : {}), ...(st.disabled ? { cursor: 'default' } : {}) }}>
+                    <div key={c.id} onClick={() => { if (!st.disabled) setSel(c.id); }} style={{ ...cpS.li, ...(sel === c.id ? cpS.liSel : {}), ...(st.dim ? { opacity: .45 } : {}), ...(st.disabled ? { cursor: 'default', pointerEvents: 'none' } : {}) }}>
                       <div style={cpS.liArt}><DeckSlotArt cardKey={c.card_key} /></div>
                       <div style={cpS.liInfo}>
                         <span style={cpS.liLv}>Lv{c.lv || 1}{(c.star || 0) > 0 ? ' ★' + (c.star || 0) : ''}</span>
                         {deckOf && deckOf[c.id] ? <span style={{ fontSize: 9, fontWeight: 700, color: '#1a0f06', background: 'linear-gradient(180deg,#ffe49a,#e8b54d)', borderRadius: 6, padding: '1px 5px' }}>デッキ{deckOf[c.id]}</span> : null}
                         {st.tag && <span style={cpS.liTag}>{st.tag}</span>}
                       </div>
-                    </button>
+                    </div>
                   );
                 })}
           </div>
