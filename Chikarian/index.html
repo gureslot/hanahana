@@ -4069,10 +4069,11 @@ function HouchiScreen({ profile, refreshAll, back, flash }) {
   return (
     <div style={S.root}>
       <div style={S.bg} /><div style={S.vignette} />
-      <div style={{ position: 'relative', zIndex: 2, minHeight: '100dvh', display: 'flex', flexDirection: 'column', padding: '14px 12px 18px', overflowY: 'auto' }}>
+      <div style={{ position: 'relative', zIndex: 2, height: '100dvh', display: 'flex', flexDirection: 'column', padding: '14px 12px 14px', overflow: 'hidden' }}>
         <div style={houS.title}>放置報酬</div>
         <div style={houS.sub}>放置＝浅域での探索（貯まった分を回収）</div>
 
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', paddingBottom: 84 }}>
         {(() => { const activeN = (states || []).filter(s => s.depth).length; return (
           <button onClick={collectAll} disabled={busy || activeN === 0} style={{ width: '100%', marginTop: 14, fontFamily: 'inherit', fontWeight: 800, fontSize: 14, color: '#2a160a', border: 'none', padding: '12px 6px', borderRadius: 12, cursor: (busy || activeN === 0) ? 'default' : 'pointer', background: 'linear-gradient(180deg,#ffe49a,#e8b54d 60%,#b9842f)', opacity: (busy || activeN === 0) ? .5 : 1 }}>{activeN === 0 ? '回収できる探索がありません' : ('全デッキ一括回収（探索中 ' + activeN + '）')}</button>
         ); })()}
@@ -4096,7 +4097,9 @@ function HouchiScreen({ profile, refreshAll, back, flash }) {
             );
           })}
         </div>
-        <button onClick={back} style={{ ...S.lineBtn, marginTop: 16, alignSelf: 'center' }}>ホームへ戻る</button>
+        </div>
+
+        <button onClick={back} style={{ ...S.lineBtn, flex: 'none', alignSelf: 'center', marginTop: 10 }}>ホームへ戻る</button>
       </div>
     </div>
   );
