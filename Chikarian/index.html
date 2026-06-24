@@ -3196,10 +3196,11 @@ const TAT_CSS = `
 .tat-it .k{font-size:10px; color:#7d7160; letter-spacing:.12em;}
 .tat-it b{display:block; font-size:18px; color:#ecd28a; font-weight:800; margin-top:2px;}
 .tat-it small{color:#7d7160; font-weight:400; font-size:12px;}
-.tat-tabs{display:flex; gap:8px; margin-top:14px;}
+.tat-tabs{display:flex; flex-wrap:wrap; gap:7px;}
 .tat-tab{font-family:inherit; font-size:13px; font-weight:700; color:#b6a890; background:linear-gradient(180deg,#221a14,#181210); border:1px solid #3a2c22; border-radius:4px; padding:8px 12px; cursor:pointer;}
-.tat-bar{display:flex; flex-wrap:wrap; align-items:center; gap:7px; padding:12px 4px 6px;}
-.tat-medal{margin-left:auto; display:flex; align-items:baseline; gap:5px; padding:6px 12px; border-radius:4px; border:1px solid #3a2c22; background:#140f0d;}
+.tat-topbar{flex:none; padding:10px 12px 8px; background:linear-gradient(180deg,#160f0d,#120c0b); border-bottom:1px solid rgba(120,90,50,.18);}
+.tat-medalrow{display:flex; justify-content:flex-end; margin-bottom:8px;}
+.tat-medal{display:flex; align-items:baseline; gap:5px; padding:6px 12px; border-radius:4px; border:1px solid #3a2c22; background:#140f0d;}
 .tat-medal .k{font-size:10px; color:#7d7160; letter-spacing:.08em;}
 .tat-medal b{font-size:16px; color:#ecd28a; font-weight:800;}
 .tat-tab.sel{color:#0c0a09; background:linear-gradient(180deg,#ecd28a,#c7a14e); border-color:#a07e2a;}
@@ -3441,22 +3442,24 @@ function TatemonoScreen({ profile, cards, refreshAll, back, flash }) {
   return (
     <div style={tatRoot}>
       <style>{TAT_CSS}</style>
-      <div className="tat-wrap">
-        {/* 圧縮施設バー：タブ（四角コンパクト）＋メダル（右端） */}
-        <div className="tat-bar">
+      {/* 固定ヘッダ：メダル（上・右寄せ）＋施設タブ（下） */}
+      <div className="tat-topbar">
+        <div className="tat-medalrow">
+          <div className="tat-medal"><span className="k">メダル</span><b>{medal.toLocaleString()}</b></div>
+        </div>
+        <div className="tat-tabs">
           {[['renkiden', '練気殿'], ['kajiya', '鍛冶屋'], ['shurenjo', '修練場'], ['exchange', '交換所']].map(([k, label]) => (
             <button key={k} onClick={() => setTab(k)} className={'tat-tab' + (tab === k ? ' sel' : '')}>{label}</button>
           ))}
-          <div className="tat-medal"><span className="k">メダル</span><b>{medal.toLocaleString()}</b></div>
         </div>
-
+      </div>
+      <div className="tat-wrap">
         {tab === 'renkiden' && <RenkidenTab profile={profile} refreshAll={refreshAll} flash={flash} />}
         {tab === 'kajiya' && <KajiyaTab profile={profile} refreshAll={refreshAll} flash={flash} />}
         {tab === 'shurenjo' && <ShurenjoView profile={profile} cards={cards} flash={flash} />}
         {tab === 'exchange' && <ExchangeTab profile={profile} cards={cards} refreshAll={refreshAll} flash={flash} />}
-
-        <div className="tat-backlink" onClick={back}>ホームへ戻る</div>
       </div>
+      <div className="tat-backlink" onClick={back}>ホームへ戻る</div>
     </div>
   );
 }
