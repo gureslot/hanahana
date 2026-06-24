@@ -3182,9 +3182,9 @@ function fmtRemain(ms) {
 }
 
 /* 建物画面 専用スタイル（tatemono-mockup の暖色・面取り意匠を tat- プレフィックスで移植・共有 S は不変） */
-const tatRoot = { position: 'relative', width: '100%', maxWidth: 480, margin: '0 auto', minHeight: '100dvh', overflowY: 'auto', color: '#efe6d5', background: 'radial-gradient(120% 80% at 50% -10%, #1d1412 0%, #15100f 38%, #0b0809 100%)' };
+const tatRoot = { position: 'relative', width: '100%', maxWidth: 480, margin: '0 auto', height: '100dvh', overflow: 'hidden', display: 'flex', flexDirection: 'column', color: '#efe6d5', background: 'radial-gradient(120% 80% at 50% -10%, #1d1412 0%, #15100f 38%, #0b0809 100%)' };
 const TAT_CSS = `
-.tat-wrap{padding:0 16px 30px;}
+.tat-wrap{flex:1; min-height:0; overflow-y:auto; padding:10px 16px 88px;}
 .tat-hdr{padding:18px 4px 0; text-align:center;}
 .tat-hdr h1{margin:4px 0 0; font-size:21px; font-weight:800; color:#ecd28a; text-shadow:0 1px 0 #000,0 0 18px rgba(199,161,78,.25);}
 .tat-deco{color:#c7a14e; font-size:11px; letter-spacing:.42em; opacity:.8;}
@@ -3195,7 +3195,11 @@ const TAT_CSS = `
 .tat-it b{display:block; font-size:18px; color:#ecd28a; font-weight:800; margin-top:2px;}
 .tat-it small{color:#7d7160; font-weight:400; font-size:12px;}
 .tat-tabs{display:flex; gap:8px; margin-top:14px;}
-.tat-tab{flex:1; font-family:inherit; font-size:13px; font-weight:700; color:#b6a890; background:linear-gradient(180deg,#221a14,#181210); border:1px solid #3a2c22; border-radius:4px; padding:10px 0; cursor:pointer;}
+.tat-tab{font-family:inherit; font-size:13px; font-weight:700; color:#b6a890; background:linear-gradient(180deg,#221a14,#181210); border:1px solid #3a2c22; border-radius:4px; padding:8px 12px; cursor:pointer;}
+.tat-bar{display:flex; flex-wrap:wrap; align-items:center; gap:7px; padding:12px 4px 6px;}
+.tat-medal{margin-left:auto; display:flex; align-items:baseline; gap:5px; padding:6px 12px; border-radius:4px; border:1px solid #3a2c22; background:#140f0d;}
+.tat-medal .k{font-size:10px; color:#7d7160; letter-spacing:.08em;}
+.tat-medal b{font-size:16px; color:#ecd28a; font-weight:800;}
 .tat-tab.sel{color:#0c0a09; background:linear-gradient(180deg,#ecd28a,#c7a14e); border-color:#a07e2a;}
 .tat-fac{margin-top:14px; padding:14px; border-radius:5px; border:1px solid #3a2c22; background:linear-gradient(180deg,#241a17,#1c1513); position:relative;}
 .tat-fac.renki{border-color:#274a47;} .tat-fac.kaji{border-color:#4a2c26;}
@@ -3240,7 +3244,7 @@ const TAT_CSS = `
 .tat-fb:active{transform:translateY(1px);}
 .tat-fb:disabled{opacity:.45; cursor:not-allowed; box-shadow:none;}
 .tat-foot{font-size:10px; color:#7d7160; margin-top:12px; line-height:1.6;}
-.tat-backlink{display:block; text-align:center; margin-top:18px; font-size:12px; color:#b6a890; cursor:pointer; letter-spacing:.08em;}
+.tat-backlink{position:absolute; left:0; right:0; bottom:0; z-index:5; text-align:center; padding:13px 16px 16px; margin:0; font-size:13px; color:#ecd28a; cursor:pointer; letter-spacing:.08em; background:linear-gradient(0deg,#0b0809 72%,transparent);}
 `;
 const exS = {
   wrap: { padding: '4px 2px 16px' },
@@ -3436,18 +3440,12 @@ function TatemonoScreen({ profile, cards, refreshAll, back, flash }) {
     <div style={tatRoot}>
       <style>{TAT_CSS}</style>
       <div className="tat-wrap">
-        <div className="tat-hdr"><span className="tat-deco">CHIKARIAN</span><h1>建物</h1><div className="tat-divider" /></div>
-
-        {/* リソース（メダル。武気は練気殿カード内に表示） */}
-        <div className="tat-res">
-          <div className="tat-it"><span className="k">メダル</span><b>{medal.toLocaleString()}</b></div>
-        </div>
-
-        {/* 施設タブ（本番の操作構造を維持しつつ意匠を移植） */}
-        <div className="tat-tabs">
+        {/* 圧縮施設バー：タブ（四角コンパクト）＋メダル（右端） */}
+        <div className="tat-bar">
           {[['renkiden', '練気殿'], ['kajiya', '鍛冶屋'], ['shurenjo', '修練場'], ['exchange', '交換所']].map(([k, label]) => (
             <button key={k} onClick={() => setTab(k)} className={'tat-tab' + (tab === k ? ' sel' : '')}>{label}</button>
           ))}
+          <div className="tat-medal"><span className="k">メダル</span><b>{medal.toLocaleString()}</b></div>
         </div>
 
         {tab === 'renkiden' && <RenkidenTab profile={profile} refreshAll={refreshAll} flash={flash} />}
