@@ -1858,6 +1858,7 @@ const cpS = {
   expBtnOff: { opacity: .4, cursor: 'default' },
   expEv: { fontSize: 10, color: '#8fd3a0' },
   expHave: { fontSize: 10, color: '#b6a890' },
+  expIc: { width: 22, height: 22, objectFit: 'contain', flex: 'none' },
   modalBack: { position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(0,0,0,.66)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 },
   modal: { width: '100%', maxWidth: 360, background: 'linear-gradient(180deg,#1a0f15,#120a10)', border: '1px solid rgba(232,194,90,.4)', borderRadius: 16, padding: '16px 16px 14px', boxShadow: '0 12px 40px rgba(0,0,0,.6)' },
   modalTitle: { fontSize: 15, fontWeight: 800, color: GOLD_HI, letterSpacing: 1, textAlign: 'center', marginBottom: 8 },
@@ -2096,7 +2097,7 @@ function CardPicker({ title, cards, getStatus, chooseLabel, onChoose, onClear, a
                         {[1, 5, 10, 50].map(n => <button key={n} style={{ ...cpS.qtyPreset, ...(expQty === n ? cpS.qtyPresetOn : {}) }} onClick={() => setExpQty(Math.min(n, Math.max(1, maxHave)))} disabled={busy}>{n}</button>)}
                       </div>
                       <div style={cpS.expBtns}>
-                        {SZ.map(([k, lab, ev]) => { const n = books[k] || 0; const off = busy || n < expQty; return <button key={k} onClick={() => onUseBook(selCard, k, expQty)} disabled={off} style={{ ...cpS.expBtn, ...(off ? cpS.expBtnOff : {}) }}>{lab}<span style={cpS.expEv}>+{ev}</span><span style={cpS.expHave}>残{n}</span></button>; })}
+                        {SZ.map(([k, lab, ev]) => { const n = books[k] || 0; const off = busy || n < expQty; return <button key={k} onClick={() => onUseBook(selCard, k, expQty)} disabled={off} style={{ ...cpS.expBtn, ...(off ? cpS.expBtnOff : {}) }}><img src={`./images/exp_book_${k}.png`} alt="" onError={e => { e.currentTarget.style.display = 'none'; }} style={cpS.expIc} />{lab}<span style={cpS.expEv}>+{ev}</span><span style={cpS.expHave}>残{n}</span></button>; })}
                       </div>
                     </>}
                 <button style={cpS.modalClose} onClick={() => setExpOpen(false)}>閉じる</button>
