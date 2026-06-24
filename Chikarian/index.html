@@ -4967,7 +4967,7 @@ const repS = {
   vsSide: { textAlign: 'center', flex: 1 },
   vsLab: { fontSize: 10, color: '#cdb488', letterSpacing: 1 },
   vsNumMe: { fontSize: 22, fontWeight: 800, marginTop: 3, color: '#ffe39a' },
-  vsNumFoe: { fontSize: 16, fontWeight: 800, marginTop: 3, color: '#ff9a8a' },
+  vsNumFoe: { fontSize: 22, fontWeight: 800, marginTop: 3, color: '#ff9a8a' },
   vsX: { fontSize: 13, color: '#cdb488' },
   drow: { display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#e7d3a6', padding: '6px 2px', borderBottom: '1px solid rgba(232,194,90,.14)' },
   chip: { fontSize: 11, color: '#fff3c8', background: 'rgba(232,194,90,.15)', border: '1px solid rgba(232,194,90,.4)', borderRadius: 10, padding: '2px 8px' },
@@ -5007,7 +5007,7 @@ function BattleLogView({ cards, back, flash }) {
     const idx = logs.findIndex(l => l.id === sel.id);   // 前(古い)/次(新しい)ナビ用（報告書はサーバ取得＝削除なし）
     const deckTotal = deck.reduce((a, c) => a + (Number(c.sougou) || 0), 0);
     // 文面はwin/相手から決定的に生成（捏造データではなく表示用テンプレ）
-    const msg = win ? `部隊は ${label} の討伐に成功した。` : `部隊は ${label} に届かなかった。戦力の差を埋められなかった。`;
+    const msg = win ? `部隊は ${label} の討伐に成功した。` : `部隊は ${label} の討伐に失敗した。`;
     return (
       <div style={S.root}><div style={repS.bg} />
         <div style={repS.body}>
@@ -5036,6 +5036,7 @@ function BattleLogView({ cards, back, flash }) {
                 {/* 敵戦力＝0075 以降の戦闘で rewards.enemy_power に保存。旧ログは未保存のため「—」 */}
                 <div style={repS.vsSide}><div style={repS.vsLab}>敵戦力</div><div style={repS.vsNumFoe}>{(sel.rewards && sel.rewards.enemy_power != null) ? Number(sel.rewards.enemy_power).toLocaleString() : '—'}</div></div>
               </div>
+              <div style={{ textAlign: 'center', fontSize: 12, color: '#cdb488', marginTop: 8 }}>武気損失 <b style={{ color: '#ff9a8a' }}>{sel.loss_rate != null ? Math.round(sel.loss_rate * 100) + '%' : '—'}</b>{(sel.rewards && sel.rewards.buki_lost != null) ? <>　／　損失数 <b style={{ color: '#ff9a8a' }}>−{Number(sel.rewards.buki_lost).toLocaleString()}</b></> : null}</div>
             </div>
 
             <div style={repS.sec}>
@@ -5092,7 +5093,6 @@ function BattleLogView({ cards, back, flash }) {
                     <span style={repS.repTime}>{fmtDt(lg.fought_at)}</span>
                   </div>
                   <div style={repS.repSub}>{bossSub(lg.boss_key) ? bossSub(lg.boss_key) + '　／　' : ''}{lg.loss_rate != null ? `武気損失 ${Math.round(lg.loss_rate * 100)}%` : '―'}{lg.win && lg.rewards && lg.rewards.medal ? `　／　メダル +${Number(lg.rewards.medal).toLocaleString()}` : ''}</div>
-                  <span style={repS.chev}>詳細 ›</span>
                 </button>
               ))}
         </div>
