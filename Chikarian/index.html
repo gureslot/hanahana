@@ -2197,6 +2197,34 @@ function DeckSlotArt({ cardKey }) {
   return <img src={'./images/' + cardKey + '.png'} alt="" onError={() => setErr(true)} style={deckS.slotImg} />;
 }
 
+// 武気充填モーダル（質アイコン＋±/最大/空）。デッキ編成とボス出撃で共有。質アイコン＝そのカードの武器×品質。
+function BukiEditModal({ cardId, cardById, pool, kajiyaLv, bukiBusy, onApply, onClose }) {
+  const c = cardById[cardId]; if (!c) return null;
+  const cap = bukiCapacity(c), loaded = c.loaded_buki || 0, q = c.quality || 'crude';
+  const pct = cap > 0 ? Math.min(100, loaded / cap * 100) : 0;
+  const weapKey = (c.card_key || '').split('_')[3] || 'ken';
+  return (
+    <div style={bukiS.scrim} onClick={() => { if (!bukiBusy) onClose(); }}>
+      <div style={bukiS.sheet} onClick={(e) => e.stopPropagation()}>
+        <div style={bukiS.title}>{parseCardKey(c.card_key).name} ・武気充填</div>
+        <div style={bukiS.cap}>{loaded} / {cap} 枠　｜　プール {pool != null ? Math.floor(pool).toLocaleString() : '—'}</div>
+        <div style={bukiS.bigGauge}><div style={{ height: '100%', width: pct + '%', background: BUKI_COLOR[q] || '#9a7' }} /></div>
+        <div style={bukiS.qrow}>
+          {Q_ORDER.map(qq => { const locked = Q_LV[qq] > kajiyaLv; return (
+            <button key={qq} disabled={bukiBusy || locked} onClick={() => onApply(c, qq, loaded)} style={{ ...bukiS.q, ...(qq === q ? bukiS.qOn : {}), ...(locked ? bukiS.qLock : {}) }}><img src={'./images/ic_weap_' + qq + '_' + weapKey + '.png'} alt="" style={{ width: 20, height: 20, objectFit: 'contain', verticalAlign: 'middle', marginRight: 3, filter: locked ? 'grayscale(1) opacity(0.7)' : 'none' }} onError={e => { e.target.style.display = 'none'; }} />{QUALITY_JA[qq]}{locked ? ' 🔒' : ''}<br /><small>攻{QATK[qq]}/コ{Q_COST[qq]}</small></button>
+          ); })}
+        </div>
+        <div style={bukiS.pmRow}>
+          <button disabled={bukiBusy || loaded <= 0} onClick={() => onApply(c, q, loaded - 1)} style={bukiS.pm}>−</button>
+          <button disabled={bukiBusy} onClick={() => onApply(c, q, 0)} style={bukiS.mid}>空にする</button>
+          <button disabled={bukiBusy} onClick={() => onApply(c, q, 100000)} style={bukiS.mid}>最大充填</button>
+          <button disabled={bukiBusy || loaded >= cap} onClick={() => onApply(c, q, loaded + 1)} style={bukiS.pm}>＋</button>
+        </div>
+        <button style={bukiS.close} onClick={() => { if (!bukiBusy) onClose(); }}>閉じる</button>
+      </div>
+    </div>
+  );
+}
 function DeckScreen({ profile, cards, refreshAll, back, flash, initialDeckNo, backLabel = 'ホームへ戻る' }) {
   const maxDecks = Math.min(2 + Math.floor(((profile && profile.cleared_stage) || 0) / 2), 6); // balance §10
   const [decks, setDecks] = useState(null);
@@ -2339,7 +2367,7 @@ function DeckScreen({ profile, cards, refreshAll, back, flash, initialDeckNo, ba
       <div style={S.bg} /><div style={S.vignette} />
       <div style={{ position: 'relative', zIndex: 2, minHeight: '100dvh', display: 'flex', flexDirection: 'column', padding: '14px 12px 18px' }}>
         <div style={{ textAlign: 'center', fontSize: 20, fontWeight: 800, letterSpacing: 3, color: GOLD_HI }}>デッキ編成</div>
-        <div style={{ textAlign: 'center', fontSize: 11, color: '#cdb488', marginTop: 2 }}>解放 {maxDecks} 本（2＋クリア面/2・上限6）</div>
+        <div style={{ textAlign: 'center', fontSize: 11, color: '#cdb488', marginTop: 2 }}>解放 {maxDecks} 本</div>
 
         {/* デッキ番号タブ（mockup .tab/.tab.sel/.tab.locked／解放数は maxDecks まで） */}
         <div style={deckS.tabs}>
@@ -2353,7 +2381,7 @@ function DeckScreen({ profile, cards, refreshAll, back, flash, initialDeckNo, ba
 
         {/* メインデッキ（デッキ1）表示／入れ替え（canon-06 §4-1・0067） */}
         {!deckSortie && (deckNo === 1
-          ? <div style={{ textAlign: 'center', fontSize: 11, fontWeight: 800, color: '#ffe39a', margin: '4px 0 0' }}>★ メインデッキ（武気を込めてボス出撃するデッキ）</div>
+          ? <div style={{ textAlign: 'center', fontSize: 11, fontWeight: 800, color: '#ffe39a', margin: '4px 0 0' }}>★ メインデッキ</div>
           : <div style={{ textAlign: 'center', margin: '6px 0 0' }}>
               <button disabled={busy || bukiBusy || swapBusy} onClick={swapMain}
                 style={{ fontFamily: 'inherit', fontSize: 12, fontWeight: 800, color: '#1a1014', background: 'linear-gradient(180deg,#ffe39a,#e8b54d)', border: '1px solid rgba(232,194,90,.6)', borderRadius: 10, padding: '6px 14px', cursor: (busy || bukiBusy || swapBusy) ? 'default' : 'pointer', opacity: (busy || bukiBusy || swapBusy) ? .5 : 1 }}>
@@ -2377,7 +2405,7 @@ function DeckScreen({ profile, cards, refreshAll, back, flash, initialDeckNo, ba
         {!deckSortie && deckNo === 1 && <div style={bukiS.deckBtns}>
           <button disabled={bukiBusy || busy} onClick={() => fillDeck(false)} style={{ ...bukiS.fillBtn, ...((bukiBusy || busy) ? bukiS.off : {}) }}>{bukiBusy ? '処理中…' : '⚡ 最大充填'}</button>
           <button disabled={bukiBusy || busy} onClick={() => fillDeck(true)} style={{ ...bukiS.emptyBtn, ...((bukiBusy || busy) ? bukiS.off : {}) }}>武気を空にする</button>
-          {pool != null && <span style={bukiS.poolTag}>プール {pool.toLocaleString()}</span>}
+          {pool != null && <span style={bukiS.poolTag}>プール {Math.floor(pool).toLocaleString()}</span>}
         </div>}
         {/* 3枠（即確定：枠タップで選択／×で即空に。出撃中デッキは編集不可） */}
         <div style={{ ...deckS.slots, opacity: (busy || deckSortie) ? .6 : 1 }}>
@@ -2421,40 +2449,14 @@ function DeckScreen({ profile, cards, refreshAll, back, flash, initialDeckNo, ba
           <div style={{ fontSize: 13, fontWeight: 700, color: costTotal > 11 ? '#ff6a7a' : GOLD_HI }}>
             合計コスト目安 <b style={{ fontSize: 24, color: costTotal > 11 ? '#ff6a7a' : '#ffe39a', textShadow: '0 0 12px rgba(255,200,90,.5)', marginLeft: 6 }}>{costTotal}</b> / 11{costTotal > 11 ? '（上限超過）' : ''}
           </div>
-          <div style={deckS.legend}>コスト N1 / R2 / SR3 / SSR5 / SP4（確定）。三すくみ 有利×1.2・不利×0.8（balance 2026-06-14）。<br />可否（コスト上限11・本数・SP離脱・重複）はサーバ判定です。</div>
           <div style={deckS.autoSave}>編成は自動で保存されます</div>
         </div>
 
         <button onClick={back} style={{ ...S.lineBtn, marginTop: 16, alignSelf: 'center' }}>{backLabel}</button>
       </div>
 
-        {/* 武気充填の微調整モーダル（質・±・最大・空） */}
-        {bukiEdit && (() => {
-          const c = cardById[bukiEdit]; if (!c) return null;
-          const cap = bukiCapacity(c), loaded = c.loaded_buki || 0, q = c.quality || 'crude';
-          const pct = cap > 0 ? Math.min(100, loaded / cap * 100) : 0;
-          return (
-            <div style={bukiS.scrim} onClick={() => { if (!bukiBusy) setBukiEdit(null); }}>
-              <div style={bukiS.sheet} onClick={(e) => e.stopPropagation()}>
-                <div style={bukiS.title}>{parseCardKey(c.card_key).name} ・武気充填</div>
-                <div style={bukiS.cap}>{loaded} / {cap} 枠　｜　プール {pool != null ? pool.toLocaleString() : '—'}</div>
-                <div style={bukiS.bigGauge}><div style={{ height: '100%', width: pct + '%', background: BUKI_COLOR[q] || '#9a7' }} /></div>
-                <div style={bukiS.qrow}>
-                  {Q_ORDER.map(qq => { const locked = Q_LV[qq] > kajiyaLv; return (
-                    <button key={qq} disabled={bukiBusy || locked} onClick={() => applyBuki(c, qq, loaded)} style={{ ...bukiS.q, ...(qq === q ? bukiS.qOn : {}), ...(locked ? bukiS.qLock : {}) }}>{QUALITY_JA[qq]}{locked ? ' 🔒' : ''}<br /><small>攻{QATK[qq]}/コ{Q_COST[qq]}</small></button>
-                  ); })}
-                </div>
-                <div style={bukiS.pmRow}>
-                  <button disabled={bukiBusy || loaded <= 0} onClick={() => applyBuki(c, q, loaded - 1)} style={bukiS.pm}>−</button>
-                  <button disabled={bukiBusy} onClick={() => applyBuki(c, q, 0)} style={bukiS.mid}>空にする</button>
-                  <button disabled={bukiBusy} onClick={() => applyBuki(c, q, 100000)} style={bukiS.mid}>最大充填</button>
-                  <button disabled={bukiBusy || loaded >= cap} onClick={() => applyBuki(c, q, loaded + 1)} style={bukiS.pm}>＋</button>
-                </div>
-                <button style={bukiS.close} onClick={() => { if (!bukiBusy) setBukiEdit(null); }}>閉じる</button>
-              </div>
-            </div>
-          );
-        })()}
+        {/* 武気充填モーダル（共通コンポーネント） */}
+        {bukiEdit && <BukiEditModal cardId={bukiEdit} cardById={cardById} pool={pool} kajiyaLv={kajiyaLv} bukiBusy={bukiBusy} onApply={applyBuki} onClose={() => setBukiEdit(null)} />}
 
       {/* 帰還/回収の確認モーダル（moveConfirm と同じ意匠） */}
       {detailCard && <CardPopup card={detailCard} onClose={() => setDetailCard(null)} />}
@@ -2659,6 +2661,10 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
   const [clockOffset, setClockOffset] = useState(0);                    // サーバ now − client now（ms）
   const [now, setNow] = useState(Date.now());
   const collectedRef = useRef({});                                      // 自動回収の重複防止（deck_no:started_at）
+  const [bukiEdit, setBukiEdit] = useState(null);   // 武気充填モーダル対象 card_id（デッキ編成と共通）
+  const [bukiBusy, setBukiBusy] = useState(false);
+  const [pool, setPool] = useState(null);           // renkiden 武気プール
+  const [kajiyaLv, setKajiyaLv] = useState(1);       // 装備の質アンロック上限
 
   const maxDecks = Math.min(2 + Math.floor(((profile && profile.cleared_stage) || 0) / 2), 6);
   const triesUsed = (profile && profile.boss_date === jstToday()) ? (profile.boss_count_today || 0) : 0;
@@ -2670,12 +2676,21 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
     try { const d = await ChikarianAPI.getBossSorties(); setSorties((d && d.sorties) || []); setClockOffset(d && d.now ? (new Date(d.now).getTime() - Date.now()) : 0); }
     catch (e) { /* 取得失敗時はゲージ非表示（最終判定はサーバ操作で担保） */ }
   }
+  async function loadPool() { try { const r = normalizeRk(await ChikarianAPI.getRenkiden()); setPool(r ? r.buki : 0); } catch (e) {} }
+  // カード単位の武気付け外し（デッキ編成と同じ・確定はサーバ equip_buki）。decks と親 cards の両方を更新してゲージ反映。
+  async function applyBuki(c, quality, amount) {
+    if (bukiBusy) return; setBukiBusy(true);
+    try { await ChikarianAPI.equipBuki(c.id, quality, Math.max(0, amount)); await loadPool(); try { setDecks(await ChikarianAPI.getDecks() || []); } catch (e2) {} await onRefresh(); }
+    catch (e) { flash(errMsg(e)); } finally { setBukiBusy(false); }
+  }
   useEffect(() => {
     (async () => {
       try { setBosses(await ChikarianAPI.getBossMaster() || []); } catch (e) { flash(errMsg(e)); setBosses([]); }
       try { setDecks(await ChikarianAPI.getDecks() || []); } catch (e) { setDecks([]); }
       try { const sm = await ChikarianAPI.getSkillMaster(); const m = {}; (sm || []).forEach(s => { m[s.skill_key] = s; }); setSkillMap(m); } catch (e) {}
       try { const sp = await ChikarianAPI.getSpStates(); const t = jstToday(); const ss = {}; (sp || []).forEach(x => { if (x.unavailable_until >= t) ss[x.card_id] = true; }); setSpSet(ss); } catch (e) {}
+      try { const r = normalizeRk(await ChikarianAPI.getRenkiden()); setPool(r ? r.buki : 0); } catch (e) {}
+      try { const os = await ChikarianAPI.getKajiyaOrders() || []; setKajiyaLv(os.filter(o => o.claimed).reduce((mx, o) => Math.max(mx, Q_LV[o.quality] || 0), 1)); } catch (e) {}
     })();
     refetchSorties();
     const t1 = setInterval(() => setNow(Date.now()), 1000);          // ローカル秒読み
@@ -2926,9 +2941,9 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
                               <div className="boss-deck2Nm">{cardFullName(c)}</div>
                               {(() => { if (/_sp$/.test(c.card_key || '')) return <div style={{ fontSize: 8, color: '#8a7a9a', textAlign: 'center', marginTop: 3 }}>武気なし</div>;
                                 const capv = bukiCapacity(c), filled = c.loaded_buki || 0, pct = capv > 0 ? Math.min(100, filled / capv * 100) : 0;
-                                return <div style={{ marginTop: 3 }}>
+                                return <div style={{ marginTop: 3, cursor: blocked ? 'default' : 'pointer' }} onClick={(e) => { e.stopPropagation(); if (!busy && !blocked) setBukiEdit(c.id); }}>
                                   <div style={{ height: 4, borderRadius: 2, background: 'rgba(255,255,255,.14)', overflow: 'hidden' }}><div style={{ height: '100%', width: pct + '%', background: BUKI_COLOR[c.quality] || '#9a7' }} /></div>
-                                  <div style={{ fontSize: 8, color: '#cdb488', textAlign: 'center', marginTop: 1 }}>{filled}/{capv}</div>
+                                  <div style={{ fontSize: 8, color: '#cdb488', textAlign: 'center', marginTop: 1 }}>{filled}/{capv}{blocked ? '' : ' ⚡充填'}</div>
                                 </div>; })()}
                             </div>
                           : <div key={si} className="boss-deck2Empty">空き</div>)}
@@ -2947,6 +2962,9 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
 
       {/* カードタップ→詳細（スキル＋武気充填）。戻るで出撃シートに復帰 */}
       {detailCard && <CardPopup card={detailCard} onClose={() => setDetailCard(null)} />}
+
+      {/* 武気充填モーダル（デッキ編成と共通）。ゲージタップで開く */}
+      {bukiEdit && <BukiEditModal cardId={bukiEdit} cardById={cardById} pool={pool} kajiyaLv={kajiyaLv} bukiBusy={bukiBusy} onApply={applyBuki} onClose={() => setBukiEdit(null)} />}
 
       {/* 編成ボタン→DeckScreen。戻るでデッキ内容を反映して出撃シートに復帰 */}
       {editDeckNo !== null && (
