@@ -1412,7 +1412,7 @@ function computeStats(card) {
   const body = base * (1 + ((card.lv || 1) - 1) * rL);                  // 本体は★非依存（0026）
   const qatk = isSp ? 0 : (QATK[card.quality] || 0);
   const equip = isSp ? 0 : ((card.loaded_buki || 0) * qatk);            // 装備項＝込めた武気×枠攻撃力
-  const starMul = 1 + 0.10 * (card.star || 0);                         // ★は総合(装備項+本体)に乗る・係数0.10（0026）
+  const starMul = 1 + 0.15 * (card.star || 0);                         // ★は総合(装備項+本体)に乗る・係数0.15（0073）
   const bodyS = body * starMul, equipS = equip * starMul;              // 内訳の和＝総合になるよう表示にも同倍率
   return { isSp, info, base, cap, body: Math.round(bodyS), equip: Math.round(equipS), sougou: Math.round(bodyS + equipS) };
 }
@@ -4238,8 +4238,8 @@ function EquipView({ base, refreshAll, onBack, flash }) {
 
   if (pool === null) return <Booting />;
 
-  // 数値は本番 computeStats 準拠（★0.10・枠攻撃力 QATK 10/15/22/34）。mockup の旧値は使わない。
-  const star = base.star || 0; const starMul = 1 + 0.10 * star;
+  // 数値は本番 computeStats 準拠（★0.15・枠攻撃力 QATK 10/15/22/34）。mockup の旧値は使わない。
+  const star = base.star || 0; const starMul = 1 + 0.15 * star;
   const qatk = QATK[quality] || 0;
   const baseBody = computeStats(base).body;                          // 本体（★適用済・装備非依存）
   const amt = Math.min(amount, capacity);
@@ -4331,7 +4331,7 @@ function EquipView({ base, refreshAll, onBack, flash }) {
 
         <button onClick={equip} disabled={busy} className="sb-cta">{busy ? '装備中…' : (amt === 0 ? 'アンロード（全返却）' : '装備する')}</button>
         <button onClick={onBack} className="sb-back">‹ 戻る</button>
-        <div className="sb-foot">数値は本番 computeStats 準拠（本体×0.80・★0.10・枠攻撃力10/15/22/34）。武気は練気殿で練成・保管。質は鍛冶屋で解放。</div>
+        <div className="sb-foot">数値は本番 computeStats 準拠（本体×0.80・★0.15・枠攻撃力10/15/22/34）。武気は練気殿で練成・保管。質は鍛冶屋で解放。</div>
       </div>
     </div>
   );
