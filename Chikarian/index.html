@@ -4592,7 +4592,7 @@ function ExchangeView({ base, refreshAll, onBack, flash }) {
   if (result) {
     return (
       <div style={S.root}><div style={S.bg} /><div style={S.vignette} />
-        <div style={{ position: 'relative', zIndex: 2, minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+        <div style={{ position: 'relative', zIndex: 2, height: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div style={{ fontSize: 22, fontWeight: 800, color: GOLD_HI }}>交換しました</div>
           <div style={{ fontSize: 14, color: '#e7d3a6', marginTop: 14, lineHeight: 2, textAlign: 'center' }}>
             {COLOR_JA[result.crystal_color] || result.crystal_color}クリスタル ×{Number(result.crystal_count || 0).toLocaleString()} 獲得<br />
@@ -4608,7 +4608,7 @@ function ExchangeView({ base, refreshAll, onBack, flash }) {
 
   return (
     <div style={S.root}><div style={S.bg} /><div style={S.vignette} />
-      <div style={{ position: 'relative', zIndex: 2, minHeight: '100dvh', display: 'flex', flexDirection: 'column', padding: '14px 14px 18px' }}>
+      <div style={{ position: 'relative', zIndex: 2, height: '100dvh', overflowY: 'auto', display: 'flex', flexDirection: 'column', padding: '14px 14px 18px' }}>
         <button onClick={onBack} style={{ ...S.lineBtn, alignSelf: 'flex-start', padding: '6px 16px' }}>‹ 戻る</button>
         <div style={{ textAlign: 'center', fontSize: 18, fontWeight: 800, letterSpacing: 2, color: GOLD_HI, marginTop: 6 }}>交換所</div>
 
