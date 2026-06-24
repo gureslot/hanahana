@@ -82,9 +82,18 @@
   .lock .lb>i{display:block; height:100%; width:0; background:linear-gradient(90deg,#ff9500,#ffe28a); transition:width .12s;}
   .lock.locked .lb>i{background:linear-gradient(90deg,#1fc46a,#9dffce);}
 
+  /* 採取の判定枠（赤=花びら / 黄=花芯 / 緑=葉）＋内枠（破線）。カメラ映像の上に重ねる */
+  .rframes{position:absolute; inset:0; z-index:2; pointer-events:none;}
+  .rbox{position:absolute; border:2px solid; border-radius:3px;}
+  /* 左右切替：ランプを持つ手で枠を左右反転。カメラ下の左スペースに置く */
+  .side-switch{position:relative; z-index:6; display:flex; gap:8px; width:46%; margin:10px 0 0 3%;}
+  .side-btn{flex:1; padding:8px 0; font-family:var(--font); font-size:13px; font-weight:700; color:var(--sub);
+    background:rgba(255,247,241,.8); border:1.5px solid var(--line); border-radius:10px; cursor:pointer;}
+  .side-btn.active{color:#fff; background:linear-gradient(180deg,#ffb84d,#e0a330); border-color:transparent;}
+
   /* 育成：カメラ＋大きいちかり＋左ゲージを重ねる舞台 */
   .train-arena{position:relative; width:100%; flex:1 1 auto; min-height:0; margin-top:10px; overflow:hidden; border-radius:18px 18px 0 0;}
-  .train-arena .camslot{position:absolute; top:0; left:0; right:0; aspect-ratio:4/3; z-index:1;}
+  .train-arena .camslot{position:relative; width:100%; aspect-ratio:4/3; z-index:1;}
   /* ちかり：右下に大きく、カメラに少し乗る。下は舞台で見切れる */
   .mini-stage{position:absolute; right:-4%; bottom:-6%; width:66%; background:transparent; z-index:5; /* aspect-ratioはJSが画像から設定 */}
   .mini-stage canvas{position:absolute; inset:0; width:100%; height:100%;}
@@ -159,10 +168,16 @@
           ここに<b>カメラ</b>が入ります<br>（ハイビスカスランプの点滅を認識）<br><br>
           ※プレビューでは <b>下のボタン</b>で点滅をシミュレートします
         </div>
+        <div class="rframes" id="rframes"></div>
         <div class="lock" id="lockwrap">
           <div class="ll" id="lock-label">かざすと はじまります</div>
           <div class="lb"><i id="lock-fill"></i></div>
         </div>
+      </div>
+
+      <div class="side-switch" id="sideSwitch">
+        <button class="side-btn active" id="btnL" type="button" onclick="setSide('L')">◀ 左</button>
+        <button class="side-btn" id="btnR" type="button" onclick="setSide('R')">右 ▶</button>
       </div>
 
       <div class="train-gauges">
@@ -637,6 +652,46 @@ function syncDevLv(){   // テストパネルのLv表示と＜＞の有効/無�
   if(dn) dn.disabled=(S.level<=1); if(up) up.disabled=(S.level>=MAX_LEVEL);
 }
 
+/* ════════════════════════════════════════════════════════════
+   採取の判定枠（赤=花びら / 黄=花芯 / 緑=葉）の表示＋左右切替
+   ※今は枠の表示のみ。カメラ映像と色判定の接続は次の段階で onBlink に繋ぐ
+   ════════════════════════════════════════════════════════════ */
+let side='L';
+const OUTER_L={
+  stamen:{x:0.564,y:0.075,w:0.219,h:0.280,c:'#ffd60a'},   // 黄＝花芯/おしべ
+  petal: {x:0.171,y:0.180,w:0.588,h:0.670,c:'#ff2d55'},   // 赤＝花びら
+  leaf1: {x:0.144,y:0.595,w:0.231,h:0.288,c:'#32d74b'},   // 緑＝葉
+  leaf2: {x:0.652,y:0.446,w:0.188,h:0.280,c:'#32d74b'},   // 緑＝葉
+};
+const INNER_L={
+  stamen:{x:0.646,y:0.178,w:0.055,h:0.073},
+  petal: {x:0.304,y:0.292,w:0.278,h:0.279},
+  leaf1: {x:0.203,y:0.658,w:0.098,h:0.119},
+  leaf2: {x:0.721,y:0.553,w:0.050,h:0.065},
+};
+const mirrorR = r => ({ x:1-r.x-r.w, y:r.y, w:r.w, h:r.h, c:r.c });
+function regions(){
+  if(side==='L') return { outer:OUTER_L, inner:INNER_L };
+  const o={}, inn={};
+  for(const k in OUTER_L) o[k]=mirrorR(OUTER_L[k]);
+  for(const k in INNER_L) inn[k]=mirrorR(INNER_L[k]);
+  // 左右反転で葉の左右も入れ替える
+  return { outer:{stamen:o.stamen,petal:o.petal,leaf1:o.leaf2,leaf2:o.leaf1},
+           inner:{stamen:inn.stamen,petal:inn.petal,leaf1:inn.leaf2,leaf2:inn.leaf1} };
+}
+function drawBoxes(){
+  const host=$('rframes'); if(!host) return; host.innerHTML='';
+  const rs=regions();
+  Object.values(rs.outer).forEach(r=>{ const d=document.createElement('div'); d.className='rbox';
+    d.style.cssText=`left:${r.x*100}%;top:${r.y*100}%;width:${r.w*100}%;height:${r.h*100}%;border-color:${r.c};`;
+    host.appendChild(d); });
+  for(const k in rs.inner){ const r=rs.inner[k], c=rs.outer[k].c;
+    const d=document.createElement('div'); d.className='rbox';
+    d.style.cssText=`left:${r.x*100}%;top:${r.y*100}%;width:${r.w*100}%;height:${r.h*100}%;border:1px dashed ${c};opacity:.7;`;
+    host.appendChild(d); }
+}
+function setSide(s){ side=s; $('btnL').classList.toggle('active',s==='L'); $('btnR').classList.toggle('active',s==='R'); drawBoxes(); }
+
 /* ───────── 起動 ───────── */
 window.addEventListener('resize', resizeChikari);
 (function boot(){
@@ -646,6 +701,7 @@ window.addEventListener('resize', resizeChikari);
   loadHome(S.level, true); loadTrain(S.level);                           // 本画像に差し替え（あれば）
   if(glOK) requestAnimationFrame(loop);
   mountChikari($('home-stage'));
+  drawBoxes();                                                           // 判定枠を描画
   updateAllUI(); showHomeLine();
 })();
 
