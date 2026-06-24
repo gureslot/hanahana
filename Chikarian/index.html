@@ -1929,16 +1929,23 @@ const cpS = {
   actOff: { opacity: .4, cursor: 'default' },
 };
 
-// CardPicker のソートをセッション中保持（開き直しでリセットしない）。既定＝レア→レベル(★優先)。
-const _pickerSort = { f1: 'rarity', d1: 'desc', f2: 'lv', d2: 'desc' };
-function CardPicker({ title, cards, getStatus, chooseLabel, onChoose, onClear, actions, back, busy, flash, backLabel = '‹ 戻る', backCenter = false, books = null, onUseBook = null, deckOf = null }) {
+// CardPicker の絞り込み(facet/値)＋ソートを画面別にセッション保持（開き直し・画面遷移でリセットしない）。
+// persistKey ごとに独立バケット。既定＝レア絞り無し／レア→レベル(★優先)。localStorage不使用（音設定と同方針）。
+const _pickerStore = {};
+function _pickerMem(key) {
+  const k = key || 'default';
+  if (!_pickerStore[k]) _pickerStore[k] = { facet: 'rarity', fval: 'all', f1: 'rarity', d1: 'desc', f2: 'lv', d2: 'desc' };
+  return _pickerStore[k];
+}
+function CardPicker({ title, cards, getStatus, chooseLabel, onChoose, onClear, actions, back, busy, flash, backLabel = '‹ 戻る', backCenter = false, books = null, onUseBook = null, deckOf = null, persistKey = 'default' }) {
+  const _mem = _pickerMem(persistKey);
   const [sel, setSel] = useState(null);
-  const [facet, setFacet] = useState('attr');
-  const [fval, setFval] = useState('all');
-  const [sort1, setSort1] = useState(() => _pickerSort.f1);
-  const [dir1, setDir1]   = useState(() => _pickerSort.d1);
-  const [sort2, setSort2] = useState(() => _pickerSort.f2);
-  const [dir2, setDir2]   = useState(() => _pickerSort.d2);
+  const [facet, setFacet] = useState(() => _mem.facet);
+  const [fval, setFval] = useState(() => _mem.fval);
+  const [sort1, setSort1] = useState(() => _mem.f1);
+  const [dir1, setDir1]   = useState(() => _mem.d1);
+  const [sort2, setSort2] = useState(() => _mem.f2);
+  const [dir2, setDir2]   = useState(() => _mem.d2);
   const [skillMap, setSkillMap] = useState({});
   const [selSkills, setSelSkills] = useState(null);
   const [expOpen, setExpOpen] = useState(false);
@@ -1973,13 +1980,13 @@ function CardPicker({ title, cards, getStatus, chooseLabel, onChoose, onClear, a
   const RAR_ORD = { n: 0, r: 1, sr: 2, ssr: 3, sp: 4 };
   const _deckNos = deckOf ? Array.from(new Set(Object.values(deckOf).filter(Boolean))).sort((a, b) => a - b) : [];
   const FACETS = {
-    attr: { label: '属性', vals: [['hana', '花'], ['shin', '芯'], ['ha', '葉'], ['sp', 'SP']] },
+    attr: { label: '属性', vals: [['hana', '花'], ['ha', '葉'], ['shin', '芯'], ['sp', 'SP']] },
     weap: { label: '武器', vals: [['ken', '剣'], ['tate', '盾'], ['tsue', '杖']] },
-    rarity: { label: 'レア', vals: [['n', 'N'], ['r', 'R'], ['sr', 'SR'], ['ssr', 'SSR'], ['sp', 'SP']] },
+    rarity: { label: 'レア', vals: [['sp', 'SP'], ['ssr', 'SSR'], ['sr', 'SR'], ['r', 'R'], ['n', 'N']] },
     species: { label: '種族', vals: [['hibiscus', 'ハイビスカス'], ['meshibe', 'めしべ'], ['sp', 'SP']] },
     deck: { label: 'デッキ', vals: _deckNos.map(n => [String(n), 'デッキ' + n]).concat([['none', '未編成']]) },
   };
-  const FACET_ORDER = ['attr', 'weap', 'rarity', 'species'].concat(deckOf ? ['deck'] : []);
+  const FACET_ORDER = (deckOf ? ['deck'] : []).concat(['rarity', 'attr', 'weap', 'species']);
   const matchFacet = c => {
     if (fval === 'all') return true;
     const k = c.card_key;
@@ -2003,8 +2010,8 @@ function CardPicker({ title, cards, getStatus, chooseLabel, onChoose, onClear, a
   items.sort((a, b) => (_c1(a, b) * _s1) || (_c2 ? _c2(a, b) * _s2 : 0) || a.card_key.localeCompare(b.card_key));
 
   const SORTS = [['body', '本体戦闘力'], ['lv', 'レベル'], ['rarity', 'レア']];
-  const cycle1 = (f) => { if (sort1 === f) { const d = dir1 === 'asc' ? 'desc' : 'asc'; setDir1(d); _pickerSort.d1 = d; } else { setSort1(f); setDir1('desc'); _pickerSort.f1 = f; _pickerSort.d1 = 'desc'; } };
-  const cycle2 = (f) => { if (f === 'none') { setSort2('none'); _pickerSort.f2 = 'none'; return; } if (sort2 === f) { const d = dir2 === 'asc' ? 'desc' : 'asc'; setDir2(d); _pickerSort.d2 = d; } else { setSort2(f); setDir2('desc'); _pickerSort.f2 = f; _pickerSort.d2 = 'desc'; } };
+  const cycle1 = (f) => { if (sort1 === f) { const d = dir1 === 'asc' ? 'desc' : 'asc'; setDir1(d); _mem.d1 = d; } else { setSort1(f); setDir1('desc'); _mem.f1 = f; _mem.d1 = 'desc'; } };
+  const cycle2 = (f) => { if (f === 'none') { setSort2('none'); _mem.f2 = 'none'; return; } if (sort2 === f) { const d = dir2 === 'asc' ? 'desc' : 'asc'; setDir2(d); _mem.d2 = d; } else { setSort2(f); setDir2('desc'); _mem.f2 = f; _mem.d2 = 'desc'; } };
   const arr1 = f => sort1 === f ? (dir1 === 'asc' ? ' ▲' : ' ▼') : '';
   const arr2 = f => sort2 === f ? (dir2 === 'asc' ? ' ▲' : ' ▼') : '';
 
@@ -2023,11 +2030,11 @@ function CardPicker({ title, cards, getStatus, chooseLabel, onChoose, onClear, a
           <div style={cpS.title}>{title}</div>
         </div>
         <div style={cpS.facetRow}>
-          {FACET_ORDER.map(f => <button key={f} onClick={() => { setFacet(f); setFval('all'); }} style={{ ...cpS.chip, ...(facet === f ? cpS.chipSel : {}) }}>{FACETS[f].label}</button>)}
+          {FACET_ORDER.map(f => <button key={f} onClick={() => { setFacet(f); setFval('all'); _mem.facet = f; _mem.fval = 'all'; }} style={{ ...cpS.chip, ...(facet === f ? cpS.chipSel : {}) }}>{FACETS[f].label}</button>)}
         </div>
         <div style={cpS.facetRow}>
-          <button onClick={() => setFval('all')} style={{ ...cpS.chip, ...(fval === 'all' ? cpS.chipSel : {}) }}>すべて</button>
-          {FACETS[facet].vals.map(([k, l]) => <button key={k} onClick={() => setFval(k)} style={{ ...cpS.chip, ...(fval === k ? cpS.chipSel : {}) }}>{l}</button>)}
+          <button onClick={() => { setFval('all'); _mem.fval = 'all'; }} style={{ ...cpS.chip, ...(fval === 'all' ? cpS.chipSel : {}) }}>すべて</button>
+          {FACETS[facet].vals.map(([k, l]) => <button key={k} onClick={() => { setFval(k); _mem.fval = k; }} style={{ ...cpS.chip, ...(fval === k ? cpS.chipSel : {}) }}>{l}</button>)}
         </div>
         <div style={cpS.facetRow}>
           <span style={cpS.sortLab}>第1</span>
@@ -3007,7 +3014,7 @@ function KyokaScreen({ cards, profile, refreshAll, back, flash }) {
     ];
   };
   const deckOf = {}; (decks || []).forEach(d => { [d.slot1_card_id, d.slot2_card_id, d.slot3_card_id].forEach(id => { if (id) deckOf[id] = d.deck_no; }); });
-  return <CardPicker title="強化するカードを選ぶ" cards={cards} getStatus={getStatus} actions={actions} back={back} busy={busy} flash={flash} backLabel="ホームへ戻る" backCenter={true} books={{ s: (profile && profile.exp_book_s) || 0, m: (profile && profile.exp_book_m) || 0, l: (profile && profile.exp_book_l) || 0, xl: (profile && profile.exp_book_xl) || 0 }} onUseBook={useBook} deckOf={deckOf} />;
+  return <CardPicker title="強化するカードを選ぶ" cards={cards} getStatus={getStatus} actions={actions} back={back} busy={busy} flash={flash} backLabel="ホームへ戻る" backCenter={true} books={{ s: (profile && profile.exp_book_s) || 0, m: (profile && profile.exp_book_m) || 0, l: (profile && profile.exp_book_l) || 0, xl: (profile && profile.exp_book_xl) || 0 }} onUseBook={useBook} deckOf={deckOf} persistKey="kyoka" />;
 }
 
 function KyokaView({ base, cards, profile, refreshAll, onBack, flash }) {
