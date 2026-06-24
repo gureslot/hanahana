@@ -3342,6 +3342,8 @@ function ExchangeTab({ profile, cards, refreshAll, flash }) {
   const [rates, setRates] = useState([]);
   const [xSort, setXSort] = useState('rarity');   // 交換所の並び替え
   const [xDir, setXDir] = useState('desc');
+  const [xRar, setXRar] = useState('all');        // 交換所：レアリティ絞り込み
+  const [lv1Only, setLv1Only] = useState(false);  // 交換所：Lv1のみ絞り込み
   const [decks, setDecks] = useState([]);
   useEffect(() => { (async () => { try { setDecks(await ChikarianAPI.getDecks() || []); } catch (e) {} })(); }, []);
   const [sel, setSel] = useState({});
@@ -3358,7 +3360,8 @@ function ExchangeTab({ profile, cards, refreshAll, flash }) {
     const RR = { n: 0, r: 1, sr: 2, ssr: 3, sp: 4 }, AO = { hana: 0, ha: 1, shin: 2 }, WO = { ken: 0, tate: 1, tsue: 2 };
     const dir = xDir === 'asc' ? 1 : -1, key = ['lv', 'body', 'attr', 'weap'].includes(xSort) ? xSort : 'rar';
     return (cards || [])
-      .map(c => { const pk = parseCardKey(c.card_key); const pt = (c.card_key || '').split('_'); return { c, body: computeStats(c).body, rar: RR[pk.rarity] != null ? RR[pk.rarity] : 0, attr: AO[pk.attrKey] != null ? AO[pk.attrKey] : 9, weap: WO[pt[3]] != null ? WO[pt[3]] : 9, lv: c.lv || 1 }; })
+      .map(c => { const pk = parseCardKey(c.card_key); const pt = (c.card_key || '').split('_'); return { c, body: computeStats(c).body, rarKey: pk.rarity, rar: RR[pk.rarity] != null ? RR[pk.rarity] : 0, attr: AO[pk.attrKey] != null ? AO[pk.attrKey] : 9, weap: WO[pt[3]] != null ? WO[pt[3]] : 9, lv: c.lv || 1 }; })
+      .filter(x => (xRar === 'all' || x.rarKey === xRar) && (!lv1Only || x.lv === 1))
       .sort((a, b) => { const d = (a[key] - b[key]) * dir; return d !== 0 ? d : (b.body - a.body); })
       .map(x => x.c);
   })();
@@ -3395,6 +3398,13 @@ function ExchangeTab({ profile, cards, refreshAll, flash }) {
       <div style={exS.actions}>
         <button onClick={selectAll} style={exS.lineBtn} disabled={busy || list.length === 0}>全選択</button>
         <button onClick={clearSel} style={exS.lineBtn} disabled={busy || selIds.length === 0}>選択解除</button>
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', margin: '0 0 6px' }}>
+        <span style={{ fontSize: 10, color: '#7d7160' }}>絞り込み</span>
+        {[['all', '全'], ['n', 'N'], ['r', 'R'], ['sr', 'SR'], ['ssr', 'SSR'], ['sp', 'SP']].map(([k, l]) => (
+          <button key={k} onClick={() => setXRar(k)} style={{ fontFamily: 'inherit', fontSize: 11, fontWeight: 700, padding: '4px 9px', borderRadius: 10, cursor: 'pointer', border: '1px solid ' + (xRar === k ? '#c7a14e' : '#3a2c22'), background: xRar === k ? 'linear-gradient(180deg,#ecd28a,#c7a14e)' : '#181210', color: xRar === k ? '#0c0a09' : (k === 'all' ? '#b6a890' : (RAR_COL[k] || '#b6a890')) }}>{l}</button>
+        ))}
+        <button onClick={() => setLv1Only(v => !v)} style={{ fontFamily: 'inherit', fontSize: 11, fontWeight: 700, padding: '4px 9px', borderRadius: 10, cursor: 'pointer', border: '1px solid ' + (lv1Only ? '#c7a14e' : '#3a2c22'), background: lv1Only ? 'linear-gradient(180deg,#ecd28a,#c7a14e)' : '#181210', color: lv1Only ? '#0c0a09' : '#b6a890', marginLeft: 4 }}>Lv1のみ{lv1Only ? ' ✓' : ''}</button>
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', margin: '0 0 8px' }}>
         <span style={{ fontSize: 10, color: '#7d7160' }}>並び替え</span>
