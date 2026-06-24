@@ -1839,7 +1839,7 @@ const cpS = {
   split: { display: 'flex', gap: 8, flex: 1, minHeight: 0, width: '100%', minWidth: 0, marginTop: 4 },
   left: { flex: '0 0 38%', maxWidth: 196, minWidth: 0, boxSizing: 'border-box', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6, paddingRight: 4, maxHeight: '66vh' },
   empty: { color: '#a98f66', fontSize: 13, padding: 20, textAlign: 'center' },
-  li: { display: 'flex', gap: 8, alignItems: 'center', padding: 5, borderRadius: 10, border: '1px solid rgba(232,194,90,.18)', background: 'rgba(20,12,16,.5)', cursor: 'pointer', textAlign: 'left', width: '100%', boxSizing: 'border-box' },
+  li: { display: 'flex', gap: 8, alignItems: 'center', padding: 5, borderRadius: 10, border: '1px solid rgba(232,194,90,.18)', background: 'rgba(20,12,16,.5)', cursor: 'pointer', textAlign: 'left', width: '100%', boxSizing: 'border-box', outline: 'none', WebkitTapHighlightColor: 'transparent' },
   liSel: { borderColor: '#e8c25a', background: 'rgba(232,194,90,.14)', boxShadow: '0 0 8px rgba(232,194,90,.25)' },
   liArt: { width: 54, height: 81, flex: '0 0 54px', borderRadius: 7, overflow: 'hidden', position: 'relative' },
   liInfo: { display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 },
@@ -1911,6 +1911,20 @@ function CardPicker({ title, cards, getStatus, chooseLabel, onChoose, onClear, a
     if (sel != null) { (async () => { try { const s = await ChikarianAPI.getCardSkills(sel) || []; if (live) setSelSkills(s); } catch (e) { if (live) setSelSkills([]); } })(); }
     return () => { live = false; };
   }, [sel]);
+
+  // iOS Safari: 経験値付与ポップアップ表示中は背景スクロールを固定し、
+  // ソフトキーボード起因の残留スクロール（= position:fixed モーダルのヒットテスト座標ズレ）を防ぐ。
+  useEffect(() => {
+    if (!expOpen) return;
+    const y = window.scrollY || window.pageYOffset || 0;
+    const b = document.body;
+    const prev = { position: b.style.position, top: b.style.top, left: b.style.left, right: b.style.right, width: b.style.width, overflow: b.style.overflow };
+    b.style.position = 'fixed'; b.style.top = `-${y}px`; b.style.left = '0'; b.style.right = '0'; b.style.width = '100%'; b.style.overflow = 'hidden';
+    return () => {
+      b.style.position = prev.position; b.style.top = prev.top; b.style.left = prev.left; b.style.right = prev.right; b.style.width = prev.width; b.style.overflow = prev.overflow;
+      window.scrollTo(0, y);
+    };
+  }, [expOpen]);
 
   const rawRar = k => k.endsWith('_sp') ? 'sp' : k.split('_').pop();
   const rawAttr = k => k.endsWith('_sp') ? 'sp' : k.split('_')[2];
@@ -1991,7 +2005,7 @@ function CardPicker({ title, cards, getStatus, chooseLabel, onChoose, onClear, a
               : items.map(c => {
                   const st = getStatus(c);
                   return (
-                    <button key={c.id} onClick={() => { if (!st.disabled) setSel(c.id); }} disabled={!!st.disabled} style={{ ...cpS.li, ...(sel === c.id ? cpS.liSel : {}), ...(st.dim ? { opacity: .45 } : {}), ...(st.disabled ? { cursor: 'default' } : {}) }}>
+                    <button key={c.id} onClick={(e) => { e.currentTarget.blur(); if (!st.disabled) setSel(c.id); }} disabled={!!st.disabled} style={{ ...cpS.li, ...(sel === c.id ? cpS.liSel : {}), ...(st.dim ? { opacity: .45 } : {}), ...(st.disabled ? { cursor: 'default' } : {}) }}>
                       <div style={cpS.liArt}><DeckSlotArt cardKey={c.card_key} /></div>
                       <div style={cpS.liInfo}>
                         <span style={cpS.liLv}>Lv{c.lv || 1}{(c.star || 0) > 0 ? ' ★' + (c.star || 0) : ''}</span>
@@ -2061,7 +2075,7 @@ function CardPicker({ title, cards, getStatus, chooseLabel, onChoose, onClear, a
           const SZ = [['s', '小', 10], ['m', '中', 50], ['l', '大', 200], ['xl', '特大', 1000]];
           const maxHave = Math.max(books.s || 0, books.m || 0, books.l || 0, books.xl || 0);
           return (
-            <div style={cpS.modalBack} onClick={() => setExpOpen(false)}>
+            <div style={cpS.modalBack}>
               <div style={cpS.modal} onClick={e => e.stopPropagation()}>
                 <div style={cpS.modalTitle}>経験の書でレベルアップ</div>
                 <div style={cpS.modalCard}>{RAR_LABEL[selInfo.rarity]} {selInfo.name}　Lv {lv} / {selStats.cap}</div>
