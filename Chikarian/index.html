@@ -257,6 +257,8 @@ class ErrBoundary extends React.Component {
 
 function App() {
   const [phase, setPhase] = useState('booting');   // booting | title | login | opening | app
+  const [loopShow, setLoopShow] = useState(false);
+  const prevRoundRef = useRef(null);
   const [profile, setProfile] = useState(null);
   const [cards, setCards] = useState([]);          // 所持カード（サーバ値）
   const [screen, setScreen] = useState('home');
@@ -417,11 +419,20 @@ function App() {
     else body = <Placeholder name={screen} back={() => setScreen('home')} logout={logout} />;
   }
 
+  useEffect(() => {
+    if (!profile) return;
+    const r = Math.max(1, (profile && profile.boss_round) || 1);
+    if (prevRoundRef.current == null) { prevRoundRef.current = r; return; }
+    if (r > prevRoundRef.current) setLoopShow(true);
+    prevRoundRef.current = r;
+  }, [profile && profile.boss_round]);
+
   return (
     <div style={{ position: 'relative', width: '100%', maxWidth: 480, margin: '0 auto', minHeight: '100dvh', overflow: 'hidden', background: '#0a0509' }}>
       {/* 常駐 BGM（絶対にアンマウントしない） */}
       <audio ref={audioRef} src="sounds/bgm_home.mp3" loop preload="auto" muted={!bgmOn} />
       <ConfirmHost />
+      {loopShow && phase === 'app' && <Opening script={LOOP_SCRIPT} onDone={() => setLoopShow(false)} />}
       <ErrBoundary key={screen} onReset={() => setScreen('home')}>{body}</ErrBoundary>
       {toast && <div style={S.toast}>{toast}</div>}
     </div>
@@ -517,7 +528,16 @@ const OPENING_SCRIPT = [
   { type:'text', html:'まずは、わたしたちと前線へ。' },
 ];
 
-function Opening({ onDone }) {
+// 8面クリア（周回切替）本文：canon-01 §5-2（一字一句・言い換え厳禁）
+const LOOP_SCRIPT = [
+  { type:'beat', glow:'full' },
+  { type:'text', html:'灯し手よ。あなたの光が、辺境を囲む八つの前線すべてに届いた。' },
+  { type:'text', html:'だが——ジャルゴアは、退いただけだ。<br>あの巨大なものを、わたしたちはまだ倒してはいない。' },
+  { type:'text', html:'光が灯れば、ジャルゴアはまた姿を変えて押し寄せる。<br>それでも、わたしたちは退かない。あなたの光があるかぎり。' },
+  { type:'text', html:'<span class="em">——もう一度、共に。</span>' },
+];
+
+function Opening({ onDone, script = OPENING_SCRIPT }) {
   const [lineHtml, setLineHtml] = useState('');
   const [lineShow, setLineShow] = useState(false);
   const [glowShow, setGlowShow] = useState(false);
@@ -539,8 +559,8 @@ function Opening({ onDone }) {
   const step = () => {
     if (ended.current) return;
     i.current++;
-    if (i.current >= OPENING_SCRIPT.length) { finish(); return; }
-    const s = OPENING_SCRIPT[i.current];
+    if (i.current >= script.length) { finish(); return; }
+    const s = script[i.current];
     if (s.type === 'beat') {                       // 演出のみ（テキスト非表示）・自動で進む
       busy.current = true; setNextShow(false);
       if (s.glow === 'on') { setGlowShow(true); T(step, 1800); }
@@ -2567,6 +2587,20 @@ const BOSS_STAGES = [
 // 終幕界2周目（女型3体）。マップ・解放は今後対応のためデータのみ保持（UI未使用）。
 const BOSS_FINALE_R2 = { stage: 8, round: 2, world: '終幕界', motif: 'ピエロ（女型）', bosses: [{ role: '中ボスA', name: 'カリオネラ', img: 'boss_8_a_r2' }, { role: '中ボスB', name: 'ノルディアーナ', img: 'boss_8_b_r2' }, { role: '面ボス', name: 'グラヴィエラ＝ディスカリス', img: 'boss_8_boss_r2' }] };
 const BOSS_ROLE_KEYS = ['a', 'b', 'boss'];                                   // ノード並び＝STAGES bosses 並び
+
+// 敵戦力（0074 boss_loop_curve のクライアントミラー）：round=1 は boss_master.base_power、
+// round>=2 は P8(R-1)×M2(R)^(n/24)。roleIdx は 1始まり（中A=1/中B=2/面ボス=3）。
+function bossEnemyPower(stage, roleIdx, round, basePower) {
+  if (!round || round <= 1) return Number(basePower) || 0;          // 1周目＝構造曲線（boss_master）
+  const P8 = { 1: 140100, 2: 448320, 3: 717312, 4: 896640, 5: 1058035, 6: 1216740 };  // boss_loop_curve.p8
+  const M2 = { 2: 3.20, 3: 1.60, 4: 1.25, 5: 1.18, 6: 1.15 };
+  const maxR = 6;
+  const n  = (stage - 1) * 3 + roleIdx;                             // 周内ノード 1..24（面8面ボス=24）
+  const m2 = M2[round] || 1.15;                                     // 表外＝フロア
+  let p8prev = P8[round - 1];
+  if (p8prev == null) p8prev = P8[maxR] * Math.pow(1.15, (round - 1) - maxR);  // R-1 も表外＝floor 延長
+  return Math.round(p8prev * Math.pow(m2, n / 24));
+}
 const BOSS_NODES = [{ left: '28%', top: '23%', size: 'sub' }, { left: '70%', top: '53.5%', size: 'sub' }, { left: '52%', top: '84%', size: 'boss', up: true }];
 
 function BossNodeImg({ src }) {
@@ -2589,9 +2623,10 @@ function bossLivePhase(s, offset, nowMs) {
 }
 function bossMmss(t) { t = Math.max(0, Math.floor(t)); const m = Math.floor(t / 60), s = t % 60; return m + ':' + String(s).padStart(2, '0'); }
 function bossSortieName(bossKey) {
-  const m = /^boss_([1-8])_(boss|a|b)/.exec(bossKey || '');
+  const m = /^boss_([1-8])_(boss|a|b)(?:_r([0-9]+))?$/.exec(bossKey || '');
   if (!m) return bossKey;
-  const st = BOSS_STAGES[+m[1] - 1]; const idx = BOSS_ROLE_KEYS.indexOf(m[2]);
+  const stage = +m[1], idx = BOSS_ROLE_KEYS.indexOf(m[2]), round = m[3] ? +m[3] : 1;
+  const st = (stage === 8 && round >= 2) ? BOSS_FINALE_R2 : BOSS_STAGES[stage - 1];
   return (st && st.bosses[idx]) ? st.bosses[idx].name : bossKey;
 }
 
@@ -2610,7 +2645,13 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
   const [emptyingDeck, setEmptyingDeck] = useState(null);              // 空にする 処理中のデッキ番号（連打防止）
   const [deckNo, setDeckNo] = useState(1);
   const cleared = (profile && profile.cleared_stage) || 0;
-  const [stage, setStage] = useState(() => Math.min(cleared + 1, 8));   // 既定＝次の未クリア面（フロンティア）
+  const bossRound = Math.max(1, (profile && profile.boss_round) || 1);
+  const [roundSel, setRoundSel] = useState(bossRound);                                    // 表示/出撃する周回（既定＝現周）
+  const [roundOpen, setRoundOpen] = useState(false);                                       // 周回セレクタの開閉
+  const frontier = Math.min((((profile && profile.boss_round_stage) || 0) + 1), 8);        // 現周のフロンティア面
+  const isPast = roundSel < bossRound;                                                      // 過去周ビュー（全開放）
+  useEffect(() => { setRoundSel(bossRound); }, [bossRound]);                                // 周回が進んだら現周へ追従
+  const [stage, setStage] = useState(() => Math.min((((profile && profile.boss_round_stage) || 0) + 1), 8));   // 既定＝現周フロンティア面
   const [openNode, setOpenNode] = useState(null);                       // 開いているノード index(0..2) or null
   const [worldOpen, setWorldOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -2668,7 +2709,7 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
     const notFull = mem.some(c => (c.loaded_buki || 0) < bukiCapacity(c));
     if (notFull && !(await uiConfirm('メインデッキの武気が満タンではありません。このまま出撃しますか？'))) return;
     setBusy(true);
-    try { await ChikarianAPI.startBossBattle(deckNo, 'boss_' + stage + '_' + role); setOpenNode(null); await refetchSorties(); await onRefresh(); flash('出撃しました'); }
+    try { await ChikarianAPI.startBossBattle(deckNo, 'boss_' + stage + '_' + role + (roundSel > 1 ? '_r' + roundSel : '')); setOpenNode(null); await refetchSorties(); await onRefresh(); flash('出撃しました'); }
     catch (e) { flash(errMsg(e)); }
     finally { setBusy(false); }
   }
@@ -2682,7 +2723,7 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
 
   if (bosses === null || decks === null) return <Booting />;
 
-  const curStage = BOSS_STAGES[stage - 1];                              // 表示中の面（名前/界/ボス画像の正）
+  const curStage = (stage === 8 && roundSel >= 2) ? BOSS_FINALE_R2 : BOSS_STAGES[stage - 1];   // 表示中の面（8面かつ2周目以降は女型）
   const closeSheet = () => setOpenNode(null);
   const busyDecks = new Set(sorties.map(s => s.deck_no));               // 出撃中デッキ
   function openSheet(i) { setOpenNode(i); setDeckNo(1); }   // メインデッキ(デッキ1)固定（canon-06 §4-1）
@@ -2750,7 +2791,7 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
   return (
     <div style={bossRoot}>
       <style>{BOSS_CSS}</style>
-      <div className="boss-mapWrap" style={{ backgroundImage: `url(./images/boss_map_${stage}.png)` }}>
+      <div className="boss-mapWrap" style={{ backgroundImage: `url(./images/boss_map_${stage}.png)`, filter: roundSel > 1 ? `hue-rotate(${(roundSel - 1) * 35}deg) saturate(1.12) brightness(0.92)` : 'none' }}>
         <div className="boss-mapDim" />
         {curStage.bosses.map((b, i) => {
           const pos = BOSS_NODES[i];
@@ -2759,7 +2800,7 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
           const nodeBusy = !!busyRoleOnStage[role];
           // 面内順次解放：フロンティア面のみ中A→中B→面ボスの順。過去面（stage≤cleared）は全ノード開放。
           const roleProg = (profile && profile.boss_round_role) || 0;
-          const nodeLocked = (stage === cleared + 1) && ((i === 1 && roleProg < 1) || (i === 2 && roleProg < 2));
+          const nodeLocked = !isPast && (stage === frontier) && ((i === 1 && roleProg < 1) || (i === 2 && roleProg < 2));
           return (
             <div key={i} className={'boss-node' + (pos.up ? ' up' : '') + (nodeBusy ? ' busy' : '') + (nodeLocked ? ' locked' : '')} style={{ left: pos.left, top: pos.top }} onClick={() => { if (nodeLocked) { flash(i === 2 ? '中ボスA・Bを撃破すると解放されます' : '中ボスAを撃破すると解放されます'); return; } openSheet(i); }}>
               <div className={'boss-dot ' + pos.size}><span className="boss-gi" /><BossNodeImg src={pinSrc} /></div>
@@ -2801,7 +2842,7 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
         <div className="boss-wbtn" onClick={() => setWorldOpen(o => !o)}><span className="boss-wn">{WORLD_NAMES[stage]}</span><span className="boss-ar">▾</span></div>
         <div className="boss-wlist">
           {Array.from({ length: 8 }, (_, i) => i + 1).map(s => {
-            const locked = s > cleared + 1;                            // 解放＝cleared_stage+1 まで（サーバ整合）
+            const locked = !isPast && (s > frontier);                  // 過去周=全開放／現周=フロンティアまで
             return (
               <div key={s} className={'boss-witem' + (s === stage ? ' cur' : '') + (locked ? ' locked' : '')} onClick={() => { if (locked) return; setStage(s); setWorldOpen(false); setOpenNode(null); }}>
                 <span>{WORLD_NAMES[s]}</span>
@@ -2812,8 +2853,22 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
         </div>
         <div className="boss-tries">本日の挑戦 残り <b>{triesLeft}</b>/3</div>
       </div>
+      {/* 周回セレクタ（2周目以降のみ）：過去周＝全開放／現周＝順次。界セレクタの意匠を流用し下に配置 */}
+      {bossRound >= 2 && (
+        <div className={'boss-worldsel' + (roundOpen ? ' open' : '')} style={{ top: 58 }}>
+          <div className="boss-wbtn" onClick={() => setRoundOpen(o => !o)}><span className="boss-wn">{roundSel}周目{roundSel === bossRound ? '（現在）' : ''}</span><span className="boss-ar">▾</span></div>
+          <div className="boss-wlist">
+            {Array.from({ length: bossRound }, (_, i) => i + 1).map(r => (
+              <div key={r} className={'boss-witem' + (r === roundSel ? ' cur' : '')} onClick={() => { setRoundSel(r); setStage(r < bossRound ? 1 : frontier); setOpenNode(null); setRoundOpen(false); }}>
+                <span>{r}周目{r === bossRound ? '（現在）' : ''}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       {/* 界ドロップダウンの外側タップで閉じる */}
       {worldOpen && <div className="boss-wscrim" onClick={() => setWorldOpen(false)} />}
+      {roundOpen && <div className="boss-wscrim" onClick={() => setRoundOpen(false)} />}
 
       <button className="boss-back" onClick={back}>ホームへ戻る</button>
 
@@ -2831,7 +2886,7 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
               <div className="boss-subt">{i < 2 ? '中ボス' : '面ボス'} ・ {curStage.world}</div>
               {bm
                 ? <>
-                    <div className="boss-stat"><span className="k">敵の戦力</span><span className="v">{Number(bm.base_power).toLocaleString()}</span></div>
+                    <div className="boss-stat"><span className="k">敵の戦力</span><span className="v">{bossEnemyPower(stage, i + 1, roundSel, Number(bm.base_power)).toLocaleString()}{roundSel > 1 ? `（${roundSel}周目）` : ''}</span></div>
                     <div className="boss-stat"><span className="k">属性</span><span className="v">{arrJA(bm.attrs, ATTR_JA)}</span></div>
                     <div className="boss-stat"><span className="k">武器</span><span className="v">{arrJA(bm.weapons, WEAP_JA)}</span></div>
                   </>
@@ -2905,14 +2960,14 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
 }
 
 // 報告書のボスイラスト＝./images/boss_<stage>_<role>.png（読めなければ ❖ にフォールバック）。
-function BossResultArt({ stage, role, win }) {
+function BossResultArt({ stage, role, win, round = 1 }) {
   const [err, setErr] = useState(false);
   const col = win ? 'rgba(120,220,140,.5)' : 'rgba(255,120,80,.5)';
   return (
     <div style={{ width: '60%', maxWidth: 230, aspectRatio: '1/1', margin: '12px auto 0', borderRadius: 14, overflow: 'hidden', border: '1.5px solid rgba(232,194,90,.5)', background: '#241018', boxShadow: `0 6px 26px rgba(0,0,0,.5), 0 0 18px ${col}`, display: 'grid', placeItems: 'center', position: 'relative' }}>
       {err
         ? <span style={{ fontSize: 44, color: '#7a5a3a' }}>❖</span>
-        : <img src={`./images/boss_${stage}_${role}.png`} alt="" onError={() => setErr(true)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+        : <img src={`./images/boss_${stage}_${role}${(stage === 8 && round >= 2) ? '_r2' : ''}.png`} alt="" onError={() => setErr(true)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
     </div>
   );
 }
@@ -4917,7 +4972,7 @@ function BattleLogView({ cards, back, flash }) {
           <div style={repS.scroll}>
             <div style={{ ...repS.result, ...(win ? repS.resultWin : repS.resultLose) }}>{win ? 'VICTORY' : 'DEFEATED'}</div>
             {/* ボスイラスト（大・主用途） */}
-            {bk && <BossResultArt stage={bk.stage} role={bk.role} win={win} />}
+            {bk && <BossResultArt stage={bk.stage} role={bk.role} win={win} round={bk.round} />}
             <div style={repS.dHead}>相手：<b style={{ color: GOLD_HI }}>{label}</b>{bossSub(sel.boss_key) ? `（${bossSub(sel.boss_key)}）` : ''}<br />{fmtDt(sel.fought_at)}</div>
             <div style={{ ...repS.msg, ...(win ? {} : repS.msgLose) }}>{msg}</div>
 
