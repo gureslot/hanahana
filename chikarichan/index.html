@@ -37,9 +37,9 @@
     background:linear-gradient(180deg,#fff7f1,#fdf3ee); background-size:cover; background-position:center;
     border:1px solid rgba(255,255,255,.85); box-shadow:0 22px 54px -22px rgba(120,80,70,.5), inset 0 1px 0 rgba(255,255,255,.9);
     touch-action:manipulation; }
-  .title-logo-wrap{ position:absolute; left:50%; top:33%; transform:translate(-50%,-50%); width:94%; max-width:400px; }
+  .title-logo-wrap{ position:absolute; left:50%; top:33%; transform:translate(-50%,-50%); width:100%; max-width:430px; }
   .title-logo{ width:100%; height:auto; display:block; filter:drop-shadow(0 8px 16px rgba(120,80,70,.4)); animation:floaty 3.2s ease-in-out infinite; }
-  .title-tap{ position:absolute; left:0; right:0; top:64%; transform:translateY(-50%); text-align:center; font-size:20px; font-weight:800;
+  .title-tap{ position:absolute; left:0; right:0; top:82%; transform:translateY(-50%); text-align:center; font-size:20px; font-weight:800;
     color:#5a4038; text-shadow:0 1px 7px rgba(255,255,255,.95), 0 0 3px rgba(255,255,255,.95); animation:tappulse 1.6s ease-in-out infinite; }
   .title-account{ margin-top:10px; text-align:center; font-size:11.5px; color:var(--sub); }
   .title-account b{ color:var(--ink); }
@@ -166,9 +166,8 @@
   .done .t{font-size:16px; font-weight:900;}
   .done .s{font-size:12.5px; color:var(--sub); line-height:1.6;}
 
-  /* ═══ Lvギャラリー（MAX到達で解禁）＋ テスト用MAXボタン（NO_LIMIT時のみ）═══ */
+  /* ═══ Lvギャラリー（MAX到達で解禁）═══ */
   #devPanel{position:fixed; right:8px; top:8px; z-index:50; font-family:system-ui,sans-serif; display:none;}
-  #devMax{position:fixed; left:8px; bottom:8px; z-index:50; display:none; background:rgba(20,12,18,.85); color:#ffd08a; border:1px solid #e0a330; border-radius:10px; padding:7px 11px; font-size:11px; font-weight:700; cursor:pointer;}
   #devToggle{background:rgba(20,12,18,.85); color:#ffd08a; border:1px solid #e0a330; border-radius:10px; padding:7px 11px; font-size:12px; font-weight:700; cursor:pointer;}
   #devBody{display:none; position:absolute; right:0; top:38px; width:188px; background:rgba(18,12,16,.96); border:1px solid #5a4a44; border-radius:12px; padding:12px;}
   #devBody.open{display:block;}
@@ -313,8 +312,6 @@
     <p class="devtiny">各段階の立ち絵を鑑賞できます。<br>育成の記録（MAX）はそのままです。</p>
   </div>
 </div>
-<!-- テスト用：MAXまで一気に進める（NO_LIMIT=true のときだけ表示。公開時は NO_LIMIT=false で自動的に消える）-->
-<button id="devMax" type="button">MAXにする（テスト）</button>
 
 <!-- ═══ クラウド保存（任意ログイン）：supabaseクライアントを読み込み window.sb に載せる ═══ -->
 <script type="module">
@@ -751,7 +748,7 @@ function analyzeCam(){
 function updateLockUI(rate){
   const wrap=$('lockwrap'), label=$('lock-label');
   $('lock-fill').style.width=Math.min(100,(rate/TUNE.LOCK_RATE)*100)+'%';
-  if(locked){ wrap.classList.add('locked'); label.classList.add('ok'); label.textContent=(!NO_LIMIT && S.dailyGot>=DAILY_MAX)?'本日の上限に達しました':'採取中'; }
+  if(locked){ wrap.classList.add('locked'); label.classList.add('ok'); label.textContent=(!NO_LIMIT && S.dailyGot>=DAILY_MAX)?'本日の上限に達しました':'育成中'; }
   else { wrap.classList.remove('locked'); label.classList.remove('ok'); label.textContent = rate>0.15?'パターン認識中…':'光を探しています…'; }
 }
 const COND_LABELS=[['shapeOK','形'],['petalRed','花の赤'],['colorGap','色の違い'],['leafGreen','葉の緑'],['hzOK','点滅']];
@@ -864,9 +861,6 @@ function browseLevel(n){
   loadHome(viewLv, true); loadTrain(viewLv);       // その段階の立ち絵（無い段階は近い下を流用）
   applyRig();                                      // その段階の揺れ（座標＋物理）
   syncViewPanel();
-}
-function devForceMax(){   // テスト用：一気にMAXへ（ギャラリー解禁の確認用。NO_LIMIT時のみボタン表示）
-  S.level=MAX_LEVEL; S.expInto=0; viewLv=MAX_LEVEL; save(); reloadFromState();
 }
 function syncViewPanel(){   // ギャラリーの表示／レベル表示／＜＞の有効無効。MAX到達かつタイトル以外で表示
   const unlocked = S.level>=MAX_LEVEL && screenName!=='title';
@@ -999,7 +993,6 @@ $('train-stage').addEventListener('pointerdown', ()=>{ if(screenName==='train') 
   $('devToggle').onclick=()=>$('devBody').classList.toggle('open');
   $('lvDown').onclick=()=>browseLevel(viewLv-1);
   $('lvUp').onclick=()=>browseLevel(viewLv+1);
-  const mx=$('devMax'); if(mx){ mx.style.display = NO_LIMIT ? 'block' : 'none'; mx.onclick=devForceMax; }
   syncViewPanel();
 })();
 </script>
