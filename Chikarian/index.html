@@ -3805,7 +3805,7 @@ const TAN_CSS = `
 .tan-back{position:absolute; z-index:9; left:50%; transform:translateX(-50%); bottom:16px; font-family:inherit; font-size:14px; letter-spacing:1px; color:#fff3c8; background:rgba(18,10,14,.88); border:1.5px solid rgba(232,194,90,.55); border-radius:22px; padding:11px 22px; cursor:pointer;}
 .tan-scrim{position:absolute; inset:0; z-index:7; background:rgba(0,0,0,.4); opacity:0; pointer-events:none; transition:.3s;}
 .tan-scrim.show{opacity:1; pointer-events:auto;}
-.tan-sheet{position:absolute; z-index:8; left:0; right:0; bottom:0; transform:translateY(110%); transition:transform .35s cubic-bezier(.2,.8,.25,1); background:rgba(18,10,14,.88); border-top:1.5px solid rgba(232,194,90,.55); border-left:1.5px solid rgba(232,194,90,.55); border-right:1.5px solid rgba(232,194,90,.55); border-radius:18px 18px 0 0; padding:16px 18px 22px; box-shadow:0 -8px 24px rgba(0,0,0,.6); max-width:480px; margin:0 auto; max-height:84vh; overflow-y:auto;}
+.tan-sheet{position:absolute; z-index:8; left:0; right:0; bottom:0; transform:translateY(110%); transition:transform .35s cubic-bezier(.2,.8,.25,1); background:rgba(18,10,14,.88); border-top:1.5px solid rgba(232,194,90,.55); border-left:1.5px solid rgba(232,194,90,.55); border-right:1.5px solid rgba(232,194,90,.55); border-radius:18px 18px 0 0; padding:16px 18px 44px; box-shadow:0 -8px 24px rgba(0,0,0,.6); max-width:480px; margin:0 auto; max-height:84vh; overflow-y:auto;}
 .tan-sheet.show{transform:translateY(0);}
 .tan-sheet h3{margin:2px 0 10px; font-size:18px; letter-spacing:2px; text-align:center; text-shadow:0 0 12px rgba(255,180,80,.4); color:#fff3c8;}
 .tan-stat{display:flex; justify-content:space-between; align-items:center; padding:7px 4px; border-bottom:1px dashed rgba(232,194,90,.25); font-size:14px;}
@@ -4078,6 +4078,7 @@ function TansakuScreen({ profile, cards, refreshAll, back, flash }) {
               <div className="tan-secTitle">時間で蓄積</div>
               <div className="tan-stat"><span className="k">メダル</span><span className="v">{rate.medalNone ? '—（ドロップ専用）' : rate.medal.toFixed(2) + ' /分'}</span></div>
               <div className="tan-stat"><span className="k">各カードEXP</span><span className="v">{rate.expNone ? 'なし（ドロップ）' : rate.exp.toFixed(2) + ' /分'}</span></div>
+              {(openStep.area === 7 || openStep.area === 8) && <div className="tan-stat"><span className="k">ドロップ</span><span className="v">{openStep.depth === 1 ? '経験の書（中）' : openStep.depth === 2 ? '青クリスタル・赤クリスタル' : '赤クリスタル・虹クリスタル（虹は稀）'}</span></div>}
               <div className="tan-deckTitle">派遣するデッキ</div>
               {/* 上：デッキ選択ボタン（不適格デッキも選んで中身を確認できる・赤表示） */}
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
@@ -4105,7 +4106,6 @@ function TansakuScreen({ profile, cards, refreshAll, back, flash }) {
                         ? <div key={si} style={{ position: 'relative', width: '31%' }}>
                             <CardThumb card={c} small />
                             <div onClick={(e) => { e.stopPropagation(); setDetailCard(c); }} style={{ position: 'absolute', left: 4, bottom: 4, width: 22, height: 22, borderRadius: '50%', background: 'rgba(10,6,9,.82)', border: '1px solid rgba(232,194,90,.55)', color: '#fff3c8', fontSize: 13, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 3 }}>ⓘ</div>
-                            <div style={{ fontSize: 9, color: '#cdb488', textAlign: 'center', marginTop: 3, lineHeight: 1.2 }}>{cardFullName(c)}</div>
                           </div>
                         : <div key={si} style={{ width: '31%', aspectRatio: '3 / 4', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: '#7a6a8a', border: '1px dashed rgba(232,194,90,.3)', borderRadius: 10 }}>空</div>)}
                     </div>
@@ -4133,7 +4133,7 @@ function TansakuScreen({ profile, cards, refreshAll, back, flash }) {
         </div>
       )}
 
-      <button className="tan-back" onClick={back}>ホームへ戻る</button>
+      {!openStep && <button className="tan-back" onClick={back}>ホームへ戻る</button>}
 
       {detailCard && <CardPopup card={detailCard} onClose={() => setDetailCard(null)} />}
     </div>
