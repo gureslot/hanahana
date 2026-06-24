@@ -1699,10 +1699,9 @@ function CardDetail({ card, cards, profile, skillMap, refreshAll, back, flash, o
     <div style={S.root}>
       <div style={zS.bg} />
       <div style={zS.dScroll}>
-        {/* カード絵（rank文字＝レア・失敗時 ❖＋名前＋属性/武器）＋ロック */}
+        {/* カード絵（失敗時 ❖＋名前＋属性/武器）＋ロック状態。レアはカード下の dBadges に表示 */}
         <div style={zS.dCard}>
           <ZDetailArt cardKey={card.card_key} info={info} />
-          <div style={zS.rank}>{RAR_LABEL[info.rarity]}</div>
           {card.locked && <div style={{ position: 'absolute', top: 8, left: 9, fontSize: 15, filter: 'drop-shadow(0 1px 2px #000)' }}>🔒</div>}
         </div>
 
