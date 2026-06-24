@@ -5004,15 +5004,15 @@ function BattleLogView({ cards, back, flash }) {
               <div style={repS.vs}>
                 <div style={repS.vsSide}><div style={repS.vsLab}>自軍</div><div style={repS.vsNumMe}>{deckTotal ? deckTotal.toLocaleString() : '—'}</div></div>
                 <div style={repS.vsX}>VS</div>
-                {/* 敵戦力は battle_logs 未保存のため損失率を表示 // TODO: 敵戦力を記録できたら foe に出す */}
-                <div style={repS.vsSide}><div style={repS.vsLab}>武気損失率</div><div style={repS.vsNumFoe}>{sel.loss_rate != null ? Math.round(sel.loss_rate * 100) + '%' : '—'}</div></div>
+                {/* 敵戦力＝0075 以降の戦闘で rewards.enemy_power に保存。旧ログは未保存のため「—」 */}
+                <div style={repS.vsSide}><div style={repS.vsLab}>敵戦力</div><div style={repS.vsNumFoe}>{(sel.rewards && sel.rewards.enemy_power != null) ? Number(sel.rewards.enemy_power).toLocaleString() : '—'}</div></div>
               </div>
             </div>
 
             <div style={repS.sec}>
               <div style={repS.secT}>発動スキル</div>
               {fired.length === 0 ? <span style={repS.none}>記録なし</span>
-                : <div style={repS.rewards}>{fired.map((f, i) => <span key={i} style={repS.chip}>{skName(f.skill_key)}</span>)}</div>}
+                : <div style={repS.rewards}>{fired.map((f, i) => <span key={i} style={repS.chip}>{skName(f.skill_key)}{f.skill_lv != null ? ' Lv' + f.skill_lv : ''}</span>)}</div>}
             </div>
 
             {deck.length > 0 && <div style={repS.sec}>
