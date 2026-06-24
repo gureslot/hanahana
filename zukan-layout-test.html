@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>図鑑レイアウト切り分けテスト</title>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;background:#0a0509;color:#fff3c8;font-family:'Yu Mincho',serif;}
+  h2{font-size:14px;margin:18px 16px 6px;color:#ffe39a;letter-spacing:1px;}
+  p.note{font-size:12px;margin:0 16px 8px;color:#cdb488;line-height:1.6;}
+  .pad{padding:2px 16px 12px;}
+
+  /* 共通タイル中身（実際の図鑑と同じく全要素 absolute） */
+  .item{position:relative;border-radius:12px;overflow:hidden;border:2px solid rgba(232,194,90,.5);background:#241018;}
+  .item .art{position:absolute;inset:0;display:grid;place-items:center;font-size:30px;font-weight:800;color:#fff;text-shadow:0 2px 6px #000;}
+  .item .foot{position:absolute;left:0;right:0;bottom:0;padding:10px 8px 7px;background:linear-gradient(0deg,rgba(0,0,0,.9),transparent);color:#ffe39a;font-size:12px;font-weight:800;}
+  .item:nth-child(1) .art{background:#5a2230;} .item:nth-child(2) .art{background:#2a4a5a;}
+  .item:nth-child(3) .art{background:#2a5a32;} .item:nth-child(4) .art{background:#5a4a22;}
+  .item:nth-child(5) .art{background:#4a2a5a;} .item:nth-child(6) .art{background:#5a3322;}
+
+  /* === A：現状と同じ grid 方式（item width:100% ＋ sizer paddingTop:140%）=== */
+  .gridA{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-content:start;align-items:start;}
+  .gridA .item{width:100%;}
+  .gridA .item .sizer{display:block;width:100%;padding-top:140%;}
+
+  /* === B：flex 折返し ＋ sizer（item width:calc(50% - 6px) ＋ sizer paddingTop:140%）=== */
+  .gridB{display:flex;flex-wrap:wrap;align-content:flex-start;gap:12px;}
+  .gridB .item{width:calc(50% - 6px);}
+  .gridB .item .sizer{display:block;width:100%;padding-top:140%;}
+
+  /* === C：flex 折返し ＋ aspect-ratio（sizer なし）=== */
+  .gridC{display:flex;flex-wrap:wrap;align-content:flex-start;gap:12px;}
+  .gridC .item{width:calc(50% - 6px);aspect-ratio:5 / 7;}
+</style>
+</head>
+<body>
+
+<p class="note" style="margin-top:14px;">
+  正常＝各ブロックでタイルが<b>縦に重ならず</b>、2列・縦長（5:7）で並ぶ状態。<br>
+  どのブロック（A / B / C）が正常に並んでいるか、スクショで教えてください。
+</p>
+
+<h2>A：現状と同じ grid 方式（対照・重なるはず）</h2>
+<div class="pad"><div class="gridA">
+  <div class="item"><div class="sizer"></div><div class="art">1</div><div class="foot">Lv10 ★3</div></div>
+  <div class="item"><div class="sizer"></div><div class="art">2</div><div class="foot">Lv10 ★3</div></div>
+  <div class="item"><div class="sizer"></div><div class="art">3</div><div class="foot">Lv10 ★3</div></div>
+  <div class="item"><div class="sizer"></div><div class="art">4</div><div class="foot">Lv10 ★3</div></div>
+  <div class="item"><div class="sizer"></div><div class="art">5</div><div class="foot">Lv10 ★3</div></div>
+  <div class="item"><div class="sizer"></div><div class="art">6</div><div class="foot">Lv10 ★3</div></div>
+</div></div>
+
+<h2>B：flex 折返し ＋ sizer</h2>
+<div class="pad"><div class="gridB">
+  <div class="item"><div class="sizer"></div><div class="art">1</div><div class="foot">Lv10 ★3</div></div>
+  <div class="item"><div class="sizer"></div><div class="art">2</div><div class="foot">Lv10 ★3</div></div>
+  <div class="item"><div class="sizer"></div><div class="art">3</div><div class="foot">Lv10 ★3</div></div>
+  <div class="item"><div class="sizer"></div><div class="art">4</div><div class="foot">Lv10 ★3</div></div>
+  <div class="item"><div class="sizer"></div><div class="art">5</div><div class="foot">Lv10 ★3</div></div>
+  <div class="item"><div class="sizer"></div><div class="art">6</div><div class="foot">Lv10 ★3</div></div>
+</div></div>
+
+<h2>C：flex 折返し ＋ aspect-ratio（sizer なし）</h2>
+<div class="pad"><div class="gridC">
+  <div class="item"><div class="art">1</div><div class="foot">Lv10 ★3</div></div>
+  <div class="item"><div class="art">2</div><div class="foot">Lv10 ★3</div></div>
+  <div class="item"><div class="art">3</div><div class="foot">Lv10 ★3</div></div>
+  <div class="item"><div class="art">4</div><div class="foot">Lv10 ★3</div></div>
+  <div class="item"><div class="art">5</div><div class="foot">Lv10 ★3</div></div>
+  <div class="item"><div class="art">6</div><div class="foot">Lv10 ★3</div></div>
+</div></div>
+
+<p class="note" style="margin:18px 16px 40px;">
+  （このページは切り分け専用の一時ファイルです。確定後に削除します。）
+</p>
+
+</body>
+</html>
