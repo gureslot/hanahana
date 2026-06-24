@@ -36,9 +36,10 @@
   .title-card{ position:relative; flex:1 1 auto; min-height:0; border-radius:20px; overflow:hidden;
     background:linear-gradient(180deg,#fff7f1,#fdf3ee); background-size:cover; background-position:center;
     border:1px solid rgba(255,255,255,.85); box-shadow:0 22px 54px -22px rgba(120,80,70,.5), inset 0 1px 0 rgba(255,255,255,.9);
-    display:flex; flex-direction:column; align-items:center; justify-content:flex-start; padding-top:9%; touch-action:manipulation; }
-  .title-logo{ width:94%; max-width:400px; height:auto; filter:drop-shadow(0 8px 16px rgba(120,80,70,.4)); animation:floaty 3.2s ease-in-out infinite; }
-  .title-tap{ position:absolute; left:0; right:0; bottom:8%; text-align:center; font-size:20px; font-weight:800;
+    touch-action:manipulation; }
+  .title-logo-wrap{ position:absolute; left:50%; top:33%; transform:translate(-50%,-50%); width:94%; max-width:400px; }
+  .title-logo{ width:100%; height:auto; display:block; filter:drop-shadow(0 8px 16px rgba(120,80,70,.4)); animation:floaty 3.2s ease-in-out infinite; }
+  .title-tap{ position:absolute; left:0; right:0; top:64%; transform:translateY(-50%); text-align:center; font-size:20px; font-weight:800;
     color:#5a4038; text-shadow:0 1px 7px rgba(255,255,255,.95), 0 0 3px rgba(255,255,255,.95); animation:tappulse 1.6s ease-in-out infinite; }
   .title-account{ margin-top:10px; text-align:center; font-size:11.5px; color:var(--sub); }
   .title-account b{ color:var(--ink); }
@@ -165,8 +166,9 @@
   .done .t{font-size:16px; font-weight:900;}
   .done .s{font-size:12.5px; color:var(--sub); line-height:1.6;}
 
-  /* ═══ テスト用パネル（公開時は削除可）═══ */
-  #devPanel{position:fixed; right:8px; top:8px; z-index:50; font-family:system-ui,sans-serif;}
+  /* ═══ Lvギャラリー（MAX到達で解禁）＋ テスト用MAXボタン（NO_LIMIT時のみ）═══ */
+  #devPanel{position:fixed; right:8px; top:8px; z-index:50; font-family:system-ui,sans-serif; display:none;}
+  #devMax{position:fixed; left:8px; bottom:8px; z-index:50; display:none; background:rgba(20,12,18,.85); color:#ffd08a; border:1px solid #e0a330; border-radius:10px; padding:7px 11px; font-size:11px; font-weight:700; cursor:pointer;}
   #devToggle{background:rgba(20,12,18,.85); color:#ffd08a; border:1px solid #e0a330; border-radius:10px; padding:7px 11px; font-size:12px; font-weight:700; cursor:pointer;}
   #devBody{display:none; position:absolute; right:0; top:38px; width:188px; background:rgba(18,12,16,.96); border:1px solid #5a4a44; border-radius:12px; padding:12px;}
   #devBody.open{display:block;}
@@ -198,7 +200,7 @@
   <!-- ═══════ タイトル ═══════ -->
   <section class="screen on" id="scr-title" onclick="onTitleTap()">
     <div class="title-card" id="title-bg">
-      <img class="title-logo" id="title-logo" src="images/logo_title.png" alt="ちかりちゃんは成長する">
+      <div class="title-logo-wrap"><img class="title-logo" id="title-logo" src="images/logo_title.png" alt="ちかりちゃんは成長する"></div>
       <div class="title-tap">タップでスタート</div>
     </div>
     <div class="title-account" id="title-account" style="display:none" onclick="event.stopPropagation()">
@@ -275,7 +277,6 @@
   <!-- ═══════ ステータス ═══════ -->
   <section class="screen" id="scr-status">
     <h1>ステータス</h1>
-    <div class="lvtag">そっと見守るための記録</div>
     <div class="panel">
       <div class="stat-hero">
         <div class="lvnum"><span id="st-lv">1</span><small> Lv</small></div>
@@ -296,12 +297,11 @@
     <div class="bar" style="margin-top:14px">
       <button class="btn sub wide" onclick="go('home')">ホームに戻る</button>
     </div>
-    <p class="tiny">数値は端末に保存されます（公開後は日をまたいでも保持）。<br><a onclick="wipeSave()">セーブを消す（テスト用）</a></p>
   </section>
 
 </div>
 
-<!-- ═══ テスト用パネル（公開時はこの #devPanel と <style>の #dev… と末尾の devPanelInit を削除）═══ -->
+<!-- ═══ Lvギャラリー：MAX到達後に各段階の立ち絵を鑑賞（普段は非表示。記録＝MAXは不変）═══ -->
 <div id="devPanel">
   <button id="devToggle">⚙ Lv切替</button>
   <div id="devBody">
@@ -310,10 +310,11 @@
       <span>Lv <b id="dev-lv">1</b> / 5</span>
       <button id="lvUp" type="button">›</button>
     </div>
-    <button class="devblink" id="devBlink" type="button">点滅テスト（揺れ確認）</button>
-    <p class="devtiny">各段階のイラストと揺れを確認できます。<br><a onclick="wipeSave()">セーブを消す（Lv1へ）</a></p>
+    <p class="devtiny">各段階の立ち絵を鑑賞できます。<br>育成の記録（MAX）はそのままです。</p>
   </div>
 </div>
+<!-- テスト用：MAXまで一気に進める（NO_LIMIT=true のときだけ表示。公開時は NO_LIMIT=false で自動的に消える）-->
+<button id="devMax" type="button">MAXにする（テスト）</button>
 
 <!-- ═══ クラウド保存（任意ログイン）：supabaseクライアントを読み込み window.sb に載せる ═══ -->
 <script type="module">
@@ -417,8 +418,9 @@ function homeWbForLevel(lv){ return pickByLevel(WB_HOME_LEVELS, lv); }
 let RIG_POINTS = pickByLevel(RIG_HOME_LEVELS, 1);   // 現在アクティブな揺れ領域（初期はホームLv1。ばねは下のensureSpringsで用意）
 let actWB = WB_HOME_LEVELS[1];                       // 現在アクティブな揺れ物理
 function applyRig(){
-  if(screenName==='train'){ RIG_POINTS=rigForLevel(S.level); actWB=wbForLevel(S.level); }
-  else { RIG_POINTS=homeRigForLevel(S.level); actWB=homeWbForLevel(S.level); }   // ホームも段階別
+  const lv=dispLv();
+  if(screenName==='train'){ RIG_POINTS=rigForLevel(lv); actWB=wbForLevel(lv); }
+  else { RIG_POINTS=homeRigForLevel(lv); actWB=homeWbForLevel(lv); }   // ホームも段階別
   RIG_POINTS.forEach(p=>{ if(p.sV){p.sV.v=p.sV.vel=0;} if(p.sH){p.sH.v=p.sH.vel=0;} });  // 切替時は揺れを静止に戻す（持ち越し・過大を防ぐ）
 }
 
@@ -439,6 +441,8 @@ let S={ level:1, expInto:0, dailyGot:0, total:0, lastDate:todayKey(), firstDate:
   if(S.level<1) S.level=1;
   save();
 })();
+let viewLv = S.level;                                   // 鑑賞ギャラリーで表示中のレベル（MAX解禁後のみ操作可能）
+function dispLv(){ return (S.level>=MAX_LEVEL) ? Math.max(1,Math.min(MAX_LEVEL,viewLv)) : S.level; }   // 画面に出す立ち絵・揺れのレベル
 function save(){ store.set(SAVE_KEY,JSON.stringify(S)); cloudPush(); }
 function daysPlayed(){ const a=new Date(S.firstDate+'T00:00:00'), b=new Date(todayKey()+'T00:00:00');
   return Math.max(1, Math.round((b-a)/86400000)+1); }
@@ -600,7 +604,6 @@ function mountChikari(c){ if(chikariCv.parentNode!==c) c.appendChild(chikariCv);
 
 /* 点滅1回ぶんのインパルス（“つつく”相当） */
 function pulse(strength=1){
-  dip.vel+=4.5*strength;
   RIG_POINTS.forEach(p=>{
     if(p.type==='bounce'||p.type==='jelly') p.sV.vel+=actWB.kick*strength*p.strength;
     if(p.type==='sway'  ||p.type==='jelly') p.sH.vel+=actWB.kick*0.66*strength*p.strength;
@@ -612,7 +615,7 @@ function loop(t){
   const dt=Math.min(.05,(t-lastT)/1000); lastT=t; nowT+=dt;
   if(glOK){
     // 待機モーション（生きてる感じ）はホームだけ。育成は止めて、揺れ領域(rig)だけ見せる
-    const onHome = (screenName!=='train');
+    const onHome = false;   // 全身の待機モーションは無し。ホームも育成と同じく、指定座標(rig)だけを揺らす
     const breath   = onHome ? Math.sin(nowT*1.4) : 0;
     const idleSway = onHome ? (Math.sin(nowT*0.55) + Math.sin(nowT*0.23+1.1)*0.45) : 0;  // 全身の左右ゆれ
     const idleBob  = onHome ? Math.sin(nowT*0.70+0.5) : 0;                                // 微かな上下
@@ -658,7 +661,7 @@ function fallback2D(){
 /* ════════════════════════════════════════════════════════════
    経験値・レベル
    ════════════════════════════════════════════════════════════ */
-function onLevelUp(){ loadHome(S.level,false); loadTrain(S.level); applyRig(); pulse(1); }   // 画像＋揺れ(座標/物理)を新段階へ＋ひと揺れ（通常の点滅と同じ強さ。1.6倍だと過大で形が崩れた）
+function onLevelUp(){ viewLv=S.level; loadHome(dispLv(),false); loadTrain(dispLv()); applyRig(); pulse(1); }   // 画像＋揺れ(座標/物理)を新段階へ＋ひと揺れ（通常の点滅と同じ強さ。1.6倍だと過大で形が崩れた）
 function gainExp(){
   if(!NO_LIMIT && S.dailyGot>=DAILY_MAX) return false;
   const add = NO_LIMIT ? PER_BLINK : Math.min(PER_BLINK, DAILY_MAX-S.dailyGot);
@@ -806,8 +809,6 @@ function stopHold(){
 }
 function finishTrain(){ stopHold(); $('train-done').classList.add('show'); }
 function leaveTrain(){ stopHold(); pushCloudNow(); $('train-done').classList.remove('show'); cameFromTraining=(S.dailyGot>0); go('home'); }
-/* テスト用：ランプ無しで揺れ／レベルアップを確認（育成画面で押す）。点滅を20回ぶん発火 */
-function devTestBlink(){ if(screenName!=='train'){ alert('「育てる」画面で押してください'); return; } let n=0; const id=setInterval(()=>{ onBlink(); if(++n>=20) clearInterval(id); }, 1000/SIM_HZ); }
 function onDailyMax(){ if(dailyToastShown) return; dailyToastShown=true; showDailyToast(); }   // 上限到達：メッセージのみ。揺れは継続（加算だけ止まる）
 function showDailyToast(){ const el=$('daily-toast'); if(!el) return; el.classList.add('show'); clearTimeout(dailyToastT); dailyToastT=setTimeout(()=>el.classList.remove('show'),2600); }
 
@@ -834,7 +835,7 @@ function updateAllUI(){
   $('st-total').textContent=S.total.toLocaleString();
   $('st-today').textContent=NO_LIMIT?(S.dailyGot+' （上限OFF）'):(S.dailyGot+' / '+DAILY_MAX);
   $('st-days').textContent=daysPlayed()+' 日目';
-  syncDevLv();
+  syncViewPanel();
 }
 
 /* ════════════════════════════════════════════════════════════
@@ -854,20 +855,27 @@ function wipeSave(){
   if(!confirm('セーブを消してLv1からやり直します。よろしいですか？')) return;
   try{ localStorage.removeItem(SAVE_KEY); }catch(e){}
   S={ level:1, expInto:0, dailyGot:0, total:0, lastDate:todayKey(), firstDate:todayKey() };
-  save(); pushCloudNow(); loadHome(1,true); loadTrain(1); applyRig(); updateAllUI(); go('home');
+  viewLv=S.level; save(); pushCloudNow(); loadHome(dispLv(),true); loadTrain(dispLv()); applyRig(); updateAllUI(); go('home');
 }
-/* テスト用：レベル(イラスト段階)を1〜MAXで切替。画像も揺れ（座標・物理）もその段階に切り替わる */
-function setDevLevel(n){
-  S.level = Math.max(1, Math.min(MAX_LEVEL, Math.round(n)));
-  S.expInto = 0; save();
-  loadHome(S.level, true); loadTrain(S.level);   // 画像（無いレベルは近い下のレベルを流用）
-  applyRig();                                     // その段階の揺れ（座標＋物理）
-  updateAllUI();
+/* Lvギャラリー（鑑賞用）：表示する立ち絵だけ切替。育成の記録（S.level=MAX）は変えない */
+function browseLevel(n){
+  if(S.level<MAX_LEVEL) return;                    // MAX未満は解禁前
+  viewLv = Math.max(1, Math.min(MAX_LEVEL, Math.round(n)));
+  loadHome(viewLv, true); loadTrain(viewLv);       // その段階の立ち絵（無い段階は近い下を流用）
+  applyRig();                                      // その段階の揺れ（座標＋物理）
+  syncViewPanel();
 }
-function syncDevLv(){   // テストパネルのLv表示と＜＞の有効/無効を合わせる
-  const b=document.getElementById('dev-lv'); if(b) b.textContent=S.level;
+function devForceMax(){   // テスト用：一気にMAXへ（ギャラリー解禁の確認用。NO_LIMIT時のみボタン表示）
+  S.level=MAX_LEVEL; S.expInto=0; viewLv=MAX_LEVEL; save(); reloadFromState();
+}
+function syncViewPanel(){   // ギャラリーの表示／レベル表示／＜＞の有効無効。MAX到達かつタイトル以外で表示
+  const unlocked = S.level>=MAX_LEVEL && screenName!=='title';
+  const panel=document.getElementById('devPanel');
+  if(panel) panel.style.display = unlocked ? 'block' : 'none';
+  if(!unlocked){ const bdy=document.getElementById('devBody'); if(bdy) bdy.classList.remove('open'); return; }
+  const b=document.getElementById('dev-lv'); if(b) b.textContent=viewLv;
   const dn=document.getElementById('lvDown'), up=document.getElementById('lvUp');
-  if(dn) dn.disabled=(S.level<=1); if(up) up.disabled=(S.level>=MAX_LEVEL);
+  if(dn) dn.disabled=(viewLv<=1); if(up) up.disabled=(viewLv>=MAX_LEVEL);
 }
 
 /* ════════════════════════════════════════════════════════════
@@ -932,7 +940,7 @@ function updateAuthUI(){
   const acc=$('title-account'); if(acc) acc.style.display = sbSignedIn?'block':'none';
   if(sbSignedIn && sbUser){ const em=$('auth-email'); if(em) em.textContent = sbUser.email || 'Googleアカウント'; }
 }
-function reloadFromState(){ loadHome(S.level,true); loadTrain(S.level); applyRig(); setHomeBg(); updateAllUI(); }
+function reloadFromState(){ viewLv=S.level; loadHome(dispLv(),true); loadTrain(dispLv()); applyRig(); setHomeBg(); updateAllUI(); }
 async function pullMergeCloud(){
   if(!window.sb || !sbUser) return;
   try{
@@ -973,11 +981,12 @@ async function cloudLogout(){ if(window.sb){ try{ await window.sb.auth.signOut()
 window.addEventListener('resize', resizeChikari);
 window.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') pushCloudNow(); });   // 離脱時に最新をクラウドへ（ベストエフォート）
 $('home-stage').addEventListener('pointerdown', ()=>{ if(screenName==='home') pulse(1); });   // ホームはキャラのタップでひと揺れ
+$('train-stage').addEventListener('pointerdown', ()=>{ if(screenName==='train') pulse(1); });  // 育成画面でもキャラのタップでひと揺れ（ギャラリー鑑賞時も）
 (function boot(){
   glOK=initGL();
   setHomeBg(); setTitleBg();
-  drawPlaceholder(S.level); homeImg=texCanvas; refreshActiveTexture();   // 仮を即表示
-  loadHome(S.level, true); loadTrain(S.level);                           // 本画像に差し替え（あれば）
+  drawPlaceholder(dispLv()); homeImg=texCanvas; refreshActiveTexture();   // 仮を即表示
+  loadHome(dispLv(), true); loadTrain(dispLv());                          // 本画像に差し替え（あれば）
   if(glOK) requestAnimationFrame(loop);
   mountChikari($('home-stage'));
   drawBoxes();                                                           // 判定枠を描画
@@ -985,13 +994,13 @@ $('home-stage').addEventListener('pointerdown', ()=>{ if(screenName==='home') pu
   cloudInit();                                                           // 任意ログインのクラウド保存を初期化
 })();
 
-/* ═══ テスト用パネルのJS（公開時は削除）═══ */
+/* ═══ Lvギャラリー（MAX解禁）＋テスト用MAXボタンのJS ═══ */
 (function devPanelInit(){
   $('devToggle').onclick=()=>$('devBody').classList.toggle('open');
-  $('lvDown').onclick=()=>setDevLevel(S.level-1);
-  $('lvUp').onclick=()=>setDevLevel(S.level+1);
-  $('devBlink').onclick=devTestBlink;
-  syncDevLv();
+  $('lvDown').onclick=()=>browseLevel(viewLv-1);
+  $('lvUp').onclick=()=>browseLevel(viewLv+1);
+  const mx=$('devMax'); if(mx){ mx.style.display = NO_LIMIT ? 'block' : 'none'; mx.onclick=devForceMax; }
+  syncViewPanel();
 })();
 </script>
 </body>
