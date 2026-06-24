@@ -1433,7 +1433,7 @@ const zS = {
   pgInfo: { fontSize: 12, color: '#cdb488', minWidth: 60, textAlign: 'center' },
   count: { flex: 'none', textAlign: 'center', fontSize: 11, color: '#cdb488', padding: '4px 0 6px' },
   grid: { flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, alignContent: 'start', alignItems: 'start', padding: '2px 16px 12px' },
-  item: { position: 'relative', width: '100%', boxSizing: 'content-box', paddingTop: '150%', paddingLeft: 0, paddingRight: 0, paddingBottom: 0, borderRadius: 12, overflow: 'hidden', border: '2px solid rgba(232,194,90,.5)', background: '#241018', cursor: 'pointer', display: 'block' },
+  item: { position: 'relative', width: '100%', boxSizing: 'border-box', aspectRatio: '5 / 7', borderRadius: 12, overflow: 'hidden', border: '2px solid rgba(232,194,90,.5)', background: '#241018', cursor: 'pointer', display: 'block' },
   itemLocked: { filter: 'grayscale(1) brightness(.4)', cursor: 'default' },
   art: { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' },
   cph: { position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', fontSize: 30, color: '#7a5a3a' },
@@ -1471,12 +1471,6 @@ function ZCard({ cardKey, star, onClick, placeholder, recorded }) {
   return (
     <button onClick={onClick || undefined} style={{ ...zS.item, ...(onClick ? {} : { cursor: 'default' }) }}>
       {err ? <div style={zS.cph}>❖</div> : <img src={'./images/' + cardKey + '.png'} alt="" onError={() => setErr(true)} style={zS.art} />}
-      <div style={zS.rank}>{RAR_LABEL[info.rarity]}</div>
-      <div style={zS.cb}>
-        {info.rarity === 'sp'
-          ? <span style={{ ...zS.badge, background: 'linear-gradient(90deg,#ffe39a,#e8b54d)' }}>SP</span>
-          : <><span style={{ ...zS.badge, background: DECK_ATTR_COL[info.attr] || '#888' }}>{info.attr}</span><span style={zS.wbadge}>{info.weap}</span></>}
-      </div>
       <div style={zS.foot}>
         {star > 0 && <div style={zS.star}>{'★'.repeat(star)}</div>}
         <div style={zS.nm}>{info.name}{recorded ? '（記録）' : ''}</div>
