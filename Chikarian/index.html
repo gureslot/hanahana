@@ -140,6 +140,7 @@ const ERR_JA = {
   'EXPLORE_POWER_LOCKED': '本体戦力の合計が足りません',
   'EXPLORE_ATTR_LOCKED': '編成3枚を同じ属性で揃えてください',
   'EXPLORE_STAR_LOCKED': '編成3枚を★2以上で揃えてください',
+  'NODE_OCCUPIED': 'このノードは別のデッキが探索中です',
   'CARD_IN_TANSAKU': 'このカードは別のデッキで探索に出ています',
   'NOT_MAIN_DECK': 'ボス出撃はメインデッキ（デッキ1）からのみ可能です',
   'CARD_NOT_IN_MAIN_DECK': '武気はメインデッキ（デッキ1）のカードにのみ込められます',
@@ -2211,7 +2212,7 @@ function BukiEditModal({ cardId, cardById, pool, kajiyaLv, bukiBusy, onApply, on
         <div style={bukiS.bigGauge}><div style={{ height: '100%', width: pct + '%', background: BUKI_COLOR[q] || '#9a7' }} /></div>
         <div style={bukiS.qrow}>
           {Q_ORDER.map(qq => { const locked = Q_LV[qq] > kajiyaLv; return (
-            <button key={qq} disabled={bukiBusy || locked} onClick={() => onApply(c, qq, loaded)} style={{ ...bukiS.q, ...(qq === q ? bukiS.qOn : {}), ...(locked ? bukiS.qLock : {}) }}><img src={'./images/ic_weap_' + qq + '_' + weapKey + '.png'} alt="" style={{ width: 20, height: 20, objectFit: 'contain', verticalAlign: 'middle', marginRight: 3, filter: locked ? 'grayscale(1) opacity(0.7)' : 'none' }} onError={e => { e.target.style.display = 'none'; }} />{QUALITY_JA[qq]}{locked ? ' 🔒' : ''}<br /><small>攻{QATK[qq]}/コ{Q_COST[qq]}</small></button>
+            <button key={qq} disabled={bukiBusy || locked} onClick={() => onApply(c, qq, loaded)} style={{ ...bukiS.q, ...(qq === q ? bukiS.qOn : {}), ...(locked ? bukiS.qLock : {}), padding: '4px 4px 5px' }}><div style={{ position: 'relative', height: 54, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><img src={'./images/ic_weap_' + qq + '_' + weapKey + '.png'} alt="" style={{ maxWidth: '100%', maxHeight: 54, objectFit: 'contain', filter: locked ? 'grayscale(1) opacity(0.5)' : 'none' }} onError={e => { e.target.style.display = 'none'; }} /><span style={{ position: 'absolute', left: 0, right: 0, bottom: 0, textAlign: 'center', fontSize: 12, fontWeight: 800, color: '#fff3c8', textShadow: '0 1px 3px #000, 0 0 5px #000' }}>{QUALITY_JA[qq]}{locked ? ' 🔒' : ''}</span></div></button>
           ); })}
         </div>
         <div style={bukiS.pmRow}>
@@ -4078,29 +4079,39 @@ function TansakuScreen({ profile, cards, refreshAll, back, flash }) {
               <div className="tan-stat"><span className="k">メダル</span><span className="v">{rate.medalNone ? '—（ドロップ専用）' : rate.medal.toFixed(2) + ' /分'}</span></div>
               <div className="tan-stat"><span className="k">各カードEXP</span><span className="v">{rate.expNone ? 'なし（ドロップ）' : rate.exp.toFixed(2) + ' /分'}</span></div>
               <div className="tan-deckTitle">派遣するデッキ</div>
-              <div className="tan-decks">
+              {/* 上：デッキ選択ボタン（不適格デッキも選んで中身を確認できる・赤表示） */}
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
                 {Array.from({ length: maxDecks }, (_, i) => i + 1).map(n => {
-                  const st = byDeck[n]; const di = st && depthInfo(st.depth);
-                  const drn = (decks || []).find(x => x.deck_no === n);
-                  const mem = drn ? [drn.slot1_card_id, drn.slot2_card_id, drn.slot3_card_id].map(id => id ? cardById[id] : null) : [null, null, null];
-                  const g = deckGate(n);
+                  const g = deckGate(n); const sel = n === deckNo;
                   return (
-                    <div key={n} className={'tan-deck' + (n === deckNo ? ' sel' : '') + (g.ok ? '' : ' bad')}
-                         onClick={() => { if (g.ok) setDeckNo(n); }}>
-                      <div className="tan-dn">デッキ{n}{di ? '（面' + (st.area || 1) + di.label + '中）' : ''}</div>
-                      <div className="tan-dCards">
-                        {mem.map((c, si) => c
-                          ? <div key={si} className="tan-dCard">
-                              <CardThumb card={c} small />
-                              <div className="tan-dInfo" onClick={(e) => { e.stopPropagation(); setDetailCard(c); }}>ⓘ</div>
-                            </div>
-                          : <div key={si} className="tan-dEmpty">空</div>)}
-                      </div>
-                      <div className={'tan-dp' + (g.ok ? '' : ' bad')}>{g.label}</div>
-                    </div>
+                    <button key={n} onClick={() => setDeckNo(n)} style={{ fontFamily: 'inherit', fontSize: 13, fontWeight: 800, padding: '7px 13px', borderRadius: 12, cursor: 'pointer', border: '1.5px solid ' + (sel ? '#e8c25a' : (g.ok ? 'rgba(232,194,90,.4)' : 'rgba(255,143,134,.45)')), background: sel ? 'linear-gradient(180deg,rgba(255,228,154,.28),rgba(232,181,77,.18))' : 'rgba(255,235,180,.05)', color: g.ok ? '#fff3c8' : '#ff8f86', boxShadow: sel ? '0 0 12px rgba(255,200,90,.35)' : 'none' }}>デッキ{n}</button>
                   );
                 })}
               </div>
+              {/* 下：選択デッキのカード＋必要条件の達否（デッキ編成と同じ並び） */}
+              {(() => {
+                const st = byDeck[deckNo]; const di = st && depthInfo(st.depth);
+                const drn = (decks || []).find(x => x.deck_no === deckNo);
+                const mem = drn ? [drn.slot1_card_id, drn.slot2_card_id, drn.slot3_card_id].map(id => id ? cardById[id] : null) : [null, null, null];
+                const g = deckGate(deckNo);
+                return (
+                  <div style={{ background: 'rgba(255,235,180,.05)', border: '1.5px solid rgba(232,194,90,.5)', borderRadius: 12, padding: '10px 10px 12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8, gap: 8 }}>
+                      <span style={{ fontSize: 14, fontWeight: 800, color: '#fff3c8' }}>デッキ{deckNo}{di ? '（面' + (st.area || 1) + di.label + '中）' : ''}</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: g.ok ? '#cdb488' : '#ff8f86', textAlign: 'right' }}>{g.label}</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                      {mem.map((c, si) => c
+                        ? <div key={si} style={{ position: 'relative', width: '31%' }}>
+                            <CardThumb card={c} small />
+                            <div onClick={(e) => { e.stopPropagation(); setDetailCard(c); }} style={{ position: 'absolute', left: 4, bottom: 4, width: 22, height: 22, borderRadius: '50%', background: 'rgba(10,6,9,.82)', border: '1px solid rgba(232,194,90,.55)', color: '#fff3c8', fontSize: 13, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 3 }}>ⓘ</div>
+                            <div style={{ fontSize: 9, color: '#cdb488', textAlign: 'center', marginTop: 3, lineHeight: 1.2 }}>{cardFullName(c)}</div>
+                          </div>
+                        : <div key={si} style={{ width: '31%', aspectRatio: '3 / 4', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: '#7a6a8a', border: '1px dashed rgba(232,194,90,.3)', borderRadius: 10 }}>空</div>)}
+                    </div>
+                  </div>
+                );
+              })()}
               {startErr && <div className="tan-startErr">{startErr}</div>}
               <button className="tan-go" onClick={doStart}
                       disabled={busy || cc === 0 || !deckGate(deckNo).ok}>
