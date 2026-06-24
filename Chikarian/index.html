@@ -1419,7 +1419,7 @@ const zS = {
   tabs: { flex: 'none', display: 'flex', gap: 8, justifyContent: 'center', padding: '8px 14px 2px' },
   tab: { fontFamily: 'inherit', fontSize: 12, color: '#cdb488', background: PANEL, border: BORDER, borderRadius: 14, padding: '6px 16px', cursor: 'pointer' },
   tabSel: { color: GOLD_HI, background: 'linear-gradient(180deg,rgba(255,228,154,.26),rgba(232,181,77,.14))', boxShadow: '0 0 10px rgba(255,200,90,.3)' },
-  filters: { flex: 'none', display: 'flex', gap: 6, overflowX: 'auto', padding: '6px 14px 2px' },
+  filters: { flex: 'none', display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 6, padding: '6px 14px 2px' },
   fil: { flex: 'none', fontFamily: 'inherit', fontSize: 11, color: GOLD_HI, background: PANEL, border: BORDER, borderRadius: 14, padding: '6px 13px', cursor: 'pointer' },
   filSel: { background: 'linear-gradient(180deg,rgba(255,228,154,.26),rgba(232,181,77,.14))', boxShadow: '0 0 10px rgba(255,200,90,.3)' },
   srow: { flex: 'none', display: 'flex', alignItems: 'center', gap: 6, overflowX: 'auto', padding: '4px 14px 2px' },
@@ -1435,7 +1435,7 @@ const zS = {
   grid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, alignContent: 'start' },
   scrollWrap: { flex: 1, minHeight: 0, overflowY: 'auto', padding: '2px 16px 12px' },
   item: { position: 'relative', width: '100%', boxSizing: 'border-box', borderRadius: 12, overflow: 'hidden', border: '2px solid rgba(232,194,90,.5)', background: '#241018', cursor: 'pointer', display: 'block' },
-  sizer: { display: 'block', width: '100%', paddingTop: '140%' },
+  sizer: { display: 'block', width: '100%', paddingTop: '150%' },
   itemLocked: { filter: 'grayscale(1) brightness(.4)', cursor: 'default' },
   art: { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' },
   cph: { position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', fontSize: 30, color: '#7a5a3a' },
@@ -1496,10 +1496,8 @@ function ZDetailArt({ cardKey, info }) {
 function ZukanScreen({ cards, profile, refreshAll, back, flash, initialTab }) {
   const PAGE_SIZE = 24;
   const [tab, setTab] = useState(initialTab || 'catalog');   // catalog | owned
-  const [facet, setFacet] = useState('attr');                // attr | weap | rarity | species
-  const [fval, setFval] = useState('all');                   // 選択中ファセット値 or 'all'
-  const [sortField, setSortField] = useState('rarity');      // rarity | lv | atk
-  const [sortDir, setSortDir] = useState('desc');            // desc | asc
+  const [facet, setFacet] = useState('rarity');              // rarity | attr | weap | species
+  const [fval, setFval] = useState('sp');                    // 選択中ファセット値 or 'all'
   const [page, setPage] = useState(0);
   const [zukan, setZukan] = useState(null);
   const [skillMap, setSkillMap] = useState({});
@@ -1515,7 +1513,7 @@ function ZukanScreen({ cards, profile, refreshAll, back, flash, initialTab }) {
     setSel(prev => prev ? ((cards || []).find(c => c.id === prev.id) || null) : prev);
   }, [cards]);
   // フィルタ/ソート/タブ変更時はページを先頭へ
-  useEffect(() => { setPage(0); }, [tab, facet, fval, sortField, sortDir]);
+  useEffect(() => { setPage(0); }, [tab, facet, fval]);
 
   if (sel) return <CardDetail card={sel} cards={cards} profile={profile} skillMap={skillMap} refreshAll={refreshAll} back={() => setSel(null)} onSelect={setSel} flash={flash} />;
 
@@ -1533,10 +1531,10 @@ function ZukanScreen({ cards, profile, refreshAll, back, flash, initialTab }) {
   const FACETS = {
     attr:    { label: '属性', vals: [['hana', '花'], ['shin', '芯'], ['ha', '葉'], ['sp', 'SP']] },
     weap:    { label: '武器', vals: [['ken', '剣'], ['tate', '盾'], ['tsue', '杖']] },
-    rarity:  { label: 'レア', vals: [['n', 'N'], ['r', 'R'], ['sr', 'SR'], ['ssr', 'SSR'], ['sp', 'SP']] },
+    rarity:  { label: 'レア', vals: [['sp', 'SP'], ['ssr', 'SSR'], ['sr', 'SR'], ['r', 'R'], ['n', 'N']] },
     species: { label: '種族', vals: [['hibiscus', 'ハイビスカス'], ['meshibe', 'めしべ'], ['sp', 'SP']] },
   };
-  const FACET_ORDER = ['attr', 'weap', 'rarity', 'species'];
+  const FACET_ORDER = ['rarity', 'attr', 'weap', 'species'];
   const matchFacet = k => {
     if (fval === 'all') return true;
     if (facet === 'attr') return rawAttr(k) === fval;
@@ -1554,19 +1552,14 @@ function ZukanScreen({ cards, profile, refreshAll, back, flash, initialTab }) {
     items = CATALOG.map(k => { const inst = ownedByKey[k] && ownedByKey[k][0]; return { key: k, card: inst || null, id: 'cat_' + k, got: collected.has(k), inst }; });
   }
   items = items.filter(it => matchFacet(it.key));
-  const sval = it => sortField === 'rarity' ? (RAR_ORD[rawRar(it.key)] != null ? RAR_ORD[rawRar(it.key)] : 0)
-    : sortField === 'lv' ? (it.card ? (it.card.lv || 1) : 0)
-    : (it.card ? computeStats(it.card).sougou : 0);
-  const dir = sortDir === 'asc' ? 1 : -1;
-  items.sort((a, b) => (sval(a) - sval(b)) * dir || ((RAR_ORD[rawRar(b.key)] || 0) - (RAR_ORD[rawRar(a.key)] || 0)) || a.key.localeCompare(b.key));
+  // 図鑑は常にレア降順（SP→N）固定。レベル/攻撃力ソートは廃止。
+  items.sort((a, b) => ((RAR_ORD[rawRar(b.key)] || 0) - (RAR_ORD[rawRar(a.key)] || 0)) || a.key.localeCompare(b.key));
 
   const total = items.length;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const pg = Math.min(page, totalPages - 1);
   const pageItems = items.slice(pg * PAGE_SIZE, pg * PAGE_SIZE + PAGE_SIZE);
 
-  const SORTS = [['rarity', 'レアリティ'], ['lv', 'レベル'], ['atk', '攻撃力']];
-  const arrow = f => sortField === f ? (sortDir === 'asc' ? ' ▲' : ' ▼') : '';
 
   return (
     <div style={S.root}>
@@ -1578,15 +1571,11 @@ function ZukanScreen({ cards, profile, refreshAll, back, flash, initialTab }) {
           <button style={{ ...zS.tab, ...(tab === 'owned' ? zS.tabSel : {}) }} onClick={() => setTab('owned')}>所持カード（{(cards || []).length}）</button>
         </div>
         <div style={zS.filters}>
-          {FACET_ORDER.map(f => <button key={f} style={{ ...zS.fil, ...(facet === f ? zS.filSel : {}) }} onClick={() => { setFacet(f); setFval('all'); }}>{FACETS[f].label}</button>)}
+          {FACET_ORDER.map(f => <button key={f} style={{ ...zS.fil, ...(facet === f ? zS.filSel : {}) }} onClick={() => { setFacet(f); setFval(FACETS[f].vals[0][0]); }}>{FACETS[f].label}</button>)}
         </div>
         <div style={zS.filters}>
           <button style={{ ...zS.fil, ...(fval === 'all' ? zS.filSel : {}) }} onClick={() => setFval('all')}>すべて</button>
           {FACETS[facet].vals.map(([k, l]) => <button key={k} style={{ ...zS.fil, ...(fval === k ? zS.filSel : {}) }} onClick={() => setFval(k)}>{l}</button>)}
-        </div>
-        <div style={zS.srow}>
-          <span style={zS.slab}>並び替え</span>
-          {SORTS.map(([k, l]) => <button key={k} style={{ ...zS.sbtn, ...(sortField === k ? zS.ssel : {}) }} onClick={() => { if (sortField === k) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortField(k); setSortDir('desc'); } }}>{l}{arrow(k)}</button>)}
         </div>
         <div style={zS.count}>
           {tab === 'catalog'
