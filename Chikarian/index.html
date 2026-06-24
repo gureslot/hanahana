@@ -1876,7 +1876,10 @@ const cpS = {
   qtyRow: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, margin: '10px 0' },
   qtyLab: { fontSize: 11, color: '#b6a890' },
   qtyBtn: { fontFamily: 'inherit', fontSize: 16, fontWeight: 800, color: GOLD_HI, background: PANEL, border: BORDER, borderRadius: 8, width: 34, height: 34, cursor: 'pointer' },
-  qtyInput: { width: 56, textAlign: 'center', fontFamily: 'inherit', fontSize: 15, fontWeight: 700, color: GOLD_HI, background: 'rgba(0,0,0,.3)', border: BORDER, borderRadius: 8, padding: '6px 4px' },
+  qtyVal: { minWidth: 56, textAlign: 'center', fontFamily: 'inherit', fontSize: 16, fontWeight: 800, color: GOLD_HI, background: 'rgba(0,0,0,.3)', border: BORDER, borderRadius: 8, padding: '6px 10px' },
+  qtyPresets: { display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 10 },
+  qtyPreset: { fontFamily: 'inherit', fontSize: 13, fontWeight: 700, color: '#d8c19a', background: PANEL, border: BORDER, borderRadius: 999, padding: '5px 0', cursor: 'pointer', minWidth: 52 },
+  qtyPresetOn: { color: '#1a1014', background: 'linear-gradient(180deg,#e8c25a,#b8901f)', border: '1.5px solid #e8c25a' },
   modalClose: { width: '100%', marginTop: 12, fontFamily: 'inherit', fontSize: 13, fontWeight: 700, color: '#d8c19a', background: 'rgba(255,255,255,.06)', border: '1px solid rgba(232,194,90,.3)', borderRadius: 10, padding: '9px 0', cursor: 'pointer' },
   ph: { color: '#a98f66', fontSize: 14, textAlign: 'center', padding: '40px 10px', lineHeight: 1.8 },
   dArt: { width: 120, height: 180, margin: '0 auto 10px', borderRadius: 10, overflow: 'hidden', boxShadow: '0 4px 18px rgba(0,0,0,.5)' },
@@ -2097,8 +2100,11 @@ function CardPicker({ title, cards, getStatus, chooseLabel, onChoose, onClear, a
                       <div style={cpS.qtyRow}>
                         <span style={cpS.qtyLab}>個数</span>
                         <button style={cpS.qtyBtn} onClick={() => setExpQty(q => Math.max(1, q - 1))} disabled={busy}>−</button>
-                        <input type="number" value={expQty} min={1} onChange={e => setExpQty(Math.max(1, parseInt(e.target.value, 10) || 1))} style={cpS.qtyInput} />
+                        <span style={cpS.qtyVal}>{expQty}</span>
                         <button style={cpS.qtyBtn} onClick={() => setExpQty(q => Math.min(Math.max(1, maxHave), q + 1))} disabled={busy}>＋</button>
+                      </div>
+                      <div style={cpS.qtyPresets}>
+                        {[1, 5, 10, 50].map(n => <button key={n} style={{ ...cpS.qtyPreset, ...(expQty === n ? cpS.qtyPresetOn : {}) }} onClick={() => setExpQty(Math.min(n, Math.max(1, maxHave)))} disabled={busy}>{n}</button>)}
                       </div>
                       <div style={cpS.expBtns}>
                         {SZ.map(([k, lab, ev]) => { const n = books[k] || 0; const off = busy || n < expQty; return <button key={k} onClick={() => onUseBook(selCard, k, expQty)} disabled={off} style={{ ...cpS.expBtn, ...(off ? cpS.expBtnOff : {}) }}>{lab}<span style={cpS.expEv}>+{ev}</span><span style={cpS.expHave}>残{n}</span></button>; })}
