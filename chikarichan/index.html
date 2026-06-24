@@ -36,16 +36,27 @@
   .title-card{ position:relative; flex:1 1 auto; min-height:0; border-radius:20px; overflow:hidden;
     background:linear-gradient(180deg,#fff7f1,#fdf3ee); background-size:cover; background-position:center;
     border:1px solid rgba(255,255,255,.85); box-shadow:0 22px 54px -22px rgba(120,80,70,.5), inset 0 1px 0 rgba(255,255,255,.9);
-    display:flex; flex-direction:column; align-items:center; justify-content:center; touch-action:manipulation; }
-  .title-logo{ width:82%; max-width:340px; height:auto; filter:drop-shadow(0 8px 16px rgba(120,80,70,.35)); animation:floaty 3.2s ease-in-out infinite; }
-  .title-tap{ position:absolute; left:0; right:0; bottom:7%; text-align:center; font-size:14px; font-weight:700;
-    color:#6a504a; text-shadow:0 1px 5px rgba(255,255,255,.85); animation:tappulse 1.7s ease-in-out infinite; }
-  .title-auth{ margin-top:12px; }
-  @keyframes floaty{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-10px); } }
-  @keyframes tappulse{ 0%,100%{ opacity:.4; } 50%{ opacity:1; } }
+    display:flex; flex-direction:column; align-items:center; justify-content:flex-start; padding-top:9%; touch-action:manipulation; }
+  .title-logo{ width:94%; max-width:400px; height:auto; filter:drop-shadow(0 8px 16px rgba(120,80,70,.4)); animation:floaty 3.2s ease-in-out infinite; }
+  .title-tap{ position:absolute; left:0; right:0; bottom:8%; text-align:center; font-size:20px; font-weight:800;
+    color:#5a4038; text-shadow:0 1px 7px rgba(255,255,255,.95), 0 0 3px rgba(255,255,255,.95); animation:tappulse 1.6s ease-in-out infinite; }
+  .title-account{ margin-top:10px; text-align:center; font-size:11.5px; color:var(--sub); }
+  .title-account b{ color:var(--ink); }
+  .title-account a{ color:var(--teal); text-decoration:underline; cursor:pointer; }
+  @keyframes floaty{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-12px); } }
+  @keyframes tappulse{ 0%,100%{ opacity:.6; } 50%{ opacity:1; } }
   /* 画面遷移の白フェード */
   .fade{ position:fixed; inset:0; z-index:120; background:#fff; opacity:0; pointer-events:none; transition:opacity .45s ease; }
   .fade.show{ opacity:1; pointer-events:auto; }
+  /* タップスタート後のログイン案内（未ログイン時のみ） */
+  .login-modal{ position:fixed; inset:0; z-index:130; display:none; align-items:center; justify-content:center;
+    background:rgba(40,25,30,.55); -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px); padding:24px; }
+  .login-modal.show{ display:flex; }
+  .login-card{ width:100%; max-width:340px; background:#fffdfb; border-radius:18px; padding:22px 20px 18px; text-align:center;
+    box-shadow:0 24px 60px -18px rgba(0,0,0,.55); }
+  .login-title{ font-size:16px; font-weight:900; color:var(--ink); margin-bottom:8px; }
+  .login-note{ font-size:11.5px; color:var(--sub); line-height:1.65; margin-bottom:16px; }
+  .login-skip{ display:inline-block; margin-top:13px; font-size:12.5px; color:var(--sub); text-decoration:underline; cursor:pointer; }
 
   h1{font-size:17px; font-weight:900; margin:2px 4px 2px; letter-spacing:.03em;}
   .lvtag{font-size:12px; color:var(--sub); margin:0 4px 10px; font-weight:700;}
@@ -174,21 +185,24 @@
 
   <div class="fade" id="fade"></div>
 
+  <!-- タップスタート後のログイン案内（未ログイン時のみ表示）。タイトルの兄弟＝タップがstartに伝播しない -->
+  <div class="login-modal" id="login-modal" onclick="closeLoginModal()">
+    <div class="login-card" onclick="event.stopPropagation()">
+      <div class="login-title">記録を残しますか？</div>
+      <p class="login-note">Googleでログインすると、機種変更やしばらく開かなかったときも記録が消えません（チカリアンと共通のアカウント）。あとからでも変更できます。</p>
+      <button class="btn sub wide" type="button" onclick="cloudLogin()">Googleでログイン</button>
+      <a class="login-skip" onclick="skipLogin()">ログインせずに始める</a>
+    </div>
+  </div>
+
   <!-- ═══════ タイトル ═══════ -->
-  <section class="screen on" id="scr-title" onclick="startFromTitle()">
+  <section class="screen on" id="scr-title" onclick="onTitleTap()">
     <div class="title-card" id="title-bg">
       <img class="title-logo" id="title-logo" src="images/logo_title.png" alt="ちかりちゃんは成長する">
       <div class="title-tap">タップでスタート</div>
     </div>
-    <div class="title-auth" onclick="event.stopPropagation()">
-      <div id="auth-out">
-        <button class="btn sub wide" id="loginBtn" type="button" onclick="event.stopPropagation(); cloudLogin()">Googleでログインして記録を残す</button>
-        <p class="authnote" style="text-align:center; margin:8px 2px 0;">機種変更やしばらく開かなかったときも記録が消えません（チカリアンと共通のアカウント）。</p>
-      </div>
-      <div id="auth-in" style="display:none">
-        <p class="authnote" style="text-align:center; margin:0 2px 8px;">ログイン中：<b id="auth-email">—</b></p>
-        <button class="btn ghost wide" id="logoutBtn" type="button" onclick="event.stopPropagation(); cloudLogout()">ログアウト</button>
-      </div>
+    <div class="title-account" id="title-account" style="display:none" onclick="event.stopPropagation()">
+      ログイン中：<b id="auth-email">—</b>　<a onclick="event.stopPropagation(); cloudLogout()">ログアウト</a>
     </div>
   </section>
 
@@ -517,7 +531,11 @@ function setTitleBg(){   // タイトルもホームと同じ時間帯背景
   el.style.backgroundImage="url('"+IMG_DIR+HOME_BG_FILE(bgSlot())+"'), linear-gradient(180deg,#fff7f1,#fdf3ee)";
 }
 let titleStarted=false;
-function startFromTitle(){   // タップ → 白フェードアウト → ホームへ → フェードイン
+function onTitleTap(){ if(sbSignedIn) startGame(); else openLoginModal(); }   // ログイン済みは即ゲーム／未ログインは案内
+function openLoginModal(){ $('login-modal').classList.add('show'); }
+function closeLoginModal(){ $('login-modal').classList.remove('show'); }
+function skipLogin(){ closeLoginModal(); startGame(); }
+function startGame(){   // 白フェードアウト → ホームへ → フェードイン
   if(titleStarted) return; titleStarted=true;
   const f=$('fade'); f.classList.add('show');
   setTimeout(()=>{ go('home'); setTimeout(()=>{ f.classList.remove('show'); titleStarted=false; }, 60); }, 450);
@@ -897,9 +915,7 @@ function cloudInit(){
   });
 }
 function updateAuthUI(){
-  const out=$('auth-out'), inn=$('auth-in'); if(!out||!inn) return;
-  out.style.display = sbSignedIn?'none':'block';
-  inn.style.display = sbSignedIn?'block':'none';
+  const acc=$('title-account'); if(acc) acc.style.display = sbSignedIn?'block':'none';
   if(sbSignedIn && sbUser){ const em=$('auth-email'); if(em) em.textContent = sbUser.email || 'Googleアカウント'; }
 }
 function reloadFromState(){ loadHome(S.level,true); loadTrain(S.level); applyRig(); setHomeBg(); updateAllUI(); }
