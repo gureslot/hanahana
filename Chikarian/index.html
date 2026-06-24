@@ -4111,12 +4111,12 @@ const FILL = {   // 充填量(枠) = 基礎+(MAX-基礎)×(Lv-1)/(上限-1)（ba
 };
 /* 装備（充填）画面 専用スタイル（soubi-mockup の暖色意匠・sb- スコープ・共有 S 不変） */
 const SOUBI_CSS = `
-.sb-root{position:relative; width:100%; max-width:480px; margin:0 auto; min-height:100dvh; overflow-y:auto; color:#efe6d5; background:radial-gradient(120% 80% at 50% -10%, #1d1412 0%, #15100f 38%, #0b0809 100%);}
-.sb-wrap{padding:0 16px 30px;}
-.sb-hdr{padding:18px 4px 0; text-align:center;}
-.sb-hdr h1{margin:4px 0 0; font-size:21px; font-weight:800; color:#ecd28a; text-shadow:0 1px 0 #000,0 0 18px rgba(199,161,78,.25);}
-.sb-deco{color:#c7a14e; font-size:11px; letter-spacing:.42em; opacity:.8;}
-.sb-divider{height:1px; margin:14px 6px 0; background:linear-gradient(90deg,transparent,#8c7038 18%,#c7a14e 50%,#8c7038 82%,transparent);}
+.sb-root{position:relative; width:100%; max-width:480px; margin:0 auto; height:100dvh; overflow:hidden; display:flex; flex-direction:column; color:#efe6d5; background:radial-gradient(120% 80% at 50% -10%, #1d1412 0%, #15100f 38%, #0b0809 100%);}
+.sb-wrap{flex:1; min-height:0; overflow-y:auto; padding:0 16px 88px;}
+.sb-hdr{padding:12px 4px 0; text-align:center;}
+.sb-hdr h1{margin:0; font-size:17px; font-weight:800; letter-spacing:.04em; color:#ecd28a; text-shadow:0 1px 0 #000,0 0 18px rgba(199,161,78,.25);}
+.sb-deco{display:none;}
+.sb-divider{height:1px; margin:8px 6px 0; background:linear-gradient(90deg,transparent,#8c7038 18%,#c7a14e 50%,#8c7038 82%,transparent);}
 .sb-note{font-size:11px; color:#7d7160; margin-top:8px; line-height:1.5;}
 .sb-card{display:flex; gap:12px; padding:13px; margin-top:14px; border-radius:4px; border:1px solid #3a2c22; background:linear-gradient(180deg,#241a17,#1c1513);}
 .sb-art{width:64px; height:90px; flex:none; border-radius:3px; position:relative; border:1px solid #8c7038; overflow:hidden; background:#241a16;}
@@ -4165,7 +4165,7 @@ const SOUBI_CSS = `
 .sb-warn{margin-top:12px; padding:10px 12px; border-radius:4px; border:1px solid #d99a5a; background:rgba(217,154,90,.08); font-size:11.5px; color:#d99a5a; line-height:1.55;}
 .sb-cta{display:block; width:100%; margin-top:16px; padding:14px 0; border:none; border-radius:4px; cursor:pointer; font-family:inherit; font-size:16px; font-weight:800; letter-spacing:.16em; color:#0c0a09; background:linear-gradient(180deg,#ecd28a,#c7a14e); box-shadow:0 0 16px rgba(199,161,78,.3);}
 .sb-cta:disabled{filter:grayscale(.5) brightness(.8); cursor:default;}
-.sb-back{display:block; text-align:center; margin-top:18px; font-size:12px; color:#b6a890; cursor:pointer; letter-spacing:.08em; background:none; border:none; font-family:inherit; width:100%;}
+.sb-back{position:absolute; left:0; right:0; bottom:0; z-index:5; text-align:center; padding:13px 16px 16px; margin:0; font-size:13px; color:#ecd28a; cursor:pointer; letter-spacing:.08em; background:linear-gradient(0deg,#0b0809 72%,transparent); border:none; font-family:inherit;}
 .sb-foot{text-align:center; font-size:10px; color:#7d7160; margin-top:18px; line-height:1.6;}
 `;
 const SOUBI_QCLASS = { crude: 'gin', refined: 'ao', enchanted: 'mura', holy: 'kin' };
