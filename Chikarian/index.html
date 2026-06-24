@@ -4409,8 +4409,9 @@ function SkillView({ base, cards, profile, skillMap, refreshAll, onBack, flash }
   const [dstSlot, setDstSlot] = useState(null);
   const [confirm, setConfirm] = useState(false);
   const [tResult, setTResult] = useState(null);
-  const [tSort, setTSort] = useState('rarity');   // 転移素材の並び替え
-  const [tDir, setTDir] = useState('desc');
+  const [tRar, setTRar] = useState('all');        // 転移素材：レアリティ絞り込み（SPは素材不可のため候補から除外＝ボタンも置かない）
+  const [tLv1, setTLv1] = useState(false);        // 転移素材：Lv1のみ
+  const [tAW, setTAW] = useState('all');          // 転移素材：属性/武器 絞り込み（全/花/葉/芯/剣/盾/杖）
 
   async function loadBase() { try { setSkills(await ChikarianAPI.getCardSkills(base.id) || []); } catch (e) { flash(errMsg(e)); setSkills([]); } }
   useEffect(() => { loadBase(); }, [base.id]);
@@ -4515,20 +4516,29 @@ function SkillView({ base, cards, profile, skillMap, refreshAll, onBack, flash }
           {<>
                 <div className="sk-seclabel">素材カードを選ぶ（ロック/SPは不可・素材は消滅）</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', margin: '0 0 6px' }}>
-                  <span style={{ fontSize: 10, color: '#7d7160' }}>並び替え</span>
-                  {[['rarity', 'レア'], ['lv', 'Lv'], ['body', '本体'], ['attr', '属性'], ['weap', '武器']].map(([k, l]) => (
-                    <button key={k} onClick={() => { if (tSort === k) setTDir(d => d === 'asc' ? 'desc' : 'asc'); else { setTSort(k); setTDir('desc'); } }} style={{ fontFamily: 'inherit', fontSize: 11, fontWeight: 700, padding: '4px 9px', borderRadius: 10, cursor: 'pointer', border: '1px solid ' + (tSort === k ? '#c7a14e' : '#3a2c22'), background: tSort === k ? 'linear-gradient(180deg,#ecd28a,#c7a14e)' : '#181210', color: tSort === k ? '#0c0a09' : '#b6a890' }}>{l}{tSort === k ? (tDir === 'asc' ? ' ▲' : ' ▼') : ''}</button>
+                  <span style={{ fontSize: 10, color: '#7d7160' }}>絞り込み</span>
+                  {[['all', '全'], ['n', 'N'], ['r', 'R'], ['sr', 'SR'], ['ssr', 'SSR']].map(([k, l]) => (
+                    <button key={k} onClick={() => setTRar(k)} style={{ fontFamily: 'inherit', fontSize: 11, fontWeight: 700, padding: '4px 9px', borderRadius: 10, cursor: 'pointer', border: '1px solid ' + (tRar === k ? '#c7a14e' : '#3a2c22'), background: tRar === k ? 'linear-gradient(180deg,#ecd28a,#c7a14e)' : '#181210', color: tRar === k ? '#0c0a09' : (k === 'all' ? '#b6a890' : (RAR_COL[k] || '#b6a890')) }}>{l}</button>
+                  ))}
+                  <button onClick={() => setTLv1(v => !v)} style={{ fontFamily: 'inherit', fontSize: 11, fontWeight: 700, padding: '4px 9px', borderRadius: 10, cursor: 'pointer', border: '1px solid ' + (tLv1 ? '#c7a14e' : '#3a2c22'), background: tLv1 ? 'linear-gradient(180deg,#ecd28a,#c7a14e)' : '#181210', color: tLv1 ? '#0c0a09' : '#b6a890', marginLeft: 4 }}>Lv1のみ{tLv1 ? ' ✓' : ''}</button>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', margin: '0 0 6px' }}>
+                  <span style={{ fontSize: 10, color: '#7d7160' }}>絞り込み</span>
+                  {[['all', '全'], ['hana', '花'], ['ha', '葉'], ['shin', '芯'], ['ken', '剣'], ['tate', '盾'], ['tsue', '杖']].map(([k, l]) => (
+                    <button key={k} onClick={() => setTAW(k)} style={{ fontFamily: 'inherit', fontSize: 11, fontWeight: 700, padding: '4px 9px', borderRadius: 10, cursor: 'pointer', border: '1px solid ' + (tAW === k ? '#c7a14e' : '#3a2c22'), background: tAW === k ? 'linear-gradient(180deg,#ecd28a,#c7a14e)' : '#181210', color: tAW === k ? '#0c0a09' : '#b6a890' }}>{l}</button>
                   ))}
                 </div>
                 <div className="sk-grid">
                   {(() => {
-                    const RR = { n: 0, r: 1, sr: 2, ssr: 3, sp: 4 }, AO = { hana: 0, ha: 1, shin: 2 }, WO = { ken: 0, tate: 1, tsue: 2 };
-                    const dir = tDir === 'asc' ? 1 : -1, key = ['lv', 'body', 'attr', 'weap'].includes(tSort) ? tSort : 'rar';
-                    return (cards || [])
+                    const RR = { n: 0, r: 1, sr: 2, ssr: 3, sp: 4 };
+                    const list = (cards || [])
                       .filter(c => c.id !== base.id && !c.locked && !c.card_key.endsWith('_sp') && c.boss_deck_no == null && c.tansaku_deck_no == null)
-                      .map(c => { const pk = parseCardKey(c.card_key); const pt = (c.card_key || '').split('_'); return { c, body: computeStats(c).body, rar: RR[pk.rarity] != null ? RR[pk.rarity] : 0, attr: AO[pk.attrKey] != null ? AO[pk.attrKey] : 9, weap: WO[pt[3]] != null ? WO[pt[3]] : 9, lv: c.lv || 1 }; })
-                      .sort((a, b) => { const d = (a[key] - b[key]) * dir; return d !== 0 ? d : (b.body - a.body); })
-                      .map(({ c }) => (
+                      .map(c => { const pk = parseCardKey(c.card_key); const pt = (c.card_key || '').split('_'); return { c, body: computeStats(c).body, rarKey: pk.rarity, attrKey: pk.attrKey, weapKey: pt[3], rar: RR[pk.rarity] != null ? RR[pk.rarity] : 0, lv: c.lv || 1 }; })
+                      .filter(x => (tRar === 'all' || x.rarKey === tRar) && (!tLv1 || x.lv === 1) && (tAW === 'all' || x.attrKey === tAW || x.weapKey === tAW))
+                      .sort((a, b) => (b.rar - a.rar) || (b.body - a.body));
+                    return list.length === 0
+                      ? <div className="sk-hint" style={{ gridColumn: '1 / -1', textAlign: 'center' }}>該当カードなし</div>
+                      : list.map(({ c }) => (
                         <div key={c.id} style={{ outline: srcId === c.id ? '2px solid #c7a14e' : 'none', borderRadius: 10 }}>
                           <CardThumb card={c} small onClick={() => pickSrc(c.id)} />
                           <div style={{ fontSize: 8, lineHeight: 1.2, textAlign: 'center', color: '#cdb488', marginTop: 1 }}>{cardFullName(c)}</div>
