@@ -1475,7 +1475,6 @@ function ZCard({ cardKey, star, onClick, placeholder, recorded }) {
       <div style={zS.sizer} />
       {err ? <div style={zS.cph}>❖</div> : <img src={'./images/' + cardKey + '.png'} alt="" onError={() => setErr(true)} style={zS.art} />}
       <div style={zS.foot}>
-        {star > 0 && <div style={zS.star}>{'★'.repeat(star)}</div>}
         <div style={zS.nm}>{info.name}{recorded ? '（記録）' : ''}</div>
       </div>
     </button>
@@ -1495,7 +1494,7 @@ function ZDetailArt({ cardKey, info }) {
 
 function ZukanScreen({ cards, profile, refreshAll, back, flash, initialTab }) {
   const PAGE_SIZE = 24;
-  const [tab, setTab] = useState(initialTab || 'catalog');   // catalog | owned
+  const tab = 'catalog';   // 図鑑のみ（所持カードタブ廃止）
   const [facet, setFacet] = useState('rarity');              // rarity | attr | weap | species
   const [fval, setFval] = useState('sp');                    // 選択中ファセット値 or 'all'
   const [page, setPage] = useState(0);
@@ -1566,10 +1565,6 @@ function ZukanScreen({ cards, profile, refreshAll, back, flash, initialTab }) {
       <div style={zS.bg} />
       <div style={zS.body}>
         <div style={zS.head}>図鑑</div>
-        <div style={zS.tabs}>
-          <button style={{ ...zS.tab, ...(tab === 'catalog' ? zS.tabSel : {}) }} onClick={() => setTab('catalog')}>図鑑</button>
-          <button style={{ ...zS.tab, ...(tab === 'owned' ? zS.tabSel : {}) }} onClick={() => setTab('owned')}>所持カード（{(cards || []).length}）</button>
-        </div>
         <div style={zS.filters}>
           {FACET_ORDER.map(f => <button key={f} style={{ ...zS.fil, ...(facet === f ? zS.filSel : {}) }} onClick={() => { setFacet(f); setFval(FACETS[f].vals[0][0]); }}>{FACETS[f].label}</button>)}
         </div>
@@ -1646,41 +1641,55 @@ function SkillEffect({ sk, lv, style }) {
   );
 }
 
+// 固定スキル候補（slot0）。サーバ pick_fixed_skill（0007・skill-db-spec §5）と同じプール＝表示専用（抽選はサーバ）。
+// ※サーバのプールを変更した場合はここも合わせること（canon-03 に同期義務を記録）。
+function fixedSkillCandidates(cardKey) {
+  if (cardKey.endsWith('_sp')) {
+    if (cardKey === 'chara_dragon_sp') return ['sp_ryuki'];
+    if (cardKey === 'chara_girl_sp')   return ['sp_aitou'];
+    if (cardKey === 'chara_houou_sp')  return ['sp_fushichou'];
+    return [];
+  }
+  const p = cardKey.split('_');
+  if (p[1] === 'meshibe') {
+    const rare = p[p.length - 1];
+    if (rare === 'sr')  return ['meshibe_sr_hisou', 'meshibe_sr_banshou'];
+    if (rare === 'ssr') return ['meshibe_ssr_shinsou', 'meshibe_ssr_tenkei'];
+    return [];
+  }
+  if (p[1] === 'hibiscus') {
+    const attr = p[2], weap = p[3], rare = p[4];
+    if (rare === 'n')   return ['n_sougou_' + attr, 'n_sougou_' + weap, 'n_hontai_' + attr, 'n_hontai_' + weap, 'n_util_houjou', 'n_util_senri'];
+    if (rare === 'r')   return ['r_sougou_' + attr, 'r_sougou_' + weap, 'r_soubi_' + attr, 'r_soubi_' + weap];
+    if (rare === 'sr') {
+      const a = attr === 'hana' ? ['sr_kyousou_hana_ha', 'sr_kyousou_hana_shin']
+              : attr === 'ha'   ? ['sr_kyousou_hana_ha', 'sr_kyousou_ha_shin']
+              :                   ['sr_kyousou_ha_shin', 'sr_kyousou_hana_shin'];
+      const w = weap === 'ken'  ? ['sr_kyousou_ken_tate', 'sr_kyousou_ken_tsue']
+              : weap === 'tate' ? ['sr_kyousou_ken_tate', 'sr_kyousou_tate_tsue']
+              :                   ['sr_kyousou_tate_tsue', 'sr_kyousou_ken_tsue'];
+      return a.concat(w, ['sr_gekirin', 'sr_keppun']);
+    }
+    if (rare === 'ssr') return ['ssr_haen', 'ssr_yuusei', 'ssr_ougon', 'ssr_kyoumei'];
+    return [];
+  }
+  return [];
+}
 function CardDetail({ card, cards, profile, skillMap, refreshAll, back, flash, onSelect }) {
-  const [skills, setSkills] = useState(null);
-  const [mode, setMode] = useState(null);   // null | 'kyoka'
-  useEffect(() => { (async () => { try { setSkills(await ChikarianAPI.getCardSkills(card.id) || []); } catch (e) { flash(errMsg(e)); setSkills([]); } })(); }, [card.id]);
+  const [mode, setMode] = useState(null);
 
   if (mode === 'kyoka') return <KyokaView base={card} cards={cards} profile={profile} refreshAll={refreshAll} onBack={() => setMode(null)} flash={flash} />;
   if (mode === 'equip') return <EquipView base={card} refreshAll={refreshAll} onBack={() => setMode(null)} flash={flash} />;
   if (mode === 'skill') return <SkillView base={card} cards={cards} profile={profile} skillMap={skillMap} refreshAll={refreshAll} onBack={() => setMode(null)} flash={flash} />;
   if (mode === 'exchange') return <ExchangeView base={card} refreshAll={refreshAll} onBack={() => setMode(null)} flash={flash} />;
 
-  const st = computeStats(card);
-  const info = st.info;
-  const bySlot = {}; (skills || []).forEach(s => { bySlot[s.slot] = s; });
-
-  const op = (label) => () => flash(label + 'は準備中です（次フェーズ）');
-
-  function SkillSlot({ slot }) {
-    const isFixed = slot === 0;
-    const row = bySlot[slot];
-    if (st.isSp && slot > 0) {
-      return <div style={dS.slot}><div style={dS.slotHead}>空きスロット{slot}</div><div style={{ fontSize: 11, color: '#a98f66' }}>SPは追加スロットなし</div></div>;
-    }
-    const m = row ? skillMap[row.skill_key] : null;
-    return (
-      <div style={dS.slot}>
-        <div style={dS.slotHead}>{isFixed ? '固定スキル' : '空きスロット' + slot}</div>
-        {row
-          ? <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: GOLD_HI }}>{m ? m.display_name : row.skill_key} <span style={{ fontSize: 11, color: '#cdb488' }}>Lv{row.skill_lv}</span></div>
-              {m && <div style={{ fontSize: 11, color: '#cdb488', marginTop: 2 }}><SkillEffect sk={m} lv={row.skill_lv} /></div>}
-            </div>
-          : <div style={{ fontSize: 11, color: '#a98f66' }}>空き（転移で付与）</div>}
-      </div>
-    );
-  }
+  // 図鑑＝カードの基本情報（育成状態は反映しない）。Lv1基準の戦闘力と固定スキル候補のみ表示。
+  const info = parseCardKey(card.card_key);
+  const isSp = info.rarity === 'sp';
+  const base = isSp ? (SP_BASE[card.card_key] || 0) : (CARD_BASE[info.rarity] || CARD_BASE.n).base;   // Lv1本体＝base（balance §2-2）
+  const cap  = isSp ? 50 : (CARD_BASE[info.rarity] || CARD_BASE.n).cap;
+  const growPerLv = Math.round(base * (2.0 / (cap - 1)));   // 1Lvあたりの本体伸び
+  const candidates = fixedSkillCandidates(card.card_key);
 
   // 前後ナビ＝所持カード(cards)を巡る（容易に配線できるため対応）。
   const navList = cards || [];
@@ -1699,25 +1708,27 @@ function CardDetail({ card, cards, profile, skillMap, refreshAll, back, flash, o
 
         <div style={zS.dName}>{cardFullName(card)}</div>
         <div style={zS.dBadges}>
-          {st.isSp
+          {isSp
             ? <span style={{ ...zS.badge, background: 'linear-gradient(90deg,#ffe39a,#e8b54d)' }}>SP</span>
             : <><span style={{ ...zS.badge, background: DECK_ATTR_COL[info.attr] || '#888' }}>{info.attr}</span><span style={zS.wbadge}>{info.weap}</span></>}
           <span style={{ ...zS.badge, background: '#3a2a40', color: '#e7d3ff' }}>{RAR_LABEL[info.rarity]}</span>
         </div>
-        <div style={zS.dStarRow}>{st.isSp ? '—' : (card.star > 0 ? '★'.repeat(card.star) : '☆')}　Lv {card.lv}{card.lv != null && <span style={{ fontSize: 11, color: '#7a6848' }}> / 上限{st.cap}</span>}</div>
 
-        {/* ステータス（数値は本番 computeStats＝SP本体3200・★0.10・枠攻撃力10/15/22/34） */}
+        {/* 基本戦闘力（Lv1基準・育成状態は反映しない） */}
         <div style={zS.dStats}>
-          <div style={zS.dRow}><span style={zS.dk}>総合戦力（発動前）</span><span style={zS.dv}>{st.sougou.toLocaleString()}</span></div>
-          <div style={zS.dRow}><span style={zS.dk}>本体戦闘力</span><span style={zS.dv}>{st.body.toLocaleString()}</span></div>
-          <div style={zS.dRow}><span style={zS.dk}>装備項</span><span style={zS.dv}>{st.equip.toLocaleString()}</span></div>
-          <div style={{ ...zS.dRow, borderBottom: 'none' }}><span style={zS.dk}>充填（武気）</span><span style={zS.dv}>{st.isSp ? '装備なし（SP）' : `${QUALITY_JA[card.quality] || '—'}・${(card.loaded_buki || 0).toLocaleString()}枠（枠攻${QATK[card.quality] || 0}）`}</span></div>
+          <div style={zS.dRow}><span style={zS.dk}>戦闘力（Lv1）</span><span style={zS.dv}>{base.toLocaleString()}</span></div>
+          <div style={{ ...zS.dRow, borderBottom: 'none' }}><span style={zS.dk}>1Lvごとの伸び</span><span style={zS.dv}>+約{growPerLv.toLocaleString()}</span></div>
         </div>
 
-        {/* スキル3枠（getCardSkills＋skillMap の実データ） */}
-        <div style={zS.dSec}>スキル（固定1＋空き2）</div>
+        {/* 固定スキル候補（サーバ pick_fixed_skill のプール・Lv1効果） */}
+        <div style={zS.dSec}>固定スキル候補</div>
         <div style={{ width: '100%', maxWidth: 320 }}>
-          <SkillSlot slot={0} /><SkillSlot slot={1} /><SkillSlot slot={2} />
+          {candidates.map(k => { const m = skillMap[k]; return (
+            <div key={k} style={dS.slot}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: GOLD_HI }}>{m ? m.display_name : k}</div>
+              {m && <div style={{ fontSize: 11, color: '#cdb488', marginTop: 2 }}><SkillEffect sk={m} lv={1} /></div>}
+            </div>
+          ); })}
         </div>
 
         {/* 図鑑詳細は閲覧専用（★強化/スキル/ロックは強化合成画面で実施）。 */}
