@@ -3106,7 +3106,10 @@ function KyokaView({ base, cards, profile, refreshAll, onBack, flash }) {
   const [result, setResult] = useState(null);
   const [detailCard, setDetailCard] = useState(null);   // 素材カードのⓘ詳細ポップアップ
 
-  const rate = Math.min(100, Math.max(30, 90 - 5 * star) + 10 * hoshou);   // balance §5
+  // 成功率＝サーバ do_kyoka（canon-04 §2）と一致：min(100, max(0, (20−10×★) + 80×(素材Lv−1)/(Lv上限−1) + 10×保証石))。最終判定はサーバ。
+  const matC0 = matId ? (cards || []).find(c => c.id === matId) : null;
+  const matCap0 = (CARD_BASE[matC0 ? parseCardKey(matC0.card_key).rarity : (isSp ? 'sp' : baseInfo.rarity)] || {}).cap || 50;
+  const rate = Math.round(Math.min(100, Math.max(0, (20 - 10 * star) + 80 * ((matC0 ? (matC0.lv || 1) : 1) - 1) / (matCap0 - 1) + 10 * hoshou)));
   // 候補: 同レア同★（SPは同名同★）／ロック除外／本体自身除外（クライアント目安・最終判定はサーバ）
   const candidates = (cards || []).filter(c => {
     if (c.id === base.id || c.locked) return false;
@@ -3194,7 +3197,7 @@ function KyokaView({ base, cards, profile, refreshAll, onBack, flash }) {
           </div>
           {medalHave < cost && <div style={{ fontSize: 11, color: '#ff6a7a' }}>メダルが不足しています（所持 {medalHave.toLocaleString()}）</div>}
 
-          <div style={kyokaS.note}>・成功で強化値+1。失敗しても強化値は下がりませんが、素材カードは消滅します。<br />・式: min(100, max(30, 90−5×★) + 10×保証石)・メダル 500×(★+1)（balance §5）。<strong>最終判定はサーバ。</strong></div>
+          <div style={kyokaS.note}>・成功で強化値+1。失敗しても強化値は下がりませんが、素材カードは消滅します。<br />・式: min(100, max(0, (20−10×★) + 80×(素材Lv−1)/(Lv上限−1) + 10×保証石))・メダル 500×(★+1)（canon-04 §2）。<strong>最終判定はサーバ。</strong></div>
 
           {/* 素材候補 */}
           <div style={kyokaS.matT}>素材を選ぶ（{isSp ? '同名・同★のSP' : '同レア・同★'}・ロック除外）</div>
@@ -3233,6 +3236,7 @@ function KyokaView({ base, cards, profile, refreshAll, onBack, flash }) {
               残 メダル {Number(result.medal_remaining).toLocaleString()} ／ 保証石 {result.hoshou_remaining}
             </div>
             <div style={{ display: 'flex', gap: 10, marginTop: 22 }}>
+              <button onClick={() => { setResult(null); setMatId(null); setHoshou(0); }} style={kyokaS.rHome}>続けて強化</button>
               <button onClick={onBack} style={{ ...kyokaS.rHome, background: 'rgba(20,10,16,.9)', color: GOLD_HI, border: BORDER }}>‹ 戻る</button>
             </div>
           </div>
