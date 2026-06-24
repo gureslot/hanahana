@@ -1433,7 +1433,8 @@ const zS = {
   pgInfo: { fontSize: 12, color: '#cdb488', minWidth: 60, textAlign: 'center' },
   count: { flex: 'none', textAlign: 'center', fontSize: 11, color: '#cdb488', padding: '4px 0 6px' },
   grid: { flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, alignContent: 'start', alignItems: 'start', padding: '2px 16px 12px' },
-  item: { position: 'relative', width: '100%', boxSizing: 'border-box', aspectRatio: '5 / 7', borderRadius: 12, overflow: 'hidden', border: '2px solid rgba(232,194,90,.5)', background: '#241018', cursor: 'pointer', display: 'block' },
+  item: { position: 'relative', width: '100%', boxSizing: 'border-box', borderRadius: 12, overflow: 'hidden', border: '2px solid rgba(232,194,90,.5)', background: '#241018', cursor: 'pointer', display: 'block' },
+  sizer: { display: 'block', width: '100%', paddingTop: '140%' },
   itemLocked: { filter: 'grayscale(1) brightness(.4)', cursor: 'default' },
   art: { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' },
   cph: { position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', fontSize: 30, color: '#7a5a3a' },
@@ -1466,10 +1467,11 @@ const zS = {
 // 図鑑カードタイル（絵入り・mockup .cardItem）。placeholder=未所持「？」。recorded=記録済だが所持インスタンス無し。
 function ZCard({ cardKey, star, onClick, placeholder, recorded }) {
   const [err, setErr] = useState(false);
-  if (placeholder) return <div style={{ ...zS.item, ...zS.itemLocked }}><div style={zS.qm}>？</div></div>;
+  if (placeholder) return <div style={{ ...zS.item, ...zS.itemLocked }}><div style={zS.sizer} /><div style={zS.qm}>？</div></div>;
   const info = parseCardKey(cardKey);
   return (
     <button onClick={onClick || undefined} style={{ ...zS.item, ...(onClick ? {} : { cursor: 'default' }) }}>
+      <div style={zS.sizer} />
       {err ? <div style={zS.cph}>❖</div> : <img src={'./images/' + cardKey + '.png'} alt="" onError={() => setErr(true)} style={zS.art} />}
       <div style={zS.foot}>
         {star > 0 && <div style={zS.star}>{'★'.repeat(star)}</div>}
