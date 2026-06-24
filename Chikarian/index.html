@@ -3682,14 +3682,27 @@ function KajiyaTab({ profile, refreshAll, flash }) {
         </div>
       </div>
       <div className="tat-fstat">
-        <div className="tat-st"><span className="k">所持メダル</span><b>{medal.toLocaleString()}</b></div>
-        <div className="tat-st"><span className="k">解放済みの質</span><span></span></div>
-        <div className="tat-qrow">
-          {Q_ORDER.map((q, i) => (<span key={q} className={'tat-q ' + (Q_LV[q] <= claimedLv ? QCLASS[i] : 'lock')}>{QUALITY_JA[q]}</span>))}
-        </div>
-        <div className="tat-st" style={{ marginTop: 8 }}>
-          <span className="k">枠コスト / 攻撃力</span>
-          <b style={{ fontSize: 11 }}>{Q_ORDER.map(q => `${QUALITY_JA[q]}${Q_COST[q]}/${QATK[q]}`).join('・')}</b>
+        <div className="tat-st"><span className="k">装備の質</span><span></span></div>
+        <div style={{ marginTop: 4 }}>
+          {Q_ORDER.map((q, i) => {
+            const unlocked = Q_LV[q] <= claimedLv;
+            return (
+              <div key={q} style={{ padding: '7px 0', borderBottom: '1px solid #2a201c', opacity: unlocked ? 1 : 0.5 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                    <span className={'tat-q ' + (unlocked ? QCLASS[i] : 'lock')} style={{ margin: 0 }}>{QUALITY_JA[q]}</span>
+                    {!unlocked && <span style={{ fontSize: 11, color: '#7d7160' }}>未解放 🔒</span>}
+                  </span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 5, flex: 'none' }}>
+                    {['ken', 'tate', 'tsue'].map(w => (
+                      <img key={w} src={'./images/ic_weap_' + q + '_' + w + '.png'} alt="" style={{ width: 24, height: 24, objectFit: 'contain', filter: unlocked ? 'none' : 'grayscale(1) opacity(0.8)' }} onError={e => { e.target.style.display = 'none'; }} />
+                    ))}
+                  </span>
+                </div>
+                <div style={{ fontSize: 11.5, color: '#a98f66', marginTop: 4 }}>攻撃力 <b style={{ color: '#efe6d5' }}>{QATK[q]}</b> ・ 枠コスト <b style={{ color: '#efe6d5' }}>{Q_COST[q]}</b></div>
+              </div>
+            );
+          })}
         </div>
 
         {inProgress
