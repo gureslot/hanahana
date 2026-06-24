@@ -383,13 +383,25 @@ const WB_TRAIN_LEVELS = {    // 各段階の揺れ物理（ツールで採取。
   4: { amp:2.4, stiff:0.240, damp:0.885, kick:14.5 },
   5: { amp:2.5, stiff:0.255, damp:0.890, kick:14.5 },
 };
-const HOME_WB = { amp:2.5, stiff:0.200, damp:0.860, kick:13.0 };   // ホームは待機モーション主体（rigは静止）なので体感差は小
-
-const RIG_HOME = [   // ホーム画面のキャラ用（仮。ホームに揺れ領域が要るなら後で差し替え）
-  { name:'hair',  type:'sway',   cx:0.50, cy:0.22, rx:0.34, ry:0.20, strength:0.85 },
-  { name:'chest', type:'bounce', cx:0.50, cy:0.56, rx:0.19, ry:0.12, strength:1.00 },
-  { name:'skirt', type:'jelly',  cx:0.50, cy:0.82, rx:0.26, ry:0.11, strength:0.6  },
-];
+const WB_HOME_LEVELS = {    // ホームのタップ揺れ物理（段階別・ツールで採取）
+  1:{ amp:1.3, stiff:0.075, damp:0.905, kick:9.5  },
+  2:{ amp:1.5, stiff:0.075, damp:0.905, kick:10.0 },
+  3:{ amp:1.7, stiff:0.055, damp:0.915, kick:11.0 },
+  4:{ amp:1.8, stiff:0.050, damp:0.925, kick:12.0 },
+  5:{ amp:1.8, stiff:0.050, damp:0.930, kick:12.0 },
+};
+const RIG_HOME_LEVELS = {   // ホーム画面のキャラ用・段階別の揺れ領域（ツールで採取）。無いレベルは近い下を流用
+  1:[ {name:'P1',type:'bounce',cx:0.464,cy:0.661,rx:0.056,ry:0.045,strength:1},
+      {name:'P2',type:'bounce',cx:0.724,cy:0.649,rx:0.053,ry:0.047,strength:1} ],
+  2:[ {name:'P1',type:'bounce',cx:0.483,cy:0.664,rx:0.060,ry:0.045,strength:1},
+      {name:'P2',type:'bounce',cx:0.720,cy:0.656,rx:0.053,ry:0.047,strength:1} ],
+  3:[ {name:'P1',type:'bounce',cx:0.476,cy:0.668,rx:0.072,ry:0.052,strength:1},
+      {name:'P2',type:'bounce',cx:0.731,cy:0.661,rx:0.070,ry:0.051,strength:1} ],
+  4:[ {name:'P1',type:'bounce',cx:0.473,cy:0.682,rx:0.095,ry:0.068,strength:1},
+      {name:'P2',type:'bounce',cx:0.773,cy:0.694,rx:0.086,ry:0.070,strength:1} ],
+  5:[ {name:'P1',type:'bounce',cx:0.434,cy:0.697,rx:0.109,ry:0.080,strength:1},
+      {name:'P2',type:'bounce',cx:0.817,cy:0.703,rx:0.102,ry:0.091,strength:1} ],
+};
 function pickByLevel(map, lv){       // そのレベル以下で一番大きいキーの値（無ければ最小キー）
   let best=null,bestKey=-1,minKey=Infinity,minV=null;
   for(const k in map){ const kn=+k;
@@ -399,12 +411,14 @@ function pickByLevel(map, lv){       // そのレベル以下で一番大きい�
 }
 function rigForLevel(lv){ return ensureSprings(pickByLevel(RIG_TRAIN_LEVELS, lv)); }
 function wbForLevel(lv){ return pickByLevel(WB_TRAIN_LEVELS, lv); }
+function homeRigForLevel(lv){ return ensureSprings(pickByLevel(RIG_HOME_LEVELS, lv)); }
+function homeWbForLevel(lv){ return pickByLevel(WB_HOME_LEVELS, lv); }
 
-let RIG_POINTS = RIG_HOME;            // 現在アクティブな揺れ領域
-let actWB = HOME_WB;                  // 現在アクティブな揺れ物理（育成は段階別 / ホームはHOME_WB）
+let RIG_POINTS = pickByLevel(RIG_HOME_LEVELS, 1);   // 現在アクティブな揺れ領域（初期はホームLv1。ばねは下のensureSpringsで用意）
+let actWB = WB_HOME_LEVELS[1];                       // 現在アクティブな揺れ物理
 function applyRig(){
   if(screenName==='train'){ RIG_POINTS=rigForLevel(S.level); actWB=wbForLevel(S.level); }
-  else { RIG_POINTS=RIG_HOME; actWB=HOME_WB; }
+  else { RIG_POINTS=homeRigForLevel(S.level); actWB=homeWbForLevel(S.level); }   // ホームも段階別
   RIG_POINTS.forEach(p=>{ if(p.sV){p.sV.v=p.sV.vel=0;} if(p.sH){p.sH.v=p.sH.vel=0;} });  // 切替時は揺れを静止に戻す（持ち越し・過大を防ぐ）
 }
 
@@ -456,7 +470,7 @@ const GX=16, GY=22, OVS=1.05;
 class Spring{ constructor(k=.16,d=.82){this.v=0;this.vel=0;this.k=k;this.d=d;}
   update(t){ this.vel+=(t-this.v)*this.k; this.vel*=this.d; this.v+=this.vel; return this.v; } }
 const dip=new Spring(.18,.80);
-ensureSprings(RIG_HOME);   // 育成レベル別のrigは rigForLevel() 内で必要時に初期化
+ensureSprings(pickByLevel(RIG_HOME_LEVELS, 1));   // 初期(ホームLv1)のばねを用意。他段階は applyRig()/homeRigForLevel() で必要時に初期化
 
 /* 揺れ物理は段階別（WB_TRAIN_LEVELS）。実際に効くのは applyRig() がセットする actWB */
 
@@ -958,6 +972,7 @@ async function cloudLogout(){ if(window.sb){ try{ await window.sb.auth.signOut()
 
 window.addEventListener('resize', resizeChikari);
 window.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') pushCloudNow(); });   // 離脱時に最新をクラウドへ（ベストエフォート）
+$('home-stage').addEventListener('pointerdown', ()=>{ if(screenName==='home') pulse(1); });   // ホームはキャラのタップでひと揺れ
 (function boot(){
   glOK=initGL();
   setHomeBg(); setTitleBg();
