@@ -1862,15 +1862,15 @@ const pickS = {
 };
 
 const cpS = {
-  wrap: { position: 'relative', zIndex: 2, width: '100%', maxWidth: 960, boxSizing: 'border-box', margin: '0 auto', padding: '12px 8px 20px', display: 'flex', flexDirection: 'column', minHeight: '100%' },
+  wrap: { position: 'relative', zIndex: 2, width: '100%', maxWidth: 960, boxSizing: 'border-box', margin: '0 auto', padding: '12px 8px 12px', display: 'flex', flexDirection: 'column', height: '100dvh' },
   head: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 },
   title: { fontFamily: "'Shippori Mincho',serif", fontSize: 18, fontWeight: 700, color: GOLD_HI, letterSpacing: '.04em' },
   facetRow: { display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 6, alignItems: 'center' },
   chip: { padding: '4px 10px', borderRadius: 999, border: '1px solid rgba(232,194,90,.35)', background: 'rgba(20,12,16,.6)', color: '#d8c19a', fontSize: 12, cursor: 'pointer', whiteSpace: 'nowrap' },
   chipSel: { background: 'linear-gradient(180deg,#e8c25a,#b8901f)', color: '#1a1014', border: '1px solid #e8c25a', fontWeight: 700 },
   sortLab: { fontSize: 11, color: '#a98f66', marginRight: 2 },
-  split: { display: 'flex', gap: 8, flex: 1, minHeight: 0, width: '100%', minWidth: 0, marginTop: 4 },
-  left: { flex: '0 0 38%', maxWidth: 196, minWidth: 0, boxSizing: 'border-box', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6, paddingRight: 4, maxHeight: '66vh' },
+  split: { display: 'flex', alignItems: 'stretch', gap: 8, flex: 1, minHeight: 0, width: '100%', minWidth: 0, marginTop: 4 },
+  left: { flex: '0 0 38%', maxWidth: 196, minWidth: 0, boxSizing: 'border-box', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6, paddingRight: 4, minHeight: 0 },
   empty: { color: '#a98f66', fontSize: 13, padding: 20, textAlign: 'center' },
   li: { display: 'flex', gap: 8, alignItems: 'center', padding: 5, borderRadius: 10, border: '1px solid rgba(232,194,90,.18)', background: 'rgba(20,12,16,.5)', cursor: 'pointer', textAlign: 'left', width: '100%', boxSizing: 'border-box', outline: 'none', WebkitTapHighlightColor: 'transparent' },
   liSel: { border: '1px solid #e8c25a', background: 'rgba(232,194,90,.14)', boxShadow: '0 0 8px rgba(232,194,90,.25)' },
@@ -1878,7 +1878,7 @@ const cpS = {
   liInfo: { display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 },
   liLv: { fontSize: 12, fontWeight: 700, color: '#efe2c8', whiteSpace: 'nowrap' },
   liTag: { fontSize: 10, color: '#cdb488', padding: '1px 6px', borderRadius: 6, border: '1px solid rgba(232,194,90,.25)', alignSelf: 'flex-start', whiteSpace: 'nowrap' },
-  right: { flex: '1 1 0', minWidth: 0, boxSizing: 'border-box', height: '66vh', border: '1px solid rgba(232,194,90,.2)', borderRadius: 12, background: 'rgba(14,9,12,.55)', display: 'flex', flexDirection: 'column', overflow: 'hidden' },
+  right: { flex: '1 1 0', minWidth: 0, boxSizing: 'border-box', minHeight: 0, border: '1px solid rgba(232,194,90,.2)', borderRadius: 12, background: 'rgba(14,9,12,.55)', display: 'flex', flexDirection: 'column', overflow: 'hidden' },
   rightScroll: { flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', padding: 12 },
   rightFoot: { padding: '10px 12px', borderTop: '1px solid rgba(232,194,90,.18)', background: 'rgba(10,6,9,.6)', display: 'flex', flexDirection: 'column', gap: 8 },
   expBox: { marginTop: 12, padding: '10px 12px', border: '1px solid rgba(232,194,90,.25)', borderRadius: 10, background: 'rgba(0,0,0,.25)' },
