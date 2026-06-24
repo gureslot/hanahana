@@ -36,8 +36,8 @@
   .gcard{position:relative;width:29%;max-width:108px;aspect-ratio:2/3;filter:drop-shadow(0 8px 16px rgba(0,0,0,.55));}
   .gcardInner{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform .55s cubic-bezier(.2,.7,.25,1);transform:rotateY(0deg);z-index:1;}
   .gcard.flipped .gcardInner{transform:rotateY(180deg);}
-  /* SR以上の希少オーラ：裏向き登場〜消滅まで持続。控えめに発光・SSR/SP は SR よりわずかに強い（色は RAR_COL をインラインで付与） */
-  .grareGlow{position:absolute;inset:-6%;border-radius:16px;pointer-events:none;z-index:0;animation:gRarePulse 2.4s ease-in-out infinite;}
+  /* SR以上の希少オーラ：裏向き登場〜消滅まで持続。白で控えめに発光・SSR が最大（サイズはインライン box-shadow／カードに密着） */
+  .grareGlow{position:absolute;inset:0;border-radius:12px;pointer-events:none;z-index:0;animation:gRarePulse 2.4s ease-in-out infinite;}
   @keyframes gRarePulse{0%,100%{opacity:.5;}50%{opacity:.9;}}
   .gface{position:absolute;inset:0;border-radius:12px;overflow:hidden;backface-visibility:hidden;-webkit-backface-visibility:hidden;border:1.5px solid rgba(232,194,90,.55);box-shadow:inset 0 0 14px rgba(0,0,0,.5);}
   .gface img{width:100%;height:100%;object-fit:cover;display:block;}
@@ -1248,10 +1248,10 @@ function cardSukumiVsBoss(card, boss) {
   return f;
 }
 
-// SR以上カードの控えめなオーラ（box-shadow）。col=RAR_COL[rarity]。SSR が最大・SR と SP は同じ控えめオーラ（裏向き登場〜消滅まで持続）。
-function rareGlowShadow(col, tier) {
-  if (tier === 'ssr') return `0 0 12px 2px ${col}aa, 0 0 22px 5px ${col}66`;   // SSR＝最大
-  return `0 0 9px 1px ${col}99, 0 0 16px 3px ${col}55`;                         // SR / SP＝控えめ（同一）
+// SR以上カードの控えめな白オーラ（box-shadow）。色は白固定・SSR が最大・SR と SP は同じ控えめオーラ（裏向き登場〜消滅まで持続・カードに密着）。
+function rareGlowShadow(tier) {
+  if (tier === 'ssr') return '0 0 12px 2px #ffffffaa, 0 0 22px 5px #ffffff66';   // SSR＝最大
+  return '0 0 9px 1px #ffffff99, 0 0 16px 3px #ffffff55';                         // SR / SP＝控えめ（同一）
 }
 
 function GCard({ data, flipped, skillName, index }) {
@@ -1260,9 +1260,10 @@ function GCard({ data, flipped, skillName, index }) {
   const info = parseCardKey(data.card_key);
   const col = RAR_COL[data.rarity] || '#b9b2a6';
   const rareTier = data.rarity === 'sr' ? 'sr' : data.rarity === 'ssr' ? 'ssr' : data.rarity === 'sp' ? 'sp' : null;   // SR以上のみオーラ
+  const glowCol = rareTier ? '#ffffff' : col;   // SR以上は縁の発光も白（枠線色 col は維持／N・Rは従来色）
   return (
     <div className={'gcard genter' + (flipped ? ' flipped' : '')} style={{ animationDelay: ((index || 0) * 0.1) + 's' }}>
-      {rareTier && <div className="grareGlow" style={{ boxShadow: rareGlowShadow(col, rareTier) }} aria-hidden="true" />}
+      {rareTier && <div className="grareGlow" style={{ boxShadow: rareGlowShadow(rareTier) }} aria-hidden="true" />}
       <div className="gcardInner">
         {/* 裏面：card_back.png（mockup .back／失敗時は ❖ fallback） */}
         <div className="gface gback">
@@ -1270,7 +1271,7 @@ function GCard({ data, flipped, skillName, index }) {
             ? <span style={{ fontSize: 30, color: 'rgba(232,194,90,.85)' }}>❖</span>
             : <img src="./images/card_back.png" alt="" onError={() => setBackErr(true)} />}
         </div>
-        <div className="gface gfront" style={{ borderColor: col, boxShadow: `inset 0 0 14px rgba(0,0,0,.5), 0 0 10px ${col}55` }}>
+        <div className="gface gfront" style={{ borderColor: col, boxShadow: `inset 0 0 14px rgba(0,0,0,.5), 0 0 10px ${glowCol}55` }}>
           {imgErr
             ? <div style={{ width: '100%', height: '100%', background: 'linear-gradient(165deg,#3a2418,#1c1018)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 4, textAlign: 'center' }}>
                 <div style={{ fontSize: 20 }}>❖</div>
