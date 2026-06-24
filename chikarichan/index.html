@@ -31,6 +31,22 @@
   /* 育成画面：ボタン下〜URL欄の余白を使い、中身を縦中央へ寄せる（本番でヒント文が消えても自動で釣り合う） */
   #scr-train.on{ min-height:calc(100dvh - 28px); }   /* 全高。中身は上詰め＝タイトルは上のまま */
 
+  /* タイトル画面（時間帯背景＋ロゴ＋タップでスタート） */
+  #scr-title.on{ min-height:calc(100dvh - 28px); }
+  .title-card{ position:relative; flex:1 1 auto; min-height:0; border-radius:20px; overflow:hidden;
+    background:linear-gradient(180deg,#fff7f1,#fdf3ee); background-size:cover; background-position:center;
+    border:1px solid rgba(255,255,255,.85); box-shadow:0 22px 54px -22px rgba(120,80,70,.5), inset 0 1px 0 rgba(255,255,255,.9);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; touch-action:manipulation; }
+  .title-logo{ width:82%; max-width:340px; height:auto; filter:drop-shadow(0 8px 16px rgba(120,80,70,.35)); animation:floaty 3.2s ease-in-out infinite; }
+  .title-tap{ position:absolute; left:0; right:0; bottom:7%; text-align:center; font-size:14px; font-weight:700;
+    color:#6a504a; text-shadow:0 1px 5px rgba(255,255,255,.85); animation:tappulse 1.7s ease-in-out infinite; }
+  .title-auth{ margin-top:12px; }
+  @keyframes floaty{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-10px); } }
+  @keyframes tappulse{ 0%,100%{ opacity:.4; } 50%{ opacity:1; } }
+  /* 画面遷移の白フェード */
+  .fade{ position:fixed; inset:0; z-index:120; background:#fff; opacity:0; pointer-events:none; transition:opacity .45s ease; }
+  .fade.show{ opacity:1; pointer-events:auto; }
+
   h1{font-size:17px; font-weight:900; margin:2px 4px 2px; letter-spacing:.03em;}
   .lvtag{font-size:12px; color:var(--sub); margin:0 4px 10px; font-weight:700;}
   .lvtag b{color:var(--gold); font-variant-numeric:tabular-nums;}
@@ -156,8 +172,28 @@
 <body>
 <div class="wrap">
 
+  <div class="fade" id="fade"></div>
+
+  <!-- ═══════ タイトル ═══════ -->
+  <section class="screen on" id="scr-title" onclick="startFromTitle()">
+    <div class="title-card" id="title-bg">
+      <img class="title-logo" id="title-logo" src="images/logo_title.png" alt="ちかりちゃんは成長する">
+      <div class="title-tap">タップでスタート</div>
+    </div>
+    <div class="title-auth" onclick="event.stopPropagation()">
+      <div id="auth-out">
+        <button class="btn sub wide" id="loginBtn" type="button" onclick="event.stopPropagation(); cloudLogin()">Googleでログインして記録を残す</button>
+        <p class="authnote" style="text-align:center; margin:8px 2px 0;">機種変更やしばらく開かなかったときも記録が消えません（チカリアンと共通のアカウント）。</p>
+      </div>
+      <div id="auth-in" style="display:none">
+        <p class="authnote" style="text-align:center; margin:0 2px 8px;">ログイン中：<b id="auth-email">—</b></p>
+        <button class="btn ghost wide" id="logoutBtn" type="button" onclick="event.stopPropagation(); cloudLogout()">ログアウト</button>
+      </div>
+    </div>
+  </section>
+
   <!-- ═══════ ホーム ═══════ -->
-  <section class="screen on" id="scr-home">
+  <section class="screen" id="scr-home">
     <h1>ちかりちゃん</h1>
     <div class="lvtag">Lv <b id="home-lv">1</b></div>
     <div class="stage" id="home-stage">
@@ -241,16 +277,6 @@
         <div class="row"><span>累計の経験値</span><span class="v" id="st-total">0</span></div>
         <div class="row"><span>本日の経験値</span><span class="v" id="st-today">0 / 100</span></div>
         <div class="row"><span>育てはじめてから</span><span class="v" id="st-days">1 日目</span></div>
-      </div>
-    </div>
-    <div class="panel authbox">
-      <div id="auth-out">
-        <p class="authnote">記録はこの端末に保存されます。Googleでログインすると、機種変更やしばらく開かなかったときも記録が消えません（チカリアンと共通のアカウント）。</p>
-        <button class="btn sub wide" id="loginBtn" type="button" onclick="cloudLogin()">Googleでログインして記録を残す</button>
-      </div>
-      <div id="auth-in" style="display:none">
-        <p class="authnote">ログイン中：<b id="auth-email">—</b><br>記録はクラウドに保存され、端末をまたいで引き継がれます。</p>
-        <button class="btn ghost wide" id="logoutBtn" type="button" onclick="cloudLogout()">ログアウト</button>
       </div>
     </div>
     <div class="bar" style="margin-top:14px">
@@ -449,7 +475,7 @@ function drawPlaceholder(level){
 
 /* テクスチャ供給源。ホーム用と育成用を別々に持てる。
    育成用の絵が無ければ、ホームのキャラ絵をそのまま流用する。 */
-let currentSource=texCanvas, homeImg=texCanvas, trainImg=null, screenName='home';
+let currentSource=texCanvas, homeImg=texCanvas, trainImg=null, screenName='title';
 const dimOf=s=> (s instanceof HTMLImageElement) ? {w:s.naturalWidth,h:s.naturalHeight} : {w:s.width,h:s.height};
 function applyAspectTo(el,w,h){ el.style.aspectRatio=w+'/'+h; requestAnimationFrame(resizeChikari); }
 function setTexture(src){ currentSource=src; if(glOK) uploadTex(src); else fallback2D(); }
@@ -485,6 +511,16 @@ function setHomeBg(){
   const s=$('home-stage').style;
   s.backgroundImage="url('"+IMG_DIR+HOME_BG_FILE(bgSlot())+"'), linear-gradient(180deg,#fff7f1,#fdf3ee)";
   s.backgroundSize="cover, cover"; s.backgroundPosition="center, center";
+}
+function setTitleBg(){   // タイトルもホームと同じ時間帯背景
+  const el=$('title-bg'); if(!el) return;
+  el.style.backgroundImage="url('"+IMG_DIR+HOME_BG_FILE(bgSlot())+"'), linear-gradient(180deg,#fff7f1,#fdf3ee)";
+}
+let titleStarted=false;
+function startFromTitle(){   // タップ → 白フェードアウト → ホームへ → フェードイン
+  if(titleStarted) return; titleStarted=true;
+  const f=$('fade'); f.classList.add('show');
+  setTimeout(()=>{ go('home'); setTimeout(()=>{ f.classList.remove('show'); titleStarted=false; }, 60); }, 450);
 }
 
 function initGL(){
@@ -908,7 +944,7 @@ window.addEventListener('resize', resizeChikari);
 window.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') pushCloudNow(); });   // 離脱時に最新をクラウドへ（ベストエフォート）
 (function boot(){
   glOK=initGL();
-  setHomeBg();
+  setHomeBg(); setTitleBg();
   drawPlaceholder(S.level); homeImg=texCanvas; refreshActiveTexture();   // 仮を即表示
   loadHome(S.level, true); loadTrain(S.level);                           // 本画像に差し替え（あれば）
   if(glOK) requestAnimationFrame(loop);
