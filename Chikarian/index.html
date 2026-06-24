@@ -1639,11 +1639,13 @@ const SK_GROUP_JA = { hana: '花', ha: '葉', shin: '芯', ken: '剣', tate: '�
 const SK_ATTR_SET = { hana: 1, ha: 1, shin: 1 };
 function skillGroupLabel(g) { const ja = SK_GROUP_JA[g] || g || ''; return ja ? (SK_ATTR_SET[g] ? ja + '属性' : ja + '武器') : ''; }
 // skill_master の構造データ（effect_type/target_group/base_value/per_lv_value）から自然文＋強調用の数値を生成。
+// スキルLvの有効増分（per_lv逓減）：Lv5まで満額・Lv6以降は伸び×0.4・青天井（canon-03 §3）。サーバ do_boss_battle と一致必須。
+function skillLvEff(lv){ const L = Math.max(1, lv || 1); return L <= 5 ? L - 1 : 4 + 0.4 * (L - 5); }
 function skillEffectParts(sk, lv) {
   if (!sk) return null;
   const L = Math.max(1, lv || 1);
   const base = Number(sk.base_value) || 0, perLv = Number(sk.per_lv_value) || 0;
-  const val = base + perLv * (L - 1);
+  const val = base + perLv * skillLvEff(L);
   const pct = Math.round(val * 1000) / 10;
   const g1 = skillGroupLabel(sk.target_group), g2 = skillGroupLabel(sk.target_group2);
   switch (sk.effect_type) {
@@ -5031,7 +5033,7 @@ function shurMultColor(m) { return m > 1 ? '#7fb6ec' : (m < 1 ? '#d08a8a' : '#b6
 
 // 1デッキ分を「この場で1回試行抽選」して各カードの実戦闘力を算出（spec §4）。サーバ非依存・保存なし・資産不変。
 function runShurenjo(members, masterMap, skillsByCardId, kAttr, kWeap) {
-  const valOf = r => (Number(r.sk.base_value) || 0) + (Number(r.sk.per_lv_value) || 0) * ((r.lv || 1) - 1);
+  const valOf = r => (Number(r.sk.base_value) || 0) + (Number(r.sk.per_lv_value) || 0) * skillLvEff(r.lv || 1);
   const cd = members.map((c, idx) => {
     const st = computeStats({ ...c, loaded_buki: bukiCapacity(c) });   // 武気は満充填想定で戦闘力を表示（SPは bukiCapacity=0＝不変）
     const p = (c.card_key || '').split('_');
