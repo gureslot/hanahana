@@ -75,6 +75,12 @@
     border:1px solid rgba(232,194,90,.3); display:flex; align-items:center; justify-content:center; text-align:center;}
   .camslot .ph{padding:18px; font-size:12px; line-height:1.7; color:#cdb488;}
   .camslot .ph b{color:#ffe28a; font-weight:700;}
+  #cam-video{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:none; z-index:0;}
+  #cam-sample{display:none;}
+  .camslot.live .ph{display:none;}
+  .camslot.live #cam-video{display:block;}
+  .cam-status{position:absolute; top:8px; left:10px; right:10px; z-index:3; text-align:center;
+    font-size:11px; font-weight:700; color:#ffe08a; text-shadow:0 1px 3px rgba(0,0,0,.7); min-height:13px; pointer-events:none;}
   .lock{position:absolute; left:14px; right:14px; bottom:12px; z-index:3;}
   .lock .ll{font-size:11.5px; font-weight:700; letter-spacing:.5px; margin-bottom:5px; color:#ffd98a;}
   .lock .ll.ok{color:#7dffb0;}
@@ -136,6 +142,7 @@
   .devlv b{color:#ffd08a; font-variant-numeric:tabular-nums;}
   .devlv button{width:42px; height:38px; font-size:20px; font-weight:700; color:#fff; background:#3f93a6; border:none; border-radius:9px; cursor:pointer;}
   .devlv button:disabled{opacity:.35; cursor:not-allowed;}
+  .devblink{width:100%; margin-top:10px; padding:9px; border:none; border-radius:9px; font-family:inherit; font-size:12px; font-weight:700; color:#fff; background:#c4445a; cursor:pointer;}
   .devtiny{font-size:10.5px; color:#a98f8a; margin:10px 0 0; line-height:1.6; text-align:center;}
   .devtiny a{color:#ffb0a0; text-decoration:underline; cursor:pointer;}
 </style>
@@ -164,11 +171,14 @@
 
     <div class="train-arena" id="train-arena">
       <div class="camslot" id="camslot">
+        <video id="cam-video" autoplay playsinline muted></video>
+        <canvas id="cam-sample" width="320" height="240"></canvas>
         <div class="ph" id="cam-ph">
           ここに<b>カメラ</b>が入ります<br>（ハイビスカスランプの点滅を認識）<br><br>
-          ※プレビューでは <b>下のボタン</b>で点滅をシミュレートします
+          ※「<b>かざす</b>」でカメラが起動します
         </div>
         <div class="rframes" id="rframes"></div>
+        <div class="cam-status" id="cam-status"></div>
         <div class="lock" id="lockwrap">
           <div class="ll" id="lock-label">かざすと はじまります</div>
           <div class="lb"><i id="lock-fill"></i></div>
@@ -243,6 +253,7 @@
       <span>Lv <b id="dev-lv">1</b> / 5</span>
       <button id="lvUp" type="button">›</button>
     </div>
+    <button class="devblink" id="devBlink" type="button">点滅テスト（揺れ確認）</button>
     <p class="devtiny">各段階のイラストと揺れを確認できます。<br><a onclick="wipeSave()">セーブを消す（Lv1へ）</a></p>
   </div>
 </div>
@@ -325,6 +336,7 @@ let actWB = HOME_WB;                  // 現在アクティブな揺れ物理（
 function applyRig(){
   if(screenName==='train'){ RIG_POINTS=rigForLevel(S.level); actWB=wbForLevel(S.level); }
   else { RIG_POINTS=RIG_HOME; actWB=HOME_WB; }
+  RIG_POINTS.forEach(p=>{ if(p.sV){p.sV.v=p.sV.vel=0;} if(p.sH){p.sH.v=p.sH.vel=0;} });  // 切替時は揺れを静止に戻す（持ち越し・過大を防ぐ）
 }
 
 /* ───────── セーブ ───────── */
@@ -548,7 +560,7 @@ function fallback2D(){
 /* ════════════════════════════════════════════════════════════
    経験値・レベル
    ════════════════════════════════════════════════════════════ */
-function onLevelUp(){ loadHome(S.level,false); loadTrain(S.level); applyRig(); pulse(1.6); }   // 画像＋揺れ(座標/物理)を新段階へ＋ひと揺れ
+function onLevelUp(){ loadHome(S.level,false); loadTrain(S.level); applyRig(); pulse(1); }   // 画像＋揺れ(座標/物理)を新段階へ＋ひと揺れ（通常の点滅と同じ強さ。1.6倍だと過大で形が崩れた）
 function gainExp(){
   if(!NO_LIMIT && S.dailyGot>=DAILY_MAX) return false;
   const add = NO_LIMIT ? PER_BLINK : Math.min(PER_BLINK, DAILY_MAX-S.dailyGot);
@@ -563,35 +575,142 @@ function gainExp(){
 }
 
 /* ════════════════════════════════════════════════════════════
-   点滅シミュレート（プレビュー専用）
-   実機では カメラの onPeak → onBlink() に置き換える
+   実カメラでの採取（saishu-test.html の判定を移植）
+   枠内の色・明るさ・点滅Hzを解析 → 5条件そろって約1秒でロック → 点滅ごとに onBlink()
    ════════════════════════════════════════════════════════════ */
-let holding=false, lockTimer=null, blinkTimer=null, lockStart=0, peakCount=0;
-function onBlink(){ if(++peakCount % WOBBLE_EVERY === 0) pulse(1); if(!gainExp()) finishTrain(); }
-function toggleHold(){ holding?stopHold():startHold(); }
+const TUNE = { U_DIFF_MIN:39, COLORGAP_MIN:25, PETAL_H:60, LEAF_H_LO:15,
+               LOCK_WIN:20, LOCK_RATE:0.60, HZ_LO:5.5, HZ_HI:12.0, HZ_WIN:20, PEAK_WIN:10 };
+const MS_ANALYZE = 50;               // 解析間隔(ms)。LOCK_WIN*MS_ANALYZE ≈ 1秒でロック
+const camVideo=$('cam-video'), camSample=$('cam-sample'), camCtx=camSample.getContext('2d',{willReadFrequently:true});
+let camStream=null, camTrack=null, camTimer=null, locked=false;
+let brBuf=[], tBuf=[], udBuf=[], okBuf=[], statBufs={}, rising=false, prevBr=0, lastPeakAt=0;
+
+function dominantHz(){            // 花びらの明るさ時系列から主要周波数を推定（点滅速度）
+  const n=brBuf.length; if(n<TUNE.HZ_WIN) return 0;
+  const v=brBuf.slice(-TUNE.HZ_WIN), t=tBuf.slice(-TUNE.HZ_WIN), m=v.length;
+  const dur=(t[m-1]-t[0])/1000; if(dur<0.4) return 0;
+  const mean=v.reduce((a,b)=>a+b,0)/m;
+  const w=v.map((x,i)=>(x-mean)*(0.5-0.5*Math.cos(2*Math.PI*i/(m-1))));
+  let best=0,bm=-1;
+  for(let f=1; f<=12; f+=0.1){ let re=0,im=0;
+    for(let i=0;i<m;i++){ const ph=-2*Math.PI*f*(t[i]-t[0])/1000; re+=w[i]*Math.cos(ph); im+=w[i]*Math.sin(ph); }
+    const mag=re*re+im*im; if(mag>bm){ bm=mag; best=f; } }
+  return best;
+}
+function avgRect(img,W,H,x0,y0,x1,y1){
+  x0=Math.max(0,Math.floor(x0));y0=Math.max(0,Math.floor(y0));x1=Math.min(W,Math.floor(x1));y1=Math.min(H,Math.floor(y1));
+  let R=0,G=0,B=0,n=0;
+  for(let y=y0;y<y1;y+=2)for(let x=x0;x<x1;x+=2){ const i=(y*W+x)*4; R+=img[i];G+=img[i+1];B+=img[i+2];n++; }
+  if(!n) return {r:0,g:0,b:0,br:0}; R/=n;G/=n;B/=n; return {r:R,g:G,b:B,br:(R+G+B)/3};
+}
+function unionInOut(img,W,H,outers){   // 4枠の和集合=枠内、それ以外=枠外。内外の明るさ差で「形」を見る
+  const boxes=Object.values(outers).map(r=>({x0:r.x*W,y0:r.y*H,x1:(r.x+r.w)*W,y1:(r.y+r.h)*H}));
+  let inSum=0,inN=0,outSum=0,outN=0;
+  for(let y=0;y<H;y+=2)for(let x=0;x<W;x+=2){
+    let inside=false; for(const b of boxes){ if(x>=b.x0&&x<b.x1&&y>=b.y0&&y<b.y1){ inside=true; break; } }
+    const i=(y*W+x)*4, br=(img[i]+img[i+1]+img[i+2])/3;
+    if(inside){ inSum+=br; inN++; } else { outSum+=br; outN++; }
+  }
+  return { diff:(inN?inSum/inN:0)-(outN?outSum/outN:0) };
+}
+function measureRegion(img,W,H,inner){  // 内枠の平均色とHue
+  const a=avgRect(img,W,H,inner.x*W,inner.y*H,(inner.x+inner.w)*W,(inner.y+inner.h)*H);
+  const mx=Math.max(a.r,a.g,a.b),mn=Math.min(a.r,a.g,a.b),dd=mx-mn;
+  let h=0; if(dd){ if(mx===a.r)h=((a.g-a.b)/dd)%6; else if(mx===a.g)h=(a.b-a.r)/dd+2; else h=(a.r-a.g)/dd+4; h*=60; if(h<0)h+=360; }
+  return { r:a.r,g:a.g,b:a.b,br:a.br,h };
+}
+function analyzeCam(){
+  if(!camVideo.videoWidth) return;
+  camCtx.drawImage(camVideo,0,0,320,240);
+  const img=camCtx.getImageData(0,0,320,240).data, W=320, H=240, rs=regions();
+  const P =measureRegion(img,W,H,rs.inner.petal);
+  const L1=measureRegion(img,W,H,rs.inner.leaf1);
+  const L2=measureRegion(img,W,H,rs.inner.leaf2);
+  const Sm=measureRegion(img,W,H,rs.inner.stamen);
+  const U =unionInOut(img,W,H,rs.outer);
+  brBuf.push(P.br); tBuf.push(Date.now()); if(brBuf.length>TUNE.HZ_WIN){ brBuf.shift(); tBuf.shift(); }
+  const hz=dominantHz(), hzOK = hz>=TUNE.HZ_LO && hz<=TUNE.HZ_HI;
+  udBuf.push(U.diff); if(udBuf.length>TUNE.PEAK_WIN) udBuf.shift();
+  const shapeOK  = Math.max(...udBuf) > TUNE.U_DIFF_MIN;                                  // 形：ランプが枠に収まる
+  const petalRed = (P.h<TUNE.PETAL_H || P.h>340);                                          // 花びらが赤橙
+  const colorGap = (Math.abs(P.r-Sm.r)+Math.abs(P.g-Sm.g)+Math.abs(P.b-Sm.b))/3 > TUNE.COLORGAP_MIN;  // 花びら≠花芯
+  const leafGreen= (L1.h>=TUNE.LEAF_H_LO && L2.h>=TUNE.LEAF_H_LO);                          // 葉が左右とも緑
+  const frameOK = shapeOK && petalRed && colorGap && leafGreen && hzOK;
+  okBuf.push(frameOK?1:0); if(okBuf.length>TUNE.LOCK_WIN) okBuf.shift();
+  const rate = okBuf.reduce((a,b)=>a+b,0)/okBuf.length;
+  locked = okBuf.length>=TUNE.LOCK_WIN && rate>=TUNE.LOCK_RATE;
+  updateLockUI(rate);
+  updateCamStatus({shapeOK,petalRed,colorGap,leafGreen,hzOK});
+  if(locked){                       // ロック中：明るさの山（点滅）を検出して onBlink
+    if(P.br>prevBr) rising=true;
+    else if(rising && P.br<prevBr){ rising=false; const t=Date.now(); if(t-lastPeakAt>80){ lastPeakAt=t; onBlink(); } }
+  } else rising=false;
+  prevBr=P.br;
+}
+function updateLockUI(rate){
+  const wrap=$('lockwrap'), label=$('lock-label');
+  $('lock-fill').style.width=Math.min(100,(rate/TUNE.LOCK_RATE)*100)+'%';
+  if(locked){ wrap.classList.add('locked'); label.classList.add('ok'); label.textContent='採取中'; }
+  else { wrap.classList.remove('locked'); label.classList.remove('ok'); label.textContent = rate>0.15?'パターン認識中…':'光を探しています…'; }
+}
+const COND_LABELS=[['shapeOK','形'],['petalRed','花の赤'],['colorGap','色の違い'],['leafGreen','葉の緑'],['hzOK','点滅']];
+function updateCamStatus(c){       // 直近で一番不合格の条件をヒント表示
+  const el=$('cam-status'); if(!el) return;
+  if(locked){ el.textContent=''; return; }
+  let worst=null, worstRate=1;
+  for(const [k,label] of COND_LABELS){
+    (statBufs[k]||(statBufs[k]=[])).push(c[k]?1:0); if(statBufs[k].length>40) statBufs[k].shift();
+    if(statBufs[k].length>=40){ const r=statBufs[k].reduce((a,x)=>a+x,0)/40; if(r<worstRate){ worstRate=r; worst=label; } }
+  }
+  el.textContent = (worst && worstRate<0.5) ? worst+' がうまく認識できていません' : '';
+}
+async function startCam(){
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ $('lock-label').textContent='この端末ではカメラが使えません'; return; }
+  try{
+    camStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:640},height:{ideal:480}}});
+    camVideo.srcObject=camStream; await camVideo.play();
+    camTrack=camStream.getVideoTracks()[0]; lowerExposure();
+    $('camslot').classList.add('live');
+    brBuf=[];tBuf=[];udBuf=[];okBuf=[];statBufs={};rising=false;prevBr=0;locked=false;
+    clearInterval(camTimer); camTimer=setInterval(analyzeCam, MS_ANALYZE);
+  }catch(e){ $('lock-label').textContent='カメラを起動できません（許可が必要です）'; }
+}
+async function lowerExposure(){    // 露出を下げて光源を見やすく（対応端末のみ）
+  if(!camTrack || !camTrack.getCapabilities) return;
+  try{ const cap=camTrack.getCapabilities(), adv=[];
+    if(cap.exposureMode && cap.exposureMode.includes('manual')) adv.push({exposureMode:'manual'});
+    if(cap.exposureCompensation) adv.push({exposureCompensation:Math.max(cap.exposureCompensation.min,-2)});
+    if(cap.iso) adv.push({iso:cap.iso.min});
+    if(adv.length) await camTrack.applyConstraints({advanced:adv});
+  }catch(e){}
+}
+function stopCam(){
+  clearInterval(camTimer); camTimer=null; locked=false;
+  if(camStream){ camStream.getTracks().forEach(t=>t.stop()); camStream=null; }
+  $('camslot').classList.remove('live');
+}
+
+let holding=false, peakCount=0;
+function onBlink(){ if(++peakCount % WOBBLE_EVERY === 0) pulse(1); if(!gainExp()) finishTrain(); }   // 点滅1回＝経験値+10＋揺れ
+function toggleHold(){ holding ? stopHold() : startHold(); }
 function startHold(){
   if(!NO_LIMIT && S.dailyGot>=DAILY_MAX){ finishTrain(); return; }
-  holding=true; $('holdBtn').textContent='■ やめる'; lockStart=performance.now();
-  const wrap=$('lockwrap'), label=$('lock-label');
-  wrap.classList.remove('locked'); label.classList.remove('ok'); label.textContent='光を認識中…';
-  cancelAnimationFrame(lockTimer);
-  (function fill(){ const p=Math.min(1,(performance.now()-lockStart)/LOCK_MS); $('lock-fill').style.width=(p*100)+'%';
-    if(p<1&&holding) lockTimer=requestAnimationFrame(fill); else if(holding) locked(); })();
-}
-function locked(){
-  $('lockwrap').classList.add('locked'); $('lock-label').classList.add('ok'); $('lock-label').textContent='採取中';
-  $('cam-ph').innerHTML='<b>採取中</b><br>点滅に合わせて<br>ちかりが揺れています';
-  clearInterval(blinkTimer); blinkTimer=setInterval(onBlink,1000/SIM_HZ);
+  holding=true; peakCount=0; $('holdBtn').textContent='■ やめる';
+  $('lockwrap').classList.remove('locked'); $('lock-label').classList.remove('ok');
+  $('lock-fill').style.width='0%'; $('lock-label').textContent='光を探しています…';
+  startCam();                       // カメラ起動＋解析開始（ロック→点滅検出は analyzeCam が担当）
 }
 function stopHold(){
-  holding=false; clearInterval(blinkTimer); cancelAnimationFrame(lockTimer);
+  holding=false; stopCam();
   $('holdBtn').textContent='▶ かざす（点滅）';
   $('lockwrap').classList.remove('locked'); $('lock-label').classList.remove('ok');
   $('lock-label').textContent='かざすと はじまります'; $('lock-fill').style.width='0%';
-  $('cam-ph').innerHTML='ここに<b>カメラ</b>が入ります<br>（ハイビスカスランプの点滅を認識）<br><br>※プレビューでは <b>下のボタン</b>で点滅をシミュレートします';
+  const st=$('cam-status'); if(st) st.textContent='';
 }
 function finishTrain(){ stopHold(); $('train-done').classList.add('show'); }
 function leaveTrain(){ stopHold(); $('train-done').classList.remove('show'); cameFromTraining=(S.dailyGot>0); go('home'); }
+/* テスト用：ランプ無しで揺れ／レベルアップを確認（育成画面で押す）。点滅を20回ぶん発火 */
+function devTestBlink(){ if(screenName!=='train'){ alert('「育てる」画面で押してください'); return; } let n=0; const id=setInterval(()=>{ onBlink(); if(++n>=20) clearInterval(id); }, 1000/SIM_HZ); }
 
 /* ════════════════════════════════════════════════════════════
    UI更新
@@ -710,6 +829,7 @@ window.addEventListener('resize', resizeChikari);
   $('devToggle').onclick=()=>$('devBody').classList.toggle('open');
   $('lvDown').onclick=()=>setDevLevel(S.level-1);
   $('lvUp').onclick=()=>setDevLevel(S.level+1);
+  $('devBlink').onclick=devTestBlink;
   syncDevLv();
 })();
 </script>
