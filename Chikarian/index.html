@@ -268,7 +268,33 @@ function App() {
   const phaseRef = useRef('booting');
   const navedOnce = useRef(false);   // サインイン後の自動遷移（opening/app）を一度だけ行うガード
   const routing = useRef(false);     // routeAfterLogin の多重実行防止
+  const authedRef = useRef(false);   // ping のログインガード用（最新の authed を参照）
   useEffect(() => { phaseRef.current = phase; }, [phase]);
+  useEffect(() => { authedRef.current = authed; }, [authed]);
+
+  // 無操作トリガー用：操作（タップ/キー）時に last_active_at をサーバへ間引き送信（canon-06 §3-3 / 0071）
+  // ※ バックグラウンド移行は引き金にしない＝visibilitychange は使わない。派遣はサーバ(pg_cron)が判定。
+  useEffect(() => {
+    let last = 0;
+    const MIN_GAP = 60 * 1000; // 60秒に1回まで
+    const ping = () => {
+      if (!authedRef.current) return;            // 未ログイン時は送らない
+      const now = Date.now();
+      if (now - last < MIN_GAP) return;
+      last = now;
+      ChikarianAPI.touchActive().catch(() => {}); // 失敗は無視
+    };
+    const opts = { passive: true, capture: true };
+    window.addEventListener('pointerdown', ping, opts);
+    window.addEventListener('keydown', ping, opts);
+    window.addEventListener('touchstart', ping, opts);
+    ping(); // 起動直後に1回（ログイン済みなら基準時刻を更新）
+    return () => {
+      window.removeEventListener('pointerdown', ping, opts);
+      window.removeEventListener('keydown', ping, opts);
+      window.removeEventListener('touchstart', ping, opts);
+    };
+  }, []);
 
   const flash = useCallback((msg) => { setToast(msg); setTimeout(() => setToast(null), 1800); }, []);
 
@@ -5266,6 +5292,38 @@ function SettingsScreen({ bgmOn, setBgmOn, volume, setVolume, logout, playOpenin
   useEffect(() => { (async () => { try { const u = await ChikarianAPI.auth.getUser(); setEmail(u && (u.email || u.id)); } catch (e) {} })(); }, []);
   const toggleSe = () => { const n = !seOn; setSeOn(n); if (window.CKSound) CKSound.setOn(n); };
 
+  // 放置（自動探索）: 現値は getProfile から読み、変更は set_auto_houchi で即サーバ保存（0071 / canon-06 §3-3）
+  const AH_PRESETS = [
+    { min: 30,   label: '30分' },
+    { min: 60,   label: '1時間' },
+    { min: 180,  label: '3時間' },
+    { min: 360,  label: '6時間' },
+    { min: 720,  label: '12時間' },
+    { min: 1440, label: '24時間' },
+  ];
+  const [ahEnabled, setAhEnabled] = useState(false);
+  const [ahMin, setAhMin]         = useState(60);
+  const [ahBusy, setAhBusy]       = useState(false);
+
+  useEffect(() => { (async () => {
+    try {
+      const p = await ChikarianAPI.getProfile();
+      if (p) {
+        setAhEnabled(!!p.auto_houchi_enabled);
+        setAhMin(p.auto_houchi_idle_min || 60);
+      }
+    } catch (e) {}
+  })(); }, []);
+
+  // サーバへ即保存（楽観更新＋失敗時ロールバック）
+  const saveAutoHouchi = async (enabled, min) => {
+    const prevE = ahEnabled, prevM = ahMin;
+    setAhEnabled(enabled); setAhMin(min); setAhBusy(true);
+    try { await ChikarianAPI.setAutoHouchi(enabled, min); }
+    catch (e) { setAhEnabled(prevE); setAhMin(prevM); }
+    finally { setAhBusy(false); }
+  };
+
   return (
     <div style={S.root}><div style={setS.bg} />
       <div style={setS.body}>
@@ -5287,6 +5345,38 @@ function SettingsScreen({ bgmOn, setBgmOn, volume, setVolume, logout, playOpenin
             <div><div style={setS.k}>効果音</div><div style={setS.sub}>ボタン・カードめくり等のSE</div></div>
             <Toggle on={seOn} onToggle={toggleSe} />
           </div>}
+
+          {/* 放置（自動探索） */}
+          <div style={setS.sec}>放置</div>
+          <div style={setS.row}>
+            <div><div style={setS.k}>自動探索</div><div style={setS.sub}>無操作が続くと空きデッキが自動で探索に出ます</div></div>
+            <Toggle on={ahEnabled} onToggle={() => saveAutoHouchi(!ahEnabled, ahMin)} />
+          </div>
+          <div style={{ ...setS.row, opacity: ahEnabled ? 1 : .4, pointerEvents: ahEnabled && !ahBusy ? 'auto' : 'none' }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={setS.k}>開始までの無操作時間</div>
+              <div style={setS.sub}>最後の操作からこの時間が過ぎると出発</div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '0 4px 4px', opacity: ahEnabled ? 1 : .4, pointerEvents: ahEnabled && !ahBusy ? 'auto' : 'none' }}>
+            {AH_PRESETS.map(o => {
+              const sel = ahMin === o.min;
+              return (
+                <button key={o.min}
+                  onClick={() => saveAutoHouchi(true, o.min)}
+                  style={{
+                    flex: '1 0 28%', minWidth: 72, padding: '8px 6px', borderRadius: 8,
+                    fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                    // 選択系は border 一括指定（borderColor 個別指定を base border に重ねない＝§7 UI規約）
+                    border: sel ? '1px solid #e8b54d' : '1px solid rgba(232,181,77,.35)',
+                    background: sel ? 'rgba(232,181,77,.18)' : 'transparent',
+                    color: sel ? '#ffe9b0' : '#cdb488',
+                  }}>
+                  {o.label}
+                </button>
+              );
+            })}
+          </div>
 
           {/* その他 */}
           <div style={setS.sec}>その他</div>

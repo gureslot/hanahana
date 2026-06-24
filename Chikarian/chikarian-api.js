@@ -120,6 +120,10 @@
   // ---- 0023（カードのロック切替・資産は動かないがRPC経由）----
   const setCardLock     = (cardId, locked)                 => rpc('set_card_lock',     { p_card_id: cardId, p_locked: locked });
 
+  // ---- 0071（放置自動探索）----
+  const touchActive     = ()                               => rpc('touch_active',      {});                                  // 操作時刻 last_active_at を更新（間引いて呼ぶ）
+  const setAutoHouchi   = (enabled, idleMin)               => rpc('set_auto_houchi',   { p_enabled: enabled, p_idle_min: idleMin }); // 自動探索 オン/オフ＋しきい値(30/60/180/360/720/1440)
+
   global.ChikarianAPI = {
     init, client, rpc, auth,
     // reads
@@ -135,6 +139,8 @@
     placeKajiyaOrder, claimKajiya, equipBuki, swapMainDeck,
     startTansaku, collectTansaku, useExpBook, doCardExchange, doCardExchangeBulk, claimMission,
     // writes (0023)
-    setCardLock
+    setCardLock,
+    // writes (0071: 放置自動探索)
+    touchActive, setAutoHouchi
   };
 })(window);
