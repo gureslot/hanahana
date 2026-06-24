@@ -1432,7 +1432,8 @@ const zS = {
   pgOff: { opacity: .3, cursor: 'default', boxShadow: 'none' },
   pgInfo: { fontSize: 12, color: '#cdb488', minWidth: 60, textAlign: 'center' },
   count: { flex: 'none', textAlign: 'center', fontSize: 11, color: '#cdb488', padding: '4px 0 6px' },
-  grid: { flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, alignContent: 'start', alignItems: 'start', padding: '2px 16px 12px' },
+  grid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, alignContent: 'start' },
+  scrollWrap: { flex: 1, minHeight: 0, overflowY: 'auto', padding: '2px 16px 12px' },
   item: { position: 'relative', width: '100%', boxSizing: 'border-box', borderRadius: 12, overflow: 'hidden', border: '2px solid rgba(232,194,90,.5)', background: '#241018', cursor: 'pointer', display: 'block' },
   sizer: { display: 'block', width: '100%', paddingTop: '140%' },
   itemLocked: { filter: 'grayscale(1) brightness(.4)', cursor: 'default' },
@@ -1595,12 +1596,12 @@ function ZukanScreen({ cards, profile, refreshAll, back, flash, initialTab }) {
         </div>
         {total === 0
           ? <div style={{ flex: 1, textAlign: 'center', color: '#cdb488', marginTop: 30, fontSize: 13 }}>{tab === 'owned' ? '該当する所持カードがありません' : '該当カードなし'}</div>
-          : <div style={zS.grid}>
+          : <div style={zS.scrollWrap}><div style={zS.grid}>
               {pageItems.map(it => {
                 if (tab === 'catalog' && !it.got) return <ZCard key={it.id} placeholder />;
                 return <ZCard key={it.id} cardKey={it.key} star={it.card ? (it.card.star || 0) : 0} recorded={tab === 'catalog' && !it.inst} onClick={it.card ? () => setSel(it.card) : null} />;
               })}
-            </div>}
+            </div></div>}
         <div style={zS.botBar}>
           <button style={zS.back2} onClick={back}>ホームへ戻る</button>
           <div style={{ flex: 1 }} />
