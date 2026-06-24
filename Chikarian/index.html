@@ -4989,7 +4989,7 @@ function BattleLogView({ cards, back, flash }) {
             <div style={repS.sec}>
               <div style={repS.secT}>戦闘力</div>
               <div style={repS.vs}>
-                <div style={repS.vsSide}><div style={repS.vsLab}>自軍（総合・記録）</div><div style={repS.vsNumMe}>{deckTotal ? deckTotal.toLocaleString() : '—'}</div></div>
+                <div style={repS.vsSide}><div style={repS.vsLab}>自軍</div><div style={repS.vsNumMe}>{deckTotal ? deckTotal.toLocaleString() : '—'}</div></div>
                 <div style={repS.vsX}>VS</div>
                 {/* 敵戦力は battle_logs 未保存のため損失率を表示 // TODO: 敵戦力を記録できたら foe に出す */}
                 <div style={repS.vsSide}><div style={repS.vsLab}>武気損失率</div><div style={repS.vsNumFoe}>{sel.loss_rate != null ? Math.round(sel.loss_rate * 100) + '%' : '—'}</div></div>
@@ -5006,17 +5006,13 @@ function BattleLogView({ cards, back, flash }) {
               <div style={repS.secT}>デッキ（記録）</div>
               {deck.map((c, i) => {
                 const lc = c.card_id ? cardById[c.card_id] : null;
-                const ci = lc ? parseCardKey(lc.card_key) : null;
                 const spC = !!c.is_sp;
-                const nm = ci ? ci.name : (spC ? 'SP' : 'カード');
                 const real = Math.round(Number(c.sougou || 0) * Number(c.sukumi || 1));
                 const rowS = { display: 'flex', justifyContent: 'space-between', fontSize: 11, padding: '2px 0' };
                 return (
                   <div key={i} style={{ background: 'rgba(20,12,16,.5)', border: '1px solid rgba(232,194,90,.18)', borderRadius: 10, padding: '9px 11px', marginBottom: 8 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 5 }}>
-                      <span style={{ fontSize: 9, fontWeight: 800, color: '#1a0f06', background: ci ? (RAR_COL[ci.rarity] || '#888') : '#888', borderRadius: 5, padding: '1px 6px' }}>{ci ? RAR_LABEL[ci.rarity] : (spC ? 'SP' : '?')}</span>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: '#fff3c8' }}>{nm}</span>
-                      {ci && ci.rarity !== 'sp' ? <span style={{ fontSize: 10, color: '#cdb488', marginLeft: 'auto' }}>{ci.attr}・{ci.weap}</span> : null}
+                      <span style={{ fontSize: 13, fontWeight: 700, color: '#fff3c8' }}>{lc ? cardFullName(lc) : (spC ? 'SP' : 'カード')}</span>
                     </div>
                     <div style={rowS}><span style={{ color: '#a98f66' }}>素の総合</span><span style={{ color: '#efe6d5' }}>{Number(c.sougou || 0).toLocaleString()}</span></div>
                     <div style={rowS}><span style={{ color: '#a98f66' }}>三すくみ補正</span><span style={{ color: '#efe6d5' }}>×{c.sukumi != null ? c.sukumi : '—'}</span></div>
@@ -5025,7 +5021,6 @@ function BattleLogView({ cards, back, flash }) {
                 );
               })}
               {/* per-card 武気損失/残存・カード絵は battle_logs 未保存 // TODO: 記録できたら mockup の武気表を完全再現 */}
-              <div style={repS.noteSm}>※ 消耗するのは武気のみ。本体戦闘力は無傷（練気殿で補充）。損失率＝0.5×(敵戦力÷自軍戦力)・下限10%〜上限100%。</div>
             </div>}
           </div>
           <div style={repS.dnav}>
