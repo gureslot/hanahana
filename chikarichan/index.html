@@ -81,6 +81,10 @@
   .camslot.live #cam-video{display:block;}
   .cam-status{position:absolute; top:8px; left:10px; right:10px; z-index:3; text-align:center;
     font-size:11px; font-weight:700; color:#ffe08a; text-shadow:0 1px 3px rgba(0,0,0,.7); min-height:13px; pointer-events:none;}
+  .daily-toast{position:absolute; left:50%; top:50%; transform:translate(-50%,-50%) scale(.9); z-index:7;
+    background:rgba(20,10,16,.86); color:#ffe28a; font-weight:700; font-size:13px; padding:10px 18px; border-radius:12px;
+    border:1px solid rgba(232,194,90,.5); opacity:0; pointer-events:none; transition:opacity .3s, transform .3s; text-align:center; white-space:nowrap;}
+  .daily-toast.show{opacity:1; transform:translate(-50%,-50%) scale(1);}
   .lock{position:absolute; left:14px; right:14px; bottom:12px; z-index:3;}
   .lock .ll{font-size:11.5px; font-weight:700; letter-spacing:.5px; margin-bottom:5px; color:#ffd98a;}
   .lock .ll.ok{color:#7dffb0;}
@@ -124,6 +128,8 @@
   .row:first-child{border-top:none;}
   .row .v{color:var(--teal); font-variant-numeric:tabular-nums;}
   .tiny{font-size:10.5px; color:var(--sub); text-align:center; margin-top:14px; line-height:1.6;}
+  .authnote{font-size:11.5px; color:var(--sub); line-height:1.65; margin:0 2px 11px;}
+  .authnote b{color:var(--ink);}
   .tiny a{color:var(--sub); text-decoration:underline; cursor:pointer;}
 
   .done{position:absolute; inset:0; z-index:9; display:none; flex-direction:column; align-items:center; justify-content:center; gap:10px;
@@ -202,6 +208,7 @@
       </div>
 
       <div class="mini-stage" id="train-stage"></div>
+      <div class="daily-toast" id="daily-toast">本日の上限に達しました</div>
     </div>
 
     <div class="bar">
@@ -236,6 +243,16 @@
         <div class="row"><span>育てはじめてから</span><span class="v" id="st-days">1 日目</span></div>
       </div>
     </div>
+    <div class="panel authbox">
+      <div id="auth-out">
+        <p class="authnote">記録はこの端末に保存されます。Googleでログインすると、機種変更やしばらく開かなかったときも記録が消えません（チカリアンと共通のアカウント）。</p>
+        <button class="btn sub wide" id="loginBtn" type="button" onclick="cloudLogin()">Googleでログインして記録を残す</button>
+      </div>
+      <div id="auth-in" style="display:none">
+        <p class="authnote">ログイン中：<b id="auth-email">—</b><br>記録はクラウドに保存され、端末をまたいで引き継がれます。</p>
+        <button class="btn ghost wide" id="logoutBtn" type="button" onclick="cloudLogout()">ログアウト</button>
+      </div>
+    </div>
     <div class="bar" style="margin-top:14px">
       <button class="btn sub wide" onclick="go('home')">ホームに戻る</button>
     </div>
@@ -258,6 +275,18 @@
   </div>
 </div>
 
+<!-- ═══ クラウド保存（任意ログイン）：supabaseクライアントを読み込み window.sb に載せる ═══ -->
+<script type="module">
+  import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+  try{
+    window.sb = createClient(
+      'https://ufqnxpljakrzvivfgenk.supabase.co',
+      'sb_publishable_mjEggLBf6A3HjR8UqiEDOw_cJeam2aK'
+    );
+  }catch(e){ console.warn('supabase init failed', e); }
+  window.dispatchEvent(new Event('sb-ready'));
+</script>
+
 <script>
 /* ════════════════════════════════════════════════════════════
    ちかりちゃん育成 — chikarichan/index.html
@@ -266,7 +295,7 @@
 const $ = id => document.getElementById(id);
 
 /* ───────── 設定の数値 ───────── */
-const PER_BLINK = 10;     // ロック後 1点滅あたりの経験値
+const PER_BLINK = 5;      // ロック後 1点滅あたりの経験値（10→5：上限到達まで約2倍の時間に）
 const DAILY_MAX = 100;    // 1日の上限EXP（NO_LIMIT=false のとき有効）
 const LOCK_MS   = 1000;   // 判定中の長さ
 const SIM_HZ    = 6;      // プレビュー点滅の周波数（実機の点滅 ≈6Hz に合わせる）
@@ -344,8 +373,9 @@ const _mem={}; const store={
   get(k){ try{return localStorage.getItem(k);}catch(e){return (k in _mem)?_mem[k]:null;} },
   set(k,v){ try{localStorage.setItem(k,v);}catch(e){_mem[k]=v;} }
 };
-const SAVE_KEY='chikari_save_v1';
+const SAVE_KEY='chikarichan_save_v1';
 function todayKey(){ const d=new Date(); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
+let sbSignedIn=false, sbUser=null, cloudPushT=null;   // クラウド保存（任意ログイン）の状態
 let S={ level:1, expInto:0, dailyGot:0, total:0, lastDate:todayKey(), firstDate:todayKey() };
 (function load(){
   try{ const raw=store.get(SAVE_KEY); if(raw) S=Object.assign(S,JSON.parse(raw)); }catch(e){}
@@ -355,7 +385,7 @@ let S={ level:1, expInto:0, dailyGot:0, total:0, lastDate:todayKey(), firstDate:
   if(S.level<1) S.level=1;
   save();
 })();
-function save(){ store.set(SAVE_KEY,JSON.stringify(S)); }
+function save(){ store.set(SAVE_KEY,JSON.stringify(S)); cloudPush(); }
 function daysPlayed(){ const a=new Date(S.firstDate+'T00:00:00'), b=new Date(todayKey()+'T00:00:00');
   return Math.max(1, Math.round((b-a)/86400000)+1); }
 
@@ -650,7 +680,7 @@ function analyzeCam(){
 function updateLockUI(rate){
   const wrap=$('lockwrap'), label=$('lock-label');
   $('lock-fill').style.width=Math.min(100,(rate/TUNE.LOCK_RATE)*100)+'%';
-  if(locked){ wrap.classList.add('locked'); label.classList.add('ok'); label.textContent='採取中'; }
+  if(locked){ wrap.classList.add('locked'); label.classList.add('ok'); label.textContent=(!NO_LIMIT && S.dailyGot>=DAILY_MAX)?'本日の上限に達しました':'採取中'; }
   else { wrap.classList.remove('locked'); label.classList.remove('ok'); label.textContent = rate>0.15?'パターン認識中…':'光を探しています…'; }
 }
 const COND_LABELS=[['shapeOK','形'],['petalRed','花の赤'],['colorGap','色の違い'],['leafGreen','葉の緑'],['hzOK','点滅']];
@@ -690,12 +720,11 @@ function stopCam(){
   $('camslot').classList.remove('live');
 }
 
-let holding=false, peakCount=0;
-function onBlink(){ if(++peakCount % WOBBLE_EVERY === 0) pulse(1); if(!gainExp()) finishTrain(); }   // 点滅1回＝経験値+10＋揺れ
+let holding=false, peakCount=0, dailyToastShown=false, dailyToastT=null;
+function onBlink(){ if(++peakCount % WOBBLE_EVERY === 0) pulse(1); if(!gainExp()) onDailyMax(); }   // 点滅1回＝経験値＋揺れ。上限後も揺れは続く（加算だけ止まる）
 function toggleHold(){ holding ? stopHold() : startHold(); }
 function startHold(){
-  if(!NO_LIMIT && S.dailyGot>=DAILY_MAX){ finishTrain(); return; }
-  holding=true; peakCount=0; $('holdBtn').textContent='■ やめる';
+  holding=true; peakCount=0; dailyToastShown=false; $('holdBtn').textContent='■ やめる';
   $('lockwrap').classList.remove('locked'); $('lock-label').classList.remove('ok');
   $('lock-fill').style.width='0%'; $('lock-label').textContent='光を探しています…';
   startCam();                       // カメラ起動＋解析開始（ロック→点滅検出は analyzeCam が担当）
@@ -708,9 +737,11 @@ function stopHold(){
   const st=$('cam-status'); if(st) st.textContent='';
 }
 function finishTrain(){ stopHold(); $('train-done').classList.add('show'); }
-function leaveTrain(){ stopHold(); $('train-done').classList.remove('show'); cameFromTraining=(S.dailyGot>0); go('home'); }
+function leaveTrain(){ stopHold(); pushCloudNow(); $('train-done').classList.remove('show'); cameFromTraining=(S.dailyGot>0); go('home'); }
 /* テスト用：ランプ無しで揺れ／レベルアップを確認（育成画面で押す）。点滅を20回ぶん発火 */
 function devTestBlink(){ if(screenName!=='train'){ alert('「育てる」画面で押してください'); return; } let n=0; const id=setInterval(()=>{ onBlink(); if(++n>=20) clearInterval(id); }, 1000/SIM_HZ); }
+function onDailyMax(){ if(dailyToastShown) return; dailyToastShown=true; showDailyToast(); }   // 上限到達：メッセージのみ。揺れは継続（加算だけ止まる）
+function showDailyToast(){ const el=$('daily-toast'); if(!el) return; el.classList.add('show'); clearTimeout(dailyToastT); dailyToastT=setTimeout(()=>el.classList.remove('show'),2600); }
 
 /* ════════════════════════════════════════════════════════════
    UI更新
@@ -720,8 +751,8 @@ function updateAllUI(){
   const need=expToNext(S.level);
   const nextPct = isMax?100:Math.min(100,S.expInto/need*100);
   const nextTxt = isMax?'MAX':(S.expInto+' / '+need);
-  const lvLabel = 'Lv <b>'+S.level+'</b>'+(isMax?'（MAX）':'');
-  $('home-lv').textContent=S.level;
+  const lvLabel = isMax ? 'Lv <b>MAX</b>' : ('Lv <b>'+S.level+'</b>');
+  $('home-lv').textContent=isMax?'MAX':S.level;
   $('train-lvtag').innerHTML = NO_LIMIT
     ? lvLabel+' ・ <b style="color:var(--gold)">テスト：上限OFF</b>'
     : lvLabel+' ・ 本日 <b>'+S.dailyGot+'</b>/'+DAILY_MAX;
@@ -729,7 +760,7 @@ function updateAllUI(){
   $('today-txt').textContent=NO_LIMIT?String(S.dailyGot):(S.dailyGot+' / '+DAILY_MAX);
   $('next-bar').style.width=nextPct+'%';
   $('next-txt').textContent=nextTxt;
-  $('st-lv').textContent=S.level+(isMax?'（MAX）':'');
+  $('st-lv').textContent=isMax?'MAX':S.level;
   $('st-next-bar').style.width=nextPct+'%';
   $('st-next-txt').textContent=nextTxt;
   $('st-total').textContent=S.total.toLocaleString();
@@ -755,7 +786,7 @@ function wipeSave(){
   if(!confirm('セーブを消してLv1からやり直します。よろしいですか？')) return;
   try{ localStorage.removeItem(SAVE_KEY); }catch(e){}
   S={ level:1, expInto:0, dailyGot:0, total:0, lastDate:todayKey(), firstDate:todayKey() };
-  save(); loadHome(1,true); loadTrain(1); applyRig(); updateAllUI(); go('home');
+  save(); pushCloudNow(); loadHome(1,true); loadTrain(1); applyRig(); updateAllUI(); go('home');
 }
 /* テスト用：レベル(イラスト段階)を1〜MAXで切替。画像も揺れ（座標・物理）もその段階に切り替わる */
 function setDevLevel(n){
@@ -812,7 +843,69 @@ function drawBoxes(){
 function setSide(s){ side=s; $('btnL').classList.toggle('active',s==='L'); $('btnR').classList.toggle('active',s==='R'); drawBoxes(); }
 
 /* ───────── 起動 ───────── */
+/* ════════════════════════════════════════════════════════════
+   クラウド保存（任意ログイン・supabase）
+   普段はlocalStorage。Googleログインで進行をクラウドに同期し、端末またぎ・Safari削除後も復活。
+   進行は累計経験値(total)で突き合わせ、多い方を採用。
+   ════════════════════════════════════════════════════════════ */
+function cloudReady(cb){ if(window.sb) cb(); else window.addEventListener('sb-ready',()=>{ if(window.sb) cb(); },{once:true}); }
+function cloudInit(){
+  updateAuthUI();
+  cloudReady(()=>{
+    try{
+      window.sb.auth.onAuthStateChange((event,session)=>{
+        sbSignedIn=!!session; sbUser=session?session.user:null; updateAuthUI();
+        if((event==='INITIAL_SESSION'||event==='SIGNED_IN') && session) pullMergeCloud();
+      });
+    }catch(e){ console.warn('cloud init failed', e); }
+  });
+}
+function updateAuthUI(){
+  const out=$('auth-out'), inn=$('auth-in'); if(!out||!inn) return;
+  out.style.display = sbSignedIn?'none':'block';
+  inn.style.display = sbSignedIn?'block':'none';
+  if(sbSignedIn && sbUser){ const em=$('auth-email'); if(em) em.textContent = sbUser.email || 'Googleアカウント'; }
+}
+function reloadFromState(){ loadHome(S.level,true); loadTrain(S.level); applyRig(); setHomeBg(); updateAllUI(); }
+async function pullMergeCloud(){
+  if(!window.sb || !sbUser) return;
+  try{
+    const { data, error } = await window.sb.from('chikarichan_save').select('*').eq('user_id', sbUser.id).maybeSingle();
+    if(error){ console.warn('cloud pull error', error); return; }
+    if(data && (data.total||0) > S.total){           // クラウドの方が進んでいる → 取り込む
+      S.level   = clamp(data.level||1, 1, MAX_LEVEL);
+      S.expInto = data.exp_into||0;
+      S.total   = data.total||0;
+      S.firstDate = data.first_date || S.firstDate;
+      if((data.last_date||'')===todayKey()){ S.dailyGot=Math.max(S.dailyGot, data.daily_got||0); S.lastDate=todayKey(); }
+      if(S.level>=MAX_LEVEL) S.expInto=0;
+      store.set(SAVE_KEY,JSON.stringify(S));
+      reloadFromState();
+    } else {                                           // ローカルが同等以上、または未作成 → クラウドへ反映
+      pushCloudNow();
+    }
+  }catch(e){ console.warn('cloud pull failed', e); }
+}
+function cloudPush(){ if(!sbSignedIn) return; clearTimeout(cloudPushT); cloudPushT=setTimeout(pushCloudNow, 4000); }   // 連続採取はまとめて4秒後に
+async function pushCloudNow(){
+  clearTimeout(cloudPushT);
+  if(!window.sb || !sbSignedIn || !sbUser) return;
+  try{
+    await window.sb.from('chikarichan_save').upsert({
+      user_id:sbUser.id, level:S.level, exp_into:S.expInto, total:S.total,
+      daily_got:S.dailyGot, last_date:S.lastDate, first_date:S.firstDate, updated_at:new Date().toISOString()
+    }, { onConflict:'user_id' });
+  }catch(e){ console.warn('cloud push failed', e); }
+}
+async function cloudLogin(){
+  if(!window.sb){ alert('接続の準備中です。少し待ってからもう一度お試しください。'); return; }
+  try{ await window.sb.auth.signInWithOAuth({ provider:'google', options:{ redirectTo: location.origin+location.pathname } }); }
+  catch(e){ alert('ログインを開始できませんでした。'); }
+}
+async function cloudLogout(){ if(window.sb){ try{ await window.sb.auth.signOut(); }catch(e){} } sbSignedIn=false; sbUser=null; updateAuthUI(); }
+
 window.addEventListener('resize', resizeChikari);
+window.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') pushCloudNow(); });   // 離脱時に最新をクラウドへ（ベストエフォート）
 (function boot(){
   glOK=initGL();
   setHomeBg();
@@ -822,6 +915,7 @@ window.addEventListener('resize', resizeChikari);
   mountChikari($('home-stage'));
   drawBoxes();                                                           // 判定枠を描画
   updateAllUI(); showHomeLine();
+  cloudInit();                                                           // 任意ログインのクラウド保存を初期化
 })();
 
 /* ═══ テスト用パネルのJS（公開時は削除）═══ */
