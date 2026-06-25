@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>自作ゲーム | グレイト・プレ・善太</title>
+<meta name="description" content="グレイト・プレ・善太が個人制作したゲーム。ダークファンタジー・ガチャ育成カードゲーム「チカリアン」をブラウザでプレイできます。">
+
+<style>
+body{
+  margin:0;
+  font-family:sans-serif;
+  background:#fff;
+  color:#111;
+}
+
+.wrap{
+  max-width:1000px;
+  margin:40px auto;
+  padding:0 20px;
+}
+
+h1{
+  text-align:center;
+  font-size:40px;
+  margin:0 0 24px 0;
+  letter-spacing:1px;
+}
+
+.intro{
+  margin:0 0 40px 0;
+  font-size:16px;
+  color:#555;
+  text-align:center;
+}
+
+.game{
+  border:1px solid #ddd;
+  border-radius:12px;
+  padding:24px;
+  display:flex;
+  gap:28px;
+  align-items:flex-start;
+}
+
+.game-poster{
+  flex:0 0 260px;
+  width:260px;
+}
+
+.game-poster img{
+  width:100%;
+  height:auto;
+  display:block;
+  border-radius:10px;
+  border:1px solid #e2c98a;
+  box-shadow:0 6px 24px rgba(0,0,0,.18);
+}
+
+.game-body{
+  flex:1 1 auto;
+  min-width:0;
+}
+
+.game-title{
+  font-size:30px;
+  margin:0 0 6px 0;
+  letter-spacing:1px;
+}
+
+.game-genre{
+  font-size:14px;
+  color:#a06b00;
+  font-weight:700;
+  letter-spacing:1px;
+  margin:0 0 16px 0;
+}
+
+.game-desc{
+  font-size:16px;
+  line-height:1.9;
+  color:#333;
+  margin:0 0 24px 0;
+}
+
+.play{
+  display:inline-block;
+  padding:16px 44px;
+  background:#ff2a6d;
+  color:#fff;
+  text-decoration:none;
+  border-radius:12px;
+  font-size:18px;
+  font-weight:bold;
+  border:2px solid #ff2a6d;
+  transition:0.2s;
+}
+
+.play:hover{
+  background:#fff;
+  color:#ff2a6d;
+}
+
+.nav{
+  display:flex;
+  gap:20px;
+  justify-content:center;
+  flex-wrap:wrap;
+  margin:48px 0 0 0;
+}
+
+.nav a{
+  display:inline-block;
+  padding:14px 28px;
+  border:2px solid #ff2a6d;
+  color:#111;
+  text-decoration:none;
+  border-radius:10px;
+  transition:0.2s;
+  font-size:18px;
+  font-weight:bold;
+}
+
+.nav a:hover{
+  background:#ff2a6d;
+  color:#fff;
+}
+
+@media(max-width:700px){
+  h1{
+    font-size:32px;
+  }
+  .game{
+    flex-direction:column;
+    align-items:center;
+    text-align:center;
+  }
+  .game-poster{
+    flex:none;
+    width:100%;
+    max-width:300px;
+  }
+  .game-body{
+    width:100%;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="wrap">
+
+  <h1>自作ゲーム</h1>
+
+  <p class="intro">個人制作したゲームを置いています。</p>
+
+  <div class="game">
+
+    <div class="game-poster">
+      <img src="Chikarian/images/title_bg.png" alt="チカリアン キービジュアル">
+    </div>
+
+    <div class="game-body">
+      <h2 class="game-title">チカリアン</h2>
+      <p class="game-genre">ダークファンタジー・ガチャ育成カードゲーム</p>
+      <p class="game-desc">
+        西洋ゴシック調のダークファンタジー世界を舞台にした、ガチャ育成カードゲームです。
+        あなた自身は戦わず、現実で見つけた明滅する赤い光をスマホのカメラでとらえて資源「チカリウム」に変え、
+        辺境を守る戦士たちに力を届ける「灯し手」となります。
+        チカリウムでカードを引いて戦士を育て、世界を覆う巨大な敵に挑みましょう。
+        深紅・黄金・漆黒・紫の重厚な世界を、毎日少しずつ遊べる設計です。
+      </p>
+      <a class="play" href="Chikarian/">プレイする</a>
+    </div>
+
+  </div>
+
+  <div class="nav">
+    <a href="index.html">index</a>
+  </div>
+
+</div>
+
+</body>
+</html>
