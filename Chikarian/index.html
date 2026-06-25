@@ -2553,6 +2553,10 @@ const BOSS_CSS = `
 .boss-witem.locked{color:#8a7c60; cursor:default;}
 .boss-tries{margin-top:6px; background:rgba(18,10,14,.9); border:1.5px solid rgba(232,194,90,.55); border-radius:12px; padding:6px 12px; text-align:center; font-size:11px; color:#cdb488; letter-spacing:1px;}
 .boss-tries b{color:#ffe39a; font-weight:800;}
+.boss-roundstep{position:absolute; z-index:7; top:14px; right:14px; width:152px; box-sizing:border-box; display:flex; align-items:center; justify-content:space-between; background:rgba(18,10,14,.9); border:1.5px solid rgba(232,194,90,.55); border-radius:12px; padding:5px 6px;}
+.boss-rsar{font-size:18px; font-weight:800; color:#ffe39a; cursor:pointer; width:30px; text-align:center; user-select:none; line-height:1.2;}
+.boss-rsar.dis{color:#5a5040; cursor:default;}
+.boss-rslabel{font-size:13px; font-weight:800; color:#fff3c8; letter-spacing:1px;}
 .boss-back{position:absolute; z-index:7; left:50%; transform:translateX(-50%); bottom:16px; font-family:inherit; font-size:14px; letter-spacing:1px; color:#fff3c8; background:rgba(18,10,14,.9); border:1.5px solid rgba(232,194,90,.55); border-radius:22px; padding:11px 22px; cursor:pointer;}
 .boss-scrim{position:absolute; inset:0; z-index:8; background:rgba(0,0,0,.45); opacity:0; pointer-events:none; transition:.3s;}
 .boss-scrim.show{opacity:1; pointer-events:auto;}
@@ -2658,7 +2662,6 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
   const cleared = (profile && profile.cleared_stage) || 0;
   const bossRound = Math.max(1, (profile && profile.boss_round) || 1);
   const [roundSel, setRoundSel] = useState(bossRound);                                    // 表示/出撃する周回（既定＝現周）
-  const [roundOpen, setRoundOpen] = useState(false);                                       // 周回セレクタの開閉
   const frontier = Math.min((((profile && profile.boss_round_stage) || 0) + 1), 8);        // 現周のフロンティア面
   const isPast = roundSel < bossRound;                                                      // 過去周ビュー（全開放）
   useEffect(() => { setRoundSel(bossRound); }, [bossRound]);                                // 周回が進んだら現周へ追従
@@ -2861,8 +2864,8 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
         })}
       </div>
 
-      {/* 右上：界選択（畳み式・界名のみ）＋本日の挑戦 */}
-      <div className={'boss-worldsel' + (worldOpen ? ' open' : '')}>
+      {/* 右上：界選択（畳み式・界名のみ）＋本日の挑戦。周回ステッパーがある2周目以降は1段下げる */}
+      <div className={'boss-worldsel' + (worldOpen ? ' open' : '')} style={{ top: bossRound >= 2 ? 54 : 14 }}>
         <div className="boss-wbtn" onClick={() => setWorldOpen(o => !o)}><span className="boss-wn">{WORLD_NAMES[stage]}</span><span className="boss-ar">▾</span></div>
         <div className="boss-wlist">
           {Array.from({ length: 8 }, (_, i) => i + 1).map(s => {
@@ -2877,22 +2880,16 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
         </div>
         <div className="boss-tries">本日の挑戦 残り <b>{triesLeft}</b>/3</div>
       </div>
-      {/* 周回セレクタ（2周目以降のみ）：過去周＝全開放／現周＝順次。界セレクタの意匠を流用し下に配置 */}
+      {/* 周回ステッパー（界セレクタの上）：‹ N周目 › で過去周/現周を切替（2周目以降のみ表示） */}
       {bossRound >= 2 && (
-        <div className={'boss-worldsel' + (roundOpen ? ' open' : '')} style={{ top: 58 }}>
-          <div className="boss-wbtn" onClick={() => setRoundOpen(o => !o)}><span className="boss-wn">{roundSel}周目{roundSel === bossRound ? '（現在）' : ''}</span><span className="boss-ar">▾</span></div>
-          <div className="boss-wlist">
-            {Array.from({ length: bossRound }, (_, i) => i + 1).map(r => (
-              <div key={r} className={'boss-witem' + (r === roundSel ? ' cur' : '')} onClick={() => { setRoundSel(r); setStage(r < bossRound ? 1 : frontier); setOpenNode(null); setRoundOpen(false); }}>
-                <span>{r}周目{r === bossRound ? '（現在）' : ''}</span>
-              </div>
-            ))}
-          </div>
+        <div className="boss-roundstep">
+          <span className={'boss-rsar' + (roundSel <= 1 ? ' dis' : '')} onClick={() => { if (roundSel <= 1) return; const r = roundSel - 1; setRoundSel(r); setStage(r < bossRound ? 1 : frontier); setOpenNode(null); }}>‹</span>
+          <span className="boss-rslabel">{roundSel}周目</span>
+          <span className={'boss-rsar' + (roundSel >= bossRound ? ' dis' : '')} onClick={() => { if (roundSel >= bossRound) return; const r = roundSel + 1; setRoundSel(r); setStage(r < bossRound ? 1 : frontier); setOpenNode(null); }}>›</span>
         </div>
       )}
       {/* 界ドロップダウンの外側タップで閉じる */}
       {worldOpen && <div className="boss-wscrim" onClick={() => setWorldOpen(false)} />}
-      {roundOpen && <div className="boss-wscrim" onClick={() => setRoundOpen(false)} />}
 
       <button className="boss-back" onClick={back}>ホームへ戻る</button>
 
