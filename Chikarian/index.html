@@ -3887,13 +3887,15 @@ const TAN_NODES = {
 function TansakuScreen({ profile, cards, refreshAll, back, flash }) {
   const maxDecks = Math.min(2 + Math.floor(((profile && profile.cleared_stage) || 0) / 2), 6);
   const round = Math.max(1, (profile && profile.boss_round) || 1);
-  const cleared = (profile && profile.cleared_stage) || 0;
-  const gate = (cleared * 3) + ((profile && profile.boss_round_role) || 0);
+  const frontier = (profile && profile.boss_round_stage) || 0;            // その周のクリア面数（周頭=0／面ボス撃破で+1）。1周目は cleared_stage と一致＝挙動同一
+  const [roundSel, setRoundSel] = useState(round);                        // 表示中の周回（既定＝現周）。界セレクタ上のステッパーで切替
+  const isPast = roundSel < round;                                        // 過去周＝クリア済み＝全段開放表示（閲覧のみ）
+  const gate = isPast ? 24 : ((frontier * 3) + ((profile && profile.boss_round_role) || 0)); // 解放ノード数。現周＝その周の進行（1周目と同式）／過去周＝全段
   const cardById = {}; (cards || []).forEach(c => { cardById[c.id] = c; });
   const [states, setStates] = useState(null);
   const [decks, setDecks] = useState([]);
   const [deckNo, setDeckNo] = useState(1);
-  const [area, setArea] = useState(() => Math.min(((profile && profile.cleared_stage) || 0) + 1, 8)); // 既定＝最新の解放面（フロンティア・ボスの stage と同方式）
+  const [area, setArea] = useState(() => Math.min((((profile && profile.boss_round_stage) || 0) + 1), 8)); // 既定＝その周のフロンティア面（ボスの stage と同方式）
   const [worldOpen, setWorldOpen] = useState(false); // 界選択ドロップダウンの開閉
   const [openStep, setOpenStep] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -3905,6 +3907,7 @@ function TansakuScreen({ profile, cards, refreshAll, back, flash }) {
   async function load() { try { setStates(await ChikarianAPI.getTansaku() || []); } catch (e) { flash(errMsg(e)); setStates([]); } }
   useEffect(() => { load(); const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
   useEffect(() => { (async () => { try { setDecks(await ChikarianAPI.getDecks() || []); } catch (e) {} })(); }, []);
+  useEffect(() => { setRoundSel(round); }, [round]);   // 周回が進んだら表示を現周へ
 
   async function run(fn, okMsg) {
     if (busy) return; setBusy(true);
@@ -3917,6 +3920,7 @@ function TansakuScreen({ profile, cards, refreshAll, back, flash }) {
   // 成功時のみシートを閉じる。ゲート拒否はシート内にエラー表示（最終判定はサーバ start_tansaku=0064）。
   const doStart = async () => {
     if (!openStep || busy) return;
+    if (isPast) { setStartErr('過去周は閲覧のみです。探索は現在の周回で行います。'); return; }
     // 探索中デッキの切り替え確認：選択デッキが探索中なら「回収して切り替え」を確認（OKで開始＝サーバが既存分を自動回収）
     const isExploring = (states || []).some(s => s.deck_no === deckNo);
     if (isExploring && !(await uiConfirm('デッキ' + deckNo + ' は別の場所を探索中です。回収して切り替えますか？'))) return;
@@ -4006,12 +4010,20 @@ function TansakuScreen({ profile, cards, refreshAll, back, flash }) {
       {/* 地図本体（ボス画面と同じ作り） */}
       <div className="tan-mapWrap" style={{ backgroundImage: `url(./images/tansaku_map_${area}.png)` }}>
         <div className="tan-mapDim" />
-        {/* 界選択（畳み式ドロップダウン・ボス画面と同じ作り） */}
-        <div className={'tan-worldsel' + (worldOpen ? ' open' : '')}>
+        {/* 周回ステッパー（界セレクタの上）：‹ N周目 › で過去周/現周を切替（2周目以降のみ・ボス画面と同じ意匠 boss-roundstep を流用） */}
+        {round >= 2 && (
+          <div className="boss-roundstep">
+            <span className={'boss-rsar' + (roundSel <= 1 ? ' dis' : '')} onClick={() => { if (roundSel <= 1) return; const r = roundSel - 1; setRoundSel(r); setArea(r < round ? 1 : Math.min(frontier + 1, 8)); setWorldOpen(false); setOpenStep(null); }}>‹</span>
+            <span className="boss-rslabel">{roundSel}周目</span>
+            <span className={'boss-rsar' + (roundSel >= round ? ' dis' : '')} onClick={() => { if (roundSel >= round) return; const r = roundSel + 1; setRoundSel(r); setArea(r < round ? 1 : Math.min(frontier + 1, 8)); setWorldOpen(false); setOpenStep(null); }}>›</span>
+          </div>
+        )}
+        {/* 界選択（畳み式ドロップダウン・ボス画面と同じ作り）。ステッパーがある2周目以降は1段下げる */}
+        <div className={'tan-worldsel' + (worldOpen ? ' open' : '')} style={{ top: round >= 2 ? 54 : 14 }}>
           <div className="tan-wbtn" onClick={() => setWorldOpen(o => !o)}><span className="tan-wn">{WORLD_NAMES[area]}</span><span className="tan-ar">▾</span></div>
           <div className="tan-wlist">
             {Array.from({ length: 8 }, (_, i) => i + 1).map(n => {
-              const locked = n > cleared + 1;   // ボスと同式＝その面の浅域が到達可能になるまでロック（表示のみ）
+              const locked = !isPast && (n > frontier + 1);   // 現周＝その周のフロンティアまで（1周目と同じ）／過去周＝全段開放
               return (
                 <div key={n} className={'tan-witem' + (n === area ? ' cur' : '') + (locked ? ' locked' : '')}
                   onClick={() => { if (locked) return; setArea(n); setWorldOpen(false); }}>
@@ -4122,10 +4134,11 @@ function TansakuScreen({ profile, cards, refreshAll, back, flash }) {
               })()}
               {startErr && <div className="tan-startErr">{startErr}</div>}
               <button className="tan-go" onClick={doStart}
-                      disabled={busy || cc === 0 || !deckGate(deckNo).ok}>
-                {cc === 0 ? 'デッキにカードがありません'
-                  : (!deckGate(deckNo).ok ? deckGate(deckNo).badReason
-                    : (busyDeck ? '出発' : '出発'))}
+                      disabled={busy || cc === 0 || isPast || !deckGate(deckNo).ok}>
+                {isPast ? '過去周は閲覧のみ（現在の周回で探索）'
+                  : (cc === 0 ? 'デッキにカードがありません'
+                    : (!deckGate(deckNo).ok ? deckGate(deckNo).badReason
+                      : (busyDeck ? '出発' : '出発')))}
               </button>
             </>
           );
