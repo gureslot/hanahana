@@ -5339,6 +5339,10 @@ function ShurenjoView({ profile, cards, flash }) {
   return (
     <div style={{ padding: '4px 0' }}>
       <style>{SHUR_KEYFRAMES}</style>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '2px 2px 8px' }}>
+        <div className="tat-ficon"><img className="tat-ficon-img" src="./images/ic_tatemono_shuren.png" alt="" onLoad={e => e.target.parentNode.classList.add('hasimg')} onError={e => e.target.remove()} />修</div>
+        <div style={{ fontSize: 18, fontWeight: 800, color: '#ecd28a', letterSpacing: '.14em' }}>修練場</div>
+      </div>
 
       {screen === 'set' && (
         <div>
@@ -5355,7 +5359,7 @@ function ShurenjoView({ profile, cards, flash }) {
               return (
                 <div key={a} onClick={() => setKakashiAttr(a)} style={{ ...shurS.chip, ...(kakashiAttr === a ? shurS.chipOn : {}) }}>
                   {k
-                    ? <><img src={ATTR_IC[k]} alt="" onError={e => e.target.remove()} style={{ width: 30, height: 30, objectFit: 'contain', display: 'block', margin: '0 auto' }} /><div style={{ fontSize: 12, marginTop: 2 }}>{a}</div></>
+                    ? <><img src={ATTR_IC[k]} alt="" onError={e => e.target.remove()} style={{ width: 56, height: 56, objectFit: 'contain', display: 'block', margin: '0 auto' }} /><div style={{ fontSize: 12, marginTop: 2 }}>{a}</div></>
                     : <>{'無'}<small style={shurS.small}>中立</small></>}
                 </div>
               );
@@ -5369,7 +5373,7 @@ function ShurenjoView({ profile, cards, flash }) {
               return (
                 <div key={w} onClick={() => setKakashiWeap(w)} style={{ ...shurS.chip, ...(kakashiWeap === w ? shurS.chipOn : {}) }}>
                   {k
-                    ? <><img src={WEAP_IC[k]} alt="" onError={e => e.target.remove()} style={{ width: 30, height: 30, objectFit: 'contain', display: 'block', margin: '0 auto' }} /><div style={{ fontSize: 12, marginTop: 2 }}>{w}</div></>
+                    ? <><img src={WEAP_IC[k]} alt="" onError={e => e.target.remove()} style={{ width: 56, height: 56, objectFit: 'contain', display: 'block', margin: '0 auto' }} /><div style={{ fontSize: 12, marginTop: 2 }}>{w}</div></>
                     : <>{'なし'}<small style={shurS.small}>中立</small></>}
                 </div>
               );
