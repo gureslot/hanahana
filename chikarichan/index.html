@@ -44,6 +44,10 @@
   .title-account{ margin-top:10px; text-align:center; font-size:11.5px; color:var(--sub); }
   .title-account b{ color:var(--ink); }
   .title-account a{ color:var(--teal); text-decoration:underline; cursor:pointer; }
+  .title-legal{ position:relative; z-index:3; margin-top:9px; text-align:center; font-size:11.5px; color:var(--sub); line-height:1.7; }
+  .title-legal a{ color:var(--teal); text-decoration:underline; cursor:pointer; }
+  .login-legal{ font-size:11px; color:var(--sub); line-height:1.65; margin:-4px 0 14px; }
+  .login-legal a{ color:var(--teal); text-decoration:underline; cursor:pointer; }
   @keyframes floaty{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-12px); } }
   @keyframes tappulse{ 0%,100%{ opacity:.6; } 50%{ opacity:1; } }
   /* 画面遷移の白フェード */
@@ -191,6 +195,7 @@
     <div class="login-card" onclick="event.stopPropagation()">
       <div class="login-title">記録を残しますか？</div>
       <p class="login-note">Googleでログインすると、機種変更やしばらく開かなかったときも記録が消えません（チカリアンと共通のアカウント）。あとからでも変更できます。</p>
+      <p class="login-legal">「Googleでログイン」または「ログインせずに始める」を選ぶと、<a href="./terms.html">利用規約</a>・<a href="./privacy.html">プライバシーポリシー</a>に同意したものとみなされます。</p>
       <button class="btn sub wide" type="button" onclick="cloudLogin()">Googleでログイン</button>
       <a class="login-skip" onclick="skipLogin()">ログインせずに始める</a>
     </div>
@@ -201,6 +206,9 @@
     <div class="title-card" id="title-bg">
       <div class="title-logo-wrap"><img class="title-logo" id="title-logo" src="images/logo_title.png" alt="ちかりちゃんは成長する"></div>
       <div class="title-tap">タップでスタート</div>
+    </div>
+    <div class="title-legal" onclick="event.stopPropagation()">
+      <a href="./terms.html">利用規約</a>・<a href="./privacy.html">プライバシーポリシー</a>
     </div>
     <div class="title-account" id="title-account" style="display:none" onclick="event.stopPropagation()">
       ログイン中：<b id="auth-email">—</b>　<a onclick="event.stopPropagation(); cloudLogout()">ログアウト</a>
