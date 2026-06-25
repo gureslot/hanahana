@@ -125,6 +125,9 @@
   const touchActive     = ()                               => rpc('touch_active',      {});                                  // 操作時刻 last_active_at を更新（間引いて呼ぶ）
   const setAutoHouchi   = (enabled, idleMin)               => rpc('set_auto_houchi',   { p_enabled: enabled, p_idle_min: idleMin }); // 自動探索 オン/オフ＋しきい値(30/60/180/360/720/1440)
 
+  // ---- 0085（規約同意の記録）----
+  const agreeTerms      = (version)                        => rpc('agree_terms',       { p_version: version }); // 利用規約/プライバシーへの同意を記録（profiles.tos_version / tos_agreed_at）
+
   global.ChikarianAPI = {
     init, client, rpc, auth,
     // reads
@@ -142,6 +145,8 @@
     // writes (0023)
     setCardLock,
     // writes (0071: 放置自動探索)
-    touchActive, setAutoHouchi
+    touchActive, setAutoHouchi,
+    // writes (0085: 規約同意)
+    agreeTerms
   };
 })(window);

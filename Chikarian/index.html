@@ -113,6 +113,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_mjEggLBf6A3HjR8UqiEDOw_cJeam2aK";
 // ===== 色・共通スタイル =====
 const GOLD = "#e8c25a", GOLD_HI = "#fff3c8";
 const PANEL = "rgba(20,10,16,.72)", BORDER = "1.5px solid rgba(232,194,90,.55)";
+const TERMS_VERSION = '1.0';  // 規約/プライバシーの版。agree_terms(0085)へ渡す版と一致させる。改定時はここを上げると全員に同意ゲートが再表示される。
 const DAILY_MAX = 1000;
 const LOCK_RPC_AVAILABLE = true;    // 0023(set_card_lock) 適用済み＝有効。強化合成のactions/ロックボタンが参照
 // 採取は点滅ベース（v3）。locked中にピーク（明滅）を検出するたび SAISHU_PER_PEAK を加算。
@@ -437,6 +438,12 @@ function App() {
       {/* 常駐 BGM（絶対にアンマウントしない） */}
       <audio ref={audioRef} src="sounds/bgm_home.mp3" loop preload="auto" muted={!bgmOn} />
       <ConfirmHost />
+      {authed && profile && profile.tos_version !== TERMS_VERSION && (
+        <ConsentGate version={TERMS_VERSION} onAgree={async () => {
+          try { await ChikarianAPI.agreeTerms(TERMS_VERSION); } catch (e) { flash(errMsg(e)); return; }
+          try { await refreshProfile(); } catch (e) {}
+        }} />
+      )}
       {loopShow && phase === 'app' && <Opening script={LOOP_SCRIPT} onDone={async () => {
         setLoopShow(false);
         try { await ChikarianAPI.completeInterlude(); } catch (e) {}
@@ -475,9 +482,46 @@ function Login({ flash }) {
         <button onClick={onLogin} disabled={busy} style={S.bigBtn}>
           {busy ? 'ログイン中…' : 'Google でログイン'}
         </button>
-        <div style={{ fontSize: 11, color: '#8a7250', marginTop: 18, textAlign: 'center', lineHeight: 1.7 }}>
-          ログインすると進行データがクラウドに保存されます
+        <div style={{ fontSize: 11, color: '#8a7250', marginTop: 18, textAlign: 'center', lineHeight: 1.9 }}>
+          ログインすると進行データがクラウドに保存されます<br />
+          ログインすることで <a href="./terms.html" target="_blank" rel="noopener" style={{ color: GOLD, textDecoration: 'underline' }}>利用規約</a>・<a href="./privacy.html" target="_blank" rel="noopener" style={{ color: GOLD, textDecoration: 'underline' }}>プライバシーポリシー</a> に同意したものとみなされます
         </div>
+      </div>
+    </div>
+  );
+}
+
+/* =================================================================== 同意ゲート */
+// 利用規約・プライバシーポリシーへの同意を取る全画面ゲート。profile.tos_version が TERMS_VERSION と
+// 不一致のとき App から表示。チェック→「同意して始める」で agree_terms(0085) を呼び、refreshProfile で消える。
+function ConsentGate({ version, onAgree }) {
+  const [agreed, setAgreed] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const linkS = { color: GOLD, textDecoration: 'underline' };
+  const submit = async () => {
+    if (!agreed || busy) return;
+    setBusy(true);
+    try { await onAgree(); } finally { setBusy(false); }
+  };
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(6,4,9,.96)', display: 'grid', placeItems: 'center', padding: 22 }}>
+      <div className="ttl-bg" />
+      <div className="ttl-vignette" />
+      <div style={{ position: 'relative', width: '100%', maxWidth: 360, background: '#160a13', border: BORDER, borderRadius: 14, padding: '22px 20px', textAlign: 'center', boxShadow: '0 12px 40px rgba(0,0,0,.6)' }}>
+        <div style={{ fontSize: 17, fontWeight: 800, color: GOLD_HI, letterSpacing: 2 }}>ご利用にあたって</div>
+        <div style={{ fontSize: 12.5, color: '#cdb488', lineHeight: 1.9, marginTop: 14 }}>
+          チカリアンをプレイするには、<br />
+          <a href="./terms.html" target="_blank" rel="noopener" style={linkS}>利用規約</a> と <a href="./privacy.html" target="_blank" rel="noopener" style={linkS}>プライバシーポリシー</a> への同意が必要です。<br />
+          本ゲームは Google アカウントでログインし、カメラ機能を利用します。内容をご確認ください。
+        </div>
+        <div onClick={() => setAgreed(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center', margin: '18px 0 16px', cursor: 'pointer', userSelect: 'none' }}>
+          <span style={{ width: 22, height: 22, borderRadius: 6, display: 'grid', placeItems: 'center', flex: 'none', border: agreed ? '2px solid ' + GOLD : '2px solid rgba(232,194,90,.45)', background: agreed ? 'rgba(232,181,77,.22)' : 'transparent', color: GOLD_HI, fontSize: 14, fontWeight: 900 }}>{agreed ? '✓' : ''}</span>
+          <span style={{ fontSize: 13, color: GOLD_HI }}>利用規約・プライバシーポリシーに同意します</span>
+        </div>
+        <button onClick={submit} disabled={!agreed || busy}
+          style={{ ...S.bigBtn, width: '100%', opacity: (agreed && !busy) ? 1 : .45, cursor: (agreed && !busy) ? 'pointer' : 'not-allowed' }}>
+          {busy ? '処理中…' : '同意して始める'}
+        </button>
       </div>
     </div>
   );
@@ -5627,6 +5671,17 @@ function SettingsScreen({ bgmOn, setBgmOn, volume, setVolume, logout, playOpenin
           <div style={setS.row}>
             <div><div style={setS.k}>ログアウト</div><div style={setS.sub}>このアカウントから出る</div></div>
             <button onClick={() => setConfirm(true)} style={{ ...setS.small, color: '#ff9a8a', borderColor: 'rgba(224,86,59,.5)' }}>ログアウト</button>
+          </div>
+
+          {/* 規約・ポリシー */}
+          <div style={setS.sec}>規約・ポリシー</div>
+          <div style={setS.row}>
+            <div><div style={setS.k}>利用規約</div><div style={setS.sub}>本ゲームの利用条件</div></div>
+            <a href="./terms.html" target="_blank" rel="noopener" style={{ ...setS.small, textDecoration: 'none' }}>開く</a>
+          </div>
+          <div style={setS.row}>
+            <div><div style={setS.k}>プライバシーポリシー</div><div style={setS.sub}>個人情報の取り扱い</div></div>
+            <a href="./privacy.html" target="_blank" rel="noopener" style={{ ...setS.small, textDecoration: 'none' }}>開く</a>
           </div>
 
           {/* バージョン */}
