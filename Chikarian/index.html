@@ -28,6 +28,9 @@
   @keyframes saishuPulse{0%,100%{filter:drop-shadow(0 0 12px rgba(255,160,60,.5));}50%{filter:drop-shadow(0 0 26px rgba(255,180,70,.85));}}
   .saishu-glow{animation:saishuPulse 2.4s ease-in-out infinite;}
   .saishu-glow:active{transform:scale(.97);}
+  /* 0080: 周回クリア報告書／報告書アイコンの発光 */
+  @keyframes repLoopGlow{0%,100%{box-shadow:0 0 0 1px rgba(255,180,60,.5),0 0 14px rgba(255,150,40,.35)}50%{box-shadow:0 0 0 1px rgba(255,214,120,.95),0 0 26px rgba(255,170,60,.75)}}
+  .report-loopglow{animation:repLoopGlow 1.8s ease-in-out infinite;border-color:rgba(255,200,90,.85)!important;border-radius:12px;}
   .home-whitein{position:absolute;inset:0;background:#fff;z-index:60;pointer-events:none;animation:whiteFadeOut 1.8s ease forwards;}
   button:active{filter:brightness(1.08);}
   .spin{width:34px;height:34px;border:3px solid rgba(232,194,90,.3);border-top-color:#e8c25a;border-radius:50%;animation:rot 1s linear infinite;}
@@ -160,8 +163,8 @@ const ERR_JA = {
   'SP_NOT_MATERIAL': 'SPは素材に使えません',
   'BASE_LOCKED': '本体カードがロック中です',
   'MATERIAL_LOCKED': '素材カードがロック中です',
-  'INSUFFICIENT_HOSHOU': '保証石が足りません',
-  'INVALID_HOSHOU': '保証石の指定が不正です',
+  'INSUFFICIENT_HOSHOU': '恩寵石が足りません',
+  'INVALID_HOSHOU': '恩寵石の指定が不正です',
   'BASE_NOT_FOUND': '本体カードが見つかりません',
   'MATERIAL_NOT_FOUND': '素材カードが見つかりません',
   // 鍛冶屋（place_kajiya_order / claim_kajiya）※RPCはrepo外＝タスク記載のコードに対応
@@ -259,7 +262,6 @@ class ErrBoundary extends React.Component {
 function App() {
   const [phase, setPhase] = useState('booting');   // booting | title | login | opening | app
   const [loopShow, setLoopShow] = useState(false);
-  const prevRoundRef = useRef(null);
   const [profile, setProfile] = useState(null);
   const [cards, setCards] = useState([]);          // 所持カード（サーバ値）
   const [screen, setScreen] = useState('home');
@@ -415,25 +417,31 @@ function App() {
     else if (screen === 'tansaku') body = <TansakuScreen profile={profile} cards={cards} refreshAll={refreshAll} back={() => setScreen('home')} flash={flash} />;
     else if (screen === 'houchi') body = <HouchiScreen profile={profile} refreshAll={refreshAll} back={() => setScreen('home')} flash={flash} />;
     else if (screen === 'mission') body = <MissionScreen profile={profile} cards={cards} refreshAll={refreshAll} back={() => setScreen('home')} flash={flash} />;
-    else if (screen === 'report') body = <BattleLogView cards={cards} back={() => setScreen('home')} flash={flash} />;
+    else if (screen === 'report') body = <BattleLogView cards={cards} profile={profile} onInterlude={() => setLoopShow(true)} back={() => setScreen('home')} flash={flash} />;
     else if (screen === 'settings') body = <SettingsScreen bgmOn={bgmOn} setBgmOn={setBgmOn} volume={volume} setVolume={setVolume} logout={logout} playOpening={() => setPhase('opening')} back={() => setScreen('home')} />;
     else body = <Placeholder name={screen} back={() => setScreen('home')} logout={logout} />;
   }
 
+  // 0080: 周回解放は「8面クリア→幕間→complete_interlude」の順。boss_round 増加では幕間を出さない。
+  // フォールバック：app 突入時に interlude_pending かつ「クリア報告書を既読」なら幕間を再生（読後に閉じた/リロードした場合）。
   useEffect(() => {
-    if (!profile) return;
-    const r = Math.max(1, (profile && profile.boss_round) || 1);
-    if (prevRoundRef.current == null) { prevRoundRef.current = r; return; }
-    if (r > prevRoundRef.current) setLoopShow(true);
-    prevRoundRef.current = r;
-  }, [profile && profile.boss_round]);
+    if (phase !== 'app' || !profile || loopShow) return;
+    if (!profile.interlude_pending) return;
+    let read = false;
+    try { read = localStorage.getItem('ck_loop_read_r' + (profile.boss_round || 1)) === '1'; } catch (e) {}
+    if (read) setLoopShow(true);
+  }, [phase, profile && profile.interlude_pending, profile && profile.boss_round]);
 
   return (
     <div style={{ position: 'relative', width: '100%', maxWidth: 480, margin: '0 auto', minHeight: '100dvh', overflow: 'hidden', background: '#0a0509' }}>
       {/* 常駐 BGM（絶対にアンマウントしない） */}
       <audio ref={audioRef} src="sounds/bgm_home.mp3" loop preload="auto" muted={!bgmOn} />
       <ConfirmHost />
-      {loopShow && phase === 'app' && <Opening script={LOOP_SCRIPT} onDone={() => setLoopShow(false)} />}
+      {loopShow && phase === 'app' && <Opening script={LOOP_SCRIPT} onDone={async () => {
+        setLoopShow(false);
+        try { await ChikarianAPI.completeInterlude(); } catch (e) {}
+        try { await refreshProfile(); } catch (e) {}   // boss_round+1・interlude_pending=false を反映＝次周解放・発光オフ
+      }} />}
       <ErrBoundary key={screen} onReset={() => setScreen('home')}>{body}</ErrBoundary>
       {toast && <div style={S.toast}>{toast}</div>}
     </div>
@@ -774,7 +782,7 @@ function Home({ profile, go, flash, onRefresh }) {
         {/* 右側 小アイコン */}
         <div style={S.sideIcons}>
           <SideIcon src={ASSETS.ic.mission} fb="📜" label="ミッション" onClick={() => go('mission')} />
-          <SideIcon src={ASSETS.ic.report} fb="🗎" label="報告書" badge={hasUnread} onClick={() => go('report')} />
+          <SideIcon src={ASSETS.ic.report} fb="🗎" label="報告書" badge={hasUnread} glow={!!(profile && profile.interlude_pending)} onClick={() => go('report')} />
           <SideIcon src={ASSETS.ic.zukan} fb="❖" label="図鑑" onClick={() => go('zukan')} />
           <SideIcon src={ASSETS.ic.settings} fb="⚙" label="設定" onClick={() => go('settings')} />
         </div>
@@ -878,11 +886,11 @@ function HouchiArt() {
   return <span style={{ fontSize: 34 }}>🧰</span>;
 }
 
-function SideIcon({ src, fb, label, badge, onClick }) {
+function SideIcon({ src, fb, label, badge, glow, onClick }) {
   const [err, setErr] = useState(false);
   return (
     <button style={S.sideIcon} onClick={onClick}>
-      <div style={HS.sideIconCircle}>
+      <div style={HS.sideIconCircle} className={glow ? 'report-loopglow' : undefined}>
         {src && !err
           ? <img alt="" src={src} style={HS.fill} onError={() => setErr(true)} />
           : <span style={{ fontSize: 20, color: '#f0dcb0' }}>{fb}</span>}
@@ -2629,7 +2637,7 @@ function bossSortieName(bossKey) {
   const m = /^boss_([1-8])_(boss|a|b)(?:_r([0-9]+))?$/.exec(bossKey || '');
   if (!m) return bossKey;
   const stage = +m[1], idx = BOSS_ROLE_KEYS.indexOf(m[2]), round = m[3] ? +m[3] : 1;
-  const st = (stage === 8 && round >= 2) ? BOSS_FINALE_R2 : BOSS_STAGES[stage - 1];
+  const st = (stage === 8 && round % 2 === 0) ? BOSS_FINALE_R2 : BOSS_STAGES[stage - 1];
   return (st && st.bosses[idx]) ? st.bosses[idx].name : bossKey;
 }
 
@@ -2739,7 +2747,7 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
 
   if (bosses === null || decks === null) return <Booting />;
 
-  const curStage = (stage === 8 && roundSel >= 2) ? BOSS_FINALE_R2 : BOSS_STAGES[stage - 1];   // 表示中の面（8面かつ2周目以降は女型）
+  const curStage = (stage === 8 && roundSel % 2 === 0) ? BOSS_FINALE_R2 : BOSS_STAGES[stage - 1];   // 表示中の面（8面：偶数周=女型／奇数周=男型）
   const closeSheet = () => setOpenNode(null);
   const busyDecks = new Set(sorties.map(s => s.deck_no));               // 出撃中デッキ
   function openSheet(i) { setOpenNode(i); setDeckNo(1); }   // メインデッキ(デッキ1)固定（canon-06 §4-1）
@@ -2986,7 +2994,7 @@ function BossResultArt({ stage, role, win, round = 1 }) {
     <div style={{ width: '60%', maxWidth: 230, aspectRatio: '1/1', margin: '12px auto 0', borderRadius: 14, overflow: 'hidden', border: '1.5px solid rgba(232,194,90,.5)', background: '#241018', boxShadow: `0 6px 26px rgba(0,0,0,.5), 0 0 18px ${col}`, display: 'grid', placeItems: 'center', position: 'relative' }}>
       {err
         ? <span style={{ fontSize: 44, color: '#7a5a3a' }}>❖</span>
-        : <img src={`./images/boss_${stage}_${role}${(stage === 8 && round >= 2) ? '_r2' : ''}.png`} alt="" onError={() => setErr(true)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+        : <img src={`./images/boss_${stage}_${role}${(stage === 8 && round % 2 === 0) ? '_r2' : ''}.png`} alt="" onError={() => setErr(true)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
     </div>
   );
 }
@@ -3106,7 +3114,7 @@ function KyokaView({ base, cards, profile, refreshAll, onBack, flash }) {
   const [result, setResult] = useState(null);
   const [detailCard, setDetailCard] = useState(null);   // 素材カードのⓘ詳細ポップアップ
 
-  // 成功率＝サーバ do_kyoka（canon-04 §2）と一致：min(100, max(0, (20−10×★) + 80×(素材Lv−1)/(Lv上限−1) + 10×保証石))。最終判定はサーバ。
+  // 成功率＝サーバ do_kyoka（canon-04 §2）と一致：min(100, max(0, (20−10×★) + 80×(素材Lv−1)/(Lv上限−1) + 10×恩寵石))。最終判定はサーバ。
   const matC0 = matId ? (cards || []).find(c => c.id === matId) : null;
   const matCap0 = (CARD_BASE[matC0 ? parseCardKey(matC0.card_key).rarity : (isSp ? 'sp' : baseInfo.rarity)] || {}).cap || 50;
   const rate = Math.round(Math.min(100, Math.max(0, (20 - 10 * star) + 80 * ((matC0 ? (matC0.lv || 1) : 1) - 1) / (matCap0 - 1) + 10 * hoshou)));
@@ -3128,7 +3136,7 @@ function KyokaView({ base, cards, profile, refreshAll, onBack, flash }) {
       const res = await ChikarianAPI.doKyoka(base.id, matId, hoshou);  // ★成否・消費はサーバ
       if (window.CKSound) CKSound.play(res && res.success ? 'se_enhance_success' : 'se_enhance_fail');  // 成功/失敗SE（既存音源）
       setResult(res);
-      await refreshAll();   // 本体★・素材消滅・メダル/保証石をサーバ再取得して反映
+      await refreshAll();   // 本体★・素材消滅・メダル/恩寵石をサーバ再取得して反映
     } catch (e) { flash(errMsg(e)); }
     finally { setBusy(false); }
   }
@@ -3177,13 +3185,13 @@ function KyokaView({ base, cards, profile, refreshAll, onBack, flash }) {
             <div style={{ ...kyokaS.brow, borderBottom: '1px dashed rgba(232,194,90,.2)' }}><span style={kyokaS.bk}>本体</span><span style={kyokaS.bv}>{baseInfo.name}（★{star}）</span></div>
             <div style={{ ...kyokaS.brow, borderBottom: '1px dashed rgba(232,194,90,.2)' }}><span style={kyokaS.bk}>素材</span><span style={kyokaS.bv}>{parseCardKey(matCard.card_key).name}（★{matCard.star || 0}）</span></div>
             <div style={{ ...kyokaS.brow, ...(hoshou > 0 ? { borderBottom: '1px dashed rgba(232,194,90,.2)' } : {}) }}><span style={kyokaS.bk}>成功で</span><span style={kyokaS.bvPlus}>強化値 +1（★{star} → ★{star + 1}）</span></div>
-            {hoshou > 0 && <div style={kyokaS.brow}><span style={kyokaS.bk}>確率保証石 ×{hoshou}</span><span style={kyokaS.bvPlus}>成功率 +{hoshou * 10}%</span></div>}
+            {hoshou > 0 && <div style={kyokaS.brow}><span style={kyokaS.bk}>恩寵石 ×{hoshou}</span><span style={kyokaS.bvPlus}>成功率 +{hoshou * 10}%</span></div>}
           </div>}
 
-          {/* 補助素材＝確率保証石 カウンター */}
+          {/* 補助素材＝恩寵石 カウンター */}
           <div style={kyokaS.assistT}>補助素材</div>
           <div style={{ ...kyokaS.ens, ...(hoshou > 0 ? kyokaS.ensActive : {}) }}>
-            <span style={kyokaS.ensNm}>確率保証石</span>
+            <span style={kyokaS.ensNm}>恩寵石</span>
             <button onClick={() => setHoshou(h => Math.max(0, h - 1))} disabled={hoshou <= 0} style={{ ...kyokaS.stp, ...(hoshou <= 0 ? kyokaS.stpOff : {}) }}>−</button>
             <span style={kyokaS.cnt}>{hoshou}</span>
             <button onClick={() => setHoshou(h => Math.min(hoshouHave, h + 1))} disabled={hoshou >= hoshouHave || rate >= 100} style={{ ...kyokaS.stp, ...((hoshou >= hoshouHave || rate >= 100) ? kyokaS.stpOff : {}) }}>＋</button>
@@ -3197,7 +3205,7 @@ function KyokaView({ base, cards, profile, refreshAll, onBack, flash }) {
           </div>
           {medalHave < cost && <div style={{ fontSize: 11, color: '#ff6a7a' }}>メダルが不足しています（所持 {medalHave.toLocaleString()}）</div>}
 
-          <div style={kyokaS.note}>・成功で強化値+1。失敗しても強化値は下がりませんが、素材カードは消滅します。<br />・式: min(100, max(0, (20−10×★) + 80×(素材Lv−1)/(Lv上限−1) + 10×保証石))・メダル 500×(★+1)（canon-04 §2）。<strong>最終判定はサーバ。</strong></div>
+          <div style={kyokaS.note}>・成功で強化値+1。失敗しても強化値は下がりませんが、素材カードは消滅します。</div>
 
           {/* 素材候補 */}
           <div style={kyokaS.matT}>素材を選ぶ（{isSp ? '同名・同★のSP' : '同レア・同★'}・ロック除外）</div>
@@ -3232,8 +3240,8 @@ function KyokaView({ base, cards, profile, refreshAll, onBack, flash }) {
             <div style={{ fontSize: 22, fontWeight: 800, color: GOLD_HI, marginBottom: 8 }}>★{result.new_star - (ok ? 1 : 0)} → ★{result.new_star}{ok ? '' : '（変化なし）'}</div>
             <div style={kyokaS.rSub}>
               成功率 {Math.round(result.success_rate)}%<br />
-              消費 メダル {Number(result.medal_spent).toLocaleString()} ／ 保証石 {result.hoshou_spent}（素材は消滅）<br />
-              残 メダル {Number(result.medal_remaining).toLocaleString()} ／ 保証石 {result.hoshou_remaining}
+              消費 メダル {Number(result.medal_spent).toLocaleString()} ／ 恩寵石 {result.hoshou_spent}（素材は消滅）<br />
+              残 メダル {Number(result.medal_remaining).toLocaleString()} ／ 恩寵石 {result.hoshou_remaining}
             </div>
             <div style={{ display: 'flex', gap: 10, marginTop: 22 }}>
               <button onClick={() => { setResult(null); setMatId(null); setHoshou(0); }} style={kyokaS.rHome}>続けて強化</button>
@@ -3809,7 +3817,7 @@ const TAN_CSS = `
 .tan-back{position:absolute; z-index:9; left:50%; transform:translateX(-50%); bottom:16px; font-family:inherit; font-size:14px; letter-spacing:1px; color:#fff3c8; background:rgba(18,10,14,.88); border:1.5px solid rgba(232,194,90,.55); border-radius:22px; padding:11px 22px; cursor:pointer;}
 .tan-scrim{position:absolute; inset:0; z-index:7; background:rgba(0,0,0,.4); opacity:0; pointer-events:none; transition:.3s;}
 .tan-scrim.show{opacity:1; pointer-events:auto;}
-.tan-sheet{position:absolute; z-index:8; left:0; right:0; bottom:0; transform:translateY(110%); transition:transform .35s cubic-bezier(.2,.8,.25,1); background:rgba(18,10,14,.88); border-top:1.5px solid rgba(232,194,90,.55); border-left:1.5px solid rgba(232,194,90,.55); border-right:1.5px solid rgba(232,194,90,.55); border-radius:18px 18px 0 0; padding:16px 18px 80px; box-shadow:0 -8px 24px rgba(0,0,0,.6); max-width:480px; margin:0 auto; max-height:92vh; overflow-y:auto;}
+.tan-sheet{position:absolute; z-index:8; left:0; right:0; bottom:0; transform:translateY(110%); transition:transform .35s cubic-bezier(.2,.8,.25,1); background:rgba(18,10,14,.88); border-top:1.5px solid rgba(232,194,90,.55); border-left:1.5px solid rgba(232,194,90,.55); border-right:1.5px solid rgba(232,194,90,.55); border-radius:18px 18px 0 0; padding:16px 18px 100px; box-shadow:0 -8px 24px rgba(0,0,0,.6); max-width:480px; margin:0 auto; max-height:92vh; overflow-y:auto;}
 .tan-sheet.show{transform:translateY(0);}
 .tan-sheet h3{margin:2px 0 10px; font-size:18px; letter-spacing:2px; text-align:center; text-shadow:0 0 12px rgba(255,180,80,.4); color:#fff3c8;}
 .tan-stat{display:flex; justify-content:space-between; align-items:center; padding:7px 4px; border-bottom:1px dashed rgba(232,194,90,.25); font-size:14px;}
@@ -3876,7 +3884,7 @@ const TAN_CSS = `
 `;
 // ノード座標＝mockup の検出座標。depth キー（shallow/mid/deep）に対応（本番の深さ3種＝3ノード）。
 const TAN_NODES = {
-  shallow: { left: '46%', top: '22.2%', name: '浅域 ・ 樹冠の広場' },
+  shallow: { left: '37%', top: '22.2%', name: '浅域 ・ 樹冠の広場' },
   mid: { left: '49.9%', top: '51.3%', name: '中域 ・ 苔生す祭壇' },
   deep: { left: '52.6%', top: '79.3%', name: '深域 ・ 霧底の遺構' },
 };
@@ -4123,7 +4131,6 @@ function TansakuScreen({ profile, cards, refreshAll, back, flash }) {
                   : (!deckGate(deckNo).ok ? deckGate(deckNo).badReason
                     : (busyDeck ? '出発' : '出発'))}
               </button>
-              <div className="tan-note">レートは現在の周回（{round}周目）基準の目安。増減・時刻計算・Lv反映はサーバ。</div>
             </>
           );
         })()}
@@ -4576,7 +4583,7 @@ function SkillView({ base, cards, profile, skillMap, refreshAll, onBack, flash }
           {rResult && <div className="sk-banner" style={{ color: rResult.success ? '#ecd28a' : '#e87f8f', borderColor: rResult.success ? '#8c7038' : '#b83b4d' }}>
             {rResult.success ? '成功' : '失敗'}：{skName(rResult.skill_key)} Lv{rResult.old_lv}→{rResult.new_lv}（{COLOR_JA[rResult.color]} 消費{rResult.cost}・残{rResult.crystal_remaining}）
           </div>}
-          <div className="sk-seclabel">強化するスキル枠（lv_upgradable=false は不可）</div>
+          <div className="sk-seclabel">強化するスキル枠</div>
           {[0, 1, 2].map(slot => {
             const row = bySlot[slot];
             const upg = row ? skUpg(row.skill_key) : false;
@@ -4606,7 +4613,6 @@ function SkillView({ base, cards, profile, skillMap, refreshAll, onBack, flash }
             })}
           </div>
           {rsCost != null && <div style={{ fontSize: 13, fontWeight: 700, color: rsShort ? '#ff9a8a' : '#ecd28a', margin: '6px 0 2px', textAlign: 'center' }}>消費：{COLOR_JA[color]}クリスタル <b style={{ fontSize: 17 }}>{rsCost}</b> 個（Lv{rsRow.skill_lv}→{rsRow.skill_lv + 1}・所持 {rsHave}）{rsShort ? ' ＝不足' : ''}</div>}
-          <div className="sk-hint">消費はカーブ×レア倍率で色によらず同数。成功＝Lv+1／失敗＝消費のみ・Lv据置。最終判定はサーバ。</div>
           <button onClick={rensei} disabled={busy || selSlot == null || rsShort} className="sk-cta">{busy ? '錬成中…' : (rsShort ? 'クリスタル不足' : '錬成する')}</button>
         </>}
 
@@ -4772,7 +4778,7 @@ function ExchangeView({ base, refreshAll, onBack, flash }) {
 /* =================================================================== ミッション */
 // 達成判定・報酬付与は全てサーバ(claim_mission)。クライアントは表示と受取ボタンのみ。
 // 進捗はクライアント目安（導出可能なもののみ）。最終判定はサーバ。報酬は mission_master.reward / 返り値のみ。
-const REWARD_LABEL = { medal: 'メダル', chikarium: 'チカリウム', buki: '武気', c_blue: '青', c_red: '赤', c_rainbow: '虹', hoshou: '保証石' };
+const REWARD_LABEL = { medal: 'メダル', chikarium: 'チカリウム', buki: '武気', c_blue: '青', c_red: '赤', c_rainbow: '虹', hoshou: '恩寵石' };
 const CAT_JA = { daily: 'デイリー', weekly: 'ウィークリー', achievement: '達成' };
 const CAT_RESET = { daily: '毎日0時(JST)にリセット', weekly: '毎週月曜0時(JST)にリセット', achievement: '恒常（1回限り）' };
 function jstWeekStart() {
@@ -4979,11 +4985,15 @@ const repS = {
   dnav: { position: 'absolute', left: 0, right: 0, bottom: 0, padding: '12px 14px 18px', background: 'linear-gradient(0deg,#0a0509 60%,transparent)', display: 'flex', gap: 8 },
   navBtn: { fontFamily: 'inherit', fontSize: 13, letterSpacing: 1, borderRadius: 22, padding: '11px 0', cursor: 'pointer', background: PANEL, border: BORDER, color: GOLD_HI },
 };
-function BattleLogView({ cards, back, flash }) {
+function BattleLogView({ cards, profile, onInterlude, back, flash }) {
   const [logs, setLogs] = useState(null);
   const [err, setErr] = useState(null);
   const [skillMap, setSkillMap] = useState({});
   const [sel, setSel] = useState(null);
+  const [fading, setFading] = useState(false);                       // 0080: 幕間前のフェード
+  const pending = !!(profile && profile.interlude_pending);
+  const loopReadKey = 'ck_loop_read_r' + ((profile && profile.boss_round) || 1);
+  const [readClear, setReadClear] = useState(() => { try { return localStorage.getItem(loopReadKey) === '1'; } catch (e) { return false; } });
   useEffect(() => {
     (async () => {
       try { setLogs(await ChikarianAPI.getBattleLogs(30) || []); }
@@ -4991,6 +5001,15 @@ function BattleLogView({ cards, back, flash }) {
       try { const sm = await ChikarianAPI.getSkillMaster(); const m = {}; (sm || []).forEach(s => { m[s.skill_key] = s; }); setSkillMap(m); } catch (e) {}
     })();
   }, []);
+  // 0080: その周の「8面 面ボス勝利」報告書＝幕間トリガ。interlude_pending の間だけ最上段固定＋発光。
+  const clearLog = (pending && logs) ? (logs.find(l => { const b = parseBossKey(l.boss_key); return b && b.stage === 8 && b.role === 'boss' && l.win; }) || null) : null;
+  // クリア報告書を開いたら既読化（フォールバック判定に使用）
+  useEffect(() => {
+    if (sel && clearLog && sel.id === clearLog.id && !readClear) {
+      setReadClear(true);
+      try { localStorage.setItem(loopReadKey, '1'); } catch (e) {}
+    }
+  }, [sel, clearLog && clearLog.id]);
   const skName = k => (skillMap[k] && skillMap[k].display_name) || k;
   const cardById = {}; (cards || []).forEach(c => { cardById[c.id] = c; });
   const fmtDt = ts => { try { return new Date(ts).toLocaleString('ja-JP'); } catch (e) { return ts; } };
@@ -4999,6 +5018,11 @@ function BattleLogView({ cards, back, flash }) {
   const bossSub = k => { const b = parseBossKey(k); return b ? `${WORLD_NAMES[b.stage] || (b.stage + '面')}・${ROLE_JA[b.role]}` : ''; };
 
   if (logs === null) return <Booting />;
+
+  // クリア報告書を開いた状態からの離脱（リスト/前/次）→ フェード→幕間。読了後のみ発火。
+  const triggerInterlude = () => { setFading(true); setTimeout(() => { setFading(false); setSel(null); if (onInterlude) onInterlude(); }, 1000); };
+  const navAway = (fn) => { if (pending && clearLog && sel && sel.id === clearLog.id && readClear) triggerInterlude(); else fn(); };
+  const orderedLogs = clearLog ? [clearLog, ...logs.filter(l => l.id !== clearLog.id)] : logs;
 
   // 詳細
   if (sel) {
@@ -5013,7 +5037,7 @@ function BattleLogView({ cards, back, flash }) {
     // 文面はwin/相手から決定的に生成（捏造データではなく表示用テンプレ）
     const msg = win ? `部隊は ${label} の討伐に成功した。` : `部隊は ${label} の討伐に失敗した。`;
     return (
-      <div style={S.root}><div style={repS.bg} />
+      <div style={{ ...S.root, opacity: fading ? 0 : 1, transition: 'opacity 1s ease' }}><div style={repS.bg} />
         <div style={repS.body}>
           <div style={repS.scroll}>
             <div style={{ ...repS.result, ...(win ? repS.resultWin : repS.resultLose) }}>{win ? 'VICTORY' : 'DEFEATED'}</div>
@@ -5071,9 +5095,9 @@ function BattleLogView({ cards, back, flash }) {
             </div>}
           </div>
           <div style={repS.dnav}>
-            <button onClick={() => setSel(null)} style={{ ...repS.navBtn, flex: 1.2 }}>リスト</button>
-            <button onClick={() => { if (idx >= 0 && idx < logs.length - 1) setSel(logs[idx + 1]); }} disabled={idx < 0 || idx >= logs.length - 1} style={{ ...repS.navBtn, flex: 1, ...(idx >= logs.length - 1 ? { opacity: .4, cursor: 'default' } : {}) }}>‹ 前</button>
-            <button onClick={() => { if (idx > 0) setSel(logs[idx - 1]); }} disabled={idx <= 0} style={{ ...repS.navBtn, flex: 1, ...(idx <= 0 ? { opacity: .4, cursor: 'default' } : {}) }}>次 ›</button>
+            <button onClick={() => navAway(() => setSel(null))} style={{ ...repS.navBtn, flex: 1.2 }}>リスト</button>
+            <button onClick={() => navAway(() => { if (idx >= 0 && idx < logs.length - 1) setSel(logs[idx + 1]); })} disabled={idx < 0 || idx >= logs.length - 1} style={{ ...repS.navBtn, flex: 1, ...(idx >= logs.length - 1 ? { opacity: .4, cursor: 'default' } : {}) }}>‹ 前</button>
+            <button onClick={() => navAway(() => { if (idx > 0) setSel(logs[idx - 1]); })} disabled={idx <= 0} style={{ ...repS.navBtn, flex: 1, ...(idx <= 0 ? { opacity: .4, cursor: 'default' } : {}) }}>次 ›</button>
           </div>
         </div>
       </div>
@@ -5089,8 +5113,8 @@ function BattleLogView({ cards, back, flash }) {
           {err && <div style={{ fontSize: 11, color: '#ff9aa8', textAlign: 'center', marginTop: 8 }}>記録を表示できません：{err}</div>}
           {logs.length === 0 && !err
             ? <div style={repS.empty}>まだ報告書はありません。<br />ボスへ出撃すると、ここへ記録が届きます。</div>
-            : logs.map(lg => (
-                <button key={lg.id} onClick={() => setSel(lg)} style={repS.rep}>
+            : orderedLogs.map(lg => (
+                <button key={lg.id} onClick={() => setSel(lg)} style={repS.rep} className={(clearLog && lg.id === clearLog.id) ? 'report-loopglow' : undefined}>
                   <div style={repS.repTop}>
                     <span style={{ ...repS.badge, ...(lg.win ? repS.badgeWin : repS.badgeLose) }}>{lg.win ? '勝利' : '敗北'}</span>
                     <span style={repS.repName}>{bossLabel(lg.boss_key)}</span>
@@ -5319,7 +5343,7 @@ function ShurenjoView({ profile, cards, flash }) {
 
       {screen === 'set' && (
         <div>
-          <div style={shurS.note}>属性・装備を設定して実戦闘力を測る。強化なし・報酬なし・回数無制限。</div>
+          <div style={shurS.note}>属性・装備を設定して実戦闘力を測る。回数無制限。</div>
           <div style={shurS.dummy}>
             <div style={shurS.target}>{kErr ? '◎' : <img src="./images/kakashi.png" alt="" onError={() => setKErr(true)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain' }} />}</div>
             <div style={shurS.dn}>カカシ</div>
