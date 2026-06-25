@@ -119,7 +119,7 @@ const LOCK_RPC_AVAILABLE = true;    // 0023(set_card_lock) 適用済み＝有効
 const SAISHU_HARVEST_SEC = 9;                                              // 採取（locked中）で日次上限に達する目安秒数（v3）
 const SAISHU_BLINK_HZ = 6;                                                 // 計算上の点滅周波数（6点滅/秒）
 const SAISHU_PER_PEAK = DAILY_MAX / (SAISHU_BLINK_HZ * SAISHU_HARVEST_SEC); // 1ピーク加算 = 1000/54 ≈ 18.518（サーバのclaim単位10・上限1000は据え置き）
-const SAISHU_TEST_NO_LIMIT = true;   // ★テスト用: 採取の日次1000上限を無視（本番前に false / 削除）
+const SAISHU_TEST_NO_LIMIT = false;  // 本番: 採取の日次1000上限を有効化
 
 // ===== エラーコード→和文 =====
 const ERR_JA = {
@@ -2681,7 +2681,7 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
   const maxDecks = Math.min(2 + Math.floor(((profile && profile.cleared_stage) || 0) / 2), 6);
   const triesUsed = (profile && profile.boss_date === jstToday()) ? (profile.boss_count_today || 0) : 0;
   const triesLeft = Math.max(0, 3 - triesUsed);
-  const BOSS_TEST_NO_LIMIT = true;                                       // ★テスト用・本番前に false か削除
+  const BOSS_TEST_NO_LIMIT = false;                                      // 本番: ボス3回/日ゲートを有効化
   const effTriesLeft = BOSS_TEST_NO_LIMIT ? 99 : triesLeft;             // 出撃可否のみ解放（表示の triesLeft は実数のまま）
 
   async function refetchSorties() {
@@ -3255,7 +3255,7 @@ const kS = { step: { width: 34, height: 34, borderRadius: 8, border: BORDER, bac
 /* =================================================================== 建物ハブ */
 // 練成量・解放・時刻判定は全てサーバ(renkiden系/kajiya系RPC)。クライアントは表示と入力のみ。
 // ※ renkiden/kajiya のRPC定義は repo 未配置（0012-0019外）。返り値/コードはタスク記載に従い防御的に扱う。
-const Q_COST = { crude: 1, refined: 2, enchanted: 4, holy: 8 };   // 枠コスト（balance §2-1）
+const Q_COST = { crude: 1, refined: 3, enchanted: 9, holy: 27 };  // 枠コスト（サーバ0031と一致）
 const Q_LV = { crude: 1, refined: 2, enchanted: 3, holy: 4 };
 const KAJIYA_HOURS = { refined: 24, enchanted: 36, holy: 48 };    // 作業時間（balance §11）
 const Q_ORDER = ['crude', 'refined', 'enchanted', 'holy'];
