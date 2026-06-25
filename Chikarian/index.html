@@ -4947,6 +4947,18 @@ function parseBossKey(k) {
   if (!m) return null;
   return { stage: +m[1], role: m[2], round: m[3] ? +m[3] : 1 };
 }
+
+// ── 鍛冶素材（飾り・確定） canon-06 §5-2／装備片規約 ──
+// 素材は「飾り」＝保管なし・消費なし・解放に不関与。周回1(round=1)の面ボス初回クリアで
+// cleared_stage が進む面の「ドロップ演出」をテキストで記録するだけ。
+// 必要数＝部位(剣/盾/杖)あたり 3/2/1 × 3部位＝精製9 / 魔装6 / 聖装3（貴いほど少ない）。
+// サーバ解放ゲート（0059：精製≥3 / 魔装≥5 / 聖装≥8）にちょうど揃うよう面別に配分。
+function forgeFragmentDrop(stage) {
+  if (stage >= 1 && stage <= 3) return { mat: '金属片', per: 3, total: 9, cum: stage * 3, quality: '精製' };
+  if (stage >= 4 && stage <= 5) return { mat: '魔石の欠片', per: 3, total: 6, cum: (stage - 3) * 3, quality: '魔装' };
+  if (stage >= 6 && stage <= 8) return { mat: '聖別の結晶', per: 1, total: 3, cum: (stage - 5) * 1, quality: '聖装' };
+  return null;
+}
 /* 報告書画面 専用スタイル（report-mockup 移植・共有 S は上書きしない） */
 const repS = {
   bg: { position: 'absolute', inset: 0, background: '#0a0509 radial-gradient(80% 50% at 50% 0%, rgba(120,40,30,.22), transparent 60%)' },
@@ -5061,6 +5073,22 @@ function BattleLogView({ cards, profile, onInterlude, back, flash }) {
                   </div>
                 : <span style={repS.none}>報酬なし（再挑戦できます）</span>}
             </div>
+
+            {(() => {
+              const fr = (win && bk && bk.round === 1 && bk.role === 'boss') ? forgeFragmentDrop(bk.stage) : null;
+              if (!fr) return null;
+              const done = fr.cum >= fr.total;
+              return (
+                <div style={repS.sec}>
+                  <div style={repS.secT}>鍛冶素材</div>
+                  <div style={{ fontSize: 12.5, color: '#cdb488', lineHeight: 1.7 }}>
+                    {fr.mat} <b style={{ color: '#efe6d5' }}>×{fr.per}</b> を入手（{fr.quality}の素材 計 <b style={{ color: '#efe6d5' }}>{fr.cum}/{fr.total}</b>）
+                    {done ? <><br /><span style={{ color: '#aee3dd' }}>▶ {fr.quality}の素材が揃いました（鍛冶屋で確認）。</span></> : null}
+                  </div>
+                  <div style={{ fontSize: 10.5, color: '#7d7160', marginTop: 5, lineHeight: 1.6 }}>※ 素材は飾りです（保管・消費なし）。質の解放は面の到達で行われ、依頼にはメダルと作業時間がかかります。</div>
+                </div>
+              );
+            })()}
 
             <div style={repS.sec}>
               <div style={repS.secT}>戦闘力</div>
