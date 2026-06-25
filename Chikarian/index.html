@@ -3488,8 +3488,8 @@ function ExchangeTab({ profile, cards, refreshAll, flash }) {
         <div style={exS.title}>交換所</div>
         <div style={exS.sub}>不要なカードをクリスタルに交換します。複数選択して一括交換。ロック中・探索/ボス出撃中のカードは除外されます。</div>
       </div>
-      <div style={exS.bal}>所持クリスタル：青 {Number((profile && profile.crystal_blue) || 0).toLocaleString()}／赤 {Number((profile && profile.crystal_red) || 0).toLocaleString()}／虹 {Number((profile && profile.crystal_rainbow) || 0).toLocaleString()}</div>
-      {result && <div style={exS.result}>交換完了：{result.exchanged} 枚{result.skipped ? '（' + result.skipped + ' 枚はロック/出撃中で除外）' : ''}。獲得 青+{result.blue_gained}／赤+{result.red_gained}／虹+{result.rainbow_gained}</div>}
+      <div style={exS.bal}>所持クリスタル：<CrystalIcon color="blue" /> {Number((profile && profile.crystal_blue) || 0).toLocaleString()}／<CrystalIcon color="red" /> {Number((profile && profile.crystal_red) || 0).toLocaleString()}／<CrystalIcon color="rainbow" /> {Number((profile && profile.crystal_rainbow) || 0).toLocaleString()}</div>
+      {result && <div style={exS.result}>交換完了：{result.exchanged} 枚{result.skipped ? '（' + result.skipped + ' 枚はロック/出撃中で除外）' : ''}。獲得 <CrystalIcon color="blue" />+{result.blue_gained}／<CrystalIcon color="red" />+{result.red_gained}／<CrystalIcon color="rainbow" />+{result.rainbow_gained}</div>}
       <div style={exS.actions}>
         <button onClick={selectAll} style={exS.lineBtn} disabled={busy || list.length === 0}>全選択</button>
         <button onClick={clearSel} style={exS.lineBtn} disabled={busy || selIds.length === 0}>選択解除</button>
@@ -3516,7 +3516,7 @@ function ExchangeTab({ profile, cards, refreshAll, flash }) {
                 <button key={c.id} onClick={() => { if (!reason) toggle(c.id); }} disabled={!!reason} style={{ ...exS.card, ...(on ? exS.cardOn : {}), ...(reason ? { opacity: .5, cursor: 'default' } : {}) }}>
                   <div style={exS.cardArt}><DeckSlotArt cardKey={c.card_key} />{reason ? <div style={{ position: 'absolute', top: 4, right: 4, fontSize: 9, fontWeight: 800, color: '#1a1014', background: reason === 'lock' ? 'rgba(210,130,130,.95)' : 'rgba(232,194,90,.95)', borderRadius: 5, padding: '1px 5px', zIndex: 3 }}>{reason === 'lock' ? '🔒' : reason}</div> : (on && <div style={exS.check}>✓</div>)}<div onClick={(e) => { e.stopPropagation(); setDetailCard(c); }} style={{ position: 'absolute', left: 3, bottom: 3, width: 20, height: 20, borderRadius: '50%', background: 'rgba(10,6,9,.82)', border: '1px solid rgba(232,194,90,.5)', color: '#fff3c8', fontSize: 12, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 3 }}>ⓘ</div></div>
                   <div style={exS.cardName}>{RAR_LABEL[info.rarity]} Lv{c.lv || 1}{(c.star || 0) > 0 ? ' ★' + (c.star || 0) : ''}</div>
-                  <div style={exS.cardCx}>{reason ? (reason === 'lock' ? 'ロック中' : reason) : (e ? COLOR_JA[e.color] + '+' + e.count : '—')}</div>
+                  <div style={exS.cardCx}>{reason ? (reason === 'lock' ? 'ロック中' : reason) : (e ? <><CrystalIcon color={e.color} size={13} />+{e.count}</> : '—')}</div>
                 </button>
               );
             })}
@@ -4455,6 +4455,13 @@ function renseiCost(lv, rarity) {
   return mult ? Math.ceil(base * mult) : null;
 }
 const COLOR_JA = { blue: '青', red: '赤', rainbow: '虹' };
+const CRYS_IC = { blue: './images/ic_crystal_blue.png', red: './images/ic_crystal_red.png', rainbow: './images/ic_crystal_rainbow.png' };
+function CrystalIcon({ color, size = 16 }) {
+  const [err, setErr] = useState(false);
+  const key = (color || '').replace('c_', '');
+  if (!CRYS_IC[key] || err) return <span>{COLOR_JA[key] || color}</span>;
+  return <img src={CRYS_IC[key]} alt={COLOR_JA[key] || key} title={COLOR_JA[key] || key} onError={() => setErr(true)} style={{ width: size, height: size, objectFit: 'contain', verticalAlign: 'middle', display: 'inline-block' }} />;
+}
 const TENI_COST = 3000;   // メダル（確定）
 
 /* スキル錬成/転移画面 専用スタイル（skill-mockup の暖色意匠・sk- スコープ・共有 S 不変） */
@@ -4580,7 +4587,7 @@ function SkillView({ base, cards, profile, skillMap, refreshAll, onBack, flash }
         {/* ===== 錬成 ===== */}
         {tab === 'rensei' && <>
           {rResult && <div className="sk-banner" style={{ color: rResult.success ? '#ecd28a' : '#e87f8f', borderColor: rResult.success ? '#8c7038' : '#b83b4d' }}>
-            {rResult.success ? '成功' : '失敗'}：{skName(rResult.skill_key)} Lv{rResult.old_lv}→{rResult.new_lv}（{COLOR_JA[rResult.color]} 消費{rResult.cost}・残{rResult.crystal_remaining}）
+            {rResult.success ? '成功' : '失敗'}：{skName(rResult.skill_key)} Lv{rResult.old_lv}→{rResult.new_lv}（<CrystalIcon color={rResult.color} /> 消費{rResult.cost}・残{rResult.crystal_remaining}）
           </div>}
           <div className="sk-seclabel">強化するスキル枠</div>
           {[0, 1, 2].map(slot => {
@@ -4611,7 +4618,7 @@ function SkillView({ base, cards, profile, skillMap, refreshAll, onBack, flash }
               );
             })}
           </div>
-          {rsCost != null && <div style={{ fontSize: 13, fontWeight: 700, color: rsShort ? '#ff9a8a' : '#ecd28a', margin: '6px 0 2px', textAlign: 'center' }}>消費：{COLOR_JA[color]}クリスタル <b style={{ fontSize: 17 }}>{rsCost}</b> 個（Lv{rsRow.skill_lv}→{rsRow.skill_lv + 1}・所持 {rsHave}）{rsShort ? ' ＝不足' : ''}</div>}
+          {rsCost != null && <div style={{ fontSize: 13, fontWeight: 700, color: rsShort ? '#ff9a8a' : '#ecd28a', margin: '6px 0 2px', textAlign: 'center' }}>消費：<CrystalIcon color={color} />クリスタル <b style={{ fontSize: 17 }}>{rsCost}</b> 個（Lv{rsRow.skill_lv}→{rsRow.skill_lv + 1}・所持 {rsHave}）{rsShort ? ' ＝不足' : ''}</div>}
           <button onClick={rensei} disabled={busy || selSlot == null || rsShort} className="sk-cta">{busy ? '錬成中…' : (rsShort ? 'クリスタル不足' : '錬成する')}</button>
         </>}
 
@@ -4736,9 +4743,9 @@ function ExchangeView({ base, refreshAll, onBack, flash }) {
         <div style={{ position: 'relative', zIndex: 2, height: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div style={{ fontSize: 22, fontWeight: 800, color: GOLD_HI }}>交換しました</div>
           <div style={{ fontSize: 14, color: '#e7d3a6', marginTop: 14, lineHeight: 2, textAlign: 'center' }}>
-            {COLOR_JA[result.crystal_color] || result.crystal_color}クリスタル ×{Number(result.crystal_count || 0).toLocaleString()} 獲得<br />
+            <CrystalIcon color={result.crystal_color} />クリスタル ×{Number(result.crystal_count || 0).toLocaleString()} 獲得<br />
             <span style={{ fontSize: 12, color: '#cdb488' }}>
-              所持 青{Number(result.crystal_blue || 0).toLocaleString()}／赤{Number(result.crystal_red || 0).toLocaleString()}／虹{Number(result.crystal_rainbow || 0).toLocaleString()}
+              所持 <CrystalIcon color="blue" />{Number(result.crystal_blue || 0).toLocaleString()}／<CrystalIcon color="red" />{Number(result.crystal_red || 0).toLocaleString()}／<CrystalIcon color="rainbow" />{Number(result.crystal_rainbow || 0).toLocaleString()}
             </span>
           </div>
           <button onClick={done} style={{ ...S.bigBtn, marginTop: 22 }}>完了</button>
@@ -4762,7 +4769,7 @@ function ExchangeView({ base, refreshAll, onBack, flash }) {
 
         <div style={{ marginTop: 16, padding: '12px 14px', background: PANEL, border: BORDER, borderRadius: 8, textAlign: 'center' }}>
           {est
-            ? <div style={{ fontSize: 14, color: GOLD_HI }}>見込み：{COLOR_JA[est.color] || est.color}クリスタル ×{est.count}</div>
+            ? <div style={{ fontSize: 14, color: GOLD_HI }}>見込み：<CrystalIcon color={est.color} />クリスタル ×{est.count}</div>
             : <div style={{ fontSize: 12, color: '#ff9aa8' }}>このレアの交換レートが見つかりません（最終判定はサーバ）</div>}
           <div style={{ fontSize: 11, color: '#ff9aa8', marginTop: 8, fontWeight: 700 }}>このカードは消滅します。元に戻せません。</div>
           <div style={{ fontSize: 10, color: '#a98f66', marginTop: 4 }}>個数・種類はサーバ確定（マスタ計算）。手計算との丸め差±1は仕様内。図鑑の収集記録は消えません。</div>
