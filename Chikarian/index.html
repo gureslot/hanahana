@@ -4793,16 +4793,21 @@ function jstWeekStart() {
   d.setUTCDate(d.getUTCDate() - (wd === 0 ? 6 : wd - 1));  // 月曜起点（PG date_trunc('week')と一致）
   return d.toISOString().slice(0, 10);
 }
+function RewardImg({ src, label, size = 15 }) {
+  const [err, setErr] = useState(false);
+  if (err) return <span>{label}</span>;
+  return <img src={src} alt={label} title={label} onError={() => setErr(true)} style={{ width: size, height: size, objectFit: 'contain' }} />;
+}
 function rewardChips(reward) {
   if (!reward) return null;
-  const IMG = { medal: ASSETS.ic.medal, chikarium: ASSETS.ic.chikarium };
+  const IMG = { medal: ASSETS.ic.medal, chikarium: ASSETS.ic.chikarium, buki: './images/ic_buki.png', hoshou: './images/ic_onchoseki.png' };
   const CRY = { c_blue: 'blue', c_red: 'red', c_rainbow: 'rainbow' };
   return Object.keys(reward).map(k => {
     if (!REWARD_LABEL[k]) return null;
     const ic = CRY[k]
       ? <CrystalIcon color={CRY[k]} size={15} />
       : (IMG[k]
-          ? <img src={IMG[k]} alt={REWARD_LABEL[k]} title={REWARD_LABEL[k]} style={{ width: 15, height: 15, objectFit: 'contain' }} onError={e => { e.target.style.display = 'none'; }} />
+          ? <RewardImg src={IMG[k]} label={REWARD_LABEL[k]} size={15} />
           : <span>{REWARD_LABEL[k]}</span>);
     return <span key={k} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, color: '#fff3c8', background: 'rgba(232,194,90,.15)', border: '1px solid rgba(232,194,90,.4)', borderRadius: 10, padding: '2px 8px', marginRight: 4 }}>{ic}×{reward[k]}</span>;
   });
@@ -4903,7 +4908,7 @@ function MissionScreen({ profile, cards, refreshAll, back, flash }) {
       {claimReward && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(6,4,4,.78)' }} onClick={() => setClaimReward(null)}>
           <div onClick={e => e.stopPropagation()} style={{ width: 'min(86vw,360px)', background: 'linear-gradient(180deg,#241a17,#160f0d)', border: '1px solid #8c7038', borderRadius: 14, padding: '24px 20px', textAlign: 'center', boxShadow: '0 12px 40px rgba(0,0,0,.6)' }}>
-            <img src="./images/ic_reward.png" alt="" style={{ width: 56, height: 56, objectFit: 'contain' }} onError={e => { e.target.style.display = 'none'; }} />
+            <img src="./images/ic_reward.png" alt="" style={{ width: 120, height: 120, objectFit: 'contain' }} onError={e => { e.target.style.display = 'none'; }} />
             <div style={{ fontSize: 17, fontWeight: 800, color: '#ecd28a', letterSpacing: '.1em', margin: '8px 0 16px' }}>報酬を受け取りました</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center', marginBottom: 20 }}>{rewardChips(claimReward) || <span style={{ color: '#b6a890' }}>なし</span>}</div>
             <button onClick={() => setClaimReward(null)} style={{ width: '100%', padding: '12px 0', border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', fontSize: 15, fontWeight: 800, letterSpacing: '.1em', color: '#0c0a09', background: 'linear-gradient(180deg,#ecd28a,#c7a14e)' }}>閉じる</button>
