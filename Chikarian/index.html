@@ -660,8 +660,9 @@ function Home({ profile, go, flash, onRefresh }) {
   const chikarium = profile ? (profile.chikarium || 0) : 0;
   const medal = profile ? (profile.medal || 0) : 0;
   const dailyGot = dailyGotOf(profile);
-  const reachedCap = !SAISHU_TEST_NO_LIMIT && dailyGot >= DAILY_MAX;
-  const pct = Math.min(100, dailyGot / DAILY_MAX * 100);
+  const dailyCap = DAILY_MAX * Math.max(1, (profile && profile.boss_round) || 1);   // 採取上限＝1000×周回数
+  const reachedCap = !SAISHU_TEST_NO_LIMIT && dailyGot >= dailyCap;
+  const pct = Math.min(100, dailyGot / dailyCap * 100);
   const [countdown, setCountdown] = useState(msUntilMidnight());
   useEffect(() => { const t = setInterval(() => setCountdown(msUntilMidnight()), 1000); return () => clearInterval(t); }, []);
 
@@ -760,7 +761,7 @@ function Home({ profile, go, flash, onRefresh }) {
               <div style={S.resLabel}>チカリウム</div>
               <div style={S.resVal}>{chikarium.toLocaleString()}</div>
               <div style={{ marginTop: 3 }}>
-                <div style={S.gaugeText}>本日 {dailyGot.toLocaleString()}/{DAILY_MAX.toLocaleString()}</div>
+                <div style={S.gaugeText}>本日 {dailyGot.toLocaleString()}/{dailyCap.toLocaleString()}</div>
                 <div style={S.gaugeBar}><div style={{ ...S.gaugeFill, width: `${pct}%` }} /></div>
               </div>
             </div>
@@ -1005,7 +1006,8 @@ function Saishu({ profile, onExit, flash }) {
   useEffect(() => { sideRef.current = side; stateRef.current.okBuf = []; }, [side]);
 
   const serverDaily = SAISHU_TEST_NO_LIMIT ? 0 : dailyGotOf(profile);
-  const remaining = Math.max(0, DAILY_MAX - serverDaily);
+  const dailyCap = DAILY_MAX * Math.max(1, (profile && profile.boss_round) || 1);   // 採取上限＝1000×周回数
+  const remaining = Math.max(0, dailyCap - serverDaily);
 
   useEffect(() => {
     let tid = null, fxRaf = null;
@@ -2912,8 +2914,8 @@ function BossScreen({ profile, cards, onRefresh, back, flash }) {
                     <div className="boss-stat"><span className="k">武器</span><span className="v">{arrJA(bm.weapons, WEAP_JA)}</span></div>
                   </>
                 : <div className="boss-stat"><span className="k">敵情報</span><span className="v" style={{ color: '#ff6a7a' }}>boss_master にデータがありません</span></div>}
-              {/* 所要時間＝テスト値（start_boss_battle と同期。本番は a=1200/b=1500/boss=1800＝約20/25/30分） */}
-              <div className="boss-stat"><span className="k">所要時間</span><span className="v">{({ a: '約10秒', b: '約15秒', boss: '約30秒' })[role] || '約30秒'}</span></div>
+              {/* 所要時間＝本番値（start_boss_battle 0081 と同期：a=600/b=600/boss=1800＝約10/10/30分） */}
+              <div className="boss-stat"><span className="k">所要時間</span><span className="v">{({ a: '約10分', b: '約10分', boss: '約30分' })[role] || '約30分'}</span></div>
 
               <div className="boss-secTitle">メインデッキ（デッキ1）</div>
               <div className="boss-decks2">
