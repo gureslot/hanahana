@@ -3675,7 +3675,7 @@ function RenkidenTab({ profile, refreshAll, flash }) {
       </div>
 
       <button className="tat-fb wide" disabled={busy} onClick={upgrade}>練気殿を強化 Lv{rk.lv}→{rk.lv + 1}（メダル{upFee.toLocaleString()}）</button>
-      <div className="tat-foot">単価 武気1＝メダル5（時間）／即生産 武気1＝メダル15。所持メダル {medal.toLocaleString()}。練成量・残量はサーバ確定値（開くたび/操作後に最新化）。</div>
+      <div className="tat-foot">単価 武気1＝メダル5（時間）／即生産 武気1＝メダル15。</div>
     </div>
   );
 }
@@ -3754,13 +3754,12 @@ function KajiyaTab({ profile, refreshAll, flash }) {
           ? (() => {
               const ms = new Date(inProgress.done_at).getTime() - now;
               const ready = ms <= 0;
-              return <button className="tat-fb gold" disabled={busy || !ready} onClick={() => run(async () => { const _r = await ChikarianAPI.claimKajiya(inProgress.id); if (window.CKSound) CKSound.play('se_enhance_success'); return _r; }, '解放しました')}>{ready ? '受け取る（解放）' : `依頼中：${QUALITY_JA[inProgress.quality]}（残り ${fmtRemain(ms)}）`}</button>;
+              return <button className="tat-fb gold" disabled={busy || !ready} onClick={() => run(async () => { const _r = await ChikarianAPI.claimKajiya(inProgress.id); if (window.CKSound) CKSound.play('se_enhance_success'); return _r; }, '解放しました')}>{ready ? '受け取る（解放）' : '依頼中…'}</button>;
             })()
           : nextQ
             ? <button className="tat-fb gold" disabled={busy} onClick={() => run(() => ChikarianAPI.placeKajiyaOrder(nextQ), '依頼しました')}>強化＝「{QUALITY_JA[nextQ]}」を鍛造依頼（メダル{fee.toLocaleString()}・作業{KAJIYA_HOURS[nextQ]}h）</button>
             : <button className="tat-fb" disabled>全ての質を解放済み</button>}
       </div>
-      <div className="tat-foot">解放・時刻判定はサーバ確定（残り時間は表示の目安）。</div>
     </div>
   );
 }
