@@ -487,7 +487,7 @@ function Login({ flash }) {
         </button>
         <div style={{ fontSize: 11, color: '#8a7250', marginTop: 18, textAlign: 'center', lineHeight: 1.9 }}>
           ログインすると進行データがクラウドに保存されます<br />
-          ログインすることで <a href="./terms.html" target="_blank" rel="noopener" style={{ color: GOLD, textDecoration: 'underline' }}>利用規約</a>・<a href="./privacy.html" target="_blank" rel="noopener" style={{ color: GOLD, textDecoration: 'underline' }}>プライバシーポリシー</a> に同意したものとみなされます
+          ログインすることで <a href="./terms.html" style={{ color: GOLD, textDecoration: 'underline' }}>利用規約</a>・<a href="./privacy.html" style={{ color: GOLD, textDecoration: 'underline' }}>プライバシーポリシー</a> に同意したものとみなされます
         </div>
       </div>
     </div>
@@ -514,7 +514,7 @@ function ConsentGate({ version, onAgree }) {
         <div style={{ fontSize: 17, fontWeight: 800, color: GOLD_HI, letterSpacing: 2 }}>ご利用にあたって</div>
         <div style={{ fontSize: 12.5, color: '#cdb488', lineHeight: 1.9, marginTop: 14 }}>
           チカリアンをプレイするには、<br />
-          <a href="./terms.html" target="_blank" rel="noopener" style={linkS}>利用規約</a> と <a href="./privacy.html" target="_blank" rel="noopener" style={linkS}>プライバシーポリシー</a> への同意が必要です。<br />
+          <a href="./terms.html" style={linkS}>利用規約</a> と <a href="./privacy.html" style={linkS}>プライバシーポリシー</a> への同意が必要です。<br />
           本ゲームは Google アカウントでログインし、カメラ機能を利用します。内容をご確認ください。
         </div>
         <div onClick={() => setAgreed(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center', margin: '18px 0 16px', cursor: 'pointer', userSelect: 'none' }}>
@@ -5680,11 +5680,11 @@ function SettingsScreen({ bgmOn, setBgmOn, volume, setVolume, logout, playOpenin
           <div style={setS.sec}>規約・ポリシー</div>
           <div style={setS.row}>
             <div><div style={setS.k}>利用規約</div><div style={setS.sub}>本ゲームの利用条件</div></div>
-            <a href="./terms.html" target="_blank" rel="noopener" style={{ ...setS.small, textDecoration: 'none' }}>開く</a>
+            <a href="./terms.html" style={{ ...setS.small, textDecoration: 'none' }}>開く</a>
           </div>
           <div style={setS.row}>
             <div><div style={setS.k}>プライバシーポリシー</div><div style={setS.sub}>個人情報の取り扱い</div></div>
-            <a href="./privacy.html" target="_blank" rel="noopener" style={{ ...setS.small, textDecoration: 'none' }}>開く</a>
+            <a href="./privacy.html" style={{ ...setS.small, textDecoration: 'none' }}>開く</a>
           </div>
 
           {/* バージョン */}
