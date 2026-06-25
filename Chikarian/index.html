@@ -3974,6 +3974,7 @@ function TansakuScreen({ profile, cards, refreshAll, back, flash }) {
   const doStart = async () => {
     if (!openStep || busy) return;
     if (isPast) { setStartErr('過去周は閲覧のみです。探索は現在の周回で行います。'); return; }
+    if (deckBossLocked(deckNo)) { setStartErr('デッキ' + deckNo + ' はボスに出撃中です。帰還後に探索へ出せます。'); return; }
     // 探索中デッキの切り替え確認：選択デッキが探索中なら「回収して切り替え」を確認（OKで開始＝サーバが既存分を自動回収）
     const isExploring = (states || []).some(s => s.deck_no === deckNo);
     if (isExploring && !(await uiConfirm('デッキ' + deckNo + ' は別の場所を探索中です。回収して切り替えますか？'))) return;
@@ -4017,6 +4018,13 @@ function TansakuScreen({ profile, cards, refreshAll, back, flash }) {
   };
   const ATTR_JA_REQ = { shin: '芯', ha: '葉', hana: '花' };
   // 開いているノード(openStep)に対するデッキ n の適合（クライアントのグレーアウト用・サーバ 0064 と同式）。
+  // 編成カードがボス出撃中のデッキか（cards.boss_deck_no で判定・追加APIなし）
+  const deckBossLocked = (n) => {
+    const dr2 = (decks || []).find(x => x.deck_no === n);
+    if (!dr2) return false;
+    return [dr2.slot1_card_id, dr2.slot2_card_id, dr2.slot3_card_id]
+      .some(id => { const c = id ? cardById[id] : null; return c && c.boss_deck_no != null; });
+  };
   function deckGate(n) {
     const row = (decks || []).find(x => x.deck_no === n);
     const ids = row ? [row.slot1_card_id, row.slot2_card_id, row.slot3_card_id] : [null, null, null];
@@ -4157,8 +4165,9 @@ function TansakuScreen({ profile, cards, refreshAll, back, flash }) {
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
                 {Array.from({ length: maxDecks }, (_, i) => i + 1).map(n => {
                   const g = deckGate(n); const sel = n === deckNo;
+                  const bossLk = deckBossLocked(n); const ok = g.ok && !bossLk;
                   return (
-                    <button key={n} onClick={() => setDeckNo(n)} style={{ fontFamily: 'inherit', fontSize: 13, fontWeight: 800, padding: '7px 13px', borderRadius: 12, cursor: 'pointer', border: '1.5px solid ' + (sel ? '#e8c25a' : (g.ok ? 'rgba(232,194,90,.4)' : 'rgba(255,143,134,.45)')), background: sel ? 'linear-gradient(180deg,rgba(255,228,154,.28),rgba(232,181,77,.18))' : 'rgba(255,235,180,.05)', color: g.ok ? '#fff3c8' : '#ff8f86', boxShadow: sel ? '0 0 12px rgba(255,200,90,.35)' : 'none' }}>デッキ{n}</button>
+                    <button key={n} onClick={() => { if (!bossLk) setDeckNo(n); }} title={bossLk ? 'ボスに出撃中' : undefined} style={{ fontFamily: 'inherit', fontSize: 13, fontWeight: 800, padding: '7px 13px', borderRadius: 12, cursor: bossLk ? 'not-allowed' : 'pointer', border: '1.5px solid ' + (sel && !bossLk ? '#e8c25a' : (ok ? 'rgba(232,194,90,.4)' : 'rgba(255,143,134,.45)')), background: sel && !bossLk ? 'linear-gradient(180deg,rgba(255,228,154,.28),rgba(232,181,77,.18))' : 'rgba(255,235,180,.05)', color: ok ? '#fff3c8' : '#ff8f86', opacity: bossLk ? .55 : 1, boxShadow: sel && !bossLk ? '0 0 12px rgba(255,200,90,.35)' : 'none' }}>デッキ{n}{bossLk ? ' ⚔' : ''}</button>
                   );
                 })}
               </div>
@@ -4168,11 +4177,12 @@ function TansakuScreen({ profile, cards, refreshAll, back, flash }) {
                 const drn = (decks || []).find(x => x.deck_no === deckNo);
                 const mem = drn ? [drn.slot1_card_id, drn.slot2_card_id, drn.slot3_card_id].map(id => id ? cardById[id] : null) : [null, null, null];
                 const g = deckGate(deckNo);
+                const bossLk = deckBossLocked(deckNo);
                 return (
                   <div style={{ background: 'rgba(255,235,180,.05)', border: '1.5px solid rgba(232,194,90,.5)', borderRadius: 12, padding: '10px 10px 12px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8, gap: 8 }}>
-                      <span style={{ fontSize: 14, fontWeight: 800, color: '#fff3c8' }}>デッキ{deckNo}{di ? '（面' + (st.area || 1) + di.label + '中）' : ''}</span>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: g.ok ? '#cdb488' : '#ff8f86', textAlign: 'right' }}>{g.label}</span>
+                      <span style={{ fontSize: 14, fontWeight: 800, color: '#fff3c8' }}>デッキ{deckNo}{bossLk ? '（ボス出撃中）' : di ? '（面' + (st.area || 1) + di.label + '中）' : ''}</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: (bossLk || !g.ok) ? '#ff8f86' : '#cdb488', textAlign: 'right' }}>{bossLk ? 'ボスに出撃中' : g.label}</span>
                     </div>
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
                       {mem.map((c, si) => c
@@ -4187,11 +4197,12 @@ function TansakuScreen({ profile, cards, refreshAll, back, flash }) {
               })()}
               {startErr && <div className="tan-startErr">{startErr}</div>}
               <button className="tan-go" onClick={doStart}
-                      disabled={busy || cc === 0 || isPast || !deckGate(deckNo).ok}>
+                      disabled={busy || cc === 0 || isPast || !deckGate(deckNo).ok || deckBossLocked(deckNo)}>
                 {isPast ? '過去周は閲覧のみ（現在の周回で探索）'
+                  : deckBossLocked(deckNo) ? 'デッキ' + deckNo + 'はボスに出撃中'
                   : (cc === 0 ? 'デッキにカードがありません'
                     : (!deckGate(deckNo).ok ? deckGate(deckNo).badReason
-                      : (busyDeck ? '出発' : '出発')))}
+                      : '出発'))}
               </button>
             </>
           );
