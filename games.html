@@ -101,6 +101,31 @@ h1{
   color:#ff2a6d;
 }
 
+.game-actions{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+
+.guide{
+  display:inline-block;
+  padding:16px 32px;
+  background:#fff;
+  color:#ff2a6d;
+  text-decoration:none;
+  border-radius:12px;
+  font-size:18px;
+  font-weight:bold;
+  border:2px solid #ff2a6d;
+  transition:0.2s;
+}
+
+.guide:hover{
+  background:#ff2a6d;
+  color:#fff;
+}
+
 .nav{
   display:flex;
   gap:20px;
@@ -143,6 +168,9 @@ h1{
   .game-body{
     width:100%;
   }
+  .game-actions{
+    justify-content:center;
+  }
 }
 </style>
 </head>
@@ -171,7 +199,10 @@ h1{
         チカリウムでカードを引いて戦士を育て、世界を覆う巨大な敵に挑みましょう。
         深紅・黄金・漆黒・紫の重厚な世界を、毎日少しずつ遊べる設計です。
       </p>
-      <a class="play" href="Chikarian/">プレイする</a>
+      <div class="game-actions">
+        <a class="play" href="Chikarian/">プレイする</a>
+        <a class="guide" href="Chikarian/manual.html">遊び方ガイド</a>
+      </div>
     </div>
 
   </div>

@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>チカリアン 遊び方ガイド</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0e0608;
+    --ink2:#150a0e;
+    --panel:#1b0d11;
+    --panel-edge:rgba(202,162,76,.22);
+    --crimson:#b3202f;
+    --crimson-deep:#7a1622;
+    --gold:#caa24c;
+    --gold-soft:#dcbd78;
+    --parch:#ece2d0;
+    --parch-dim:#b6a890;
+    --muted:#8a7c6b;
+    --violet:#2a1840;
+    --serif:"Noto Serif JP","Yu Mincho","Hiragino Mincho ProN",serif;
+    --sans:"Noto Sans JP","Hiragino Sans","Yu Gothic",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    font-family:var(--sans);
+    color:var(--parch);
+    background:
+      radial-gradient(1100px 520px at 50% -8%, rgba(179,32,47,.20), transparent 60%),
+      radial-gradient(800px 600px at 100% 12%, rgba(42,24,64,.30), transparent 55%),
+      radial-gradient(700px 500px at 0% 30%, rgba(122,22,34,.18), transparent 55%),
+      linear-gradient(180deg, var(--ink2), var(--ink) 40%, #0b0507 100%);
+    background-attachment:fixed;
+    line-height:1.9;
+    font-size:16px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:760px;margin:0 auto;padding:0 20px 80px;}
+
+  /* ---- hero ---- */
+  header.hero{
+    text-align:center;
+    padding:64px 16px 30px;
+    position:relative;
+  }
+  .hero-bloom{
+    width:140px;height:140px;display:inline-block;
+    filter:drop-shadow(0 0 16px rgba(179,32,47,.5));
+    animation:bloom 4.6s ease-in-out infinite;
+  }
+  @keyframes bloom{
+    0%,100%{filter:drop-shadow(0 0 13px rgba(179,32,47,.42));transform:scale(1);}
+    50%{filter:drop-shadow(0 0 30px rgba(224,70,80,.7));transform:scale(1.04);}
+  }
+  .hero h1{
+    font-family:var(--serif);font-weight:700;
+    font-size:2.5rem;letter-spacing:.16em;
+    margin:.5em 0 .15em;
+    color:var(--gold);
+    text-shadow:0 1px 0 #000, 0 0 26px rgba(202,162,76,.25);
+  }
+  .hero .eyebrow{
+    font-family:var(--serif);
+    letter-spacing:.5em;font-size:.8rem;color:var(--parch-dim);
+    text-indent:.5em;margin-bottom:.2em;
+  }
+  .hero .tagline{
+    font-family:var(--serif);
+    color:var(--crimson);font-size:1.02rem;letter-spacing:.1em;
+    margin:.4em 0 0;
+  }
+  .hero .lede{
+    color:var(--parch-dim);font-size:.95rem;max-width:34em;margin:1.1em auto 0;
+  }
+
+  /* ---- toc ---- */
+  nav.toc{
+    margin:8px 0 40px;
+    background:linear-gradient(180deg, rgba(27,13,17,.9), rgba(20,10,14,.7));
+    border:1px solid var(--panel-edge);
+    border-radius:8px;
+    padding:22px 22px 24px;
+  }
+  nav.toc h2{
+    font-family:var(--serif);font-weight:600;font-size:1.05rem;
+    color:var(--gold-soft);letter-spacing:.28em;text-align:center;
+    margin:0 0 18px;text-indent:.28em;
+  }
+  .toc-grid{display:grid;grid-template-columns:1fr;gap:2px;}
+  @media(min-width:600px){.toc-grid{grid-template-columns:1fr 1fr;column-gap:26px;}}
+  .toc-grid a{
+    display:flex;align-items:baseline;gap:.7em;
+    text-decoration:none;color:var(--parch);
+    padding:7px 6px;border-radius:5px;
+    border-bottom:1px solid rgba(202,162,76,.08);
+    transition:background .18s ease,color .18s ease;
+  }
+  .toc-grid a:hover,.toc-grid a:focus-visible{background:rgba(179,32,47,.12);color:var(--gold-soft);}
+  .toc-grid .n{
+    font-family:var(--serif);color:var(--crimson);font-weight:600;
+    min-width:1.6em;text-align:right;font-size:.95rem;
+  }
+
+  /* ---- sections ---- */
+  section{
+    scroll-margin-top:18px;
+    background:linear-gradient(180deg, rgba(27,13,17,.55), rgba(17,9,12,.35));
+    border:1px solid var(--panel-edge);
+    border-radius:8px;
+    padding:26px 24px 12px;
+    margin:0 0 22px;
+  }
+  .ch-head{display:flex;align-items:center;gap:.7em;margin-bottom:.2em;}
+  .ch-mark{width:22px;height:22px;flex:none;opacity:.95;}
+  .ch-num{
+    font-family:var(--serif);font-weight:700;color:var(--crimson);
+    font-size:1.05rem;letter-spacing:.05em;
+  }
+  section h2{
+    font-family:var(--serif);font-weight:700;
+    font-size:1.5rem;color:var(--gold);letter-spacing:.04em;
+    margin:.05em 0 0;line-height:1.4;
+  }
+  .rule{height:1px;border:0;margin:14px 0 18px;
+    background:linear-gradient(90deg, var(--gold) 0%, rgba(202,162,76,.25) 30%, transparent 70%);}
+  section h3{
+    font-family:var(--serif);font-weight:600;
+    font-size:1.12rem;color:var(--gold-soft);letter-spacing:.03em;
+    margin:1.5em 0 .5em;
+  }
+  section h3:first-of-type{margin-top:.4em;}
+  p{margin:.7em 0;color:var(--parch);}
+  strong{color:var(--gold-soft);font-weight:700;}
+  em{font-style:normal;color:var(--crimson);}
+
+  ul.list,ol.steps{margin:.6em 0 1em;padding-left:1.5em;}
+  ul.list{list-style:none;padding-left:1.3em;}
+  ul.list li{position:relative;margin:.45em 0;padding-left:.2em;}
+  ul.list li::before{
+    content:"";position:absolute;left:-1.05em;top:.62em;
+    width:7px;height:7px;background:var(--crimson);
+    transform:rotate(45deg);
+    box-shadow:0 0 0 2px rgba(202,162,76,.18);
+  }
+  ol.steps{counter-reset:st;list-style:none;padding-left:0;}
+  ol.steps li{position:relative;margin:.5em 0;padding-left:2.1em;counter-increment:st;}
+  ol.steps li::before{
+    content:counter(st);position:absolute;left:0;top:.05em;
+    width:1.5em;height:1.5em;display:flex;align-items:center;justify-content:center;
+    font-family:var(--serif);font-size:.82rem;font-weight:700;color:var(--gold-soft);
+    background:rgba(179,32,47,.16);border:1px solid rgba(202,162,76,.3);border-radius:50%;
+  }
+  li{color:var(--parch);}
+  ul.list ul.list{margin:.3em 0 .3em;}
+
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin:.6em 0 1em;}
+  .pills span{
+    font-family:var(--serif);font-size:.92rem;color:var(--parch);
+    background:rgba(179,32,47,.12);border:1px solid rgba(202,162,76,.28);
+    border-radius:6px;padding:5px 12px;letter-spacing:.02em;
+  }
+  .pills b{color:var(--gold-soft);}
+
+  .note{
+    border-left:3px solid var(--crimson);
+    background:rgba(122,22,34,.16);
+    border-radius:0 6px 6px 0;
+    padding:12px 16px;margin:1em 0;
+    color:var(--parch-dim);font-size:.95rem;
+  }
+
+  .totop{
+    display:inline-block;margin:8px 0 4px;
+    font-size:.82rem;color:var(--muted);text-decoration:none;letter-spacing:.08em;
+    border-bottom:1px solid transparent;
+  }
+  .totop:hover,.totop:focus-visible{color:var(--gold-soft);border-bottom-color:rgba(202,162,76,.4);}
+
+  footer{text-align:center;padding:30px 0 0;color:var(--muted);}
+  footer .fbloom{width:34px;height:34px;opacity:.7;}
+  footer p{font-family:var(--serif);letter-spacing:.18em;color:var(--parch-dim);font-size:.85rem;margin:.6em 0 0;}
+
+  a{color:var(--gold-soft);}
+  :focus-visible{outline:2px solid var(--gold-soft);outline-offset:2px;border-radius:3px;}
+
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto;}
+    .hero-bloom{animation:none;}
+  }
+  @media (max-width:480px){
+    .hero h1{font-size:2.05rem;}
+    section{padding:22px 17px 10px;}
+    body{font-size:15.5px;}
+  }
+</style>
+</head>
+<body>
+
+<!-- reusable hibiscus emblem -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="petalGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#c8283f"/>
+      <stop offset="1" stop-color="#7a1422"/>
+    </linearGradient>
+    <radialGradient id="coreGrad" cx="50%" cy="42%" r="60%">
+      <stop offset="0" stop-color="#f0d27a"/>
+      <stop offset="1" stop-color="#b8862f"/>
+    </radialGradient>
+    <symbol id="hibiscus" viewBox="0 0 100 100">
+      <g stroke="rgba(0,0,0,.28)" stroke-width="0.6" fill="url(#petalGrad)">
+        <path d="M50,53 C 32,43 32,15 50,7 C 68,15 68,43 50,53 Z"/>
+        <path d="M50,53 C 32,43 32,15 50,7 C 68,15 68,43 50,53 Z" transform="rotate(72 50 50)"/>
+        <path d="M50,53 C 32,43 32,15 50,7 C 68,15 68,43 50,53 Z" transform="rotate(144 50 50)"/>
+        <path d="M50,53 C 32,43 32,15 50,7 C 68,15 68,43 50,53 Z" transform="rotate(216 50 50)"/>
+        <path d="M50,53 C 32,43 32,15 50,7 C 68,15 68,43 50,53 Z" transform="rotate(288 50 50)"/>
+      </g>
+      <line x1="50" y1="50" x2="50" y2="23" stroke="#dcbd78" stroke-width="1.6" stroke-linecap="round" opacity=".92"/>
+      <circle cx="50" cy="24" r="2.4" fill="#f0d27a"/>
+      <circle cx="45.5" cy="28" r="1.7" fill="#e6c463"/>
+      <circle cx="54.5" cy="28" r="1.7" fill="#e6c463"/>
+      <circle cx="50" cy="50" r="8.5" fill="url(#coreGrad)"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+
+  <header class="hero" id="top">
+    <svg class="hero-bloom" aria-hidden="true"><use href="#hibiscus"/></svg>
+    <p class="eyebrow">遊び方ガイド</p>
+    <h1>チカリアン</h1>
+    <p class="tagline">光を集め、花を継ぐ者</p>
+    <p class="lede">光を集め、カードを引き、育て、デッキを組んで戦う。この一冊で、はじめての方も、じっくり遊ぶ方も迷わないように、各機能をまとめました。</p>
+  </header>
+
+  <nav class="toc" id="toc" aria-label="目次">
+    <h2>目次</h2>
+    <div class="toc-grid">
+      <a href="#s1"><span class="n">1</span><span>はじめに</span></a>
+      <a href="#s2"><span class="n">2</span><span>ゲームの基本ループ</span></a>
+      <a href="#s3"><span class="n">3</span><span>資源とアイテム</span></a>
+      <a href="#s4"><span class="n">4</span><span>採取</span></a>
+      <a href="#s5"><span class="n">5</span><span>ガチャ</span></a>
+      <a href="#s6"><span class="n">6</span><span>カードの基礎</span></a>
+      <a href="#s7"><span class="n">7</span><span>デッキ編成</span></a>
+      <a href="#s8"><span class="n">8</span><span>スキル</span></a>
+      <a href="#s9"><span class="n">9</span><span>育成・強化</span></a>
+      <a href="#s10"><span class="n">10</span><span>探索</span></a>
+      <a href="#s11"><span class="n">11</span><span>ボス戦</span></a>
+      <a href="#s12"><span class="n">12</span><span>放置報酬</span></a>
+      <a href="#s13"><span class="n">13</span><span>ミッション</span></a>
+      <a href="#s14"><span class="n">14</span><span>建物</span></a>
+      <a href="#s15"><span class="n">15</span><span>交換所</span></a>
+      <a href="#s16"><span class="n">16</span><span>用語集</span></a>
+    </div>
+  </nav>
+
+  <!-- 1 -->
+  <section id="s1">
+    <div class="ch-head"><svg class="ch-mark" aria-hidden="true"><use href="#hibiscus"/></svg><span class="ch-num">1</span></div>
+    <h2>はじめに</h2>
+    <hr class="rule">
+    <p>『チカリアン』は、退廃した荘厳な世界で<strong>「チカリウム」と呼ばれる赤い光</strong>を集め、カードに宿る戦士たちを率いて戦う、収集・育成型のゲームです。ダークファンタジーの世界で、あなたは<em>光を集め、花を継ぐ者</em>となります。</p>
+    <p>遊び方の流れはシンプルです。<strong>光(チカリウム)を集め</strong>、その力で<strong>カードを引き</strong>、<strong>育て</strong>、<strong>デッキを組んで</strong>、<strong>探索やボス戦に挑む</strong>。これを繰り返し、より強い戦力を築いていきます。</p>
+    <p>操作はすべてスマートフォンの縦画面で完結します。進行データは Google ログインによってクラウドに保存され、機種を変えても引き継がれます。</p>
+    <a class="totop" href="#toc">↑ 目次へもどる</a>
+  </section>
+
+  <!-- 2 -->
+  <section id="s2">
+    <div class="ch-head"><svg class="ch-mark" aria-hidden="true"><use href="#hibiscus"/></svg><span class="ch-num">2</span></div>
+    <h2>ゲームの基本ループ</h2>
+    <hr class="rule">
+    <p>チカリアンの進行は、次のサイクルを繰り返すことで進んでいきます。</p>
+    <ol class="steps">
+      <li><strong>採取でチカリウムを集める</strong> — ホーム中央の大きなボタンからの日々の基本行動です。集めたチカリウムが、カードを引いたり育てたりする元手になります。</li>
+      <li><strong>ガチャでカードを引く</strong> — 集めたチカリウムを使ってカードを獲得します。カードがあなたの戦力の中心です。</li>
+      <li><strong>カードを育てる・強化する</strong> — レベル上げ、★強化、装備(武気の充填)、スキル強化などで、手持ちのカードを強くしていきます。</li>
+      <li><strong>デッキを編成する</strong> — 強くしたカードを組み合わせ、出撃用のデッキを作ります。</li>
+      <li><strong>探索・ボス戦に挑む</strong> — 編成したデッキで戦い、報酬を獲得します。得た報酬がさらなる育成の元手になり、1 に戻ります。</li>
+    </ol>
+    <p>この「<strong>集める → 引く → 育てる → 編成する → 戦う</strong>」の循環が、ゲームを進める基本の流れです。</p>
+    <p>これに加えて、放置中も報酬が貯まる<strong>放置報酬</strong>、達成で報酬がもらえる<strong>ミッション</strong>、貯めたメダルを使う<strong>交換所</strong>などが、このサイクルを後押しします。</p>
+    <p>なお採取には<strong>1日の上限(1000チカリウム)</strong>があり、毎日0時(日本時間)にリセットされます。毎日の採取を習慣にするのが、無理なく戦力を伸ばすコツです。</p>
+    <a class="totop" href="#toc">↑ 目次へもどる</a>
+  </section>
+
+  <!-- 3 -->
+  <section id="s3">
+    <div class="ch-head"><svg class="ch-mark" aria-hidden="true"><use href="#hibiscus"/></svg><span class="ch-num">3</span></div>
+    <h2>資源とアイテム</h2>
+    <hr class="rule">
+    <p>ゲームを進める中で、いくつかの資源やアイテムを扱います。それぞれの役割は次のとおりです。</p>
+    <h3>通貨</h3>
+    <ul class="list">
+      <li><strong>チカリウム</strong> — ゲームの基本通貨です。<strong>採取</strong>で集め、主に<strong>ガチャ(カード入手)</strong>に使います。採取できる量には1日の上限(1000)があり、毎日0時(日本時間)にリセットされます。</li>
+      <li><strong>メダル</strong> — 探索・ボス戦・ミッションなどで得られる通貨です。カードの<strong>★強化</strong>、<strong>建物の強化</strong>(鍛冶屋・練気殿)、<strong>武気の練成</strong>(練気殿)など、幅広く使います。</li>
+      <li><strong>クリスタル(青・赤・虹)</strong> — スキルを強化するための素材です。交換所で不要なカードを変換して入手し、ミッションの報酬でも手に入ります。カードを変換すると、<strong>N・R は青、SR・SSR は赤、SP は虹</strong>のクリスタルになります。<strong>虹</strong>は最も希少な色で、重要なスキルの強化に使います。</li>
+    </ul>
+    <h3>育成・装備の素材</h3>
+    <ul class="list">
+      <li><strong>武気(ぶき)</strong> — カードの<strong>装備を強くする</strong>ための力です。練気殿が時間とともに生み出し、プールに貯まります。カードに「<strong>充填</strong>」することで装備の攻撃力になります。戦闘では一定の割合が失われるため、繰り返し補充していきます(SPカードは装備を持たないため武気を使いません)。</li>
+      <li><strong>経験の書(小・中・大・特大)</strong> — カードの<strong>レベルを上げる</strong>ための育成アイテムです。主にボス戦の勝利で手に入り、難しいボスほど多く、また大きいランクが手に入ります。</li>
+      <li><strong>恩寵石</strong> — カードの<strong>★(ランク)強化</strong>で使い、成功率を上げるアイテムです。ボス戦やミッションでの入手を想定しています。</li>
+    </ul>
+    <a class="totop" href="#toc">↑ 目次へもどる</a>
+  </section>
+
+  <!-- 4 -->
+  <section id="s4">
+    <div class="ch-head"><svg class="ch-mark" aria-hidden="true"><use href="#hibiscus"/></svg><span class="ch-num">4</span></div>
+    <h2>採取</h2>
+    <hr class="rule">
+    <p>採取は、チカリウムを集めるための日々の基本行動です。ホーム画面中央の<strong>赤い大きなボタン</strong>(花に囲まれた赤い光)から行います。</p>
+    <h3>やり方</h3>
+    <ol class="steps">
+      <li>ホーム中央の<strong>赤い大きなボタン</strong>を押すと、カメラが起動します(初回はカメラの使用許可が必要です)。</li>
+      <li><strong>赤く、一部に緑や黄色を含み、7Hz前後で点滅する光</strong>にカメラをかざします。</li>
+      <li>光をうまく捉えると採取が始まり、点滅に合わせてチカリウムが少しずつ貯まっていきます。</li>
+      <li>採取を終えると、集めたぶんがチカリウムの残高に加算されます。</li>
+    </ol>
+    <h3>1日の上限とリセット</h3>
+    <ul class="list">
+      <li>採取できるチカリウムには<strong>1日あたりの上限(1000)</strong>があります。</li>
+      <li>上限に達するとその日は採取できなくなり、画面に次の採取までの残り時間が表示されます。</li>
+      <li>上限は<strong>毎日0時(日本時間)にリセット</strong>され、翌日また採取できます。</li>
+    </ul>
+    <h3>コツ</h3>
+    <ul class="list">
+      <li>光の全体がカメラに収まり、点滅がはっきり映る位置で構えると安定して採取できます。</li>
+      <li>毎日の上限まで採取しておくのが、無理なく戦力を伸ばす近道です。</li>
+    </ul>
+    <a class="totop" href="#toc">↑ 目次へもどる</a>
+  </section>
+
+  <!-- 5 -->
+  <section id="s5">
+    <div class="ch-head"><svg class="ch-mark" aria-hidden="true"><use href="#hibiscus"/></svg><span class="ch-num">5</span></div>
+    <h2>ガチャ</h2>
+    <hr class="rule">
+    <p>ガチャは、集めたチカリウムを使ってカードを手に入れる方法です。ホーム画面の「<strong>チカリアンガチャ</strong>」から行います。</p>
+    <h3>費用と引き方</h3>
+    <ul class="list">
+      <li>1回 <strong>300チカリウム</strong>で、<strong>6枚</strong>まとめて引きます(6連)。</li>
+      <li>6枚はそれぞれ独立して抽選されます。</li>
+    </ul>
+    <h3>レアリティ</h3>
+    <p>カードには5段階のレアリティがあります。出やすい順に <strong>N → R → SR → SSR</strong>、そしてこれらとは別枠の特別なカード <strong>SP</strong> があります。</p>
+    <ul class="list">
+      <li><strong>N・R</strong> — もっとも手に入りやすい、基本のカードです。</li>
+      <li><strong>SR</strong> — やや希少なカードです。</li>
+      <li><strong>SSR</strong> — 標準ランクの中で最も希少で、素の戦力も高いカードです。</li>
+      <li><strong>SP</strong> — 属性や武器を持たない、戦闘専用の特別なカードです(3種)。</li>
+    </ul>
+    <h3>手に入るカード</h3>
+    <ul class="list">
+      <li>多くは「ハイビスカスの戦士」で、<strong>属性(花・葉・芯)×武器(剣・盾・杖)</strong>の組み合わせで種類が分かれます。</li>
+      <li>高レアには、これに加えて特別なカードが含まれます。</li>
+    </ul>
+    <h3>引いたカードについて</h3>
+    <ul class="list">
+      <li>引いたカードはすべて<strong>レベル1・★0・装備なし</strong>の状態で手に入り、ここから育成して強くしていきます。</li>
+      <li>初めて入手したカードは<strong>図鑑</strong>に記録されます(後でそのカードを手放しても記録は残ります)。</li>
+    </ul>
+    <h3>所持枠について</h3>
+    <ul class="list">
+      <li>カードの所持には上限(枠)があります。枠が足りないとガチャは引けません(このときチカリウムは消費されません)。</li>
+      <li>所持枠は<strong>初期200枠</strong>で、面ボスのいる面をクリアするごとに<strong>+100枠ずつ</strong>広がります。</li>
+    </ul>
+    <a class="totop" href="#toc">↑ 目次へもどる</a>
+  </section>
+
+  <!-- 6 -->
+  <section id="s6">
+    <div class="ch-head"><svg class="ch-mark" aria-hidden="true"><use href="#hibiscus"/></svg><span class="ch-num">6</span></div>
+    <h2>カードの基礎</h2>
+    <hr class="rule">
+    <p>カードは、戦力の中心となるユニットです。1枚ごとに<strong>レアリティ・属性・武器・レベル・★・装備・スキル</strong>といった要素を持ち、これらが組み合わさって強さが決まります。カードは全部で<strong>41種</strong>あり、大きく「ハイビスカスマン」「めしべだけマン」「SP」の3グループに分かれます。</p>
+    <h3>レアリティ</h3>
+    <p>通常カードには <strong>N → R → SR → SSR</strong> の4段階があり、これとは別枠の特別なカード <strong>SP</strong> があります。高レアほど素の戦力が高く、レベルの上限も高くなります。</p>
+    <div class="pills">
+      <span>N <b>Lv30</b></span><span>R <b>Lv40</b></span><span>SR <b>Lv50</b></span><span>SSR <b>Lv60</b></span><span>SP <b>Lv50</b></span>
+    </div>
+    <h3>属性と武器</h3>
+    <p>通常カードは、<strong>属性(花・葉・芯)</strong>と<strong>武器(剣・盾・杖)</strong>を1つずつ持ちます。この属性・武器は<strong>スキルの効果対象</strong>を決める重要な要素です(多くのスキルは「特定の属性のカード」「特定の武器のカード」をまとめて強化します)。どの属性・武器を揃えるかが、デッキ編成のカギになります。</p>
+    <ul class="list">
+      <li>ほとんどのカードは「ハイビスカスマン」(花・葉・芯 × 剣・盾・杖)です。</li>
+      <li>「めしべだけマン」は<strong>芯・杖</strong>の希少なカードで、SR・SSRにのみ存在する魔法特化型です。</li>
+    </ul>
+    <h3>戦力 — 本体と装備</h3>
+    <p>カードの<strong>総合戦力</strong>は、<strong>本体と装備の合計</strong>に、さらに<strong>★(ランク)の倍率</strong>を掛けたものです。</p>
+    <ul class="list">
+      <li><strong>本体</strong> — レアリティとレベルで決まる、カード自身の戦力。</li>
+      <li><strong>装備</strong> — 装備の質と込めた武気で決まる戦力(SPは装備を持ちません)。</li>
+      <li><strong>★(ランク)</strong> — 上げると、本体＋装備の合計<strong>全体</strong>に倍率が掛かり、総合戦力が伸びます。</li>
+    </ul>
+    <h3>成長の軸 — レベルと★</h3>
+    <p>カードを強くする主な手段が、<strong>レベル</strong>と<strong>★</strong>です。</p>
+    <ul class="list">
+      <li><strong>レベル</strong>は経験の書で上げます。上限はレアリティごとに異なります(上記)。</li>
+      <li><strong>★(ランク)</strong>は★強化で上げ、上げるほど<strong>総合戦力(本体＋装備の合計)全体</strong>が伸びます。</li>
+    </ul>
+    <h3>スキル</h3>
+    <p>各カードは<strong>スキルを最大3つ</strong>持てます。内訳は、最初から付いている<strong>固定スキル1つ</strong>(そのカードの属性・武器に応じた内容)と、<strong>空き枠2つ</strong>です。空き枠は、他のカードからスキルを移して(転移して)埋めていきます。スキルは戦闘中に発動し、戦力を底上げしたり敵を弱めたりします(詳しくは「スキル」の章で)。</p>
+    <h3>SP — 特別なカード</h3>
+    <p>SPは<strong>無属性・無武器・戦闘専用</strong>の特別なカードで、<strong>ゴールドドラゴン・ゴーストガール・鳳凰</strong>の3種です。装備を持たず総合戦力は本体のみですが、素の本体戦力は非常に高く、それぞれ強力な専用スキルを1つ持ちます。</p>
+    <ul class="list">
+      <li><strong>ゴールドドラゴン「竜気覚醒」</strong> — デッキ全体の戦力を大きく引き上げます。</li>
+      <li><strong>ゴーストガール「哀慟の眼」</strong> — 敵の戦闘力を大きく下げます。</li>
+      <li><strong>鳳凰「不死鳥の加護」</strong> — 敗北しても武気の損失を防ぎます。</li>
+    </ul>
+    <p>ただしSPには大きな制約があります。専用スキルが<strong>発動すると、そのSPカードはその日のあいだデッキから外れ</strong>(編成・探索・出撃のいずれも不可)、<strong>翌0時に復帰</strong>します。</p>
+    <p>また、SPの★強化には特別なルールがあります。SPも★強化できますが、その<strong>素材には「同じ名前で同じ★のSP」しか使えません</strong>。さらに、SPカードを他のカードの★強化の素材にすることはできません。SPの専用スキルは固定で、スキルの強化(錬成)や転移の対象にもなりません。</p>
+    <a class="totop" href="#toc">↑ 目次へもどる</a>
+  </section>
+
+  <!-- 7 -->
+  <section id="s7">
+    <div class="ch-head"><svg class="ch-mark" aria-hidden="true"><use href="#hibiscus"/></svg><span class="ch-num">7</span></div>
+    <h2>デッキ編成</h2>
+    <hr class="rule">
+    <p>デッキは、ボス戦や探索に連れていくカードの組み合わせです。ホーム画面の「<strong>デッキ編成</strong>」から作成・変更します。</p>
+    <h3>デッキの枚数と本数</h3>
+    <ul class="list">
+      <li>1つのデッキには<strong>カードを3枚</strong>までセットできます(空きスロットがあってもかまいません)。</li>
+      <li>使えるデッキの本数は<strong>進行に応じて増えていき</strong>、<strong>最大6本</strong>になります。</li>
+    </ul>
+    <h3>コスト上限</h3>
+    <p>デッキに入れられるカードには、<strong>3枚のコスト合計が11まで</strong>という制限があります。コストはレアリティで決まります。</p>
+    <div class="pills">
+      <span>N <b>1</b></span><span>R <b>2</b></span><span>SR <b>3</b></span><span>SP <b>4</b></span><span>SSR <b>5</b></span>
+    </div>
+    <div class="note">例えばSSR(5)を3枚並べると合計15で上限を超えるため組めません。SSR(5)＋SR(3)＋SR(3)＝11、SSR(5)＋SP(4)＋R(2)＝11 のように、<strong>上限11に収まる組み合わせを考えること</strong>がデッキ編成の核心です。高レアばかりを並べれば強い、というわけではありません。</div>
+    <h3>編成のルール</h3>
+    <ul class="list">
+      <li><strong>同じカードを、1つのデッキ内で複数のスロットに入れることはできません</strong>。</li>
+      <li><strong>SPカードが離脱中(専用スキルを使った当日)</strong>のあいだは、そのカードを編成できません(翌0時に復帰します)。</li>
+    </ul>
+    <h3>装備(充填)もここから</h3>
+    <p>デッキに入れたカードには、この画面から<strong>武気の充填(装備)</strong>も行えます(カードをタップ)。なお、<strong>武気を持てるのはデッキに入っているカードだけ</strong>で、デッキから外すと充填した武気は練気殿のプールに戻ります。</p>
+    <h3>使用中のデッキ</h3>
+    <p>デッキをボス戦に出撃させたり、探索に送ったりすると、そのデッキは「<strong>使用中</strong>」として占有されます。ホーム左上の「<strong>出撃 ×N</strong>」「<strong>探索 ×N</strong>」は、いま使われているデッキの数を表します。使用中のデッキは、戻ってくるまで別の用途には使えません。</p>
+    <a class="totop" href="#toc">↑ 目次へもどる</a>
+  </section>
+
+  <!-- 8 -->
+  <section id="s8">
+    <div class="ch-head"><svg class="ch-mark" aria-hidden="true"><use href="#hibiscus"/></svg><span class="ch-num">8</span></div>
+    <h2>スキル</h2>
+    <hr class="rule">
+    <p>スキルは、戦闘中に発動してデッキを有利にする効果です。カード1枚につき<strong>最大3つ</strong>のスキルを持てます。</p>
+    <h3>スキル枠 — 固定1＋空き2</h3>
+    <ul class="list">
+      <li><strong>固定スキル(1枠)</strong> — カードに最初から付いているスキルです。内容はそのカードの属性・武器とレアリティに応じて決まり、後から別のスキルに変更することはできません。</li>
+      <li><strong>空き枠(2枠)</strong> — 最初は空いています。後述の<strong>スキル転移</strong>で、他のカードからスキルを移して埋めます。</li>
+    </ul>
+    <h3>発動率と効果量</h3>
+    <ul class="list">
+      <li>スキルは戦闘のたびに必ず発動するわけではなく、それぞれ<strong>発動率</strong>があります。</li>
+      <li>発動したときの<strong>効果の大きさ(効果量)は、スキルのレベルが高いほど大きく</strong>なります。</li>
+      <li>スキルレベルを上げても<strong>発動率は変わりません</strong>(上がるのは効果量だけです)。</li>
+    </ul>
+    <h3>スキルの効果(種類)</h3>
+    <ul class="list">
+      <li><strong>自分のカードを強化する</strong> — 本体・装備・総合戦力を上げます。「特定の属性」「特定の武器」のカードだけをまとめて強化するものが多く、デッキの属性・武器を揃えるほど噛み合います。</li>
+      <li><strong>デッキ全体を強化する</strong> — デッキにいる全カードの戦力を引き上げます。</li>
+      <li><strong>条件で強くなる</strong> — 「発動しているスキルが多いほど」「格上の敵に挑むほど」など、状況に応じて効果が伸びます。</li>
+      <li><strong>敵を弱くする</strong> — 敵の戦闘力を下げます。</li>
+      <li><strong>リスク・保険</strong> — リスクと引き換えに大きく強化するもの、敗北時の損失を防ぐものなどもあります。</li>
+    </ul>
+    <h3>スキル強化(レベルアップ)</h3>
+    <p>スキルのレベルは<strong>クリスタル</strong>を使って上げます(★強化とは別の操作で、カード詳細画面から行います)。</p>
+    <ul class="list">
+      <li>1レベル上げるごとに1回挑戦し、<strong>クリスタルを消費</strong>します。</li>
+      <li>成功するかどうかは<strong>使うクリスタルの色</strong>で決まります。<strong>虹は必ず成功</strong>し、赤は中程度、青は成功しにくい代わりに手に入りやすい色です。</li>
+      <li><strong>失敗してもレベルは下がりません</strong>(消費したクリスタルだけがなくなります)。</li>
+      <li>レベルが高いほど1回に必要なクリスタルの数は増え、また高レアのスキルほど多く必要です。</li>
+      <li>伸びるのは効果量だけで、レベルに上限はありません(やり込み要素です)。</li>
+    </ul>
+    <h3>スキル転移</h3>
+    <p>不要なカードが持つスキルを、別のカードの<strong>空き枠</strong>に移すのが<strong>スキル転移</strong>です。</p>
+    <ul class="list">
+      <li>素材にしたカードの<strong>固定スキル・空き枠スキルのどちらからでも</strong>、移すスキルを1つ選べます。</li>
+      <li>1回で移せるのは<strong>1つだけ</strong>です。素材カードは<strong>消滅</strong>し、選ばなかったスキルも一緒に失われます(当たりを1つ救い出すイメージです)。</li>
+      <li>スキルは<strong>コピーではなく移動</strong>で、育てたレベルもそのまま引き継がれます。</li>
+      <li>費用は<strong>メダル</strong>で、<strong>失敗はありません</strong>(必ず移せます)。</li>
+      <li>移し先は必ず空き枠です。カード自身の固定スキルそのものを、別のスキルに変えることはできません。</li>
+    </ul>
+    <p>なお、<strong>SPカードの専用スキルは固定</strong>で、スキル強化・転移のどちらの対象にもなりません。</p>
+    <a class="totop" href="#toc">↑ 目次へもどる</a>
+  </section>
+
+  <!-- 9 -->
+  <section id="s9">
+    <div class="ch-head"><svg class="ch-mark" aria-hidden="true"><use href="#hibiscus"/></svg><span class="ch-num">9</span></div>
+    <h2>育成・強化</h2>
+    <hr class="rule">
+    <p>カードを強くする手段は、大きく「<strong>レベル</strong>」「<strong>★強化</strong>」「<strong>装備(充填)</strong>」「<strong>スキル強化・転移</strong>」の4つです。スキル関連は前章のとおりなので、ここでは残りの3つを説明します。</p>
+    <h3>レベル</h3>
+    <p>経験の書を使ってカードのレベルを上げます。レベルが上がると、<strong>本体戦力</strong>と、装備に込められる枠の数(後述の充填量)が増えます。</p>
+    <ul class="list">
+      <li>経験の書は「小・中・大・特大」の4種で、大きいほど多くの経験値が入ります。</li>
+      <li>次のレベルに必要な経験値は、レベルが上がるほど増えていきます。</li>
+      <li>レベルには上限があります(N=30 / R=40 / SR=50 / SSR=60 / SP=50)。<strong>すでに上限に達したカードには、経験の書を使えません</strong>(選べないようになっています)。</li>
+      <li>上限の手前のカードに、上限を超えるぶんまで経験の書を使おうとした場合は、<strong>無駄になる経験値の量が表示され、使うかどうかを選べます</strong>(承知のうえで使えば、超過分は失われます)。</li>
+    </ul>
+    <h3>★強化</h3>
+    <p>カードの<strong>★(ランク)</strong>を上げると、<strong>総合戦力(本体＋装備)全体</strong>が伸びます(ランクに上限はありません)。</p>
+    <ul class="list">
+      <li>★強化には素材としてカードを1枚使い、<strong>成功・失敗のどちらの場合でも素材カードは失われます</strong>。</li>
+      <li>素材にできるのは、ベースと<strong>同じレアリティ・同じ★(ランク)</strong>のカードです(SPは「同名・同★のSP」のみ。SP自身は他カードの素材にできません)。</li>
+      <li><strong>成功率は、素材カードのレベルで決まります</strong>。素材をレベル上限まで育てるほど成功率が上がり、★0なら素材が最大レベルで<strong>確実に成功</strong>します。★(ランク)が上がるほど成功率の上限は下がり、足りないぶんは<strong>恩寵石</strong>で補います(1個ごとに成功率が上がります)。</li>
+      <li>費用として<strong>メダル</strong>もかかります(★が高いほど多くかかります)。</li>
+      <li><strong>ロックしたカードは、ベース・素材のどちらにも使えません</strong>。</li>
+    </ul>
+    <h3>装備(充填)</h3>
+    <p>カードの総合戦力の多くを占めるのが<strong>装備</strong>です。装備は、<strong>武気をカードに「充填」する</strong>ことで強くなります。</p>
+    <ul class="list">
+      <li>充填は<strong>デッキ編成の画面</strong>で行います。デッキに入れたカードをタップして武気を込めます(ホームの「強化合成」は★強化専用です)。</li>
+      <li><strong>武気を持てるのはデッキに入っているカードだけ</strong>です。カードをデッキから外すと、込めていた武気は自動で<strong>練気殿のプールに戻ります</strong>。</li>
+      <li>充填できる<strong>枠の数(充填量)はカードのレベルで増えます</strong>(SPは装備を持たないため充填できません)。</li>
+      <li><strong>装備の質</strong>(粗製→精製→魔装→聖装)が高いほど1枠あたりの攻撃力が上がります(ただし1枠に必要な武気も増えます)。質は面のクリアに応じて<strong>鍛冶屋</strong>で作れるようになり、一度作った質はどのカードにも使えます(詳しくは「建物」の章で)。</li>
+      <li>充填する武気は<strong>練気殿</strong>で生産します(メダルを使い、時間とともに武気が貯まります)。</li>
+      <li>戦闘では込めた武気が一定割合失われます。減った武気は練気殿で補充し、また充填します。</li>
+    </ul>
+    <a class="totop" href="#toc">↑ 目次へもどる</a>
+  </section>
+
+  <!-- 10 -->
+  <section id="s10">
+    <div class="ch-head"><svg class="ch-mark" aria-hidden="true"><use href="#hibiscus"/></svg><span class="ch-num">10</span></div>
+    <h2>探索</h2>
+    <hr class="rule">
+    <p>探索は、デッキを各地へ送り出し、時間とともに報酬を集めるコンテンツです。ホーム画面の「<strong>探索</strong>」から行います。</p>
+    <h3>送り出し方</h3>
+    <ul class="list">
+      <li>探索する<strong>エリア</strong>と<strong>深さ(浅域・中域・深域)</strong>を選び、デッキを送り出します。</li>
+      <li>行けるエリアは、ボスの<strong>面をクリアするごとに増えていきます</strong>。</li>
+      <li>奥のエリアに入るには、そのデッキの<strong>本体戦力が一定以上</strong>必要です(探索では武気は関係せず、カード本体の戦力だけで判定します)。</li>
+    </ul>
+    <h3>収入の効率</h3>
+    <ul class="list">
+      <li><strong>奥のエリアほど、また深く潜るほど、収入の効率が上がります</strong>(エリアと深さが一続きの段階になっていて、先に進むほど多くなります)。</li>
+      <li>得られるのは主に<strong>メダル</strong>で、あわせて<strong>経験の書</strong>なども手に入ります。</li>
+    </ul>
+    <h3>報酬の蓄積</h3>
+    <ul class="list">
+      <li>貯まった報酬は<strong>いつでも回収</strong>できます。</li>
+      <li><strong>蓄積に上限はありません</strong>。収入は経過した実時間に比例するため、こまめに回収しても、しばらく放っておいても、得られる総量は変わりません(張り付く必要はありません)。</li>
+    </ul>
+    <h3>デッキの占有</h3>
+    <ul class="list">
+      <li>探索に出している間、そのデッキは「<strong>使用中</strong>」として占有され、ボス戦などには使えません。</li>
+      <li>複数のデッキを同時に探索へ出せます(ホーム左上の「探索 ×N」がその数です)。</li>
+    </ul>
+    <p>なお、何もしていない間も自動で収入が貯まる「<strong>放置報酬</strong>」は次章で説明します。</p>
+    <a class="totop" href="#toc">↑ 目次へもどる</a>
+  </section>
+
+  <!-- 11 -->
+  <section id="s11">
+    <div class="ch-head"><svg class="ch-mark" aria-hidden="true"><use href="#hibiscus"/></svg><span class="ch-num">11</span></div>
+    <h2>ボス戦</h2>
+    <hr class="rule">
+    <p>ボス戦は、編成したデッキでボスに挑み、報酬と進行(面のクリア)を得るコンテンツです。ホーム画面の「<strong>ボス戦</strong>」から行います。</p>
+    <h3>挑戦のしかた</h3>
+    <ul class="list">
+      <li>ステージは複数の面に分かれていて、各面に<strong>中ボスA・中ボスB・面ボス</strong>がいます。</li>
+      <li>挑むボスとデッキを選んで出撃します。ボスの<strong>属性・武器は挑む前の画面で確認</strong>できるので、有利なデッキを当てるのが攻略のコツです。出撃前の画面では、デッキ各カードの<strong>スキル・発動率・効果</strong>も確認できます。</li>
+      <li>ボスへ送り出している間、そのデッキは「<strong>出撃中</strong>」として占有されます(ホーム左上の「出撃 ×N」がその数で、複数のデッキを同時に出撃させられます)。</li>
+    </ul>
+    <h3>勝敗の決まり方</h3>
+    <p>勝敗は運ではなく、<strong>戦力の比べ合いで決まります</strong>。</p>
+    <ul class="list">
+      <li>自分の<strong>デッキ実戦闘力 ≥ 敵の戦力</strong>なら勝ち、下回れば負けです。</li>
+      <li>デッキ実戦闘力は、各カードの総合戦力に、後述の<strong>相性(三すくみ)</strong>と、戦闘中に発動した<strong>スキル</strong>の効果を反映して合計した値です。スキルは確率で発動するため、同じデッキでも戦力は毎回少し変動します。</li>
+    </ul>
+    <h3>相性(三すくみ)</h3>
+    <p>カードとボスには、属性と武器それぞれに相性があります。</p>
+    <ul class="list">
+      <li><strong>属性</strong> — 花は芯に、芯は葉に、葉は花に強い(花→芯→葉→花)。</li>
+      <li><strong>武器</strong> — 盾は剣に、剣は杖に、杖は盾に強い(盾→剣→杖→盾)。</li>
+      <li>有利なら戦力が上がり(×1.2)、不利なら下がります(×0.8)。相性なし(中立)は変化しません。</li>
+      <li>ボスは<strong>複数の属性・武器を持つことがあり</strong>、その場合は有利と不利が打ち消し合うため、尖った有利を取りにくくなります。</li>
+      <li><strong>1面のボスは属性・武器を持たない</strong>ため相性は無関係です。<strong>SPカードも常に中立</strong>です。</li>
+    </ul>
+    <h3>1日の回数</h3>
+    <ul class="list">
+      <li>ボス戦は<strong>1日3回</strong>まで挑戦でき、毎日<strong>0時(日本時間)にリセット</strong>されます。</li>
+    </ul>
+    <h3>武気の損失</h3>
+    <ul class="list">
+      <li>戦闘では、込めた<strong>武気が一定割合失われます</strong>。失われる割合は敵との戦力差で決まり、競り合いや敗北ほど大きく、相手を大きく上回るほど小さくなります。</li>
+      <li><strong>SPカードは武気を持たないため、損失しません</strong>。</li>
+      <li>鳳凰の「不死鳥の加護」が発動すると、敗北時の武気損失を防げます。</li>
+      <li>減った武気は練気殿で補充し、また充填します。</li>
+    </ul>
+    <h3>報酬と面クリア</h3>
+    <ul class="list">
+      <li>勝利すると、<strong>メダル</strong>や<strong>経験の書</strong>が手に入ります。</li>
+      <li><strong>面ボスに初めて勝つとその面をクリア</strong>したことになり、<strong>次の面・カードの所持枠(+100)・デッキの本数</strong>などが解放されていきます。</li>
+      <li>戦績は「<strong>報告書</strong>」に記録されます。</li>
+    </ul>
+    <div class="note">戦闘後に「装備片」などのドロップ演出が出ることがありますが、これは<strong>見た目だけの演出</strong>で、アイテムとして手に入るものではありません。</div>
+    <a class="totop" href="#toc">↑ 目次へもどる</a>
+  </section>
+
+  <!-- 12 -->
+  <section id="s12">
+    <div class="ch-head"><svg class="ch-mark" aria-hidden="true"><use href="#hibiscus"/></svg><span class="ch-num">12</span></div>
+    <h2>放置報酬</h2>
+    <hr class="rule">
+    <p>放置報酬は、ゲームを開いていない間も<strong>自動で貯まっていく収入</strong>です。ホーム画面の宝箱「<strong>放置報酬</strong>」から受け取ります。</p>
+    <ul class="list">
+      <li>何も操作しなくても、<strong>時間の経過とともに自動で</strong>報酬(主に<strong>メダル</strong>)が貯まっていきます。</li>
+      <li><strong>蓄積に上限はありません</strong>。しばらく起動していなくても、その間のぶんがすべて貯まっています(収入は経過した実時間に比例します)。</li>
+      <li>貯まった報酬は、ホームの「放置報酬」からまとめて受け取れます。</li>
+      <li>これは控えめな<strong>基礎収入</strong>です。より効率よく稼ぎたいときは、デッキを送り出す「<strong>探索</strong>」を活用しましょう。</li>
+    </ul>
+    <a class="totop" href="#toc">↑ 目次へもどる</a>
+  </section>
+
+  <!-- 13 -->
+  <section id="s13">
+    <div class="ch-head"><svg class="ch-mark" aria-hidden="true"><use href="#hibiscus"/></svg><span class="ch-num">13</span></div>
+    <h2>ミッション</h2>
+    <hr class="rule">
+    <p>ミッションは、特定の条件を達成すると報酬がもらえるしくみです。ホーム画面右上の「<strong>ミッション</strong>」から確認します。</p>
+    <h3>3種類のミッション</h3>
+    <ul class="list">
+      <li><strong>デイリー</strong> — 毎日入れ替わるミッションです(0時／日本時間にリセット)。「採取する」「ボスに挑戦する」「ガチャを引く」など、日々のプレイで自然に達成できるものが中心です。</li>
+      <li><strong>ウィークリー</strong> — 1週間単位のミッションです(毎週月曜にリセット)。デイリーより条件は重めですが、報酬も大きめです。</li>
+      <li><strong>達成</strong> — 常設の、一度きりのミッションです。ゲームを進める中での節目(採取やボス、図鑑の収集、デッキの戦力、スキルの育成など)を達成すると報酬がもらえます。</li>
+    </ul>
+    <h3>報酬の受け取り方</h3>
+    <ul class="list">
+      <li>条件を満たすと、そのミッションの報酬を<strong>受け取れる</strong>ようになります。<strong>自分で受け取る操作</strong>が必要で、達成しただけでは自動では入りません。</li>
+      <li>報酬は、スキル強化に使う<strong>クリスタル</strong>を中心に、<strong>メダル・武気・チカリウム</strong>などです。特に<strong>達成ミッション</strong>では、貴重な<strong>虹クリスタル</strong>などが手に入ります。</li>
+    </ul>
+    <h3>全達成ボーナス</h3>
+    <ul class="list">
+      <li>デイリー・ウィークリーは、その<strong>すべてのミッションを受け取ると、追加のボーナス報酬</strong>がもらえます。</li>
+    </ul>
+    <a class="totop" href="#toc">↑ 目次へもどる</a>
+  </section>
+
+  <!-- 14 -->
+  <section id="s14">
+    <div class="ch-head"><svg class="ch-mark" aria-hidden="true"><use href="#hibiscus"/></svg><span class="ch-num">14</span></div>
+    <h2>建物</h2>
+    <hr class="rule">
+    <p>「建物」では、戦力を支える施設を運用します。<strong>練気殿・鍛冶屋・修練場</strong>があり、ホーム画面の「<strong>建物</strong>」から入ります。</p>
+    <h3>練気殿 — 武気をつくる</h3>
+    <p>練気殿は、装備に使う<strong>武気を生産する施設</strong>です。</p>
+    <ul class="list">
+      <li>武気は<strong>時間とともに自動で</strong>生産され、プールに貯まっていきます(起動していない間も貯まります)。</li>
+      <li>生産には<strong>メダルを使います</strong>。あらかじめ生産に充てるメダルを預けておくと、その範囲で時間とともに武気が作られていきます。</li>
+      <li><strong>貯められる量(保管上限)には限りがあり</strong>、上限まで貯まると生産は一時停止します(預けたメダルのうち、まだ生産に使われていないぶんは残るので、無駄になりません)。</li>
+      <li>急いで武気がほしいときは、<strong>即生産</strong>もできます(時間をかけて生産するより多めのメダルがかかります)。</li>
+      <li>練気殿は<strong>メダルでレベルアップ</strong>でき、上げると<strong>生産の速さと保管上限の両方</strong>が上がります。</li>
+    </ul>
+    <p>(生産した武気をカードに込める「充填」は、デッキ編成の画面で行います。詳しくは「育成・強化」の章を参照してください。)</p>
+    <h3>鍛冶屋 — 装備の質をつくる</h3>
+    <p>鍛冶屋は、<strong>装備の質(装備ランク)</strong>を作り出す施設です。</p>
+    <ul class="list">
+      <li>装備の質は <strong>粗製 → 精製 → 魔装 → 聖装</strong> の順で、<strong>上の質ほど装備が強くなります</strong>(1枠あたりの攻撃力が上がります)。<strong>粗製は最初から</strong>使えます。</li>
+      <li>上位の質を作れるようになるには、<strong>ボスの面をある程度まで進める</strong>必要があります(進めるほど、より上の質の依頼が解禁されていきます)。</li>
+      <li>解禁された質は、<strong>「依頼」を出して作ります</strong>。依頼には<strong>メダル</strong>がかかり、<strong>完成までは作業時間を待ちます</strong>(上の質ほど時間が長くなります)。すぐに完成させる手段はありません。</li>
+      <li>依頼は<strong>1件ずつ</strong>で、前の依頼が完成してから次を出せます。また、質は<strong>順番どおり</strong>(粗製→精製→魔装→聖装)に解放していきます(飛ばせません)。</li>
+      <li>一度作った質は、<strong>どのカードにも使えます</strong>。</li>
+    </ul>
+    <h3>修練場 — 戦力を試す</h3>
+    <p>修練場は、<strong>自分のデッキの実戦闘力を数値で確かめられる</strong>練習場です。</p>
+    <ul class="list">
+      <li><strong>カカシ(戦力0の的)</strong>を相手にするため、<strong>勝敗はつきません</strong>。三すくみやスキルの発動による戦力のブレを確かめるのに使います。</li>
+      <li>カカシの<strong>属性・武器を変えて</strong>(組み合わせは多数)、相性込みの戦力も試せます。</li>
+      <li><strong>無料・武気を消耗しない・回数無制限</strong>です。気軽に入れます。</li>
+      <li>ここでは、<strong>SPの専用スキルが発動しても当日離脱しません</strong>(本番のボス戦・探索のみ離脱します)。</li>
+    </ul>
+    <a class="totop" href="#toc">↑ 目次へもどる</a>
+  </section>
+
+  <!-- 15 -->
+  <section id="s15">
+    <div class="ch-head"><svg class="ch-mark" aria-hidden="true"><use href="#hibiscus"/></svg><span class="ch-num">15</span></div>
+    <h2>交換所</h2>
+    <hr class="rule">
+    <p>交換所では、不要なカードを<strong>クリスタルに交換</strong>できます。クリスタルは、スキル強化に使う素材です。</p>
+    <h3>交換のしくみ</h3>
+    <ul class="list">
+      <li>カードを交換すると、その<strong>レアリティに応じた色</strong>のクリスタルが手に入ります。
+        <ul class="list">
+          <li><strong>N・R → 青クリスタル</strong></li>
+          <li><strong>SR・SSR → 赤クリスタル</strong></li>
+          <li><strong>SP → 虹クリスタル</strong></li>
+        </ul>
+      </li>
+      <li>手に入る量は、カードの<strong>レアリティが高いほど、また★(ランク)が高いほど多く</strong>なります。</li>
+      <li>カードの<strong>レベルや装備の質は、交換で手に入るクリスタルの量には影響しません</strong>(交換で見られるのはレアリティと★だけです)。</li>
+    </ul>
+    <h3>注意点</h3>
+    <ul class="list">
+      <li>交換は<strong>一方向</strong>です。クリスタルからカードには戻せません。</li>
+      <li>交換するとそのカードは<strong>手元から無くなります</strong>(ただし<strong>図鑑の記録は残る</strong>ので、コンプリート状況には影響しません)。</li>
+      <li><strong>ロックしたカードは交換できません</strong>。手放したくないカードは、あらかじめロックしておくと安心です。</li>
+    </ul>
+    <a class="totop" href="#toc">↑ 目次へもどる</a>
+  </section>
+
+  <!-- 16 -->
+  <section id="s16">
+    <div class="ch-head"><svg class="ch-mark" aria-hidden="true"><use href="#hibiscus"/></svg><span class="ch-num">16</span></div>
+    <h2>用語集</h2>
+    <hr class="rule">
+    <h3>通貨・アイテム</h3>
+    <ul class="list">
+      <li><strong>チカリウム</strong> — 採取で集める基本通貨。主にガチャに使う(1日の採取量に上限あり)。</li>
+      <li><strong>メダル</strong> — 探索・ボス戦・ミッションで得る通貨。★強化・建物・武気の生産などに使う。</li>
+      <li><strong>クリスタル(青・赤・虹)</strong> — スキル強化の素材。交換所やミッションで入手。N・R→青、SR・SSR→赤、SP→虹。虹が最希少。</li>
+      <li><strong>武気(ぶき)</strong> — 装備を強くする力。練気殿で生産し、カードに充填する。</li>
+      <li><strong>経験の書</strong> — カードのレベルを上げる育成アイテム(小・中・大・特大)。</li>
+      <li><strong>恩寵石</strong> — ★強化の成功率を上げるアイテム(旧称・確率保証石)。</li>
+    </ul>
+    <h3>カード</h3>
+    <ul class="list">
+      <li><strong>レアリティ</strong> — カードの希少度。N・R・SR・SSR と、別枠の SP。</li>
+      <li><strong>属性</strong> — 花・葉・芯。スキルの対象や相性に関わる。</li>
+      <li><strong>武器</strong> — 剣・盾・杖。属性と同様に対象・相性に関わる(力の「武気」とは別物)。</li>
+      <li><strong>★(ランク)</strong> — カードの強化段階。上げると総合戦力が伸びる。</li>
+      <li><strong>本体／装備／総合戦力</strong> — 本体＝カード自身の戦力、装備＝充填した武気ぶんの戦力、総合戦力＝それらを合わせ★倍率を掛けた値。</li>
+      <li><strong>装備の質(装備ランク)</strong> — 粗製→精製→魔装→聖装。高いほど装備が強い。</li>
+      <li><strong>充填</strong> — 武気をカードに込めて装備を強くすること(デッキ編成の画面から)。</li>
+      <li><strong>固定スキル／空き枠</strong> — カードに最初から付くスキル1つと、転移で埋める2つ。</li>
+      <li><strong>スキル転移</strong> — 別カードのスキルを空き枠に移すこと(素材カードは消滅)。</li>
+      <li><strong>スキル強化(錬成)</strong> — クリスタルでスキルのレベル(効果量)を上げること。</li>
+      <li><strong>SP</strong> — 無属性・戦闘専用の特別なカード。専用スキルを持つが、発動するとその日は離脱する。</li>
+      <li><strong>ロック</strong> — カードを誤って素材や交換に使わないよう保護する設定。</li>
+    </ul>
+    <h3>戦闘・進行</h3>
+    <ul class="list">
+      <li><strong>デッキ</strong> — 出撃や探索に使うカード3枚の組み合わせ(コスト上限あり)。</li>
+      <li><strong>実戦闘力</strong> — 三すくみとスキルを反映した、戦闘での実際のデッキ戦力。</li>
+      <li><strong>三すくみ</strong> — 属性・武器の相性(有利・不利・中立)。</li>
+      <li><strong>出撃</strong> — デッキをボス戦に送り出すこと。</li>
+      <li><strong>採取</strong> — カメラで光を捉えてチカリウムを集めること。</li>
+      <li><strong>探索</strong> — デッキを送り、時間で報酬を集めるコンテンツ。</li>
+      <li><strong>放置報酬</strong> — 操作していない間も自動で貯まる基礎収入。</li>
+      <li><strong>面／中ボス・面ボス</strong> — ボス戦のステージと、そこにいる敵。面ボスを倒すと先へ進める。</li>
+    </ul>
+    <h3>施設・画面</h3>
+    <ul class="list">
+      <li><strong>練気殿</strong> — 武気を生産する建物。</li>
+      <li><strong>鍛冶屋</strong> — 装備の質を作る建物。</li>
+      <li><strong>修練場</strong> — デッキの実戦闘力を数値で確かめられる練習場(勝敗なし)。</li>
+      <li><strong>ガチャ(チカリアンガチャ)</strong> — チカリウムでカードを引く。</li>
+      <li><strong>図鑑</strong> — 入手したカードの記録(手放しても残る)。</li>
+      <li><strong>報告書</strong> — 戦績の記録。</li>
+      <li><strong>ミッション</strong> — 達成で報酬がもらえるしくみ(デイリー／ウィークリー／達成)。</li>
+    </ul>
+    <a class="totop" href="#toc">↑ 目次へもどる</a>
+  </section>
+
+  <footer>
+    <svg class="fbloom" aria-hidden="true"><use href="#hibiscus"/></svg>
+    <p>光を集め、花を継ぐ者</p>
+  </footer>
+
+</div>
+</body>
+</html>
