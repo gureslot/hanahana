@@ -4239,7 +4239,6 @@ function HouchiScreen({ profile, refreshAll, back, flash }) {
                 {est && <div style={houS.est}>見込み メダル+{est.medal.toLocaleString()}・各カードEXP+{est.exp}（{Math.floor(est.min)}分・目安）</div>}
                 <div style={houS.btns}>
                   <button onClick={() => run(() => ChikarianAPI.collectTansaku(n), '回収しました')} disabled={busy || !row} style={{ ...houS.collect, ...((busy || !row) ? houS.collectOff : {}) }}>回収</button>
-                  <button onClick={() => run(() => ChikarianAPI.startTansaku(n, 1, 'shallow'), '浅域で放置開始')} disabled={busy || cc === 0} style={{ ...S.lineBtn, flex: 1, padding: '10px 6px', ...((busy || cc === 0) ? { opacity: .45 } : {}) }}>{cc === 0 ? 'カードなし' : '浅域で放置開始'}</button>
                 </div>
               </div>
             );
