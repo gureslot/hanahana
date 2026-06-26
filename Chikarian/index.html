@@ -1490,7 +1490,7 @@ function computeStats(card) {
   const body = base * (1 + ((card.lv || 1) - 1) * rL);                  // 本体は★非依存（0026）
   const qatk = isSp ? 0 : (QATK[card.quality] || 0);
   const equip = isSp ? 0 : ((card.loaded_buki || 0) * qatk);            // 装備項＝込めた武気×枠攻撃力
-  const starMul = 1 + 0.15 * (card.star || 0);                         // ★は総合(装備項+本体)に乗る・係数0.15（0073）
+  const starMul = 1 + (isSp ? 0.225 : 0.15) * (card.star || 0);                         // ★は総合(装備項+本体)に乗る・係数 SP=0.225/通常=0.15（0073→0090・SP★1.5倍）
   const bodyS = body * starMul, equipS = equip * starMul;              // 内訳の和＝総合になるよう表示にも同倍率
   return { isSp, info, base, cap, body: Math.round(bodyS), equip: Math.round(equipS), sougou: Math.round(bodyS + equipS) };
 }
