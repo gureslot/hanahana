@@ -3307,6 +3307,8 @@ const kS = { step: { width: 34, height: 34, borderRadius: 8, border: BORDER, bac
 const Q_COST = { crude: 1, refined: 3, enchanted: 9, holy: 27 };  // 枠コスト（サーバ0031と一致）
 const Q_LV = { crude: 1, refined: 2, enchanted: 3, holy: 4 };
 const KAJIYA_HOURS = { refined: 24, enchanted: 36, holy: 48 };    // 作業時間（balance §11）
+const KAJIYA_FEE   = { refined: 5000, enchanted: 30000, holy: 45000 };   // 解放コスト（メダル・canon-06 §5-2／0059。精製は5,000＝旧 15000×Lv の誤りを是正）
+const KAJIYA_STAGE = { refined: 3, enchanted: 5, holy: 8 };              // 依頼解禁に必要な cleared_stage（canon-06 §5-2／0059・STAGE_LOCKED）
 const Q_ORDER = ['crude', 'refined', 'enchanted', 'holy'];
 
 function normalizeRk(r) {
@@ -3746,7 +3748,12 @@ function KajiyaTab({ profile, refreshAll, flash }) {
   const claimedLv = orders.filter(o => o.claimed).reduce((mx, o) => Math.max(mx, Q_LV[o.quality] || 0), 1); // crude=1既定
   const inProgress = orders.find(o => !o.claimed) || null;
   const nextQ = Q_ORDER[claimedLv]; // claimedLv(1..)→次の質。4(holy)なら undefined
-  const fee = 15000 * claimedLv;    // balance §11
+  const fee = nextQ ? (KAJIYA_FEE[nextQ] || 0) : 0;          // 解放コスト（canon-06 §5-2／0059）
+  const reqStage = nextQ ? (KAJIYA_STAGE[nextQ] || 0) : 0;   // 依頼解禁に必要な cleared_stage
+  const cleared = (profile && profile.cleared_stage) || 0;
+  const stageOk = !nextQ || cleared >= reqStage;             // 面クリアゲート（STAGE_LOCKED 相当）
+  const medalOk = !nextQ || medal >= fee;                    // メダル充足（INSUFFICIENT_MEDAL 相当）
+  const canOrder = !!nextQ && stageOk && medalOk;            // 依頼可能＝両条件クリア
   const QCLASS = ['gin', 'ao', 'mura', 'kin'];   // 粗製/精製/魔装/聖装 → mockup の質カラー
 
   return (
@@ -3791,7 +3798,7 @@ function KajiyaTab({ profile, refreshAll, flash }) {
               );
             })()
           : nextQ
-            ? <div className="tat-st"><span className="k">次に解放</span><b>{QUALITY_JA[nextQ]}（段階{claimedLv + 1}・作業{KAJIYA_HOURS[nextQ]}h・メダル{fee.toLocaleString()}）</b></div>
+            ? <div className="tat-st"><span className="k">次に解放</span><b>{QUALITY_JA[nextQ]}{stageOk ? `（作業${KAJIYA_HOURS[nextQ]}h・メダル${fee.toLocaleString()}）` : `（面${reqStage}クリアで解禁）`}{stageOk && !medalOk ? <span style={{ color: '#ff9a8a' }}>　メダル不足</span> : null}</b></div>
             : <div className="tat-st"><span className="k">解放状況</span><b style={{ color: '#aee3dd' }}>全ての質を解放済み</b></div>}
       </div>
 
@@ -3803,7 +3810,7 @@ function KajiyaTab({ profile, refreshAll, flash }) {
               return <button className="tat-fb gold" disabled={busy || !ready} onClick={() => run(async () => { const _r = await ChikarianAPI.claimKajiya(inProgress.id); if (window.CKSound) CKSound.play('se_enhance_success'); return _r; }, '解放しました')}>{ready ? '受け取る（解放）' : '依頼中…'}</button>;
             })()
           : nextQ
-            ? <button className="tat-fb gold" disabled={busy} onClick={() => run(() => ChikarianAPI.placeKajiyaOrder(nextQ), '依頼しました')}>強化＝「{QUALITY_JA[nextQ]}」を鍛造依頼（メダル{fee.toLocaleString()}・作業{KAJIYA_HOURS[nextQ]}h）</button>
+            ? <button className="tat-fb gold" disabled={busy || !canOrder} onClick={() => run(() => ChikarianAPI.placeKajiyaOrder(nextQ), '依頼しました')}>鍛造を依頼する</button>
             : <button className="tat-fb" disabled>全ての質を解放済み</button>}
       </div>
     </div>
