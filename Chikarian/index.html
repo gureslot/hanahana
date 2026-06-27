@@ -174,6 +174,10 @@ const ERR_JA = {
   'PREREQUISITE_MISSING': '前段階の質が未解放です',
   'INVALID_QUALITY': '対象外の質です',
   'ORDER_NOT_FOUND': '依頼が見つかりません',
+  // 練気殿の強化依頼（upgrade_renkiden / claim_renkiden_upgrade・0094）
+  'UPGRADE_IN_PROGRESS': '強化を依頼中です（1件ずつ）',
+  'NO_UPGRADE_PENDING': '受け取れる強化依頼がありません',
+  'UPGRADE_NOT_READY': 'まだ完成していません',
   // スキル錬成（do_skill_rensei・0021）
   'CARD_NOT_OWNED': '自分のカードではありません',
   'SKILL_NOT_FOUND': 'スキルが見つかりません',
@@ -3319,13 +3323,18 @@ function normalizeRk(r) {
   const fuel = g('fuel_medal', 'fuel') != null ? g('fuel_medal', 'fuel') : 0;
   const cap = r.cap != null ? r.cap : (1000 + 1500 * (lv - 1));     // 確定式（balance §11）
   const rate = r.rate_per_sec != null ? r.rate_per_sec : (0.1 * lv); // 確定式
-  return { lv, buki, fuel, cap, rate };
+  const upLv = r.upgrade_to_lv != null ? r.upgrade_to_lv : null;     // 依頼中の目標Lv（0094）
+  const upAt = r.upgrade_done_at != null ? r.upgrade_done_at : null; // 完成時刻（0094）
+  return { lv, buki, fuel, cap, rate, upLv, upAt };
 }
 function fmtRemain(ms) {
   if (ms <= 0) return '完成';
   const s = Math.floor(ms / 1000), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
   return (h > 0 ? h + '時間' : '') + m + '分';
 }
+// 練気殿の強化（0060コスト＝逓増 / 0094作業時間）。現Lv→次Lv。Lv5超は従来式/24h。
+const RENKI_UP_FEE   = (lv) => ({ 1: 3000, 2: 5000, 3: 8000, 4: 12000 })[lv] || 8000 * lv;
+const RENKI_UP_HOURS = (lv) => ({ 1: 4, 2: 8, 3: 16, 4: 24 })[lv] || 24;
 
 /* 建物画面 専用スタイル（tatemono-mockup の暖色・面取り意匠を tat- プレフィックスで移植・共有 S は不変） */
 const tatRoot = { position: 'relative', width: '100%', maxWidth: 480, margin: '0 auto', height: '100dvh', overflow: 'hidden', display: 'flex', flexDirection: 'column', color: '#efe6d5', background: 'radial-gradient(120% 80% at 50% -10%, #1d1412 0%, #15100f 38%, #0b0809 100%)' };
@@ -3670,10 +3679,11 @@ function RenkidenTab({ profile, refreshAll, flash }) {
     run(() => ChikarianAPI.instantRenkiden(n), n < n0 ? `上限までの ${n} 個のみ即生産しました` : '即時生産しました');
     setInstantN('');
   };
-  const upgrade = () => run(() => ChikarianAPI.upgradeRenkiden(), '練気殿をLvアップ');
+  const upgrade = () => run(() => ChikarianAPI.upgradeRenkiden(), '強化を依頼しました（完成まで待つ）');
 
   if (!rk) return <Booting />;
-  const upFee = 8000 * rk.lv;   // balance §11
+  const upFee = RENKI_UP_FEE(rk.lv);      // 0060逓増（3000/5000/8000/12000）
+  const upHours = RENKI_UP_HOURS(rk.lv);  // 0094作業時間（4/8/16/24h）
   const { b: liveBuki, f: liveFuel } = liveSnap(now);
   const pct = rk.cap > 0 ? Math.min(100, liveBuki / rk.cap * 100) : 0;
   const running = liveFuel > 0 && liveBuki < rk.cap;
@@ -3722,7 +3732,18 @@ function RenkidenTab({ profile, refreshAll, flash }) {
         </div>
       </div>
 
-      <button className="tat-fb wide" disabled={busy} onClick={upgrade}>練気殿を強化 Lv{rk.lv}→{rk.lv + 1}（メダル{upFee.toLocaleString()}）</button>
+      {rk.upLv != null
+        ? (() => {
+            const ms = new Date(rk.upAt).getTime() - now;
+            const ready = ms <= 0;
+            return (
+              <>
+                <div className="tat-st" style={{ marginTop: 4 }}><span className="k">強化 依頼中</span><b style={{ color: '#f0b9a0' }}>Lv{rk.lv}→{rk.upLv}（{ready ? '完成しました' : '残り ' + fmtRemain(ms)}）</b></div>
+                <button className="tat-fb wide gold" disabled={busy || !ready} onClick={() => run(async () => { const _r = await ChikarianAPI.claimRenkidenUpgrade(); if (window.CKSound) CKSound.play('se_enhance_success'); return _r; }, '練気殿をLvアップしました')}>{ready ? '受け取る（Lv' + rk.upLv + '完成）' : '依頼中…'}</button>
+              </>
+            );
+          })()
+        : <button className="tat-fb wide" disabled={busy} onClick={upgrade}>練気殿を強化 Lv{rk.lv}→{rk.lv + 1}（メダル{upFee.toLocaleString()}・作業{upHours}h）</button>}
       <div className="tat-foot">単価 武気1＝メダル5（時間）／即生産 武気1＝メダル15。</div>
     </div>
   );

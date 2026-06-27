@@ -106,6 +106,7 @@
   const collectRenkiden = ()                               => rpc('collect_renkiden',  {});
   const instantRenkiden = (n)                              => rpc('instant_renkiden',  { p_n: n });
   const upgradeRenkiden = ()                               => rpc('upgrade_renkiden',  {});
+  const claimRenkidenUpgrade = ()                          => rpc('claim_renkiden_upgrade', {});
   const placeKajiyaOrder= (quality)                        => rpc('place_kajiya_order',{ p_quality: quality });   // 'refined'|'enchanted'|'holy'
   const claimKajiya     = (orderId)                        => rpc('claim_kajiya',      { p_order_id: orderId });
   const equipBuki       = (cardId, quality, amount)        => rpc('equip_buki',        { p_card_id: cardId, p_quality: quality, p_amount: amount }); // quality: crude|refined|enchanted|holy, amount=枠数
@@ -139,7 +140,7 @@
     startBossBattle, collectBossResult, cancelBossSortie, getBossSorties,
     // writes (0012-0021)
     doKyoka, doSkillTeni, doSkillRensei,
-    investRenkiden, collectRenkiden, instantRenkiden, upgradeRenkiden,
+    investRenkiden, collectRenkiden, instantRenkiden, upgradeRenkiden, claimRenkidenUpgrade,
     placeKajiyaOrder, claimKajiya, equipBuki, swapMainDeck,
     startTansaku, collectTansaku, completeInterlude, useExpBook, doCardExchange, doCardExchangeBulk, claimMission,
     // writes (0023)
