@@ -15,6 +15,30 @@
   var _seUnlocked = false;
   var _PRELOAD = ['se_tap', 'se_back', 'se_card_flip', 'se_enhance_success', 'se_enhance_fail'];
 
+  /* ===== iOS サイレントスイッチ対策 =====
+     iPhone はサイレント(マナー)スイッチがオンだと Web Audio(SE) を消す。無音をループ再生する
+     HTMLAudio 要素を1つ流すと「再生(playback)セッション」が保たれ、スイッチがオンでも SE が鳴る。
+     SE がオンの間だけ保持し、オフにすれば解放する（他アプリの音楽を不要に止めない）。 */
+  var _silent = null;
+  function _silentSrc() {
+    // 1秒の無音WAV(8kHz/mono/8bit)をその場生成（外部ファイル不要）。
+    var sr = 8000, n = sr, view = new DataView(new ArrayBuffer(44 + n));
+    function s(o, str) { for (var i = 0; i < str.length; i++) view.setUint8(o + i, str.charCodeAt(i)); }
+    s(0, 'RIFF'); view.setUint32(4, 36 + n, true); s(8, 'WAVE');
+    s(12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+    view.setUint32(24, sr, true); view.setUint32(28, sr, true); view.setUint16(32, 1, true); view.setUint16(34, 8, true);
+    s(36, 'data'); view.setUint32(40, n, true);
+    for (var i = 0; i < n; i++) view.setUint8(44 + i, 128);  // 8bit無音=128
+    return URL.createObjectURL(new Blob([view.buffer], { type: 'audio/wav' }));
+  }
+  function _startKeepalive() {
+    try {
+      if (!_silent) { _silent = new Audio(_silentSrc()); _silent.loop = true; _silent.volume = 1; }
+      var p = _silent.play(); if (p && p.catch) p.catch(function () {});
+    } catch (e) {}
+  }
+  function _stopKeepalive() { if (_silent) { try { _silent.pause(); } catch (e) {} } }
+
   function _ensureCtx() {
     if (!_AC) return null;
     if (!_ctx) _ctx = new _AC();
@@ -47,6 +71,7 @@
       try { var s = c.createBufferSource(); s.buffer = c.createBuffer(1, 1, 22050); s.connect(c.destination); s.start(0); } catch (e) {}
       _PRELOAD.forEach(function (n) { _decode(n).catch(function () {}); });
     }
+    if (localStorage.getItem(KEY) !== '0') _startKeepalive();   // SEオンならiOS用に再生セッション保持
     window.removeEventListener('pointerdown', _seUnlock);
     window.removeEventListener('touchstart', _seUnlock);
     window.removeEventListener('keydown', _seUnlock);
@@ -61,7 +86,7 @@
     isOn: function () { return localStorage.getItem(KEY) !== '0'; }, // 未設定はオン
     setOn: function (v) {
       localStorage.setItem(KEY, v ? '1' : '0');
-      if (v) { this.resumeBGM(); } else { this.stopBGM(); }
+      if (v) { _startKeepalive(); this.resumeBGM(); } else { _stopKeepalive(); this.stopBGM(); }
     },
     toggle: function () { var n = !this.isOn(); this.setOn(n); return n; },
 
