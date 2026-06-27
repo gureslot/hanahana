@@ -825,7 +825,7 @@ function Home({ profile, go, flash, onRefresh }) {
 
         {/* 出撃中（ボス）／探索中の部隊 */}
         {(fleetBoss > 0 || fleetTansaku > 0) && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8, padding: '6px 2px 0' }}>
+          <div style={{ position: 'absolute', top: 76, left: 8, zIndex: 4, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8 }}>
             {fleetBoss > 0 && <button style={HS.fleetPill} onClick={() => setFleetSheet('boss')}><span style={{ fontSize: 13 }}>⚔</span><span style={{ fontSize: 11, color: GOLD_HI }}>出撃 ×{fleetBoss}</span></button>}
             {fleetTansaku > 0 && <button style={HS.fleetPill} onClick={() => setFleetSheet('tansaku')}><span style={{ fontSize: 13 }}>🧭</span><span style={{ fontSize: 11, color: GOLD_HI }}>探索 ×{fleetTansaku}</span></button>}
           </div>
