@@ -118,6 +118,7 @@
   const doCardExchange  = (cardId)                         => rpc('do_card_exchange',  { p_card_id: cardId });
   const doCardExchangeBulk = (cardIds)                     => rpc('do_card_exchange_bulk', { p_card_ids: cardIds }); // 0052: 一括交換
   const claimMission    = (missionKey)                     => rpc('claim_mission',     { p_mission_key: missionKey });
+  const getMissionProgress = ()                            => rpc('get_mission_progress', {});
 
   // ---- 0023（カードのロック切替・資産は動かないがRPC経由）----
   const setCardLock     = (cardId, locked)                 => rpc('set_card_lock',     { p_card_id: cardId, p_locked: locked });
@@ -142,7 +143,7 @@
     doKyoka, doSkillTeni, doSkillRensei,
     investRenkiden, collectRenkiden, instantRenkiden, upgradeRenkiden, claimRenkidenUpgrade,
     placeKajiyaOrder, claimKajiya, equipBuki, swapMainDeck,
-    startTansaku, collectTansaku, completeInterlude, useExpBook, doCardExchange, doCardExchangeBulk, claimMission,
+    startTansaku, collectTansaku, completeInterlude, useExpBook, doCardExchange, doCardExchangeBulk, claimMission, getMissionProgress,
     // writes (0023)
     setCardLock,
     // writes (0071: 放置自動探索)

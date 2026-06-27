@@ -4947,12 +4947,16 @@ function MissionScreen({ profile, cards, refreshAll, back, flash }) {
   const [claimReward, setClaimReward] = useState(null);
   const [master, setMaster] = useState(null);
   const [missions, setMissions] = useState(null);
+  const [serverProg, setServerProg] = useState(null);  // get_mission_progress（サーバ計算の進捗・受取可判定の正）
   const [zukan, setZukan] = useState(null);
   const [kajiyaLv, setKajiyaLv] = useState(1);
   const [tansaku, setTansaku] = useState(null);
   const [busy, setBusy] = useState(false);
 
-  async function loadMissions() { try { setMissions(await ChikarianAPI.getMissions() || []); } catch (e) { setMissions([]); } }
+  async function loadMissions() {
+    try { setMissions(await ChikarianAPI.getMissions() || []); } catch (e) { setMissions([]); }
+    try { setServerProg(await ChikarianAPI.getMissionProgress() || {}); } catch (e) { setServerProg(null); }
+  }
   useEffect(() => {
     (async () => {
       try { setMaster(await ChikarianAPI.getMissionMaster() || []); } catch (e) { flash(errMsg(e)); setMaster([]); }
@@ -5029,7 +5033,8 @@ function MissionScreen({ profile, cards, refreshAll, back, flash }) {
           {list.map(mm => {
             const row = rowOf(mm);
             const claimed = row ? row.claimed : false;
-            const est = estProgress(mm, row);
+            const sp = serverProg ? serverProg[mm.mission_key] : null;   // サーバ計算の進捗（あれば正）
+            const est = (sp && sp.progress != null) ? Number(sp.progress) : estProgress(mm, row);
             const isBonus = mm.condition_type === 'all_daily' || mm.condition_type === 'all_weekly';
             const met = est == null ? null : est >= Number(mm.threshold);
             const claimable = !claimed && (met === null || met === true);
