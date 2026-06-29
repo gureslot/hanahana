@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>チカリアン 効果一覧（リファレンス）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0e0608;--ink2:#150a0e;--panel:#1b0d11;--panel-edge:rgba(202,162,76,.22);
+    --crimson:#b3202f;--crimson-deep:#7a1622;--gold:#caa24c;--gold-soft:#dcbd78;
+    --parch:#ece2d0;--parch-dim:#b6a890;--muted:#8a7c6b;--violet:#2a1840;
+    --serif:"Noto Serif JP","Yu Mincho","Hiragino Mincho ProN",serif;
+    --sans:"Noto Sans JP","Hiragino Sans","Yu Gothic",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;font-family:var(--sans);color:var(--parch);line-height:1.85;font-size:16px;
+    -webkit-font-smoothing:antialiased;background-attachment:fixed;
+    background:
+      radial-gradient(1100px 520px at 50% -8%, rgba(179,32,47,.20), transparent 60%),
+      radial-gradient(800px 600px at 100% 12%, rgba(42,24,64,.30), transparent 55%),
+      radial-gradient(700px 500px at 0% 30%, rgba(122,22,34,.18), transparent 55%),
+      linear-gradient(180deg, var(--ink2), var(--ink) 40%, #0b0507 100%);
+  }
+  .wrap{max-width:760px;margin:0 auto;padding:0 20px 80px;}
+  .backlink{display:inline-block;margin:22px 0 0;font-size:.85rem;color:var(--muted);text-decoration:none;letter-spacing:.06em;}
+  .backlink:hover,.backlink:focus-visible{color:var(--gold-soft);}
+
+  header.hero{text-align:center;padding:18px 16px 26px;}
+  .hero-bloom{width:96px;height:96px;display:inline-block;filter:drop-shadow(0 0 14px rgba(179,32,47,.5));animation:bloom 4.6s ease-in-out infinite;}
+  @keyframes bloom{0%,100%{filter:drop-shadow(0 0 12px rgba(179,32,47,.42));transform:scale(1);}50%{filter:drop-shadow(0 0 26px rgba(224,70,80,.68));transform:scale(1.04);}}
+  .hero .eyebrow{font-family:var(--serif);letter-spacing:.5em;font-size:.78rem;color:var(--parch-dim);text-indent:.5em;margin:.6em 0 .15em;}
+  .hero h1{font-family:var(--serif);font-weight:700;font-size:2rem;letter-spacing:.14em;margin:.1em 0;color:var(--gold);text-shadow:0 1px 0 #000,0 0 24px rgba(202,162,76,.22);}
+  .hero .lede{color:var(--parch-dim);font-size:.92rem;max-width:34em;margin:.8em auto 0;}
+
+  nav.toc{display:flex;justify-content:center;gap:10px;margin:6px 0 34px;flex-wrap:wrap;}
+  nav.toc a{
+    font-family:var(--serif);text-decoration:none;color:var(--parch);
+    border:1px solid var(--panel-edge);border-radius:999px;padding:8px 20px;letter-spacing:.08em;
+    background:rgba(27,13,17,.7);transition:background .18s,color .18s;
+  }
+  nav.toc a:hover,nav.toc a:focus-visible{background:rgba(179,32,47,.16);color:var(--gold-soft);}
+
+  section{
+    scroll-margin-top:18px;
+    background:linear-gradient(180deg, rgba(27,13,17,.55), rgba(17,9,12,.35));
+    border:1px solid var(--panel-edge);border-radius:8px;padding:26px 24px 18px;margin:0 0 22px;
+  }
+  .ch-head{display:flex;align-items:center;gap:.6em;margin-bottom:.1em;}
+  .ch-mark{width:22px;height:22px;flex:none;opacity:.95;}
+  section h2{font-family:var(--serif);font-weight:700;font-size:1.5rem;color:var(--gold);letter-spacing:.04em;margin:.05em 0 0;}
+  .rule{height:1px;border:0;margin:14px 0 16px;background:linear-gradient(90deg,var(--gold) 0%,rgba(202,162,76,.25) 30%,transparent 70%);}
+  section h3{font-family:var(--serif);font-weight:600;font-size:1.1rem;color:var(--gold-soft);letter-spacing:.03em;margin:1.5em 0 .6em;padding-bottom:.3em;border-bottom:1px solid rgba(202,162,76,.14);}
+  section h3:first-of-type{margin-top:.3em;}
+  p{margin:.6em 0;color:var(--parch);}
+  strong{color:var(--gold-soft);font-weight:700;}
+  .intro{color:var(--parch-dim);font-size:.95rem;}
+
+  .note{border-left:3px solid var(--crimson);background:rgba(122,22,34,.16);border-radius:0 6px 6px 0;padding:12px 16px;margin:1em 0;color:var(--parch-dim);font-size:.92rem;}
+  .note ul{margin:.3em 0 0;padding-left:1.2em;}
+  .note li{margin:.25em 0;}
+
+  .entry{padding:12px 0;border-bottom:1px solid rgba(202,162,76,.1);}
+  .entry:last-child{border-bottom:0;}
+  .en{font-family:var(--serif);font-weight:600;color:var(--gold-soft);font-size:1.04rem;}
+  .ed{margin:.25em 0 .1em;color:var(--parch);}
+  .em{color:var(--muted);font-size:.86rem;letter-spacing:.02em;}
+  .em b{color:var(--parch-dim);font-weight:500;}
+  .enum{margin:.25em 0 .1em;font-size:.86rem;color:var(--gold-soft);}
+
+  .gear{width:100%;border-collapse:collapse;margin:.5em 0 .2em;font-size:.9rem;}
+  .gear th,.gear td{text-align:center;padding:6px 6px;border-bottom:1px solid rgba(202,162,76,.12);}
+  .gear th{color:var(--gold-soft);font-family:var(--serif);font-weight:600;}
+  .gear td:first-child,.gear th:first-child{text-align:left;}
+
+  .skill{padding:11px 0;border-bottom:1px solid rgba(202,162,76,.1);}
+  .skill:last-child{border-bottom:0;}
+  .sh{display:flex;align-items:center;gap:.55em;flex-wrap:wrap;}
+  .sn{font-family:var(--serif);font-weight:600;color:var(--gold-soft);font-size:1.04rem;}
+  .sd{margin:.25em 0 0;color:var(--parch);}
+  .snum{margin:.3em 0 0;font-size:.83rem;color:var(--gold-soft);letter-spacing:.01em;}
+  .snum .lbl{color:var(--muted);}
+  .cnt{color:var(--muted);font-size:.82rem;}
+  .rb{font-family:var(--serif);font-weight:700;font-size:.72rem;letter-spacing:.06em;padding:2px 9px;border-radius:5px;line-height:1.4;white-space:nowrap;}
+  .rb.n{background:#9a8c78;color:#1a120c;}
+  .rb.r{background:#7fa6c2;color:#0c1620;}
+  .rb.sr{background:#b189cf;color:#190d25;}
+  .rb.ssr{background:#d8b970;color:#241a08;}
+  .rb.sp{background:#d24a58;color:#230a0d;}
+  .rb.me{background:#5fb6a0;color:#06201a;}
+
+  footer{text-align:center;padding:26px 0 0;color:var(--muted);}
+  footer .fbloom{width:32px;height:32px;opacity:.7;}
+  footer p{font-family:var(--serif);letter-spacing:.18em;color:var(--parch-dim);font-size:.84rem;margin:.6em 0 0;}
+  a{color:var(--gold-soft);}
+  :focus-visible{outline:2px solid var(--gold-soft);outline-offset:2px;border-radius:3px;}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto;}.hero-bloom{animation:none;}}
+  @media (max-width:480px){.hero h1{font-size:1.7rem;}section{padding:22px 17px 14px;}body{font-size:15.5px;}}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="petalGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#c8283f"/><stop offset="1" stop-color="#7a1422"/>
+    </linearGradient>
+    <radialGradient id="coreGrad" cx="50%" cy="42%" r="60%">
+      <stop offset="0" stop-color="#f0d27a"/><stop offset="1" stop-color="#b8862f"/>
+    </radialGradient>
+    <symbol id="hibiscus" viewBox="0 0 100 100">
+      <g stroke="rgba(0,0,0,.28)" stroke-width="0.6" fill="url(#petalGrad)">
+        <path d="M50,53 C 32,43 32,15 50,7 C 68,15 68,43 50,53 Z"/>
+        <path d="M50,53 C 32,43 32,15 50,7 C 68,15 68,43 50,53 Z" transform="rotate(72 50 50)"/>
+        <path d="M50,53 C 32,43 32,15 50,7 C 68,15 68,43 50,53 Z" transform="rotate(144 50 50)"/>
+        <path d="M50,53 C 32,43 32,15 50,7 C 68,15 68,43 50,53 Z" transform="rotate(216 50 50)"/>
+        <path d="M50,53 C 32,43 32,15 50,7 C 68,15 68,43 50,53 Z" transform="rotate(288 50 50)"/>
+      </g>
+      <line x1="50" y1="50" x2="50" y2="23" stroke="#dcbd78" stroke-width="1.6" stroke-linecap="round" opacity=".92"/>
+      <circle cx="50" cy="24" r="2.4" fill="#f0d27a"/>
+      <circle cx="45.5" cy="28" r="1.7" fill="#e6c463"/>
+      <circle cx="54.5" cy="28" r="1.7" fill="#e6c463"/>
+      <circle cx="50" cy="50" r="8.5" fill="url(#coreGrad)"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+
+  <a class="backlink" href="manual.html">← 遊び方ガイドへ</a>
+
+  <header class="hero" id="top">
+    <svg class="hero-bloom" aria-hidden="true"><use href="#hibiscus"/></svg>
+    <p class="eyebrow">リファレンス</p>
+    <h1>効果一覧</h1>
+    <p class="lede">アイテムとスキルの効果・数値をまとめた早見ページです。数値は現行の値です。</p>
+  </header>
+
+  <nav class="toc" aria-label="目次">
+    <a href="#items">アイテム一覧</a>
+    <a href="#skills">スキル一覧</a>
+  </nav>
+
+  <!-- ITEMS -->
+  <section id="items">
+    <div class="ch-head"><svg class="ch-mark" aria-hidden="true"><use href="#hibiscus"/></svg></div>
+    <h2>アイテムとその効果</h2>
+    <hr class="rule">
+
+    <h3>通貨</h3>
+    <div class="entry">
+      <div class="en">チカリウム</div>
+      <div class="ed">ガチャを引くための基本通貨。</div>
+      <div class="enum">ガチャ1回 ＝ 300チカリウムで6枚</div>
+      <div class="em"><b>入手</b>：採取(1日に集められる量は最大1000)</div>
+    </div>
+    <div class="entry">
+      <div class="en">メダル</div>
+      <div class="ed">★強化・武気の生産・スキル転移・建物の強化などに使う、基幹の通貨。</div>
+      <div class="enum">★強化 500×(★+1)／回 ・ 武気の生産 メダル5→武気1 ・ スキル転移 3,000</div>
+      <div class="em"><b>入手</b>：探索・ボス戦・ミッション・放置報酬</div>
+    </div>
+    <div class="entry">
+      <div class="en">青クリスタル</div>
+      <div class="ed">スキル強化に使う。安いが成功率は低い色。</div>
+      <div class="enum">スキル強化の成功率 10%</div>
+      <div class="em"><b>入手</b>：N・Rのカードを交換所で変換／ミッション</div>
+    </div>
+    <div class="entry">
+      <div class="en">赤クリスタル</div>
+      <div class="ed">スキル強化に使う。中程度の成功率。</div>
+      <div class="enum">スキル強化の成功率 33%</div>
+      <div class="em"><b>入手</b>：SR・SSRのカードを交換所で変換／ミッション</div>
+    </div>
+    <div class="entry">
+      <div class="en">虹クリスタル</div>
+      <div class="ed">スキル強化に使う。必ず成功する最上位の色。最も希少。</div>
+      <div class="enum">スキル強化の成功率 100%(必ず成功)</div>
+      <div class="em"><b>入手</b>：SPのカードを交換所で変換／達成ミッション</div>
+    </div>
+
+    <h3>育成・装備の素材</h3>
+    <div class="entry">
+      <div class="en">武気(ぶき)</div>
+      <div class="ed">カードに「充填」して装備の攻撃力にする。1枠ぶんの武気が生む攻撃力(と1枠に必要な武気)は、装備の質で決まります。</div>
+      <table class="gear">
+        <tr><th>装備の質</th><th>1枠に必要な武気</th><th>1枠の攻撃力</th></tr>
+        <tr><td>粗製</td><td>1</td><td>10</td></tr>
+        <tr><td>精製</td><td>3</td><td>15</td></tr>
+        <tr><td>魔装</td><td>9</td><td>22</td></tr>
+        <tr><td>聖装</td><td>27</td><td>34</td></tr>
+      </table>
+      <div class="em"><b>入手</b>：練気殿で生産(メダルから)。戦闘で一定割合が減る</div>
+    </div>
+    <div class="entry">
+      <div class="en">経験の書</div>
+      <div class="ed">カードのレベルを上げる。大きいランクほど多くの経験値が入ります。</div>
+      <div class="enum">小 ＝ 10 ／ 中 ＝ 50 ／ 大 ＝ 200 ／ 特大 ＝ 1,000(経験値)</div>
+      <div class="em"><b>入手</b>：主にボス戦・探索</div>
+    </div>
+    <div class="entry">
+      <div class="en">恩寵石</div>
+      <div class="ed">★(ランク)強化の成功率を上げる。</div>
+      <div class="enum">1個ごとに成功率 +10%</div>
+      <div class="em"><b>入手</b>：ボス戦・ミッション</div>
+    </div>
+
+    <a class="backlink" href="#top">↑ ページの先頭へ</a>
+  </section>
+
+  <!-- SKILLS -->
+  <section id="skills">
+    <div class="ch-head"><svg class="ch-mark" aria-hidden="true"><use href="#hibiscus"/></svg></div>
+    <h2>スキルとその効果</h2>
+    <hr class="rule">
+    <p class="intro">スキルは戦闘中に発動して、デッキを有利にします。多くのスキルは「特定のグループ(属性・武器)に当てはまるカード」をまとめて強化するため、デッキの属性・武器を揃えるほど強く噛み合います。</p>
+    <div class="note">
+      <strong>数値の読み方</strong>
+      <ul>
+        <li><strong>発動率</strong>＝そのスキルが発動する確率(レベルでは変わりません)。</li>
+        <li><strong>Lv1</strong>＝レベル1での効果量。<strong>伸び</strong>＝1レベルごとに増える量。</li>
+        <li>「伸び」はレベル5までの値です。<strong>レベル6以降は伸びが約0.4倍</strong>に下がります(上限はありません)。</li>
+      </ul>
+    </div>
+
+    <h3>N</h3>
+    <div class="skill">
+      <div class="sh"><span class="sn">〇焔</span><span class="rb n">N</span><span class="cnt">6種</span></div>
+      <p class="sd">対応する属性・武器のカードの<strong>総合戦力</strong>を上げる(花焔・葉焔・芯焔・剣焔・盾焔・杖焔)。</p>
+      <p class="snum"><span class="lbl">発動率</span> 85% ／ <span class="lbl">Lv1</span> 総合+24% ／ <span class="lbl">伸び</span> +1.5%/Lv</p>
+    </div>
+    <div class="skill">
+      <div class="sh"><span class="sn">〇の礎</span><span class="rb n">N</span><span class="cnt">6種</span></div>
+      <p class="sd">対応する属性・武器のカードの<strong>本体戦力</strong>を上げる(本体は戦力の小さな部分)。</p>
+      <p class="snum"><span class="lbl">発動率</span> 85% ／ <span class="lbl">Lv1</span> 本体+142% ／ <span class="lbl">伸び</span> +5.9%/Lv</p>
+    </div>
+    <div class="skill">
+      <div class="sh"><span class="sn">豊穣の眼</span><span class="rb n">N</span></div>
+      <p class="sd"><strong>探索</strong>での収入を増やす(戦闘では効果がありません)。</p>
+      <p class="snum"><span class="lbl">発動率</span> 100% ／ <span class="lbl">Lv1</span> 収入+30% ／ <span class="lbl">伸び</span> レベルで増加</p>
+    </div>
+    <div class="skill">
+      <div class="sh"><span class="sn">千里眼</span><span class="rb n">N</span></div>
+      <p class="sd"><strong>探索</strong>でのドロップを増やす(戦闘では効果がありません)。</p>
+      <p class="snum"><span class="lbl">発動率</span> 100% ／ <span class="lbl">伸び</span> レベルで増加</p>
+    </div>
+
+    <h3>R</h3>
+    <div class="skill">
+      <div class="sh"><span class="sn">〇煌</span><span class="rb r">R</span><span class="cnt">6種</span></div>
+      <p class="sd">対応する属性・武器のカードの<strong>総合戦力</strong>を上げる(〇焔より強力)。</p>
+      <p class="snum"><span class="lbl">発動率</span> 75% ／ <span class="lbl">Lv1</span> 総合+22% ／ <span class="lbl">伸び</span> +3.3%/Lv</p>
+    </div>
+    <div class="skill">
+      <div class="sh"><span class="sn">〇刃</span><span class="rb r">R</span><span class="cnt">6種</span></div>
+      <p class="sd">対応する属性・武器のカードの<strong>装備の戦力</strong>を上げる。</p>
+      <p class="snum"><span class="lbl">発動率</span> 75% ／ <span class="lbl">Lv1</span> 装備+28% ／ <span class="lbl">伸び</span> +3.7%/Lv</p>
+    </div>
+
+    <h3>SR</h3>
+    <div class="skill">
+      <div class="sh"><span class="sn">連奏</span><span class="rb sr">SR</span><span class="cnt">6種</span></div>
+      <p class="sd"><strong>2つのグループ</strong>(属性・武器)のカードの総合戦力を上げる。</p>
+      <p class="snum"><span class="lbl">発動率</span> 65% ／ <span class="lbl">Lv1</span> 総合+18% ／ <span class="lbl">伸び</span> +5.9%/Lv</p>
+    </div>
+    <div class="skill">
+      <div class="sh"><span class="sn">逆鱗</span><span class="rb sr">SR</span></div>
+      <p class="sd"><strong>格上の敵に挑むほど</strong>、自身の戦力が大きく上がる。</p>
+      <p class="snum"><span class="lbl">発動率</span> 55% ／ <span class="lbl">Lv1</span> 総合 最大+25% ／ <span class="lbl">伸び</span> +6.9%/Lv</p>
+    </div>
+    <div class="skill">
+      <div class="sh"><span class="sn">血焚</span><span class="rb sr">SR</span></div>
+      <p class="sd">自身の<strong>装備を大きく上げる</strong>が、その戦闘の<strong>武気損失が2倍</strong>になる。</p>
+      <p class="snum"><span class="lbl">発動率</span> 60% ／ <span class="lbl">Lv1</span> 装備+55% ／ <span class="lbl">伸び</span> +7.0%/Lv</p>
+    </div>
+
+    <h3>SSR</h3>
+    <div class="skill">
+      <div class="sh"><span class="sn">覇焔解放</span><span class="rb ssr">SSR</span></div>
+      <p class="sd">自身の<strong>本体戦力を爆発的に</strong>引き上げる。</p>
+      <p class="snum"><span class="lbl">発動率</span> 15% ／ <span class="lbl">Lv1</span> 本体×20 ／ <span class="lbl">伸び</span> 倍率+1.1/Lv</p>
+    </div>
+    <div class="skill">
+      <div class="sh"><span class="sn">絶対優勢</span><span class="rb ssr">SSR</span></div>
+      <p class="sd">三すくみで<strong>有利なとき、その有利をさらに強める</strong>。</p>
+      <p class="snum"><span class="lbl">発動率</span> 40% ／ <span class="lbl">Lv1</span> 有利係数+0.30 ／ <span class="lbl">伸び</span> +0.14/Lv</p>
+    </div>
+    <div class="skill">
+      <div class="sh"><span class="sn">黄金律</span><span class="rb ssr">SSR</span></div>
+      <p class="sd"><strong>デッキ全体</strong>の総合戦力を底上げする。</p>
+      <p class="snum"><span class="lbl">発動率</span> 100%(必ず発動) ／ <span class="lbl">Lv1</span> デッキ全体+12% ／ <span class="lbl">伸び</span> +5.5%/Lv</p>
+    </div>
+    <div class="skill">
+      <div class="sh"><span class="sn">共鳴</span><span class="rb ssr">SSR</span></div>
+      <p class="sd">同じカードで発動した<strong>他のスキルの効果を増幅</strong>する。</p>
+      <p class="snum"><span class="lbl">発動率</span> 100%(必ず発動) ／ <span class="lbl">Lv1</span> 他スキルの効果+30% ／ <span class="lbl">伸び</span> レベルで増加</p>
+    </div>
+
+    <h3>めしべだけマン専用</h3>
+    <div class="skill">
+      <div class="sh"><span class="sn">秘奏</span><span class="rb sr">SR</span><span class="rb me">めしべ</span></div>
+      <p class="sd"><strong>芯属性または杖</strong>を持つカードの総合戦力を上げる。</p>
+      <p class="snum"><span class="lbl">発動率</span> 65% ／ <span class="lbl">Lv1</span> 総合+18.9% ／ <span class="lbl">伸び</span> +6.1%/Lv</p>
+    </div>
+    <div class="skill">
+      <div class="sh"><span class="sn">万象共鳴</span><span class="rb sr">SR</span><span class="rb me">めしべ</span></div>
+      <p class="sd"><strong>発動しているスキルが多いほど</strong>、自身の戦力が上がる。</p>
+      <p class="snum"><span class="lbl">発動率</span> 65% ／ <span class="lbl">Lv1</span> 発動中の他スキル1つにつき+5% ／ <span class="lbl">伸び</span> +1.0%/Lv(1つあたり)</p>
+    </div>
+    <div class="skill">
+      <div class="sh"><span class="sn">神奏</span><span class="rb ssr">SSR</span><span class="rb me">めしべ</span></div>
+      <p class="sd"><strong>芯属性または杖</strong>を持つカードの総合戦力を大きく上げる。</p>
+      <p class="snum"><span class="lbl">発動率</span> 40% ／ <span class="lbl">Lv1</span> 総合+31.5% ／ <span class="lbl">伸び</span> +14.4%/Lv</p>
+    </div>
+    <div class="skill">
+      <div class="sh"><span class="sn">天啓の導き</span><span class="rb ssr">SSR</span><span class="rb me">めしべ</span></div>
+      <p class="sd">毎回の戦闘で、<strong>確率で発動するスキルのうち1つを必ず発動</strong>させる。</p>
+      <p class="snum"><span class="lbl">発動率</span> 100%(常に働く) ／ <span class="lbl">レベル</span> なし(強化はできません)</p>
+    </div>
+    <div class="note">めしべだけマン専用のスキル(秘奏・万象共鳴・神奏・天啓の導き)は、<strong>めしべだけマン同士でのみ</strong>転移できます(通常のカードへは移せません)。秘奏・万象共鳴・神奏は強化できますが、<strong>天啓の導きは強化できません</strong>。</div>
+
+    <h3>SP専用(固定)</h3>
+    <div class="skill">
+      <div class="sh"><span class="sn">竜気覚醒</span><span class="rb sp">SP</span><span class="cnt">ゴールドドラゴン</span></div>
+      <p class="sd"><strong>デッキ全体の戦力を大きく引き上げる</strong>。</p>
+      <p class="snum"><span class="lbl">発動率</span> 5% ／ <span class="lbl">効果</span> デッキ全体の総合×5.5 ／ <span class="lbl">レベル</span> なし(固定)</p>
+    </div>
+    <div class="skill">
+      <div class="sh"><span class="sn">哀慟の眼</span><span class="rb sp">SP</span><span class="cnt">ゴーストガール</span></div>
+      <p class="sd"><strong>敵の戦闘力を大きく下げる</strong>。</p>
+      <p class="snum"><span class="lbl">発動率</span> 5% ／ <span class="lbl">効果</span> 敵の戦闘力×0.18(約82%下げる) ／ <span class="lbl">レベル</span> なし(固定)</p>
+    </div>
+    <div class="skill">
+      <div class="sh"><span class="sn">不死鳥の加護</span><span class="rb sp">SP</span><span class="cnt">鳳凰</span></div>
+      <p class="sd"><strong>敗北したときの武気損失を防ぐ</strong>。</p>
+      <p class="snum"><span class="lbl">発動</span> 敗北時は必ず ／ <span class="lbl">効果</span> その戦闘の武気損失を0に ／ <span class="lbl">レベル</span> なし(固定)</p>
+    </div>
+    <div class="note">
+      SP専用スキルは固定で、強化・転移はできません。専用スキルが働くと、そのSPカードは<strong>その日のあいだデッキから外れ</strong>、翌0時に復帰します。
+      <ul>
+        <li><strong>竜気覚醒・哀慟の眼</strong> — 発動したときに離脱します。</li>
+        <li><strong>不死鳥の加護</strong> — 敗北して武気の損失を防いだときに離脱します(勝ったときは離脱しません)。</li>
+      </ul>
+    </div>
+
+    <a class="backlink" href="#top">↑ ページの先頭へ</a>
+  </section>
+
+  <footer>
+    <svg class="fbloom" aria-hidden="true"><use href="#hibiscus"/></svg>
+    <p>光を集め、花を継ぐ者</p>
+  </footer>
+
+</div>
+</body>
+</html>
