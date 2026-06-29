@@ -21,14 +21,16 @@
      SE がオンの間だけ保持し、オフにすれば解放する（他アプリの音楽を不要に止めない）。 */
   var _silent = null;
   function _silentSrc() {
-    // 1秒の無音WAV(8kHz/mono/8bit)をその場生成（外部ファイル不要）。
-    var sr = 8000, n = sr, view = new DataView(new ArrayBuffer(44 + n));
+    // 1秒の無音WAV(44.1kHz/mono/16bit)をその場生成（外部ファイル不要）。
+    // ※8kHz/8bit だと iOS の共有オーディオセッションが低サンプルレートに引きずられ、
+    //   画面収録(ReplayKit)の音声タップでBGM/SEがノイズ化することがある。標準レートで生成して回避する。
+    var sr = 44100, ch = 1, bps = 2, n = sr * ch * bps, view = new DataView(new ArrayBuffer(44 + n));
     function s(o, str) { for (var i = 0; i < str.length; i++) view.setUint8(o + i, str.charCodeAt(i)); }
     s(0, 'RIFF'); view.setUint32(4, 36 + n, true); s(8, 'WAVE');
-    s(12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
-    view.setUint32(24, sr, true); view.setUint32(28, sr, true); view.setUint16(32, 1, true); view.setUint16(34, 8, true);
+    s(12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, ch, true);
+    view.setUint32(24, sr, true); view.setUint32(28, sr * ch * bps, true); view.setUint16(32, ch * bps, true); view.setUint16(34, 8 * bps, true);
     s(36, 'data'); view.setUint32(40, n, true);
-    for (var i = 0; i < n; i++) view.setUint8(44 + i, 128);  // 8bit無音=128
+    // 16bit符号付きの無音は全サンプル0。ArrayBuffer は 0 初期化のため追加書き込み不要。
     return URL.createObjectURL(new Blob([view.buffer], { type: 'audio/wav' }));
   }
   function _startKeepalive() {
