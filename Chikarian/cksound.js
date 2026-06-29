@@ -7,23 +7,13 @@
   var KEY = 'ck_sound_on';
   var bgm = null, bgmSrc = null;
 
-  /* ===== SE: Web Audio 化（HTMLAudio の再生時デコード遅延を排除）===== */
-  var _AC = window.AudioContext || window.webkitAudioContext;
-  var _ctx = null;          // AudioContext（初回ユーザー操作で生成）
-  var _buf = {};            // name -> AudioBuffer（デコード済みキャッシュ）
-  var _load = {};           // name -> Promise（多重デコード防止）
-  var _seUnlocked = false;
-  var _PRELOAD = ['se_tap', 'se_back', 'se_card_flip', 'se_enhance_success', 'se_enhance_fail'];
-
   /* ===== iOS サイレントスイッチ対策 =====
-     iPhone はサイレント(マナー)スイッチがオンだと Web Audio(SE) を消す。無音をループ再生する
-     HTMLAudio 要素を1つ流すと「再生(playback)セッション」が保たれ、スイッチがオンでも SE が鳴る。
+     iPhone はサイレント(マナー)スイッチがオンだと音を消す。無音をループ再生する HTMLAudio 要素を
+     1つ流すと「再生(playback)セッション」が保たれ、スイッチがオンでも BGM/SE が鳴る。
      SE がオンの間だけ保持し、オフにすれば解放する（他アプリの音楽を不要に止めない）。 */
   var _silent = null;
   function _silentSrc() {
     // 1秒の無音WAV(44.1kHz/mono/16bit)をその場生成（外部ファイル不要）。
-    // ※8kHz/8bit だと iOS の共有オーディオセッションが低サンプルレートに引きずられ、
-    //   画面収録(ReplayKit)の音声タップでBGM/SEがノイズ化することがある。標準レートで生成して回避する。
     var sr = 44100, ch = 1, bps = 2, n = sr * ch * bps, view = new DataView(new ArrayBuffer(44 + n));
     function s(o, str) { for (var i = 0; i < str.length; i++) view.setUint8(o + i, str.charCodeAt(i)); }
     s(0, 'RIFF'); view.setUint32(4, 36 + n, true); s(8, 'WAVE');
@@ -41,38 +31,49 @@
   }
   function _stopKeepalive() { if (_silent) { try { _silent.pause(); } catch (e) {} } }
 
-  function _ensureCtx() {
-    if (!_AC) return null;
-    if (!_ctx) _ctx = new _AC();
-    if (_ctx.state === 'suspended' && _ctx.resume) _ctx.resume();
-    return _ctx;
+  /* ===== SE: HTMLAudio プール（事前バッファでデコード遅延を排除／画面収録でも録音される）=====
+     Web Audio(AudioContext) の出力は iOS の画面収録(ReplayKit)で録音が破綻しノイズ化するため、
+     SE も BGM と同じ HTMLAudio 経路にする。各音を起動時に複数要素へ先読みロードし、
+     ラウンドロビンで即時再生＆重なり再生する。 */
+  var _seUnlocked = false;
+  var _POOL = {};           // name -> [HTMLAudioElement, ...]
+  var _rr = {};             // name -> 次に使う要素のインデックス
+  var _POOL_N = 4;          // 1音あたりの同時再生数（重なり用）
+  var _PRELOAD = ['se_tap', 'se_back', 'se_card_flip', 'se_enhance_success', 'se_enhance_fail'];
+
+  // iOS は「ユーザー操作中に一度 play した要素」だけ後で任意契機に再生できる。
+  // ミュートで一瞬 play→pause し、再生許可だけ取得する。
+  function _unlock(a) {
+    try {
+      a.muted = true;
+      var p = a.play();
+      var fin = function () { try { a.pause(); a.currentTime = 0; a.muted = false; } catch (e) {} };
+      if (p && p.then) p.then(fin, fin); else fin();
+    } catch (e) {}
   }
-  function _decode(name) {
-    if (_buf[name]) return Promise.resolve(_buf[name]);
-    if (_load[name]) return _load[name];
-    var c = _ensureCtx();
-    if (!c) return Promise.reject(new Error('no AudioContext'));
-    var pr = fetch('sounds/' + name + '.mp3')
-      .then(function (r) { return r.arrayBuffer(); })
-      .then(function (ab) { return c.decodeAudioData(ab); })
-      .then(function (b) { _buf[name] = b; delete _load[name]; return b; })
-      .catch(function (e) { delete _load[name]; throw e; });
-    _load[name] = pr;
-    return pr;
+  function _ensurePool(name) {
+    if (_POOL[name]) return _POOL[name];
+    var arr = [];
+    for (var i = 0; i < _POOL_N; i++) {
+      var a = new Audio('sounds/' + name + '.mp3');
+      a.preload = 'auto';
+      try { a.load(); } catch (e) {}
+      if (_seUnlocked) _unlock(a);   // 操作後に新規生成したプールは即解錠
+      arr.push(a);
+    }
+    _POOL[name] = arr; _rr[name] = 0;
+    return arr;
   }
-  function _fire(buf) {
-    var c = _ensureCtx(); if (!c || !buf) return;
-    var s = c.createBufferSource();
-    s.buffer = buf; s.connect(c.destination); s.start(0);
+  function _seFire(name) {
+    var arr = _ensurePool(name);
+    var idx = _rr[name] % arr.length; _rr[name] = (idx + 1) % arr.length;
+    var a = arr[idx];
+    try { a.currentTime = 0; var p = a.play(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
   }
-  // 初回ユーザー操作：AudioContext 起動＋無音 warm up（iOS のロック解除）＋全 SE 先読みデコード
+  // 初回ユーザー操作：全プールを解錠（非操作契機のSE＝強化結果音などを後から鳴らせるように）＋keepalive開始。
   function _seUnlock() {
     if (_seUnlocked) return; _seUnlocked = true;
-    var c = _ensureCtx();
-    if (c) {
-      try { var s = c.createBufferSource(); s.buffer = c.createBuffer(1, 1, 22050); s.connect(c.destination); s.start(0); } catch (e) {}
-      _PRELOAD.forEach(function (n) { _decode(n).catch(function () {}); });
-    }
+    _PRELOAD.forEach(function (n) { _ensurePool(n).forEach(_unlock); });
     if (localStorage.getItem(KEY) !== '0') _startKeepalive();   // SEオンならiOS用に再生セッション保持
     window.removeEventListener('pointerdown', _seUnlock);
     window.removeEventListener('touchstart', _seUnlock);
@@ -81,8 +82,8 @@
   window.addEventListener('pointerdown', _seUnlock);
   window.addEventListener('touchstart', _seUnlock);
   window.addEventListener('keydown', _seUnlock);
-  // 起動時に先読みデコード開始（初回タップ前にバッファを用意＝最初のタップも即時化）。decodeAudioData は AudioContext が suspended でも実行可。
-  _PRELOAD.forEach(function (n) { _decode(n).catch(function () {}); });
+  // 起動時に先読みロード（初回タップ前にバッファを用意＝最初のタップも即時化）。
+  _PRELOAD.forEach(function (n) { _ensurePool(n); });
 
   var CKSound = {
     isOn: function () { return localStorage.getItem(KEY) !== '0'; }, // 未設定はオン
@@ -92,15 +93,10 @@
     },
     toggle: function () { var n = !this.isOn(); this.setOn(n); return n; },
 
-    // 効果音：毎回新しいAudioを生成（重なり再生OK）。未配置ファイルは握りつぶす。
+    // 効果音：事前ロード済みHTMLAudioをラウンドロビン再生（重なり再生OK）。未配置ファイルは握りつぶす。
     play: function (name) {
       if (!this.isOn()) return;
-      if (!_AC) { // Web Audio 非対応環境は従来どおり new Audio フォールバック
-        try { var a = new Audio('sounds/' + name + '.mp3'); var p = a.play(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
-        return;
-      }
-      if (_buf[name]) { _fire(_buf[name]); return; }   // 通常：デコード済み＝即時・遅延ゼロ
-      _decode(name).then(_fire).catch(function () {});  // 未登録名：初回のみ取得→再生、以降はキャッシュされ即時化
+      _seFire(name);
     },
 
     // ホーム専用：最初のユーザー操作でBGMをループ開始
