@@ -1073,14 +1073,33 @@ function exportImage(){
     ctx.beginPath(); ctx.moveTo(padX, Math.round(hy)+0.5); ctx.lineTo(padX+tableW, Math.round(hy)+0.5); ctx.stroke();
   }
 
+  var fname = 'slot_' + (state.active==='front'?'omote':'ura') + '_' + stamp() + '.png';
+
+  // Prefer the native share sheet (iOS: tap "画像を保存" -> saves to Photos / フォト).
+  // Build the file synchronously so the tap's user-activation is still valid when share() is called.
+  if (navigator.share && navigator.canShare){
+    try {
+      var durl = cv.toDataURL('image/png');
+      var bstr = atob(durl.split(',')[1]);
+      var nn = bstr.length, u8 = new Uint8Array(nn);
+      while (nn--) u8[nn] = bstr.charCodeAt(nn);
+      var file = new File([u8], fname, { type:'image/png' });
+      if (navigator.canShare({ files:[file] })){
+        navigator.share({ files:[file] }).catch(function(){ /* キャンセル等は無視 */ });
+        return;
+      }
+    } catch(e){ /* fall through to download */ }
+  }
+
+  // Fallback: download to Files
   if (cv.toBlob){
     cv.toBlob(function(blob){
       if (!blob){ showAlert('画像の作成に失敗しました。'); return; }
-      downloadBlob(blob, 'slot_' + (state.active==='front'?'omote':'ura') + '_' + stamp() + '.png');
+      downloadBlob(blob, fname);
     }, 'image/png');
   } else {
     var a = document.createElement('a');
-    a.href = cv.toDataURL('image/png'); a.download = 'slot_' + (state.active==='front'?'omote':'ura') + '_' + stamp() + '.png';
+    a.href = cv.toDataURL('image/png'); a.download = fname;
     document.body.appendChild(a); a.click(); if (a.parentNode) a.parentNode.removeChild(a);
   }
 }
