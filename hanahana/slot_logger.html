@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>スロットデータ記録</title>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  :root{--cols:12% 17% 11% 11% 15% 15% 9% 10%;}
+  html,body{margin:0;height:100%;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP","Yu Gothic",sans-serif;
+    color:#15191f;background:#e9ebef;-webkit-text-size-adjust:100%;
+    font-variant-numeric:tabular-nums;
+  }
+  #app{display:flex;flex-direction:column;height:100vh;height:100dvh;}
+
+  /* ---- page tabs (表 / 裏) ---- */
+  .tabbar{
+    flex:none;display:flex;gap:5px;
+    background:#11161f;padding:6px 6px 0;padding-top:calc(6px + env(safe-area-inset-top));
+  }
+  .tab{
+    flex:1;height:40px;border:none;border-radius:11px 11px 0 0;
+    background:#2a3344;color:#9aa3b2;font-size:14.5px;font-weight:800;letter-spacing:.04em;
+  }
+  .tab.on{background:#1e2533;color:#fff;}
+  .tab:active{filter:brightness(1.1);}
+
+  /* ---- toolbar ---- */
+  .toolbar{
+    flex:none;display:flex;gap:3px;
+    padding:6px 5px;
+    background:#1e2533;border-bottom:2px solid #1e2533;transition:border-color .15s;
+  }
+  .toolbar.saved{border-bottom-color:#3ddc84;}
+  .tbtn{
+    flex:1;min-width:0;height:42px;border:none;border-radius:8px;padding:0 2px;
+    background:#2f3a4d;color:#fff;font-size:12px;font-weight:700;letter-spacing:.01em;
+  }
+  .tbtn:active{background:#43526c;}
+  .tbtn.accent{background:#3b50c4;}
+  .tbtn.accent:active{background:#4a61e0;}
+  .tbtn.arrow{font-size:18px;background:#39435a;}
+  .tbtn.arrow:active{background:#4b5670;}
+  .tbtn:disabled{opacity:.3;}
+
+  /* ---- column header ---- */
+  .colheader{
+    flex:none;display:grid;grid-template-columns:var(--cols);
+    background:#d6dbe2;border-bottom:1px solid #aab2bd;
+  }
+  .colheader>div{
+    padding:3px 1px;font-size:10px;font-weight:800;line-height:1.12;
+    text-align:center;color:#2b3340;border-right:1px solid #c2c8d1;
+    display:flex;align-items:center;justify-content:center;min-height:36px;
+  }
+  .colheader>div:last-child{border-right:none;}
+  .colheader>div.sortable{cursor:pointer;background:#cfd6df;color:#1d3a8a;}
+  .colheader>div.sortable:active{background:#bfc8d4;}
+  .sortarw{font-size:9px;margin-left:2px;line-height:1;}
+
+  /* ---- table body ---- */
+  .tbody{
+    flex:1;overflow-y:auto;overflow-x:hidden;background:#fff;
+    -webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+  }
+  .tbody::-webkit-scrollbar{display:none;}
+  .tbody{scrollbar-width:none;}
+  .trow{display:grid;grid-template-columns:var(--cols);border-bottom:1px solid #e4e7eb;}
+  .cell{
+    min-height:42px;display:flex;align-items:center;justify-content:center;
+    font-size:11px;line-height:1.1;text-align:center;white-space:nowrap;overflow:hidden;
+    border-right:1px solid #eef0f3;padding:2px 1px;
+    touch-action:manipulation;user-select:none;-webkit-user-select:none;
+  }
+  .cell:last-child{border-right:none;}
+  .cell.c-daiban{font-weight:800;font-size:12.5px;background:#f8fafc;}
+  .cell.c-gakkun{font-size:15px;font-weight:700;}
+  .cell.c-side,.cell.c-bigAfter,.cell.c-regAfter,.cell.c-bigSuika,.cell.c-regSuika{font-size:10.5px;font-weight:600;}
+  .cell:empty::after{content:"";}
+  .empty{padding:34px 20px;text-align:center;color:#8a93a0;font-size:13px;line-height:1.7;}
+
+  /* ---- modal / bottom sheet ---- */
+  .overlay{
+    position:fixed;inset:0;background:rgba(13,18,26,.5);
+    display:none;align-items:flex-end;justify-content:center;z-index:100;
+  }
+  .overlay.show{display:flex;}
+  .modal{width:100%;display:flex;justify-content:center;}
+  .sheet{
+    width:100%;max-width:520px;background:#fff;border-radius:18px 18px 0 0;
+    padding:12px 16px calc(18px + env(safe-area-inset-bottom));
+    box-shadow:0 -8px 30px rgba(0,0,0,.28);animation:slideup .16s ease-out;
+  }
+  @keyframes slideup{from{transform:translateY(18px);opacity:.4;}to{transform:translateY(0);opacity:1;}}
+  .sheethdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .sheettitle{font-size:15px;font-weight:800;color:#1c2532;}
+  .closebtn{width:38px;height:38px;border:none;background:#eef1f5;border-radius:50%;font-size:22px;line-height:1;color:#5a6472;}
+  .closebtn:active{background:#dfe4ea;}
+  .preview{
+    text-align:center;font-size:18px;font-weight:800;color:#2a3340;letter-spacing:.04em;
+    background:#f2f4f7;border-radius:10px;padding:8px;margin-bottom:12px;min-height:38px;
+  }
+
+  /* ---- confirm / alert dialog (centred) ---- */
+  .overlay.confirm{align-items:center;z-index:200;}
+  .confirmcard{
+    width:88%;max-width:360px;background:#fff;border-radius:16px;padding:18px;
+    box-shadow:0 12px 44px rgba(0,0,0,.32);animation:slideup .14s ease-out;
+  }
+  .confirmmsg{font-size:14.5px;font-weight:600;color:#1c2532;line-height:1.65;margin-bottom:16px;white-space:pre-line;}
+  .confirmbtns{display:flex;gap:10px;}
+  .confirmbtns button{flex:1;height:46px;border:none;border-radius:10px;font-size:14.5px;font-weight:800;}
+  .cf-cancel{background:#eef1f5;color:#3a4452;}
+  .cf-cancel:active{background:#e1e6ec;}
+  .cf-ok{background:#3b50c4;color:#fff;}
+  .cf-ok:active{background:#4a61e0;}
+  .cf-ok.danger{background:#e0392b;}
+  .cf-ok.danger:active{background:#c0392b;}
+
+  /* counter grid (side / big後 / reg後) */
+  .cgrid{display:flex;justify-content:space-between;gap:5px;}
+  .cstack{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;}
+  .cswrap{display:flex;flex-direction:column;align-items:center;gap:2px;height:38px;justify-content:flex-end;}
+  .swatch{width:22px;height:22px;border-radius:50%;border:1px solid rgba(0,0,0,.18);}
+  .swatch.rainbow{background:linear-gradient(95deg,#ff2b4e,#ff8a00,#ffd500,#23c552,#1aa7ff,#8a5cff);}
+  .clabel{font-size:11px;font-weight:800;color:#3a4452;}
+  .cnum{font-size:23px;font-weight:800;min-width:34px;text-align:center;color:#10151c;}
+  .cbtn{width:100%;height:44px;border:none;border-radius:9px;font-size:22px;font-weight:800;line-height:1;}
+  .cbtn.up{background:#e7ecff;color:#2c3da8;}
+  .cbtn.up:active{background:#d3ddff;}
+  .cbtn.dn{background:#f0f2f5;color:#5a6472;}
+  .cbtn.dn:active{background:#e2e6ea;}
+
+  /* single counter (BIGスイカ / REGスイカ) */
+  .singlewrap{display:flex;flex-direction:column;align-items:center;gap:10px;padding:6px 0 4px;}
+  .sbtn{width:180px;max-width:80%;height:54px;border:none;border-radius:11px;font-size:26px;font-weight:800;}
+  .sbtn:first-child{background:#e7ecff;color:#2c3da8;}
+  .sbtn:last-child{background:#f0f2f5;color:#5a6472;}
+  .sbtn:active{filter:brightness(.95);}
+  .snum{font-size:46px;font-weight:800;color:#10151c;min-width:80px;text-align:center;}
+
+  /* pair counter (BIGスイカ / REGスイカ) : two values */
+  .pairgrid{display:flex;align-items:center;justify-content:center;gap:14px;padding:6px 0 4px;}
+  .pairgrid .cstack{flex:0 0 120px;max-width:42%;}
+  .pairgrid .cnum{font-size:34px;}
+  .pairdash{font-size:32px;font-weight:800;color:#5a6472;padding:0 2px 4px;}
+
+  /* choices (gakkun) */
+  .choicewrap{display:flex;gap:10px;justify-content:center;padding:4px 0 8px;}
+  .choice{flex:1;height:74px;border:2px solid #dfe4ea;border-radius:12px;background:#fff;font-size:20px;font-weight:800;color:#27313f;}
+  .choice.big{font-size:40px;}
+  .choice.sel{border-color:#3b50c4;background:#eef1ff;color:#2c3da8;}
+  .choice:active{background:#f2f4f7;}
+
+  /* asa-fla grid */
+  .asagrid{display:flex;flex-wrap:wrap;gap:8px;padding:2px 0 6px;}
+  .asaopt{
+    flex:1 1 28%;min-height:54px;border:2px solid #dfe4ea;border-radius:11px;background:#fff;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+    font-size:14px;font-weight:800;color:#27313f;
+  }
+  .asaopt.sel{border-color:#3b50c4;background:#eef1ff;}
+  .asaopt:active{background:#f2f4f7;}
+  .asasw{width:20px;height:20px;border-radius:50%;}
+  .asasw.none{display:flex;align-items:center;justify-content:center;font-size:14px;color:#9aa3af;border:1px dashed #c2c8d1;font-weight:700;}
+
+  /* daiban / settings inputs */
+  .dwrap{display:flex;align-items:center;gap:10px;justify-content:center;padding:2px 0 10px;}
+  .dinput{
+    flex:1;max-width:170px;height:50px;border:2px solid #cfd5dd;border-radius:10px;
+    text-align:center;font-size:22px;font-weight:800;color:#10151c;
+  }
+  .dinput:focus{outline:none;border-color:#3b50c4;}
+  .drow{display:flex;gap:10px;margin-top:10px;}
+  .drow .mini{flex:1;min-width:0;}
+  .field{margin-bottom:12px;}
+  .field2{display:flex;gap:12px;margin-bottom:14px;}
+  .field2>div{flex:1;min-width:0;}
+  label{display:block;font-size:12px;font-weight:800;color:#56606e;margin-bottom:5px;}
+  .segwrap{display:flex;gap:8px;}
+  .seg{flex:1;height:46px;border:2px solid #dfe4ea;border-radius:10px;background:#fff;font-size:14px;font-weight:800;color:#27313f;}
+  .seg.on{border-color:#3b50c4;background:#eef1ff;color:#2c3da8;}
+  .mini{height:46px;border:none;border-radius:10px;background:#eef1f5;color:#2b3340;font-size:14px;font-weight:800;padding:0 14px;}
+  .mini:disabled{opacity:.4;}
+  .mini:active{background:#e1e6ec;}
+  .mini.primary{background:#3b50c4;color:#fff;}
+  .mini.primary:active{background:#4a61e0;}
+  .mini.danger{background:#fdeaea;color:#c0392b;}
+  .mini.danger:active{background:#f8d8d8;}
+  .mini.wide{display:block;width:100%;}
+  .note{font-size:11px;color:#7c8693;line-height:1.6;margin-top:10px;}
+  .sep{border:none;border-top:1px solid #e4e7eb;margin:14px 0;}
+  .modalrow{display:flex;justify-content:flex-end;gap:10px;margin-top:14px;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="tabbar" id="tabbar">
+    <button class="tab on" id="tabFront">表</button>
+    <button class="tab" id="tabBack">裏</button>
+  </div>
+  <div class="toolbar" id="toolbar">
+    <button class="tbtn arrow" id="btnUndo" disabled>←</button>
+    <button class="tbtn arrow" id="btnRedo" disabled>→</button>
+    <button class="tbtn accent" id="btnDaiban">台番</button>
+    <button class="tbtn" id="btnUp">↑行</button>
+    <button class="tbtn" id="btnDown">↓行</button>
+    <button class="tbtn" id="btnSave">保存</button>
+    <button class="tbtn" id="btnLoad">読込</button>
+    <button class="tbtn" id="btnImg">画像</button>
+  </div>
+  <div class="colheader">
+    <div id="colDaiban" class="sortable">台番<span id="sortArrow" class="sortarw">▲</span></div>
+    <div>サイド</div>
+    <div>BIG<br>スイカ</div>
+    <div>REG<br>スイカ</div>
+    <div>BIG後</div>
+    <div>REG後</div>
+    <div>ガックン</div>
+    <div>朝フラ</div>
+  </div>
+  <div class="tbody" id="tbody"></div>
+</div>
+<div class="overlay" id="overlay"><div class="modal" id="modalHost"></div></div>
+<div class="overlay confirm" id="confirmOverlay"><div class="confirmcard" id="confirmCard"></div></div>
+<input type="file" id="fileInput" accept="application/json,.json" style="display:none">
+<script>
+/* ============== スロットデータ記録 ============== */
+"use strict";
+
+/* ---- DOM refs ---- */
+var tbody     = document.getElementById('tbody');
+var overlay   = document.getElementById('overlay');
+var modalHost = document.getElementById('modalHost');
+var toolbar   = document.getElementById('toolbar');
+var fileInput = document.getElementById('fileInput');
+var confirmOverlay = document.getElementById('confirmOverlay');
+var confirmCard    = document.getElementById('confirmCard');
+var btnDaiban = document.getElementById('btnDaiban');
+var btnUp     = document.getElementById('btnUp');
+var btnDown   = document.getElementById('btnDown');
+var btnSave   = document.getElementById('btnSave');
+var btnLoad   = document.getElementById('btnLoad');
+var btnImg    = document.getElementById('btnImg');
+var btnUndo   = document.getElementById('btnUndo');
+var btnRedo   = document.getElementById('btnRedo');
+var tabFront  = document.getElementById('tabFront');
+var tabBack   = document.getElementById('tabBack');
+var colDaiban = document.getElementById('colDaiban');
+var sortArrow = document.getElementById('sortArrow');
+
+/* ---- state ---- */
+/* two independent pages: front (表/手前) and back (裏/背面). Each {mode,rows}. */
+var state = {
+  active: 'front',
+  pages: {
+    front: { mode:'full', rows:[] },
+    back:  { mode:'full', rows:[] }
+  }
+};
+function pg(){ return state.pages[state.active]; }
+var idc = 0;
+var LS_KEY = 'slot_logger_v1';
+var mem = { v:null };
+var histStack = [];     // snapshots (JSON strings) for undo/redo
+var histIdx = -1;
+
+/* ---- columns ---- */
+var COLS = [
+  { key:'daiban',   cls:'c-daiban',   type:'daiban' },
+  { key:'side',     cls:'c-side',     type:'count', colors:'side'  },
+  { key:'bigSuika', cls:'c-bigSuika', type:'pair' },
+  { key:'regSuika', cls:'c-regSuika', type:'pair' },
+  { key:'bigAfter', cls:'c-bigAfter', type:'count', colors:'after' },
+  { key:'regAfter', cls:'c-regAfter', type:'count', colors:'after' },
+  { key:'gakkun',   cls:'c-gakkun',   type:'gakkun' },
+  { key:'asaFla',   cls:'c-asaFla',   type:'asa'    }
+];
+
+var COLORS_SIDE = [
+  { label:'青', sw:'#2f6bff' },
+  { label:'黄', sw:'#f2c200' },
+  { label:'緑', sw:'#28b463' },
+  { label:'赤', sw:'#ef4444' },
+  { label:'虹', rainbow:true }
+];
+var COLORS_AFTER = [
+  { label:'青',  sw:'#2f6bff' },
+  { label:'黄',  sw:'#f2c200' },
+  { label:'緑',  sw:'#28b463' },
+  { label:'赤(紫)', grad:'linear-gradient(135deg,#ef4444,#a855f7)' },
+  { label:'虹',  rainbow:true }
+];
+var ASA_OPTS = [
+  { v:'',   label:'空白',   none:true },
+  { v:'白',  label:'白',    sw:'#ffffff', border:true },
+  { v:'青',  label:'青',    sw:'#2f6bff' },
+  { v:'黄',  label:'黄',    sw:'#f2c200' },
+  { v:'緑',  label:'緑',    sw:'#28b463' },
+  { v:'赤紫', label:'赤(紫)', grad:'linear-gradient(135deg,#ef4444,#a855f7)' }
+];
+/* readable-on-white text colours for 朝フラ display */
+var ASA_TEXT  = { '白':'#3a4452','青':'#2f6bff','黄':'#c79100','緑':'#1ea34d','赤紫':'#c026d3' };
+var ASA_VALID = { '':1,'白':1,'青':1,'黄':1,'緑':1,'赤紫':1 };
+function normAsa(s){
+  if (typeof s !== 'string') return '';
+  if (s==='赤' || s==='紫' || s==='赤(紫)') return '赤紫';   // legacy / merge
+  return ASA_VALID[s] ? s : '';
+}
+
+/* ---- small helpers ---- */
+function el(tag, cls, txt){
+  var e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (txt != null) e.textContent = txt;
+  return e;
+}
+function escapeHtml(s){
+  return String(s).replace(/[&<>]/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;'})[c]; });
+}
+
+/* ---- in-app confirm / alert (native confirm/alert is suppressed in iOS standalone web-app view) ---- */
+function hideConfirm(){ confirmOverlay.classList.remove('show'); confirmCard.innerHTML = ''; }
+function showConfirm(message, onOk, okLabel, danger){
+  confirmCard.innerHTML = '';
+  confirmCard.appendChild(el('div','confirmmsg', message));
+  var btns = el('div','confirmbtns');
+  var cancel = el('button','cf-cancel','キャンセル');
+  var ok = el('button','cf-ok' + (danger ? ' danger' : ''), okLabel || 'OK');
+  cancel.onclick = function(){ hideConfirm(); };
+  ok.onclick = function(){ hideConfirm(); onOk(); };
+  btns.appendChild(cancel); btns.appendChild(ok);
+  confirmCard.appendChild(btns);
+  confirmOverlay.classList.add('show');
+}
+function showAlert(message){
+  confirmCard.innerHTML = '';
+  confirmCard.appendChild(el('div','confirmmsg', message));
+  var btns = el('div','confirmbtns');
+  var ok = el('button','cf-ok','OK');
+  ok.onclick = function(){ hideConfirm(); };
+  btns.appendChild(ok);
+  confirmCard.appendChild(btns);
+  confirmOverlay.classList.add('show');
+}
+if (confirmOverlay) confirmOverlay.addEventListener('click', function(e){ if (e.target === confirmOverlay) hideConfirm(); });
+function pad2(n){ return (n<10?'0':'') + n; }
+function stamp(){
+  var d = new Date();
+  return '' + d.getFullYear() + pad2(d.getMonth()+1) + pad2(d.getDate()) + '_' + pad2(d.getHours()) + pad2(d.getMinutes());
+}
+
+/* ---- row factory / normalise ---- */
+function fix5(a){
+  var o = [0,0,0,0,0], i, n;
+  if (Object.prototype.toString.call(a) === '[object Array]') {
+    for (i=0;i<5;i++){ n = parseInt(a[i],10); o[i] = isNaN(n) ? 0 : Math.max(0,n); }
+  }
+  return o;
+}
+function fix2(a){
+  var o = [0,0], i, n;
+  if (typeof a === 'number'){ o[0] = Math.max(0, a|0); return o; }   // migrate old single int
+  if (Object.prototype.toString.call(a) === '[object Array]') {
+    for (i=0;i<2;i++){ n = parseInt(a[i],10); o[i] = isNaN(n) ? 0 : Math.max(0,n); }
+  }
+  return o;
+}
+function normalizeRow(r){
+  r = r || {};
+  var dn = (r.daiban==null || r.daiban==='') ? null : (parseInt(r.daiban,10));
+  if (isNaN(dn)) dn = null;
+  return {
+    id:       (r.id!=null) ? r.id : (++idc),
+    daiban:   dn,
+    side:     fix5(r.side),
+    bigSuika: fix2(r.bigSuika),
+    regSuika: fix2(r.regSuika),
+    bigAfter: fix5(r.bigAfter),
+    regAfter: fix5(r.regAfter),
+    gakkun:   (r.gakkun===true || r.gakkun===false) ? r.gakkun : null,
+    asaFla:   normAsa(r.asaFla)
+  };
+}
+function newRow(daiban){
+  return normalizeRow({ daiban: daiban, side:[0,0,0,0,0], bigSuika:[0,0], regSuika:[0,0],
+                        bigAfter:[0,0,0,0,0], regAfter:[0,0,0,0,0], gakkun:null, asaFla:'' });
+}
+function rowById(id){ id = String(id); for (var i=0;i<pg().rows.length;i++){ if (String(pg().rows[i].id)===id) return pg().rows[i]; } return null; }
+function rowIndexById(id){ id = String(id); for (var i=0;i<pg().rows.length;i++){ if (String(pg().rows[i].id)===id) return i; } return -1; }
+
+/* ---- daiban sequencing ---- */
+function has49(n){ var s = String(Math.abs(n)); return s.indexOf('4') >= 0 || s.indexOf('9') >= 0; }
+function nextDaiban(n){ var x = n+1; if (pg().mode==='no49'){ while (has49(x)) x++; } return x; }
+function prevDaiban(n){ var x = n-1; if (pg().mode==='no49'){ while (x>0 && has49(x)) x--; } return x>0 ? x : null; }
+function genRows(start, count, mode, desc){
+  var rows = [], cur = start, x, i;
+  for (i=0;i<count;i++){
+    if (cur == null || cur < 1) break;
+    rows.push(newRow(cur));
+    if (desc){
+      x = cur - 1;
+      if (mode==='no49'){ while (x>0 && has49(x)) x--; }
+      if (x < 1) x = null;            // can't go below 台番1
+    } else {
+      x = cur + 1;
+      if (mode==='no49'){ while (has49(x)) x++; }
+    }
+    cur = x;
+  }
+  return rows;
+}
+
+/* ---- display formatting ---- */
+function fmtDaiban(n){ return (n==null) ? '' : n.toLocaleString('en-US'); }
+function fmt5(a){
+  var sum = a[0]+a[1]+a[2]+a[3]+a[4];
+  if (sum === 0) return '';
+  var s = a[0] + '-' + a[1] + '-' + a[2] + '-' + a[3];
+  if (a[4] > 0) s += '-' + a[4];
+  return s;
+}
+function fmt2(a){
+  if (a[0] === 0 && a[1] === 0) return '';
+  return a[0] + '-' + a[1];
+}
+function cellText(r, col){
+  switch (col.type){
+    case 'daiban': return fmtDaiban(r.daiban);
+    case 'count':  return fmt5(r[col.key]);
+    case 'pair':   return fmt2(r[col.key]);
+    case 'gakkun': return r.gakkun===true ? '○' : (r.gakkun===false ? '×' : '');
+    case 'asa':    return r.asaFla || '';
+  }
+  return '';
+}
+
+/* ---- render ---- */
+function renderBody(){
+  if (pg().rows.length === 0){
+    tbody.innerHTML = '<div class="empty">「台番」ボタンを押して<br>台番号を作成してください。<br><br>各マスを<b>ダブルタップ</b>すると<br>入力画面が開きます。</div>';
+    updateUI();
+    return;
+  }
+  var html = '', i, j, r, col, t, style;
+  for (i=0;i<pg().rows.length;i++){
+    r = pg().rows[i];
+    html += '<div class="trow" data-id="'+r.id+'">';
+    for (j=0;j<COLS.length;j++){
+      col = COLS[j];
+      t = cellText(r, col);
+      style = '';
+      if (col.type==='asa' && t){ style = ' style="color:'+(ASA_TEXT[t]||'#15191f')+'"'; }
+      html += '<div class="cell '+col.cls+'" data-id="'+r.id+'" data-col="'+col.key+'"'+style+'>'+escapeHtml(t)+'</div>';
+    }
+    html += '</div>';
+  }
+  tbody.innerHTML = html;
+  fitCells();
+  updateUI();
+}
+
+/* shrink numeric/daiban cell fonts so values never wrap or clip */
+function fitCells(){
+  var cells = tbody.querySelectorAll('.cell.c-side,.cell.c-bigAfter,.cell.c-regAfter,.cell.c-bigSuika,.cell.c-regSuika,.cell.c-daiban');
+  for (var i=0;i<cells.length;i++){
+    var c = cells[i];
+    if (!c.textContent) continue;
+    var base = (c.className.indexOf('c-daiban') >= 0) ? 12.5 : 10.5;
+    c.style.fontSize = base + 'px';
+    var fs = base, guard = 0;
+    while (c.scrollWidth > c.clientWidth && fs > 6.5 && guard < 14){ fs -= 0.5; c.style.fontSize = fs + 'px'; guard++; }
+  }
+}
+
+/* ---- page normalisation ---- */
+function normalizePage(p){
+  p = p || {};
+  return {
+    mode: (p.mode==='no49') ? 'no49' : 'full',
+    desc: (p.desc===true),          // true = 台番が下に向かって減る（降順）
+    rows: (Object.prototype.toString.call(p.rows)==='[object Array]') ? p.rows.map(normalizeRow) : []
+  };
+}
+function normalizeState(o){
+  o = o || {};
+  if (o.pages){   // new format
+    return {
+      active: (o.active==='back') ? 'back' : 'front',
+      pages: { front: normalizePage(o.pages.front), back: normalizePage(o.pages.back) }
+    };
+  }
+  // legacy {mode, rows} -> becomes the front page
+  return { active:'front', pages:{ front: normalizePage(o), back: normalizePage(null) } };
+}
+function fixIdc(){
+  var mx = 0;
+  ['front','back'].forEach(function(k){
+    state.pages[k].rows.forEach(function(r){ if (typeof r.id==='number' && r.id > mx) mx = r.id; });
+  });
+  idc = mx;
+}
+
+/* ---- undo / redo histStack (covers both pages' data; active tab is not part of a snapshot) ---- */
+function snapshot(){ return JSON.stringify(state.pages); }
+function applySnapshot(snap){
+  try {
+    var o = JSON.parse(snap);
+    state.pages.front = normalizePage(o.front);
+    state.pages.back  = normalizePage(o.back);
+    fixIdc();
+  } catch(e){}
+}
+function historyInit(){ histStack = [snapshot()]; histIdx = 0; updateUI(); }
+function checkpoint(){
+  var snap = snapshot();
+  if (histIdx >= 0 && snap === histStack[histIdx]) { updateUI(); return; }  // no change -> skip
+  histStack = histStack.slice(0, histIdx + 1);
+  histStack.push(snap);
+  if (histStack.length > 80) histStack.shift();
+  histIdx = histStack.length - 1;
+  updateUI();
+}
+function undo(){
+  if (histIdx <= 0) return;
+  histIdx--;
+  applySnapshot(histStack[histIdx]);
+  renderBody(); save();   // save() persists but does NOT checkpoint
+}
+function redo(){
+  if (histIdx >= histStack.length - 1) return;
+  histIdx++;
+  applySnapshot(histStack[histIdx]);
+  renderBody(); save();
+}
+
+/* ---- tab switching ---- */
+function updateTabs(){
+  if (tabFront) tabFront.classList.toggle('on', state.active === 'front');
+  if (tabBack)  tabBack.classList.toggle('on', state.active === 'back');
+}
+function switchPage(which){
+  if (state.active === which) return;
+  state.active = which;
+  updateTabs();
+  renderBody();
+  save();              // tab choice is persisted, but switching is not an undo step
+  tbody.scrollTop = 0;
+}
+
+/* ---- direction-aware row insert / sort helpers (operate on the active page) ---- */
+/* number for a new row ABOVE the current top (asc: smaller / desc: larger) */
+function topExtendNum(){
+  var rows = pg().rows;
+  if (rows.length === 0) return undefined;
+  var t = rows[0].daiban;
+  if (t == null) return null;
+  return pg().desc ? nextDaiban(t) : prevDaiban(t);
+}
+/* number for a new row BELOW the current bottom (asc: larger / desc: smaller) */
+function bottomExtendNum(){
+  var rows = pg().rows;
+  if (rows.length === 0) return undefined;
+  var b = rows[rows.length - 1].daiban;
+  if (b == null) return null;
+  return pg().desc ? prevDaiban(b) : nextDaiban(b);
+}
+function canAddTop(){ return typeof topExtendNum() === 'number'; }
+function canAddBottom(){ return typeof bottomExtendNum() === 'number'; }
+function insertTop(){
+  var n = topExtendNum();
+  if (typeof n !== 'number') return false;
+  pg().rows.unshift(newRow(n));
+  return true;
+}
+function insertBottom(){
+  var n = bottomExtendNum();
+  if (typeof n !== 'number') return false;
+  pg().rows.push(newRow(n));
+  return true;
+}
+function sortRowsByDir(){
+  var d = pg().desc;
+  pg().rows.sort(function(a, b){
+    var av = a.daiban, bv = b.daiban;
+    if (av == null && bv == null) return 0;
+    if (av == null) return 1;          // blank 台番 -> bottom
+    if (bv == null) return -1;
+    return d ? (bv - av) : (av - bv);
+  });
+}
+function setDesc(v){
+  pg().desc = !!v;
+  sortRowsByDir();
+  renderBody(); save(); checkpoint();
+}
+
+/* ---- toolbar / tab enable state ---- */
+function updateUI(){
+  updateTabs();
+  if (btnUndo) btnUndo.disabled = (histIdx <= 0);
+  if (btnRedo) btnRedo.disabled = (histIdx >= histStack.length - 1);
+  var has = pg().rows.length > 0;
+  if (btnUp)   btnUp.disabled   = (has && !canAddTop());
+  if (btnDown) btnDown.disabled = (has && !canAddBottom());
+  if (sortArrow) sortArrow.textContent = pg().desc ? '▼' : '▲';
+}
+
+
+/* ---- double-tap detection (touch) + dblclick (desktop) ---- */
+var lastTapT=0, lastTapX=0, lastTapY=0;
+var tsX=0, tsY=0, tsT=0, lastOpenT=0;
+
+tbody.addEventListener('touchstart', function(e){
+  var t = e.touches[0];
+  tsX = t.clientX; tsY = t.clientY; tsT = Date.now();
+}, { passive:true });
+
+tbody.addEventListener('touchend', function(e){
+  var ch = e.changedTouches[0];
+  var dx = Math.abs(ch.clientX - tsX), dy = Math.abs(ch.clientY - tsY), dt = Date.now() - tsT;
+  if (dx > 12 || dy > 12 || dt > 600) return;            // moved/scrolled or long press -> not a tap
+  var now = Date.now();
+  if (now - lastTapT < 330 && Math.abs(ch.clientX - lastTapX) < 32 && Math.abs(ch.clientY - lastTapY) < 32){
+    var node = document.elementFromPoint(ch.clientX, ch.clientY);
+    var cc = node && node.closest ? node.closest('.cell') : null;
+    if (cc){ e.preventDefault(); openCell(cc.getAttribute('data-id'), cc.getAttribute('data-col')); }
+    lastTapT = 0;
+  } else {
+    lastTapT = now; lastTapX = ch.clientX; lastTapY = ch.clientY;
+  }
+}, { passive:false });
+
+tbody.addEventListener('dblclick', function(e){
+  var cc = e.target.closest ? e.target.closest('.cell') : null;
+  if (cc) openCell(cc.getAttribute('data-id'), cc.getAttribute('data-col'));
+});
+
+function openCell(id, colKey){
+  var now = Date.now();
+  if (now - lastOpenT < 450) return;     // guard against touch + synthetic dblclick double-fire
+  lastOpenT = now;
+  var r = rowById(id);
+  if (!r) return;
+  switch (colKey){
+    case 'daiban':   openDaibanModal(r); break;
+    case 'side':     openCountModal(r,'side'); break;
+    case 'bigSuika': openPairModal(r,'bigSuika'); break;
+    case 'regSuika': openPairModal(r,'regSuika'); break;
+    case 'bigAfter': openCountModal(r,'bigAfter'); break;
+    case 'regAfter': openCountModal(r,'regAfter'); break;
+    case 'gakkun':   openGakkunModal(r); break;
+    case 'asaFla':   openAsaModal(r); break;
+  }
+}
+
+/* ---- modal infrastructure ---- */
+function openModalWith(node){
+  modalHost.innerHTML = '';
+  var sheet = el('div','sheet');
+  sheet.appendChild(node);
+  modalHost.appendChild(sheet);
+  overlay.classList.add('show');
+}
+function closeModal(){
+  overlay.classList.remove('show');
+  modalHost.innerHTML = '';
+  renderBody();
+  save();
+  checkpoint();
+}
+overlay.addEventListener('click', function(e){ if (e.target === overlay) closeModal(); });
+
+function sheetHeader(title){
+  var h = el('div','sheethdr');
+  h.appendChild(el('div','sheettitle', title));
+  var b = el('button','closebtn');
+  b.innerHTML = '&times;';
+  b.onclick = closeModal;
+  h.appendChild(b);
+  return h;
+}
+
+/* ---- count modal (サイド / BIG後 / REG後) ---- */
+function openCountModal(r, key){
+  var colors = (key==='side') ? COLORS_SIDE : COLORS_AFTER;
+  var titleMap = { side:'サイド', bigAfter:'BIG後', regAfter:'REG後' };
+  var arr = r[key];
+  var wrap = el('div');
+  wrap.appendChild(sheetHeader(titleMap[key]));
+  var prev = el('div','preview');
+  function refresh(){ prev.textContent = fmt5(arr) || '（なし）'; }
+  var grid = el('div','cgrid');
+
+  colors.forEach(function(c, i){
+    var st = el('div','cstack');
+    var sw = el('div','cswrap');
+    var dot = el('div', 'swatch' + (c.rainbow ? ' rainbow' : ''));
+    if (c.sw)   dot.style.background = c.sw;
+    if (c.grad) dot.style.background = c.grad;
+    sw.appendChild(dot);
+    sw.appendChild(el('div','clabel', c.label));
+
+    var up  = el('button','cbtn up','▲');
+    var num = el('div','cnum', String(arr[i]));
+    var dn  = el('button','cbtn dn','▼');
+    up.onclick = function(){ arr[i]++; num.textContent = arr[i]; refresh(); save(); };
+    dn.onclick = function(){ if (arr[i] > 0){ arr[i]--; num.textContent = arr[i]; refresh(); save(); } };
+
+    st.appendChild(sw); st.appendChild(up); st.appendChild(num); st.appendChild(dn);
+    grid.appendChild(st);
+  });
+
+  refresh();
+  wrap.appendChild(prev);
+  wrap.appendChild(grid);
+  openModalWith(wrap);
+}
+
+/* ---- pair counter (BIGスイカ / REGスイカ) : two values "a-b" ---- */
+function openPairModal(r, key){
+  var titleMap = { bigSuika:'BIGスイカ', regSuika:'REGスイカ' };
+  var arr = r[key];
+  var wrap = el('div');
+  wrap.appendChild(sheetHeader(titleMap[key]));
+  var prev = el('div','preview');
+  function refresh(){ prev.textContent = fmt2(arr) || '（なし）'; }
+  var row = el('div','pairgrid');
+  [0,1].forEach(function(idx){
+    var st  = el('div','cstack');
+    var up  = el('button','cbtn up','▲');
+    var num = el('div','cnum', String(arr[idx]));
+    var dn  = el('button','cbtn dn','▼');
+    up.onclick = function(){ arr[idx]++; num.textContent = arr[idx]; refresh(); save(); };
+    dn.onclick = function(){ if (arr[idx] > 0){ arr[idx]--; num.textContent = arr[idx]; refresh(); save(); } };
+    st.appendChild(up); st.appendChild(num); st.appendChild(dn);
+    row.appendChild(st);
+    if (idx === 0) row.appendChild(el('div','pairdash','-'));
+  });
+  refresh();
+  wrap.appendChild(prev);
+  wrap.appendChild(row);
+  openModalWith(wrap);
+}
+
+/* ---- gakkun modal ---- */
+function openGakkunModal(r){
+  var wrap = el('div');
+  wrap.appendChild(sheetHeader('ガックン'));
+  var cw = el('div','choicewrap');
+  var opts = [ {v:true,t:'○'}, {v:false,t:'×'}, {v:null,t:'空白'} ];
+  opts.forEach(function(o){
+    var b = el('button', 'choice' + (o.v!==null ? ' big' : '') + (r.gakkun===o.v ? ' sel' : ''), o.t);
+    b.onclick = function(){ r.gakkun = o.v; closeModal(); };
+    cw.appendChild(b);
+  });
+  wrap.appendChild(cw);
+  openModalWith(wrap);
+}
+
+/* ---- asa-fla modal ---- */
+function openAsaModal(r){
+  var wrap = el('div');
+  wrap.appendChild(sheetHeader('朝フラ'));
+  var grid = el('div','asagrid');
+  ASA_OPTS.forEach(function(o){
+    var b = el('button', 'asaopt' + (r.asaFla===o.v ? ' sel' : ''));
+    if (o.none){
+      b.appendChild(el('div','asasw none','—'));
+    } else {
+      var s = el('div','asasw');
+      s.style.background = o.grad ? o.grad : o.sw;
+      if (o.border) s.style.border = '1px solid #c2c8d1';
+      b.appendChild(s);
+    }
+    var lab = el('div', null, o.label);
+    lab.style.fontSize = '13px';
+    b.appendChild(lab);
+    b.onclick = function(){ r.asaFla = o.v; closeModal(); };
+    grid.appendChild(b);
+  });
+  wrap.appendChild(grid);
+  openModalWith(wrap);
+}
+
+/* ---- daiban cell modal (edit number / insert / delete) ---- */
+function openDaibanModal(r){
+  var wrap = el('div');
+  wrap.appendChild(sheetHeader('台番号'));
+
+  var dw = el('div','dwrap');
+  var inp = el('input','dinput');
+  inp.type = 'tel'; inp.inputMode = 'numeric';
+  inp.value = (r.daiban==null) ? '' : r.daiban;
+  inp.placeholder = '番号';
+  inp.addEventListener('input', function(){
+    var v = inp.value.replace(/[^0-9]/g,'');
+    r.daiban = (v==='') ? null : parseInt(v,10);
+  });
+  dw.appendChild(inp);
+  wrap.appendChild(dw);
+
+  var r1 = el('div','drow');
+  var above = el('button','mini','▲ 一番上に1行追加');
+  var below = el('button','mini','▼ 一番下に1行追加');
+  above.disabled = !canAddTop();
+  below.disabled = !canAddBottom();
+  above.onclick = function(){ if (insertTop()){ closeModal(); tbody.scrollTop = 0; } };
+  below.onclick = function(){ if (insertBottom()){ closeModal(); tbody.scrollTop = tbody.scrollHeight; } };
+  r1.appendChild(above); r1.appendChild(below);
+  wrap.appendChild(r1);
+
+  wrap.appendChild(el('hr','sep'));
+
+  var label = (fmtDaiban(r.daiban) || '番号なし');
+  var delUp = el('button','mini danger wide','▲ この行から上をすべて削除');
+  delUp.style.marginBottom = '10px';
+  delUp.onclick = function(){
+    var cnt = rowIndexById(r.id) + 1;
+    showConfirm('台番 ' + label + ' から上の ' + cnt + ' 行を削除します。\nよろしいですか？',
+      function(){ var k = rowIndexById(r.id); pg().rows.splice(0, k + 1); closeModal(); }, '削除する', true);
+  };
+  wrap.appendChild(delUp);
+
+  var delDown = el('button','mini danger wide','▼ この行から下をすべて削除');
+  delDown.onclick = function(){
+    var cnt = pg().rows.length - rowIndexById(r.id);
+    showConfirm('台番 ' + label + ' から下の ' + cnt + ' 行を削除します。\nよろしいですか？',
+      function(){ var k = rowIndexById(r.id); pg().rows.splice(k); closeModal(); }, '削除する', true);
+  };
+  wrap.appendChild(delDown);
+
+  openModalWith(wrap);
+}
+
+/* ---- settings / generate rows (台番 toolbar button) ---- */
+function pageName(){ return state.active === 'front' ? '表' : '裏'; }
+function openSettings(){
+  var wrap = el('div');
+  wrap.appendChild(sheetHeader('台番号の作成（' + pageName() + '）'));
+
+  /* mode */
+  var f1 = el('div','field');
+  f1.appendChild(el('label', null, '番号の付け方'));
+  var seg = el('div','segwrap');
+  var segFull  = el('button','seg' + (pg().mode==='full' ? ' on' : ''), '完全連番');
+  var segNo49  = el('button','seg' + (pg().mode==='no49' ? ' on' : ''), '4・9なし');
+  segFull.onclick = function(){ pg().mode='full'; segFull.classList.add('on'); segNo49.classList.remove('on'); save(); };
+  segNo49.onclick = function(){ pg().mode='no49'; segNo49.classList.add('on'); segFull.classList.remove('on'); save(); };
+  seg.appendChild(segFull); seg.appendChild(segNo49);
+  f1.appendChild(seg);
+  wrap.appendChild(f1);
+
+  /* direction */
+  var fd = el('div','field');
+  fd.appendChild(el('label', null, '台番の数字が上から下へ'));
+  var segd = el('div','segwrap');
+  var segAsc  = el('button','seg' + (!pg().desc ? ' on' : ''), '増加');
+  var segDesc = el('button','seg' + ( pg().desc ? ' on' : ''), '減少');
+  segAsc.onclick  = function(){ pg().desc=false; segAsc.classList.add('on'); segDesc.classList.remove('on'); sortRowsByDir(); save(); };
+  segDesc.onclick = function(){ pg().desc=true;  segDesc.classList.add('on'); segAsc.classList.remove('on'); sortRowsByDir(); save(); };
+  segd.appendChild(segAsc); segd.appendChild(segDesc);
+  fd.appendChild(segd);
+  wrap.appendChild(fd);
+
+  /* start + count */
+  var f2 = el('div','field2');
+  var d1 = el('div'); d1.style.flex = '1'; d1.style.minWidth = '0';
+  d1.appendChild(el('label', null, '開始台番'));
+  var startInp = el('input','dinput');
+  startInp.type='tel'; startInp.inputMode='numeric';
+  startInp.style.width='100%'; startInp.style.maxWidth='none';
+  startInp.placeholder='例: 1361';
+  d1.appendChild(startInp);
+  var d2 = el('div'); d2.style.flex = '0 0 94px';
+  d2.appendChild(el('label', null, '行数'));
+  var countInp = el('input','dinput');
+  countInp.type='tel'; countInp.inputMode='numeric';
+  countInp.style.width='100%'; countInp.style.maxWidth='none';
+  countInp.value='5'; countInp.placeholder='5';
+  d2.appendChild(countInp);
+  f2.appendChild(d1); f2.appendChild(d2);
+  wrap.appendChild(f2);
+
+  var gen = el('button','mini primary wide','この内容で行を作成');
+  gen.onclick = function(){
+    var start = parseInt((startInp.value||'').replace(/[^0-9]/g,''), 10);
+    var count = parseInt((countInp.value||'').replace(/[^0-9]/g,''), 10);
+    if (isNaN(start)){ startInp.focus(); startInp.style.borderColor='#ef4444'; return; }
+    var c = isNaN(count) ? 16 : Math.min(300, Math.max(1, count));
+    var doGen = function(){ pg().rows = genRows(start, c, pg().mode, pg().desc); closeModal(); tbody.scrollTop = 0; };
+    if (pg().rows.length > 0){
+      showConfirm('既存の ' + pg().rows.length + ' 行をすべて置き換えます。\nよろしいですか？', doGen, '置き換える', true);
+    } else { doGen(); }
+  };
+  wrap.appendChild(gen);
+
+  var note = el('div','note');
+  note.innerHTML = '「開始台番」は<b>一番上</b>の台番です。向きは上の「増加／減少」で選べます。<br>「4・9なし」は4または9を<b>含む番号すべて</b>を飛ばします（例：88 → 100）。<br>入力した内容は端末内へ自動保存され、途中でリセットされません。';
+  wrap.appendChild(note);
+
+  wrap.appendChild(el('hr','sep'));
+  var clr = el('button','mini danger wide','「' + pageName() + '」のデータを消去（リセット）');
+  clr.onclick = function(){
+    showConfirm('「' + pageName() + '」のすべての行と入力内容を消去します。\nよろしいですか？',
+      function(){ pg().rows = []; closeModal(); }, '消去する', true);
+  };
+  wrap.appendChild(clr);
+
+  openModalWith(wrap);
+}
+
+/* ---- toolbar wiring ---- */
+btnDaiban.onclick = openSettings;
+btnUp.onclick = function(){
+  if (pg().rows.length === 0){ openSettings(); return; }
+  if (insertTop()){ renderBody(); save(); checkpoint(); tbody.scrollTop = 0; }
+};
+btnDown.onclick = function(){
+  if (pg().rows.length === 0){ openSettings(); return; }
+  if (insertBottom()){ renderBody(); save(); checkpoint(); tbody.scrollTop = tbody.scrollHeight; }
+};
+btnSave.onclick = exportJSON;
+btnLoad.onclick = function(){ fileInput.click(); };
+btnImg.onclick  = exportImage;
+btnUndo.onclick = undo;
+btnRedo.onclick = redo;
+if (tabFront) tabFront.onclick = function(){ switchPage('front'); };
+if (tabBack)  tabBack.onclick  = function(){ switchPage('back'); };
+if (colDaiban) colDaiban.onclick = function(){ setDesc(!pg().desc); };
+fileInput.addEventListener('change', importJSON);
+
+/* ---- persistence ---- */
+var savedTimer = null;
+function flashSaved(){
+  toolbar.classList.add('saved');
+  if (savedTimer) clearTimeout(savedTimer);
+  savedTimer = setTimeout(function(){ toolbar.classList.remove('saved'); }, 600);
+}
+function save(){
+  var data = JSON.stringify(state);
+  mem.v = data;
+  try { localStorage.setItem(LS_KEY, data); } catch(e){}
+  flashSaved();
+}
+function load(){
+  var raw = null;
+  try { raw = localStorage.getItem(LS_KEY); } catch(e){}
+  if (raw == null) raw = mem.v;
+  if (!raw) return;
+  try {
+    state = normalizeState(JSON.parse(raw));
+    fixIdc();
+  } catch(e){}
+}
+
+function downloadBlob(blob, name){
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(url); if (a.parentNode) a.parentNode.removeChild(a); }, 1500);
+}
+
+function exportJSON(){
+  var blob = new Blob([JSON.stringify(state, null, 1)], { type:'application/json' });
+  downloadBlob(blob, 'slot_data_' + stamp() + '.json');
+  flashSaved();
+}
+
+function importJSON(e){
+  var file = e.target.files && e.target.files[0];
+  if (!file) return;
+  var rd = new FileReader();
+  rd.onload = function(){
+    try {
+      var ns = normalizeState(JSON.parse(rd.result));
+      var apply = function(){
+        state = ns;
+        fixIdc();
+        renderBody(); save(); checkpoint(); tbody.scrollTop = 0;
+      };
+      var existing = state.pages.front.rows.length + state.pages.back.rows.length;
+      if (existing > 0){
+        showConfirm('読み込んだデータで現在の内容（表・裏すべて）を置き換えます。\nよろしいですか？', apply, '置き換える', true);
+      } else { apply(); }
+    } catch(err){
+      showAlert('ファイルを読み込めませんでした。\n正しい保存ファイル（JSON）か確認してください。');
+    }
+    fileInput.value = '';
+  };
+  rd.onerror = function(){ showAlert('ファイルの読み込みに失敗しました。'); fileInput.value = ''; };
+  rd.readAsText(file);
+}
+
+/* ---- image export (offline canvas, single column) ---- */
+var FF = '-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP","Yu Gothic",sans-serif';
+function drawFit(ctx, txt, cx, cy, maxw, baseFs, fw, color, scale){
+  ctx.fillStyle = color;
+  var fs = baseFs;
+  ctx.font = fw + ' ' + (fs*scale) + 'px ' + FF;
+  while (ctx.measureText(txt).width > maxw && fs > 6){ fs -= 0.5; ctx.font = fw + ' ' + (fs*scale) + 'px ' + FF; }
+  ctx.fillText(txt, cx, cy);
+}
+function exportImage(){
+  if (pg().rows.length === 0){ showAlert('台番号がありません。先に行を作成してください。'); return; }
+
+  var headers = ['台番','サイド','BIGスイカ','REGスイカ','BIG後','REG後','ガックン','朝フラ'];
+  var wcss = [64,104,72,72,84,84,72,60];
+  var scale = 2;
+  var colW = wcss.map(function(w){ return w*scale; });
+  var tableW = colW.reduce(function(a,b){ return a+b; }, 0);
+  var rowH = 34*scale, headH = 40*scale;
+  var padTop = 10*scale, padBot = 12*scale, padX = 8*scale, titleH = 28*scale;
+  var n = pg().rows.length;
+  var W = tableW + padX*2;
+  var H = padTop + titleH + headH + rowH*n + padBot;
+
+  var cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  var ctx = cv.getContext('2d');
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,W,H);
+  ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
+
+  /* title */
+  drawFit(ctx, 'スロットデータ（' + pageName() + '） ' + stamp().replace('_',' '), W/2, padTop + titleH/2, W - padX*2, 14, '800', '#1c2532', scale);
+
+  var top = padTop + titleH;
+  /* header bg + text */
+  ctx.fillStyle = '#d6dbe2'; ctx.fillRect(padX, top, tableW, headH);
+  var cx = padX, i;
+  for (i=0;i<headers.length;i++){
+    drawFit(ctx, headers[i], cx + colW[i]/2, top + headH/2, colW[i] - 6*scale, 11, '800', '#2b3340', scale);
+    cx += colW[i];
+  }
+
+  /* rows */
+  var y = top + headH;
+  pg().rows.forEach(function(r, ri){
+    if (ri % 2 === 1){ ctx.fillStyle = '#f5f7fa'; ctx.fillRect(padX, y, tableW, rowH); }
+    var x = padX;
+    COLS.forEach(function(col, ci){
+      var t = cellText(r, col);
+      if (t){
+        var color = (col.type==='asa') ? (ASA_TEXT[t] || '#15191f')
+                  : (col.type==='daiban') ? '#10151c' : '#1d2531';
+        var fs = (col.type==='count' || col.type==='pair') ? 9.5 : (col.type==='daiban' ? 12 : (col.type==='gakkun' ? 14 : 11));
+        var fw = (col.type==='daiban' || col.type==='gakkun') ? '800' : '600';
+        drawFit(ctx, t, x + colW[ci]/2, y + rowH/2, colW[ci] - 6*scale, fs, fw, color, scale);
+      }
+      x += colW[ci];
+    });
+    y += rowH;
+  });
+
+  /* gridlines */
+  var bottom = y;
+  ctx.strokeStyle = '#c2c8d1'; ctx.lineWidth = 1;
+  cx = padX;
+  for (i=0;i<=colW.length;i++){
+    ctx.beginPath(); ctx.moveTo(Math.round(cx)+0.5, top); ctx.lineTo(Math.round(cx)+0.5, bottom); ctx.stroke();
+    if (i < colW.length) cx += colW[i];
+  }
+  ctx.strokeStyle = '#d4d9e0';
+  ctx.beginPath(); ctx.moveTo(padX, Math.round(top)+0.5); ctx.lineTo(padX+tableW, Math.round(top)+0.5); ctx.stroke();
+  ctx.strokeStyle = '#aab2bd';
+  ctx.beginPath(); ctx.moveTo(padX, Math.round(top+headH)+0.5); ctx.lineTo(padX+tableW, Math.round(top+headH)+0.5); ctx.stroke();
+  ctx.strokeStyle = '#e2e6ec';
+  for (i=1;i<=n;i++){
+    var hy = top + headH + rowH*i;
+    ctx.beginPath(); ctx.moveTo(padX, Math.round(hy)+0.5); ctx.lineTo(padX+tableW, Math.round(hy)+0.5); ctx.stroke();
+  }
+
+  if (cv.toBlob){
+    cv.toBlob(function(blob){
+      if (!blob){ showAlert('画像の作成に失敗しました。'); return; }
+      downloadBlob(blob, 'slot_' + (state.active==='front'?'omote':'ura') + '_' + stamp() + '.png');
+    }, 'image/png');
+  } else {
+    var a = document.createElement('a');
+    a.href = cv.toDataURL('image/png'); a.download = 'slot_' + (state.active==='front'?'omote':'ura') + '_' + stamp() + '.png';
+    document.body.appendChild(a); a.click(); if (a.parentNode) a.parentNode.removeChild(a);
+  }
+}
+
+/* ---- init ---- */
+load();
+renderBody();
+historyInit();
+
+</script>
+</body>
+</html>
