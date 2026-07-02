@@ -9,87 +9,48 @@
 <style>
 :root{
   --accent:#ff2a6d;
-  --text:#111;
-  --muted:#666;
-  --bg:#ffffff;
-  --line:#e5e5e5;
+  --bg:#0d0d0d;
+  --border:#252525;
 }
-
-*{
-  box-sizing:border-box;
-}
-
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 body{
-  margin:0;
-  font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans JP",sans-serif;
-  color:var(--text);
-  background:#fff;
+  background:var(--bg);
+  color:#fff;
+  font-family:system-ui,-apple-system,"Segoe UI","Noto Sans JP",sans-serif;
+  line-height:1.6;
+  min-height:100vh;
 }
 
-.wrap{
-  max-width:1000px;
-  margin:80px auto;
-  padding:0 20px;
+.hdr{padding:64px 20px 48px;text-align:center;border-bottom:1px solid var(--border);}
+.hdr-eye{font-size:10px;letter-spacing:6px;color:var(--accent);margin-bottom:16px;}
+.hdr-title{font-size:clamp(28px,6vw,52px);font-weight:300;letter-spacing:8px;line-height:1.2;}
+
+.wrap{max-width:720px;margin:0 auto;padding:56px 20px 80px;}
+
+.field{margin-bottom:44px;}
+.field:last-child{margin-bottom:0;}
+
+.field-label{
+  font-size:10px;
+  letter-spacing:2px;
+  color:#555;
+  border-left:2px solid var(--accent);
+  padding-left:10px;
+  margin-bottom:9px;
 }
 
-.section-title{
+.field-value{
+  font-size:18px;
+  line-height:1.8;
+  padding-left:12px;
+}
+
+.field-credit{
   font-size:14px;
-  letter-spacing:2px;
-  margin:0 0 16px 0;
-  color:#444;
-  text-align:center;
-}
-
-.profile{
-  border:1px solid var(--line);
-  padding:50px 40px;
-  text-align:center;
-}
-
-.block{
-  margin:0 0 40px 0;
-}
-
-.block h2{
-  font-size:13px;
-  letter-spacing:2px;
-  margin:0 0 14px 0;
-  color:#555;
-}
-
-.name{
-  font-size:18px;
-  line-height:1.8;
-  margin:0;
-  letter-spacing:0;
-  font-weight:400;
-}
-
-.content-text{
-  font-size:18px;
-  line-height:1.8;
-  margin:0;
-}
-
-.sub-label{
-  font-size:13px;
-  letter-spacing:2px;
-  color:#555;
-  margin:28px 0 10px 0;
-  font-weight:700;
-}
-
-.work-title{
-  font-size:18px;
-  line-height:1.8;
-  margin:0;
-}
-
-.work-credit{
-  font-size:15px;
   line-height:1.7;
-  margin:2px 0 0 0;
-  color:#666;
+  color:#888;
+  padding-left:12px;
+  margin-top:2px;
 }
 
 .sns-link{
@@ -98,84 +59,64 @@ body{
   text-decoration:none;
   word-break:break-word;
 }
+.sns-link:hover{text-decoration:underline;}
 
-.sns-link:hover{
-  text-decoration:underline;
+.site-nav{border-top:1px solid var(--border);padding:30px 20px;display:flex;gap:14px;justify-content:center;flex-wrap:wrap;}
+.site-nav a{
+  display:inline-block;padding:12px 30px;border:2px solid var(--accent);
+  color:#fff;text-decoration:none;border-radius:8px;font-size:15px;
+  font-weight:700;letter-spacing:1px;transition:background 0.15s;
 }
+.site-nav a:hover{background:var(--accent);}
 
-.nav{
-  margin:60px 0 0 0;
-  text-align:center;
-}
-
-.nav a{
-  display:inline-block;
-  padding:14px 40px;
-  border:2px solid var(--accent);
-  font-size:18px;
-  font-weight:700;
-  text-decoration:none;
-  color:#111;
-  transition:0.2s;
-}
-
-.nav a:hover{
-  background:var(--accent);
-  color:#fff;
-}
-
-@media(max-width:800px){
-  .profile{
-    padding:40px 24px;
-  }
+@media(max-width:600px){
+  .wrap{padding:40px 16px 60px;}
 }
 </style>
 </head>
-
 <body>
 
-<div class="wrap">
+<header class="hdr">
+  <p class="hdr-eye">PROFILE</p>
+  <h1 class="hdr-title">プロフィール</h1>
+</header>
 
-  <div class="section-title">Profile</div>
+<main class="wrap">
 
-  <div class="profile">
-
-    <div class="block">
-      <h2>Name</h2>
-      <p class="name">グレイト・プレ・善太</p>
-    </div>
-
-    <div class="block">
-      <h2>好きなもの</h2>
-      <p class="content-text">
-        ハナハナ・AI創作・シュールなもの
-      </p>
-
-      <p class="sub-label">好きな漫画</p>
-      <p class="work-title">サバイバル</p>
-      <p class="work-credit">さいとう・たかを</p>
-
-      <p class="sub-label">好きな映画</p>
-      <p class="work-title">どですかでん</p>
-      <p class="work-credit">黒澤明監督</p>
-    </div>
-
-    <div class="block">
-      <h2>各SNSリンク</h2>
-      <p class="content-text">
-        <a class="sns-link" href="https://lit.link/GreatPresenter" target="_blank" rel="noopener noreferrer">
-          https://lit.link/GreatPresenter
-        </a>
-      </p>
-    </div>
-
-    <div class="nav">
-      <a href="index.html">index</a>
-    </div>
-
+  <div class="field">
+    <p class="field-label">Name</p>
+    <p class="field-value">グレイト・プレ・善太</p>
   </div>
 
-</div>
+  <div class="field">
+    <p class="field-label">好きなもの</p>
+    <p class="field-value">ハナハナ・AI創作・シュールなもの</p>
+  </div>
+
+  <div class="field">
+    <p class="field-label">好きな漫画</p>
+    <p class="field-value">サバイバル</p>
+    <p class="field-credit">さいとう・たかを</p>
+  </div>
+
+  <div class="field">
+    <p class="field-label">好きな映画</p>
+    <p class="field-value">どですかでん</p>
+    <p class="field-credit">黒澤明監督</p>
+  </div>
+
+  <div class="field">
+    <p class="field-label">各SNSリンク</p>
+    <p class="field-value">
+      <a class="sns-link" href="https://lit.link/GreatPresenter" target="_blank" rel="noopener noreferrer">https://lit.link/GreatPresenter</a>
+    </p>
+  </div>
+
+</main>
+
+<nav class="site-nav">
+  <a href="index.html">index</a>
+</nav>
 
 </body>
 </html>
