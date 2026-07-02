@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>sora2 ハナハナ女子シリーズ | グレイト・プレ・善太</title>
+<link rel="icon" type="image/png" sizes="32x32" href="icon_32x32.png">
+
+<style>
+:root{
+  --accent:#ff2a6d;
+  --bg:#0d0d0d;
+  --border:#252525;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{
+  background:var(--bg);
+  color:#fff;
+  font-family:system-ui,-apple-system,"Segoe UI","Noto Sans JP",sans-serif;
+  line-height:1.6;
+}
+
+.hdr{padding:64px 20px 48px;text-align:center;border-bottom:1px solid var(--border);}
+.hdr-eye{font-size:10px;letter-spacing:6px;color:var(--accent);margin-bottom:16px;}
+.hdr-title{font-size:clamp(26px,5.5vw,48px);font-weight:300;letter-spacing:4px;line-height:1.3;}
+.hdr-sub{font-size:13px;color:#666;margin-top:16px;letter-spacing:1px;}
+
+#loader{text-align:center;padding:80px 20px;font-size:11px;letter-spacing:4px;color:#333;}
+
+.sec{max-width:680px;margin:0 auto;padding:56px 20px 72px;}
+
+/* Thumbnail strip */
+.strip{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:40px;}
+.strip-thumb{
+  position:relative;width:64px;height:40px;padding:0;flex-shrink:0;
+  border:2px solid transparent;border-radius:6px;overflow:hidden;
+  background:#111;cursor:pointer;
+}
+.strip-thumb img{width:100%;height:100%;object-fit:cover;display:block;opacity:0.5;transition:opacity .15s;}
+.strip-thumb:hover img{opacity:0.85;}
+.strip-thumb.active{border-color:var(--accent);}
+.strip-thumb.active img{opacity:1;}
+.strip-thumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+/* Exhibit nav */
+.exhibit-nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;}
+.exhibit-nav-btn{
+  background:transparent;border:1px solid var(--border);color:#aaa;
+  padding:9px 18px;border-radius:8px;font-size:13px;cursor:pointer;
+  transition:border-color .15s,color .15s;
+}
+.exhibit-nav-btn:hover:not(:disabled){border-color:var(--accent);color:#fff;}
+.exhibit-nav-btn:disabled{opacity:0.25;cursor:default;}
+
+.work-num{font-size:11px;letter-spacing:3px;color:var(--accent);margin-bottom:8px;font-family:monospace;}
+.work-title{font-size:21px;font-weight:700;margin-bottom:22px;line-height:1.5;min-height:1px;}
+
+.work-player{position:relative;width:100%;aspect-ratio:9/16;max-width:360px;margin:0 auto 28px;background:#111;border-radius:10px;overflow:hidden;box-shadow:0 10px 26px rgba(0,0,0,.65);}
+.work-player img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;}
+.work-player iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;}
+.work-play-btn{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;border:none;background:transparent;cursor:pointer;transition:background .15s;}
+.work-play-btn:hover{background:rgba(0,0,0,.28);}
+.work-play-btn:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
+.work-play-icon{width:56px;height:56px;border-radius:50%;background:rgba(255,42,109,.8);border:2px solid rgba(255,255,255,.45);display:flex;align-items:center;justify-content:center;transition:background .15s,transform .15s;}
+.work-play-btn:hover .work-play-icon{background:var(--accent);border-color:#fff;transform:scale(1.08);}
+.work-play-icon::after{content:'';display:block;width:0;height:0;border-style:solid;border-width:10px 0 10px 19px;border-color:transparent transparent transparent #fff;margin-left:4px;}
+
+.work-field{margin-bottom:26px;}
+.work-field-label{font-size:10px;letter-spacing:2px;color:#555;border-left:2px solid var(--accent);padding-left:10px;margin-bottom:9px;}
+.work-field-body{font-size:14.5px;line-height:1.85;color:#ccc;white-space:pre-line;padding-left:12px;}
+.work-field-body a{color:var(--accent);}
+
+.site-nav{border-top:1px solid var(--border);padding:30px 20px;display:flex;gap:14px;justify-content:center;flex-wrap:wrap;}
+.site-nav a{display:inline-block;padding:12px 30px;border:2px solid var(--accent);color:#fff;text-decoration:none;border-radius:8px;font-size:15px;font-weight:700;letter-spacing:1px;transition:background .15s;}
+.site-nav a:hover{background:var(--accent);}
+
+@media(max-width:600px){
+  .sec{padding:40px 16px 56px;}
+  .work-play-icon{width:48px;height:48px;}
+  .work-title{font-size:19px;}
+}
+@media(prefers-reduced-motion:reduce){
+  .work-play-btn,.work-play-icon{transition:none;}
+}
+</style>
+</head>
+<body>
+
+<!-- ================================================================
+  ▼ 動画データ ― ここを編集してください
+  id          : YouTube動画ID
+  title       : 手動タイトル（空欄なら YouTube から自動取得）
+  createdAt   : 作成日時（YYYY-MM-DD）。新しい順に自動で並び替わります
+  thoughts    : コメント
+================================================================ -->
+<script>
+var VIDEOS = [
+  { id:"dq9aYxMAi3s", title:"", createdAt:"2025-12-20", thoughts:"今日のパドック大喜利\nスロニートはスマホ見ていても列を乱しません。\nhttps://x.com/GreatPresenter/status/2002351925702856888?s=20" },
+  { id:"TzzYLMUd3CU", title:"", createdAt:"2025-12-18", thoughts:"sora2ハナハナ女子最終回。\nハナハナ女子シリーズ制作期間数日だったのに、自分からすると数年の色んな思い出が詰まった動画みたいな感じに思えます。\nこれ作るのに苦労したんですよね。結局切り張り編集をしました。\nhttps://x.com/GreatPresenter/status/2001593825459081719?s=20" },
+  { id:"vO0YioP1kVo", title:"", createdAt:"2025-12-17", thoughts:"sora2ハナハナ女子シリーズ第12回\n15枚役の設定差がどのくらいあるかわからないのにそこを強く信じてしまっている人。\nhttps://x.com/GreatPresenter/status/2001232395354488965?s=20\n\n第11回はYouTubeに上げてないのでこちらXのポストでどうぞ。\nhttps://x.com/GreatPresenter/status/2000871697445212559?s=20" },
+  { id:"vbyVA6Y5yp8", title:"", createdAt:"2025-12-15", thoughts:"sora2ハナハナ女子シリーズ第10回\nFFさんから来たLINEをそのままネタにしたものです。\n心の声の表現をどうするか。そして10秒じゃ収まらないから15秒でガチャ回しました。\nhttps://x.com/GreatPresenter/status/2000510097290883442?s=20" },
+  { id:"1U8p-1MHf_I", title:"", createdAt:"2025-12-14", thoughts:"sora2ハナハナ女子シリーズ第9回\n完全に口臭を嗅ぎに行ってるのがポイントです。\nhttps://x.com/GreatPresenter/status/2000143074618724642?s=20" },
+  { id:"Bfx1o8Yi498", title:"", createdAt:"2025-12-13", thoughts:"sora2ハナハナ女子シリーズ第8回\nRPG的な動画を作りたかったのですが、めちゃくちゃ「暴力的シーン」のコンテンツ違反で弾かれました。\n成功してもチープなCGになったり。これは特に難易度高かったです。\nhttps://x.com/GreatPresenter/status/1999791247163269449?s=20" },
+  { id:"NaqxQDz7QS8", title:"", createdAt:"2025-12-12", thoughts:"sora2ハナハナ女子シリーズ第7回+\nTED風日本語バージョン。\nhttps://x.com/GreatPresenter/status/1999424777090711797?s=20" },
+  { id:"32e4uhpp8Iw", title:"", createdAt:"2025-12-12", thoughts:"sora2ハナハナ女子シリーズ第7回\nTED風でハナハナを語らせてみたかった。\nhttps://x.com/GreatPresenter/status/1999424715547660400?s=20" },
+  { id:"NNlrkqGIc_g", title:"", createdAt:"2025-12-11", thoughts:"sora2ハナハナ女子シリーズ第6回\nおうちついていっていいですか風。マイホを紹介する人。\nこの眼鏡さん可愛い。くせっ毛ポニーテールはいいですね。\nhttps://x.com/GreatPresenter/status/1999091315318169933?s=20" },
+  { id:"7LIgmlyEuTI", title:"", createdAt:"2025-12-10", thoughts:"sora2ハナハナ女子シリーズ第5回\nドラゴンに乗って空を飛びながらハナハナのオカルトを話すという非現実的さ。\nほんとドラハナって当たり方で設定がなんとなくわかるんですよ。\nhttps://x.com/GreatPresenter/status/1998710979107107149?s=20" },
+  { id:"XWbZbbjG7Ug", title:"", createdAt:"2025-12-09", thoughts:"sora2ハナハナ女子シリーズ第4回\n「ふわぁっ」の言い方がいいですよね。sora2が出て、このリアルな話し方が作れるって衝撃でしたよね。\nhttps://x.com/GreatPresenter/status/1998345100594983117?s=20" },
+  { id:"DcCmOT7XyG0", title:"", createdAt:"2025-12-08", thoughts:"sora2ハナハナ女子シリーズ第3回\nアクティブな眼鏡さん。インドのこんな環境に平気でいられるんだからボーナスが当たらないくらいなんてことない。\nhttps://x.com/GreatPresenter/status/1997982158250795243?s=20" },
+  { id:"3ragD80iqZU", title:"", createdAt:"2025-12-07", thoughts:"sora2ハナハナ女子シリーズ第2回\n全然そんな意図ないのに「セクシー」のコンテンツ違反で何回か弾かれました。\nそしてできた動画もなぜかセクシーを意識したつくり。\nsora2が勝手にそっち路線で作ってコンテンツ違反で弾くという理不尽。\nhttps://x.com/GreatPresenter/status/1997679518979707164?s=20" },
+  { id:"THUP0g9t7gM", title:"", createdAt:"2025-12-06", thoughts:"sora2ハナハナ女子シリーズ第1回\nライブ配信かテレビ電話か、そんなイメージ。思い返せば眼鏡さんの若い頃みたいになりました。\nhttps://x.com/GreatPresenter/status/1997104813403000935?s=20" },
+];
+</script>
+<!-- ================================================================ -->
+
+<header class="hdr">
+  <p class="hdr-eye">SORA2 SERIES</p>
+  <h1 class="hdr-title">ハナハナ女子シリーズ</h1>
+  <p class="hdr-sub">Sora2で制作したAI動画シリーズ</p>
+</header>
+
+<main>
+  <div id="loader">LOADING...</div>
+
+  <section class="sec" id="sec-main" style="display:none;">
+    <div class="strip" id="strip-main"></div>
+    <div id="exhibit-main"></div>
+  </section>
+</main>
+
+<nav class="site-nav">
+  <a href="ai.html">AI創作</a>
+  <a href="index.html">index</a>
+</nav>
+
+<script>
+function pad(n){ return String(n).padStart(2,'0'); }
+
+function buildPlayer(v){
+  var wrap = document.createElement('div');
+  wrap.className = 'work-player';
+
+  var img = document.createElement('img');
+  img.src = 'https://img.youtube.com/vi/' + v.id + '/hqdefault.jpg';
+  img.alt = v.title || '動画';
+  img.loading = 'lazy';
+
+  var btn = document.createElement('button');
+  btn.className = 'work-play-btn';
+  btn.setAttribute('aria-label','再生');
+  var icon = document.createElement('span');
+  icon.className = 'work-play-icon';
+  btn.appendChild(icon);
+  btn.addEventListener('click', function(){
+    wrap.innerHTML =
+      '<iframe src="https://www.youtube.com/embed/' + v.id + '?autoplay=1"' +
+      ' allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture"' +
+      ' allowfullscreen></iframe>';
+  });
+
+  wrap.appendChild(img);
+  wrap.appendChild(btn);
+  return wrap;
+}
+
+function appendField(parent, label, text){
+  if (!text) return;
+  var wrap = document.createElement('div');
+  wrap.className = 'work-field';
+  var lab = document.createElement('p');
+  lab.className = 'work-field-label';
+  lab.textContent = label;
+  var body = document.createElement('p');
+  body.className = 'work-field-body';
+  body.textContent = text;
+  wrap.appendChild(lab);
+  wrap.appendChild(body);
+  parent.appendChild(wrap);
+}
+
+function setupSection(videos){
+  var stripEl = document.getElementById('strip-main');
+  var exhibitEl = document.getElementById('exhibit-main');
+
+  videos.forEach(function(v, idx){
+    var btn = document.createElement('button');
+    btn.className = 'strip-thumb';
+    btn.setAttribute('aria-label', (idx+1) + '番目の作品を表示');
+    var img = document.createElement('img');
+    img.src = 'https://img.youtube.com/vi/' + v.id + '/hqdefault.jpg';
+    img.alt = '';
+    img.loading = 'lazy';
+    btn.appendChild(img);
+    btn.addEventListener('click', function(){ show(idx, true); });
+    stripEl.appendChild(btn);
+  });
+
+  function updateActiveThumb(idx){
+    Array.prototype.forEach.call(stripEl.children, function(el, i){
+      el.classList.toggle('active', i === idx);
+    });
+  }
+
+  function buildNavRow(idx){
+    var row = document.createElement('div');
+    row.className = 'exhibit-nav';
+    var prev = document.createElement('button');
+    prev.className = 'exhibit-nav-btn';
+    prev.textContent = '← 前の作品';
+    prev.disabled = (idx === 0);
+    prev.addEventListener('click', function(){ show(idx - 1, true); });
+    var next = document.createElement('button');
+    next.className = 'exhibit-nav-btn';
+    next.textContent = '次の作品 →';
+    next.disabled = (idx === videos.length - 1);
+    next.addEventListener('click', function(){ show(idx + 1, true); });
+    row.appendChild(prev);
+    row.appendChild(next);
+    return row;
+  }
+
+  function show(idx, scroll){
+    var v = videos[idx];
+    exhibitEl.innerHTML = '';
+
+    exhibitEl.appendChild(buildNavRow(idx));
+
+    var num = document.createElement('p');
+    num.className = 'work-num';
+    var numText = pad(idx+1) + ' / ' + pad(videos.length);
+    if (v.createdAt) numText += '　·　' + v.createdAt.replace(/-/g, '.');
+    num.textContent = numText;
+    exhibitEl.appendChild(num);
+
+    var title = document.createElement('h3');
+    title.className = 'work-title';
+    title.textContent = v.title || '';
+    exhibitEl.appendChild(title);
+
+    exhibitEl.appendChild(buildPlayer(v));
+
+    appendField(exhibitEl, 'コメント', v.thoughts);
+
+    exhibitEl.appendChild(buildNavRow(idx));
+
+    updateActiveThumb(idx);
+    if (scroll) exhibitEl.scrollIntoView({ behavior:'smooth', block:'start' });
+  }
+
+  show(0, false);
+}
+
+function sortByDateDesc(videos){
+  return videos.slice().sort(function(a, b){
+    var da = a.createdAt || '';
+    var db = b.createdAt || '';
+    if (da && db) return da < db ? 1 : (da > db ? -1 : 0);
+    if (da && !db) return -1;
+    if (!da && db) return 1;
+    return 0;
+  });
+}
+
+(async function(){
+  var CACHE_KEY = 'hana_titles_v1';
+  var cache = {};
+  try { cache = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}'); } catch(e){}
+
+  var needFetch = VIDEOS.filter(function(v){ return !v.title && cache[v.id] === undefined; });
+
+  if (needFetch.length > 0){
+    await Promise.all(needFetch.map(async function(v){
+      try{
+        var res = await fetch('https://www.youtube.com/oembed?url=' + encodeURIComponent('https://www.youtube.com/shorts/' + v.id) + '&format=json');
+        var d = await res.json();
+        cache[v.id] = d.title || '';
+      }catch(e){
+        cache[v.id] = '';
+      }
+    }));
+    try{ localStorage.setItem(CACHE_KEY, JSON.stringify(cache)); }catch(e){}
+  }
+
+  VIDEOS.forEach(function(v){ if(!v.title) v.title = cache[v.id] || ''; });
+
+  setupSection(sortByDateDesc(VIDEOS));
+
+  document.getElementById('loader').style.display = 'none';
+  document.getElementById('sec-main').style.display = '';
+})();
+</script>
+
+</body>
+</html>
