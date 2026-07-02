@@ -1,163 +1,272 @@
 <!DOCTYPE html>
 <html lang="ja">
-
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>グレイト・プレ・善太のハナハナサイト</title>
 <meta name="description" content="グレイト・プレ・善太のサイト。ハナハナのリール配列確認や最速目押しの紹介、Sparebeatで制作した自作譜面をプレイできます。">
 
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&display=swap" rel="stylesheet">
+
 <style>
-body{
-  margin:0;
-  font-family:sans-serif;
-  background:#000;
-  color:#fff;
+:root {
+  --accent:    #ff2a6d;
+  --bg:        #080808;
+  --surface:   #111111;
+  --surface-2: #171717;
+  --border:    #1e1e1e;
+  --text:      #e0dbd5;
+  --muted:     #5e5e5e;
+  --serif:     'Noto Serif JP', 'YuMincho', '游明朝', serif;
+  --sans:      'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
 }
 
-header{
-  padding:20px 20px 0 20px;
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
 }
 
-header img{
-  width:100%;
-  max-width:1200px;
-  height:auto;
-  display:block;
-  margin:0 auto;
-  border-radius:12px;
+/* ─── header image ─── */
+.site-header {
+  padding: 24px 24px 0;
+}
+.site-header img {
+  width: 100%;
+  max-width: 1200px;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+  border-radius: 14px;
 }
 
-.container{
-  display:flex;
-  max-width:1200px;
-  margin:40px auto;
-  padding:0 20px;
-  gap:30px;
-  align-items:flex-start;
+/* ─── 2-column layout ─── */
+.container {
+  display: flex;
+  max-width: 1200px;
+  margin: 56px auto 80px;
+  padding: 0 24px;
+  gap: 32px;
+  align-items: flex-start;
 }
 
-.left{
-  width:35%;
+.left {
+  width: 34%;
+  flex-shrink: 0;
 }
 
-.right{
-  width:65%;
-  background:#0b0b0b;
-  border:1px solid #222;
-  border-radius:14px;
-  padding:20px;
+.right {
+  width: 66%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 30px 34px;
 }
 
-.menu{
-  display:flex;
-  flex-direction:column;
-  gap:20px;
+.section-label {
+  font-family: var(--serif);
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin: 0 0 18px 0;
 }
 
-.menu a{
-  display:block;
-  padding:25px;
-  background:#111;
-  border:2px solid #ff2a6d;
-  text-decoration:none;
-  color:#fff;
-  font-size:20px;
-  font-weight:bold;
-  border-radius:14px;
-  transition:0.2s;
+/* ─── menu (left) ─── */
+.menu {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.menu a:hover{
-  background:#ff2a6d;
-  color:#000;
+.menu-card {
+  display: block;
+  padding: 24px 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  text-decoration: none;
+  color: var(--text);
+  transition: background 0.18s, border-color 0.18s;
+}
+.menu-card:hover {
+  background: var(--surface-2);
+  border-color: #2c2c2c;
+  border-left-color: var(--accent);
 }
 
-.twitter-tweet{
-  margin:0 0 30px 0;
+.menu-card-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.menu-card-title {
+  font-family: var(--serif);
+  font-size: 19px;
+  font-weight: 700;
+}
+.menu-card-arrow {
+  color: var(--accent);
+  font-size: 14px;
+  opacity: 0;
+  transform: translateX(-6px);
+  transition: opacity 0.18s, transform 0.18s;
+}
+.menu-card:hover .menu-card-arrow {
+  opacity: 1;
+  transform: translateX(0);
 }
 
-@media(max-width:768px){
-  .container{
-    flex-direction:column;
+/* ─── update history (right) ─── */
+.changelog {
+  list-style: none;
+}
+.changelog-item {
+  display: flex;
+  gap: 20px;
+  padding: 15px 0;
+  border-bottom: 1px solid var(--border);
+}
+.changelog-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.changelog-date {
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  color: var(--accent);
+  flex-shrink: 0;
+  width: 92px;
+  padding-top: 2px;
+  letter-spacing: 0.02em;
+}
+.changelog-text {
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--text);
+}
+
+/* ─── footer ─── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 28px 24px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  font-family: var(--serif);
+}
+
+/* ─── responsive ─── */
+@media (max-width: 768px) {
+  .site-header { padding: 18px 18px 0; }
+  .container {
+    flex-direction: column;
+    margin-top: 40px;
   }
-  .left,
-  .right{
-    width:100%;
-  }
+  .left, .right { width: 100%; }
+  .menu-card-title { font-size: 18px; }
+}
+
+@media (max-width: 480px) {
+  .site-header { padding: 12px 12px 0; }
+  .site-header img { border-radius: 10px; }
+  .container { padding: 0 14px; margin-top: 32px; gap: 24px; }
+  .right { padding: 22px 20px; }
+  .menu-card { padding: 20px 18px; }
+  .changelog-date { width: 78px; font-size: 11px; }
+  .changelog-text { font-size: 13px; }
 }
 </style>
 </head>
 
 <body>
 
-<header>
-  <img src="header.jpg" alt="header">
+<header class="site-header">
+  <img src="header.jpg" alt="グレイト・プレ・善太のハナハナサイト">
 </header>
 
 <div class="container">
 
+  <!-- LEFT: menu -->
   <div class="left">
-    <div class="menu">
-      <a href="profile.html">プロフィール</a>
-      <a href="hanahana.html">ハナハナ関連</a>
-      <a href="games.html">自作ゲーム</a>
-      <a href="sparebeat.html">スペアビート</a>
-    </div>
+    <nav class="menu">
+      <a class="menu-card" href="hanahana.html">
+        <div class="menu-card-row">
+          <span class="menu-card-title">ハナハナ関連</span>
+          <span class="menu-card-arrow">→</span>
+        </div>
+      </a>
+      <!-- AI創作：リンク先は ai.html に差し替えてください -->
+      <a class="menu-card" href="#">
+        <div class="menu-card-row">
+          <span class="menu-card-title">AI創作</span>
+          <span class="menu-card-arrow">→</span>
+        </div>
+      </a>
+      <a class="menu-card" href="games.html">
+        <div class="menu-card-row">
+          <span class="menu-card-title">自作ゲーム</span>
+          <span class="menu-card-arrow">→</span>
+        </div>
+      </a>
+      <a class="menu-card" href="sparebeat.html">
+        <div class="menu-card-row">
+          <span class="menu-card-title">スペアビート</span>
+          <span class="menu-card-arrow">→</span>
+        </div>
+      </a>
+      <a class="menu-card" href="profile.html">
+        <div class="menu-card-row">
+          <span class="menu-card-title">プロフィール</span>
+          <span class="menu-card-arrow">→</span>
+        </div>
+      </a>
+    </nav>
   </div>
 
+  <!-- RIGHT: update history (replaces old X post embeds) -->
   <div class="right">
+    <p class="section-label">更新履歴</p>
 
-    <!-- 1番上：スターガバガバ -->
-    <blockquote class="twitter-tweet">
-      <p lang="ja" dir="ltr">
-        スターガバガバ 
-        <a href="https://t.co/lLnt8z5KqP">pic.twitter.com/lLnt8z5KqP</a>
-      </p>
-      &mdash; グレイト・プレ・善太🌺👆💫 (@GreatPresenter)
-      <a href="https://twitter.com/GreatPresenter/status/2024491486499524765?ref_src=twsrc%5Etfw">
-        February 19, 2026
-      </a>
-    </blockquote>
-
-    <!-- 2番目：ドラゴンvsホウオウ -->
-    <blockquote class="twitter-tweet">
-      <p lang="ja" dir="ltr">
-        ドラゴンvsホウオウ 
-        <a href="https://t.co/ILMe7CnjXI">pic.twitter.com/ILMe7CnjXI</a>
-      </p>
-      &mdash; グレイト・プレ・善太🌺👆💫 (@GreatPresenter)
-      <a href="https://twitter.com/GreatPresenter/status/2023421549878071433?ref_src=twsrc%5Etfw">
-        February 16, 2026
-      </a>
-    </blockquote>
-
-    <!-- 3番目：Super D'station39飯塚店 -->
-    <blockquote class="twitter-tweet">
-      <p lang="ja" dir="ltr">
-        Super D&#39;station39飯塚店<br>
-        高咲たぬち来店<br>
-        3の日<br><br>
-        Lニューキングハナハナ<br>
-        +10700枚<br><br>
-        2連続リプ音遅れで大連続確定は痺れました。<br><br>
-        …と午前中にポスト用のメモしてたらそれどころではありませんでした。<br>
-        (リプ重は今日だけで3回引きました)<br><br>
-        ハナハナ初万枚！🌺🙌<br><br>
-        周りもめっちゃ強かったですね👀 
-        <a href="https://t.co/SBqjqVQ9CT">pic.twitter.com/SBqjqVQ9CT</a>
-      </p>
-      &mdash; グレイト・プレ・善太🌺👆💫 (@GreatPresenter)
-      <a href="https://twitter.com/GreatPresenter/status/2022319162853572754?ref_src=twsrc%5Etfw">
-        February 13, 2026
-      </a>
-    </blockquote>
-
+    <!--
+      ★ プレースホルダーです。以下のいずれかで実データに差し替えてください：
+        1. 手動で日付と内容を書き換える
+        2. Gitリポジトリのコミット履歴から生成する（URLを教えてもらえれば対応できます）
+    -->
+    <ul class="changelog">
+      <li class="changelog-item">
+        <span class="changelog-date">YYYY.MM.DD</span>
+        <span class="changelog-text">更新内容をここに</span>
+      </li>
+      <li class="changelog-item">
+        <span class="changelog-date">YYYY.MM.DD</span>
+        <span class="changelog-text">更新内容をここに</span>
+      </li>
+      <li class="changelog-item">
+        <span class="changelog-date">YYYY.MM.DD</span>
+        <span class="changelog-text">更新内容をここに</span>
+      </li>
+      <li class="changelog-item">
+        <span class="changelog-date">YYYY.MM.DD</span>
+        <span class="changelog-text">更新内容をここに</span>
+      </li>
+      <li class="changelog-item">
+        <span class="changelog-date">YYYY.MM.DD</span>
+        <span class="changelog-text">更新内容をここに</span>
+      </li>
+    </ul>
   </div>
 
 </div>
 
-<script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+<footer>
+  © グレイト・プレ・善太
+</footer>
 
 </body>
 </html>
