@@ -104,6 +104,7 @@ body{
 .work-field:last-child{margin-bottom:0;}
 .work-field-label{font-size:10px;letter-spacing:2px;color:#555;border-left:2px solid var(--accent);padding-left:10px;margin-bottom:9px;}
 .work-field-body{font-size:14.5px;line-height:1.85;color:#ccc;white-space:pre-line;padding-left:12px;}
+.work-field-body a{color:var(--accent);word-break:break-all;}
 
 .work-prompt .work-field-body{
   font-family:"SF Mono",Consolas,Menlo,monospace;
@@ -359,7 +360,19 @@ function appendField(parent, label, text, extraClass){
   lab.textContent = label;
   var body = document.createElement('p');
   body.className = 'work-field-body';
-  body.textContent = text;
+  var urlRe = /(https?:\/\/[^\s]+)/g;
+  text.split(urlRe).forEach(function(part){
+    if (/^https?:\/\//.test(part)) {
+      var a = document.createElement('a');
+      a.href = part;
+      a.textContent = part;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      body.appendChild(a);
+    } else if (part) {
+      body.appendChild(document.createTextNode(part));
+    }
+  });
   wrap.appendChild(lab);
   wrap.appendChild(body);
   parent.appendChild(wrap);

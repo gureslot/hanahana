@@ -72,7 +72,7 @@ body{
 .work-field{margin-bottom:26px;}
 .work-field-label{font-size:10px;letter-spacing:2px;color:#555;border-left:2px solid var(--accent);padding-left:10px;margin-bottom:9px;}
 .work-field-body{font-size:14.5px;line-height:1.85;color:#ccc;white-space:pre-line;padding-left:12px;}
-.work-field-body a{color:var(--accent);}
+.work-field-body a{color:var(--accent);word-break:break-all;}
 
 .site-nav{border-top:1px solid var(--border);padding:30px 20px;display:flex;gap:14px;justify-content:center;flex-wrap:wrap;}
 .site-nav a{display:inline-block;padding:12px 30px;border:2px solid var(--accent);color:#fff;text-decoration:none;border-radius:8px;font-size:15px;font-weight:700;letter-spacing:1px;transition:background .15s;}
@@ -183,7 +183,19 @@ function appendField(parent, label, text){
   lab.textContent = label;
   var body = document.createElement('p');
   body.className = 'work-field-body';
-  body.textContent = text;
+  var urlRe = /(https?:\/\/[^\s]+)/g;
+  text.split(urlRe).forEach(function(part){
+    if (/^https?:\/\//.test(part)) {
+      var a = document.createElement('a');
+      a.href = part;
+      a.textContent = part;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      body.appendChild(a);
+    } else if (part) {
+      body.appendChild(document.createTextNode(part));
+    }
+  });
   wrap.appendChild(lab);
   wrap.appendChild(body);
   parent.appendChild(wrap);
