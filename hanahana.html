@@ -6,95 +6,179 @@
 <title>ハナハナ関連</title>
 <link rel="icon" type="image/png" sizes="32x32" href="icon_32x32.png">
 
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&display=swap" rel="stylesheet">
+
 <style>
-body{
-  margin:0;
-  font-family:sans-serif;
-  background:#fff;
-  color:#111;
+:root {
+  --accent:    #ff2a6d;
+  --bg:        #080808;
+  --surface:   #111111;
+  --surface-2: #171717;
+  --border:    #1e1e1e;
+  --text:      #e0dbd5;
+  --muted:     #5e5e5e;
+  --serif:     'Noto Serif JP', 'YuMincho', '游明朝', serif;
+  --sans:      'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
 }
 
-.wrap{
-  max-width:1100px;
-  margin:40px auto;
-  padding:0 20px;
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
 }
 
-h1{
-  text-align:center;
-  font-size:40px;
-  margin:0 0 24px 0;
-  letter-spacing:1px;
+/* ─── header image ─── */
+.site-header {
+  padding: 24px 24px 0;
+}
+.site-header img {
+  width: 100%;
+  max-width: 1200px;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+  border-radius: 14px;
 }
 
-.intro{
-  margin:0 0 40px 0;
-  font-size:16px;
-  color:#555;
-  text-align:center;
+/* ─── layout ─── */
+.container {
+  max-width: 760px;
+  margin: 56px auto 40px;
+  padding: 0 24px;
 }
 
-.list{
-  display:flex;
-  flex-direction:column;
-  gap:20px;
+.page-title {
+  font-family: var(--serif);
+  font-size: clamp(26px, 5vw, 34px);
+  font-weight: 700;
+  letter-spacing: 4px;
+  text-align: center;
+  margin-bottom: 14px;
 }
 
-.item{
-  border:1px solid #ddd;
-  padding:20px;
-  text-decoration:none;
-  color:#111;
-  transition:0.2s;
+.intro {
+  text-align: center;
+  font-size: 14px;
+  color: var(--muted);
+  margin-bottom: 40px;
+  line-height: 1.9;
 }
 
-.item:hover{
-  background:#f5f5f5;
+/* ─── list of items ─── */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.item h2{
-  margin:0 0 8px 0;
-  font-size:20px;
+.item {
+  display: block;
+  padding: 22px 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  text-decoration: none;
+  color: var(--text);
+  transition: background 0.18s, border-color 0.18s;
+}
+.item:hover {
+  background: var(--surface-2);
+  border-color: #2c2c2c;
+  border-left-color: var(--accent);
 }
 
-.item p{
-  margin:0;
-  font-size:15px;
-  color:#555;
+.item-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.item h2 {
+  font-family: var(--serif);
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.item-arrow {
+  color: var(--accent);
+  font-size: 14px;
+  opacity: 0;
+  transform: translateX(-6px);
+  transition: opacity 0.18s, transform 0.18s;
+  flex-shrink: 0;
+}
+.item:hover .item-arrow {
+  opacity: 1;
+  transform: translateX(0);
+}
+.item p {
+  margin-top: 9px;
+  font-size: 13.5px;
+  line-height: 1.75;
+  color: var(--muted);
 }
 
-.nav{
-  display:flex;
-  gap:20px;
-  justify-content:center;
-  flex-wrap:wrap;
-  margin:40px 0 0 0;
+/* ─── nav ─── */
+.site-nav {
+  border-top: 1px solid var(--border);
+  margin-top: 8px;
+  padding: 34px 24px 40px;
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.site-nav a {
+  display: inline-block;
+  padding: 12px 30px;
+  border: 2px solid var(--accent);
+  color: var(--text);
+  text-decoration: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  transition: background 0.18s, color 0.18s;
+}
+.site-nav a:hover {
+  background: var(--accent);
+  color: #fff;
 }
 
-.nav a{
-  display:inline-block;
-  padding:14px 28px;
-  border:2px solid #ff2a6d;
-  color:#111;
-  text-decoration:none;
-  border-radius:10px;
-  transition:0.2s;
-  font-size:18px;
-  font-weight:bold;
+/* ─── footer ─── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 28px 24px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  font-family: var(--serif);
 }
 
-.nav a:hover{
-  background:#ff2a6d;
-  color:#fff;
+/* ─── responsive ─── */
+@media (max-width: 480px) {
+  .site-header { padding: 12px 12px 0; }
+  .site-header img { border-radius: 10px; }
+  .container { margin-top: 36px; padding: 0 16px; }
+  .item { padding: 20px 18px; }
 }
 </style>
 </head>
 
 <body>
 
-<div class="wrap">
+<header class="site-header">
+  <img src="header.jpg" alt="グレイト・プレ・善太のハナハナサイト">
+</header>
 
-  <h1>ハナハナ関連</h1>
+<div class="container">
+
+  <h1 class="page-title">ハナハナ関連</h1>
 
   <p class="intro">
     リール配列確認や動画、打ち方などを置いています。
@@ -103,43 +187,65 @@ h1{
   <div class="list">
 
     <a class="item" href="hanahana/reel.html">
-      <h2>リール配列確認</h2>
+      <div class="item-head">
+        <h2>リール配列確認</h2>
+        <span class="item-arrow">→</span>
+      </div>
       <p>21コマのリール配列をドラッグ操作で確認できます。</p>
     </a>
-    
+
     <a class="item" href="hanahana/saisoku.html">
-      <h2>最速collection</h2>
+      <div class="item-head">
+        <h2>最速collection</h2>
+        <span class="item-arrow">→</span>
+      </div>
       <p>白BARからの最速目押し動画をコレクションしていきます。</p>
     </a>
-    
+
     <a class="item" href="#">
-      <h2>通常時の打ち方</h2>
+      <div class="item-head">
+        <h2>通常時の打ち方</h2>
+        <span class="item-arrow">→</span>
+      </div>
       <p>-。</p>
     </a>
 
     <a class="item" href="#">
-      <h2>BIG中の打ち方</h2>
+      <div class="item-head">
+        <h2>BIG中の打ち方</h2>
+        <span class="item-arrow">→</span>
+      </div>
       <p>-。</p>
     </a>
 
     <a class="item" href="https://gureslot.github.io/hanahana/hanahana/slot_logger.html">
-      <h2>ツール①</h2>
+      <div class="item-head">
+        <h2>ツール①</h2>
+        <span class="item-arrow">→</span>
+      </div>
       <p>誰かの役に立ちそうなツール①</p>
     </a>
 
     <a class="item" href="hanahana/island-tool.html">
-      <h2>島図作成ツール</h2>
+      <div class="item-head">
+        <h2>島図作成ツール</h2>
+        <span class="item-arrow">→</span>
+      </div>
       <p>角台だけの情報から列の棒を作って配置し、島図を作ります。色も付けられます。</p>
     </a>
 
   </div>
 
-  <div class="nav">
-    <a href="index.html">index</a>
-    <a href="sparebeat.html">スペアビート</a>
-  </div>
-
 </div>
+
+<nav class="site-nav">
+  <a href="index.html">index</a>
+  <a href="sparebeat.html">スペアビート</a>
+</nav>
+
+<footer>
+  © グレイト・プレ・善太
+</footer>
 
 </body>
 </html>
