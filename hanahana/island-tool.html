@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>島レイアウト ツール</title>
-<link rel="icon" type="image/png" sizes="32x32" href="../icon_32x32.png">
 <style>
 :root{
   --bg:#102540;--bg2:#0B1B30;--panel:#173258;--soft:#1D3D69;
@@ -19,11 +18,12 @@
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0;}
 html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);font-family:var(--san);}
+body{display:flex;flex-direction:column;}
 
 /* ── header ── */
 #hdr{
-  display:flex;align-items:center;gap:7px;flex-wrap:wrap;
-  padding:0 10px;height:42px;flex-shrink:0;
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  padding:5px 10px;flex-shrink:0;
   border-bottom:2px solid var(--line2);background:var(--bg2);
 }
 #hdr h1{font-size:13px;font-weight:700;white-space:nowrap;}
@@ -32,7 +32,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);font
   color:var(--ink);font-family:var(--san);font-size:12px;width:140px;padding:2px 4px;
 }
 #sName::placeholder{color:var(--faint);}
-.hg{display:flex;gap:5px;align-items:center;}
+.hg{display:flex;gap:5px;align-items:center;flex-wrap:wrap;}
 .hg.ml{margin-left:auto;}
 button{font-family:var(--san);border-radius:var(--r);cursor:pointer;border:1px solid var(--line2);background:var(--soft);color:var(--ink);font-size:11px;padding:4px 9px;min-height:26px;}
 button:hover{background:#1e3f6e;}
@@ -44,7 +44,7 @@ label.flb{display:inline-flex;align-items:center;background:var(--soft);border:1
 input[type=file]{display:none;}
 
 /* ── layout ── */
-#wrap{display:flex;height:calc(100vh - 42px);overflow:hidden;}
+#wrap{display:flex;flex:1;overflow:hidden;min-height:0;}
 
 /* ── sidebar ── */
 #sb{width:120px;flex-shrink:0;display:flex;flex-direction:column;border-right:1px solid var(--line2);overflow:hidden;}
@@ -163,6 +163,27 @@ details#inp summary::marker{color:var(--aend);}
 
 /* ── drag ghost ── */
 #dg{display:none;position:fixed;z-index:9999;pointer-events:none;background:var(--aend);color:#1A0E00;font-size:11px;font-family:var(--mon);padding:4px 10px;border-radius:var(--r);box-shadow:0 2px 8px rgba(0,0,0,.4);white-space:nowrap;}
+
+/* ── mobile responsive ── */
+@media (max-width:640px){
+  #hdr h1{font-size:12px;}
+  #sName{width:80px;font-size:11px;}
+  /* 保存系ボタンを2行目に展開 */
+  .hg.ml{width:100%;margin-left:0;justify-content:flex-end;gap:4px;padding-bottom:2px;}
+  .hg.ml button,.hg.ml label.flb{font-size:10px;padding:3px 7px;min-height:24px;}
+  /* 戻す・進む */
+  .hg button{font-size:10px;padding:3px 7px;min-height:24px;}
+  /* ツールバーのモードボタンを小さく */
+  .mb{font-size:10px;padding:3px 6px;min-height:24px;}
+  #tb{padding:4px 6px;gap:4px;}
+  #zl{font-size:10px;width:30px;}
+  .mbadge{font-size:9.5px;padding:2px 5px;}
+  /* サイドバーを少し広く */
+  #sb{width:100px;}
+  .pc{padding:2px 4px;}
+  .pc-range{font-size:9px;}
+  .pc-n{font-size:8px;}
+}
 
 /* ── toast ── */
 #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--soft);border:1px solid var(--line2);border-radius:var(--r);color:var(--ink);font-size:12px;padding:7px 16px;opacity:0;transition:opacity .18s,transform .18s;pointer-events:none;z-index:9000;white-space:nowrap;}
