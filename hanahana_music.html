@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ハナハナ音楽 | グレイト・プレ・善太</title>
+<link rel="icon" type="image/png" sizes="32x32" href="icon_32x32.png">
+
+<style>
+:root{
+  --accent:#ff2a6d;
+  --bg:#0d0d0d;
+  --border:#252525;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{
+  background:var(--bg);
+  color:#fff;
+  font-family:system-ui,-apple-system,"Segoe UI","Noto Sans JP",sans-serif;
+  line-height:1.6;
+}
+
+.hdr{padding:64px 20px 48px;text-align:center;border-bottom:1px solid var(--border);}
+.hdr-eye{font-size:10px;letter-spacing:6px;color:var(--accent);margin-bottom:16px;}
+.hdr-title{font-size:clamp(28px,6vw,52px);font-weight:300;letter-spacing:8px;line-height:1.2;}
+
+#loader{text-align:center;padding:80px 20px;font-size:11px;letter-spacing:4px;color:#333;}
+
+.sec{max-width:680px;margin:0 auto;padding:56px 20px 72px;}
+.sec+.sec{border-top:1px solid var(--border);}
+.sec-eye{font-size:10px;letter-spacing:4px;color:#444;margin-bottom:8px;}
+.sec-title{font-size:19px;font-weight:700;border-left:3px solid var(--accent);padding-left:14px;margin-bottom:36px;line-height:1.4;}
+
+/* TOC */
+.toc-label{font-size:10px;letter-spacing:3px;color:#3a3a3a;margin-bottom:10px;}
+.toc{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:8px;}
+.toc-item{display:flex;align-items:center;gap:12px;padding:10px 14px;text-decoration:none;color:#999;font-size:13px;border-bottom:1px solid var(--border);transition:background .15s,color .15s;}
+.toc-item:last-child{border-bottom:none;}
+.toc-item:hover{background:#161616;color:#fff;}
+.toc-num{font-size:10px;color:#444;font-family:monospace;flex-shrink:0;width:20px;}
+.toc-item:hover .toc-num{color:var(--accent);}
+.toc-title{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+/* Work (exhibit) */
+.work{scroll-margin-top:20px;}
+.work + .work{margin-top:64px;padding-top:56px;border-top:1px solid var(--border);}
+.work-num{font-size:11px;letter-spacing:3px;color:var(--accent);margin-bottom:8px;font-family:monospace;}
+.work-title{font-size:21px;font-weight:700;margin-bottom:22px;line-height:1.5;min-height:1px;}
+
+.work-player{position:relative;width:100%;aspect-ratio:16/9;background:#111;border-radius:10px;overflow:hidden;margin-bottom:28px;}
+.work-player.shorts-mode{max-width:300px;aspect-ratio:9/16;}
+.work-player img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;}
+.work-player iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;}
+.work-play-btn{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;border:none;background:transparent;cursor:pointer;transition:background .15s;}
+.work-play-btn:hover{background:rgba(0,0,0,.28);}
+.work-play-btn:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
+.work-play-icon{width:56px;height:56px;border-radius:50%;background:rgba(255,42,109,.8);border:2px solid rgba(255,255,255,.45);display:flex;align-items:center;justify-content:center;transition:background .15s,transform .15s;}
+.work-play-btn:hover .work-play-icon{background:var(--accent);border-color:#fff;transform:scale(1.08);}
+.work-play-icon::after{content:'';display:block;width:0;height:0;border-style:solid;border-width:10px 0 10px 19px;border-color:transparent transparent transparent #fff;margin-left:4px;}
+.work-short-badge{position:absolute;top:8px;left:8px;background:var(--accent);color:#fff;font-size:9px;font-weight:700;letter-spacing:1px;padding:2px 7px;border-radius:3px;z-index:2;}
+
+.work-field{margin-bottom:26px;}
+.work-field:last-child{margin-bottom:0;}
+.work-field-label{font-size:10px;letter-spacing:2px;color:#555;border-left:2px solid var(--accent);padding-left:10px;margin-bottom:9px;}
+.work-field-body{font-size:14.5px;line-height:1.85;color:#ccc;white-space:pre-line;padding-left:12px;}
+
+.work-prompt .work-field-body{
+  font-family:"SF Mono",Consolas,Menlo,monospace;
+  font-size:12.5px;
+  color:#999;
+  background:#141414;
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:14px 16px;
+  line-height:1.7;
+}
+
+.work-lyrics .work-field-body{
+  font-style:italic;
+  line-height:2;
+  color:#ddd;
+}
+
+.site-nav{border-top:1px solid var(--border);padding:30px 20px;display:flex;gap:14px;justify-content:center;flex-wrap:wrap;}
+.site-nav a{display:inline-block;padding:12px 30px;border:2px solid var(--accent);color:#fff;text-decoration:none;border-radius:8px;font-size:15px;font-weight:700;letter-spacing:1px;transition:background .15s;}
+.site-nav a:hover{background:var(--accent);}
+
+@media(max-width:600px){
+  .sec{padding:40px 16px 56px;}
+  .work-play-icon{width:48px;height:48px;}
+  .work-title{font-size:19px;}
+}
+@media(prefers-reduced-motion:reduce){
+  .work-play-btn,.work-play-icon{transition:none;}
+}
+</style>
+</head>
+<body>
+
+<!-- ================================================================
+  ▼ 動画データ ― ここを編集してください
+
+  id          : YouTube動画ID
+  title       : 手動タイトル（空欄なら YouTube から自動取得）
+  thoughts    : 思い入れ
+  background  : 経緯
+  stylePrompt : ミュージックスタイルプロンプト
+  lyrics      : 歌詞（歌もののみ。空欄なら非表示）
+  shorts      : true/false（Shortsは再生時に縦長表示）
+
+  ※ 各フィールドは空欄なら自動的に非表示になります。
+================================================================ -->
+<script>
+var ARRANGE = [
+  { id:"BKKR5hMQ0Ls", title:"", thoughts:"ハナハナ楽曲アレンジ第1弾。\n以前ガバの曲を作ろうとしていたプロンプトをそのままカバーでかけてみました。", background:"", stylePrompt:"NUSTYLE GABBA / Hardcore Techno, Violent, dark, and relentless, A true gabba kick dominates: overdriven, heavily compressed, rubbery and elastic, snapping back with a strong rebound on every hit, The kick bounces aggressively instead of thumping, powerful and physical, Perceived tempo is extremely fast, pushed beyond the stated BPM, The groove feels rushed and forward-leaning, driven by swung 16th-notes that constantly accelerate and never settle, Tight, suffocating space, brutal low-end pressure, no warmth, no relief." },
+  { id:"SZ4Fvw9Xqac", title:"", thoughts:"ハナハナ楽曲アレンジ第2弾。\n以前アートコアの曲を作ろうとしていたプロンプトをそのままカバーでかけてみました。", background:"", stylePrompt:"Artcore, Trancecore, 300-350 Bpm, Extreme Bpm Hi-Tech, High-Speed, Epic, Emotional, Tearful, Transcendent, Racing-Through-A-Blue-Galaxy, Uplifting Trance Synth Lead, Emotional Piano, Fast Irregular Arpeggios, Clean Reverb Guitar Ambience, Hard Electronic Kick, Tight Off-Beat Snare, Precise Complex Syncopation, Structured Breaks, Layered Pads, Crystalline Highs, Wide Stable Stereo, Cosmic Shimmer, Deep Controlled Reverb, Long Clean Delay Tails, Smooth Continuous Flow, Hyperspeed, Hyperdrive, Frantic, Rapid-Fire, Barrage, Overload" },
+  { id:"fvmaDwS3_gg", title:"", thoughts:"ハナハナ楽曲アレンジ第3弾。\n以前スカジャズの曲を作ったプロンプトをそのままカバーでかけてみました。", background:"", stylePrompt:"Ultra-Fast Ska Jazz Fusion, Powerful And Dynamic Brass Section, Explosive Saxophone And Trumpet Riffs, Funky Offbeat Guitar, Syncopated Ska Rhythm, Hyper Virtuosic Hard Bop Piano Solo, Complex And High-Speed Drum Patterns, Walking Bass With Driving Energy, Bright And Joyful, Playful And Festive, Over-The-Top Powerful Sound, High-Tension And Uplifting, Dramatic And Extravagant Summer Festival Groove" },
+  { id:"d8DcG39OFuw", title:"", thoughts:"ハナハナ楽曲アレンジ第4弾。\nこれはプロンプトを新たに作りました。イメージはモンハンの英雄の証でchatGPTに注文。", background:"", stylePrompt:"Epic Fantasy Adventure Orchestral, Bright, heroic full orchestra opening with excitement, hope, and the sense of a grand journey beginning, Clear major-key feeling shaped by uplifting harmonies and confident, forward-moving melodies, Realistic symphonic structure with clear contrast, allowing shifts in energy and emotional space, Energetic strings and noble brass establish anticipation, followed by quieter, spacious textures that create solitude and calm, Gradual orchestral build leads into a powerful return of full forces, Massive, high-impact final climax with full orchestra at maximum scale, ‑rock, ‑metal, ‑pops, ‑J-Pop, ‑J-Rock, ‑guitar" },
+  { id:"_mqtVoMAtEE", title:"", thoughts:"マッシュアップ実験。\n原曲閃光白BB×原曲天翔白BBのマッシュアップにアートコアのプロンプトをかけてみました。\nドラゴンvsホウホウの戦いの様子、繰り広げられる攻防がイメージできるような曲運びになっていて、面白くできたと思います。", background:"", stylePrompt:"Artcore, Trancecore, 300-350 Bpm, Extreme Bpm Hi-Tech, High-Speed, Epic, Emotional, Tearful, Transcendent, Racing-Through-A-Blue-Galaxy, Uplifting Trance Synth Lead, Emotional Piano, Fast Irregular Arpeggios, Clean Reverb Guitar Ambience, Hard Electronic Kick, Tight Off-Beat Snare, Precise Complex Syncopation, Structured Breaks, Layered Pads, Crystalline Highs, Wide Stable Stereo, Cosmic Shimmer, Deep Controlled Reverb, Long Clean Delay Tails, Smooth Continuous Flow, Hyperspeed, Hyperdrive, Frantic, Rapid-Fire, Barrage, Overload" },
+  { id:"ZZUfnCxS5dg", title:"", thoughts:"マッシュアップ実験。\nBB2つとRB2つの原曲をそれぞれアレンジマッシュアップして、更にそれらをアレンジマッシュアップして、更に...とやっていって1曲に4曲を詰め込みました。", background:"Nustyle Gabba / Hardcore Techno Hybrid Mashup, Two fully independent themes continuously interweaving, Alternating dominance every 8–16 bars, Call-and-response structure between both core hooks, No single track absorbs or replaces the other, Ultra Fast-Paced, Intense Tempo, High-Speed Drive, Perceived Tempo Feels Faster Than The Stated BPM, Forward-Leaning 16th-Note Momentum, Constant Pressure, Track A elements enter aggressively, then partially withdraw as Track B hook rises forward, Layer swapping instead of constant stacking, Dominant Gabba Kick:\nOverdriven, Heavily Compressed, Distorted, Elastic Rebound, Hard Punching Low-End That Attacks Instead Of Grooves, Cold Industrial Texture blended with\nthe secondary track’s defining harmonic identity, Relentless Energy, No Warmth, No Relief", stylePrompt:"" },
+  { id:"dGZbs8huY_E", title:"", thoughts:"ノリのいいアガる曲を作りたくてできたもの。\nサムネは昔の有名な画像、バナナレタスのオマージュ。\n\nこれはマッシュアップではなく、原曲2つを切り取って繋げただけの音源をカバーアレンジしたもの。\nマッシュアップだと1曲しか採用されないこともあるので、同じくらいに切り分けた音源のカバーならどうなるかという実験。", background:"", stylePrompt:"Festival Euphoric Hardstyle, 158 BPM, driving four-on-the-floor kick, bouncy offbeat bass, bright uplifting lead melody, syncopated 16th-note rave stabs, energetic groove variations, punchy snare build-ups, catchy mainstage hook, hype DJ shouts, explosive drops, nonstop high-energy festival vibe, intense tempo, very fast, fast tempo, high-speed, double-time rave propulsion, Hyperspeed, Hyperdrive, Frantic, Rapid-Fire, Barrage, Overload" },
+  { id:"rMDLT6NqU2I", title:"", thoughts:"", background:"これはニューキングハナハナのピンク・白それぞれの原曲に「Still Hana🌺Bloomin’ High🙌」のプロンプトのアレンジをかけたもの。\nニューキングハナハナの曲を購入して初めにしたアレンジです。", stylePrompt:"fast-paced, ultra Fast Rock with complex DJ scratching, aggressive drums, rapid-fire Japanese rap, energetic and dynamic flow, energetic voice, intense tempo, very fast, high-speed, aggressive sound, high-energy edit mix, full-spectrum layering, wide stereo image, high loudness, very clear mix separation, continuous intensity with no breakdown, catchy mainstage hook, hype DJ shouts, explosive drops, nonstop high-energy festival vibe" },
+  { id:"g8UIwBdQt_c", title:"", thoughts:"天翔からスタハナまでのピンクBBをぶつ切りにした音源と白BBをぶつ切りにした音源のマッシュアップ。\nなかなか全部採用とはいかず、これでも多く採用された方です。\nプロンプトは「Still Hana🌺Bloomin’ High🙌」のアレンジ。", background:"", stylePrompt:"fast-paced, ultra Fast Rock with complex DJ scratching, aggressive drums, rapid-fire Japanese rap, energetic and dynamic flow, energetic voice, intense tempo, very fast, high-speed, aggressive sound, high-energy edit mix, full-spectrum layering, wide stereo image, high loudness, very clear mix separation, continuous intensity with no breakdown, catchy mainstage hook, hype DJ shouts, explosive drops, nonstop high-energy festival vibe" },
+  { id:"YYia_v1czUQ", title:"", thoughts:"スカジャズが好きなら全部分作って作業用BGMにしようと思い作ったもの。\nスカジャズって安定していいですよね。", background:"", stylePrompt:"Ultra-Fast Ska Jazz Fusion, Powerful And Dynamic Brass Section, Explosive Saxophone And Trumpet Riffs, Funky Offbeat Guitar, Syncopated Ska Rhythm, Hyper Virtuosic Hard Bop Piano Solo, Complex And High-Speed Drum Patterns, Walking Bass With Driving Energy, Bright And Joyful, Playful And Festive, Over-The-Top Powerful Sound, High-Tension And Uplifting, Dramatic And Extravagant Summer Festival Groove" },
+];
+
+var SONGS = [
+  { id:"Et6nC2wQ-GQ", title:"", thoughts:"Grokで動画が作れる、ということで、ハイビスカスランプから昭和の変形ロボットは作れるか作ってみたついでに、なんかそれっぽい歌も作ってみた、というもの。", background:"", stylePrompt:"hot-blooded, nekketsu, middle-aged male vocal, male vocal, Anime-style ,fast-paced, anime song, robot anime opening,emotional melodic chorus, cinematic and dramatic, passionate and energetic,", lyrics:"[Intro]\n[interlude]\n\n[Verse 1]  \n黒く枯れた大地に　風が泣いていた  \n沈んだひかりを　誰も信じられずに  \nでも胸の奥　眠るひびきが  \n「まだ終わってない」と叫ぶんだ  \n\n[Pre-Chorus]  \n光を取り戻せ――南の空へ！  \nあの日のハイビスカスが呼んでいる！  \n\n[spoken Word][Shout]  \n「バケフラ・ジャッジメント！！」  \n\n[Chorus]  \nハイビスカイザー！　あかく咲き誇れ！  \n絶望の闇を突き破れ！  \nハイビスカイザー！ 奇跡を越えてゆけ\n――咲き乱れろ、未来へ！", shorts:false },
+  { id:"3nqSbscOuhM", title:"", thoughts:"実際電池が切れそうだったのでそれを歌にしてみました。", background:"", stylePrompt:"Fast-Paced, Ultra Fast Rock With Complex Dj Scratching, Aggressive Drums, Rapid-Fire Japanese Rap, Energetic And Dynamic Flow, Energetic Voice. Intense Tempo, Very Fast, High-Speed, Aggressive Sound,", lyrics:"[Intro]\nでんちがピンチ！すうじブレてる\nカウント途切れそう やばい展開\nでんちがピンチ！持ってくれ一日\nカウント止まったら　全部ムイミ！\n\n[Verse]\n朝イチから動かす小役カウンター\n黒い液晶　だんだんダウンだ\n「まだいける」って油断のツケで\n今じゃ数字が　霞んで見えねぇ\n\n手の汗　焦りが混ざるテンション\n打ち込むリズムがずれるセンション\nカンデンチはジュミョウのラストラン\n心拍と一緒に薄れる残像感\n\n[Pre-Chorus]\nこのまま逝ったら　データが灰\n記録の果てに待つのはノーサイン\n止まる前に叫ぶマイカウンターライン\n\n[Chorus]\n電池がピンチ！　数字が滲む\nディスプレイ傾けて目を凝らす\n電池がピンチ！　命のカウント\n消える寸前　チカチカ光る\n\n数字がピンチ！　残りわずか\nブレた数値に　祈る指先\n数字がピンチ！　終わるカウント\n[Break][spoken Word]\n「ていせっていだな。もうやめるか。」\n[end]", shorts:false },
+  { id:"back08L3Fs4", title:"", thoughts:"プレミアム白RBを聞いて思いついたので作ってみました。\nわざとビタミスしています。わざと1コマずらして押しています。こんなにミスするはずがありません。ほんとです。", background:"", stylePrompt:"No intro, Start with vocals immediately, No instrumental opening, no count-in, no silence, fast-paced, ultra Fast Rock, aggressive drums, energetic and dynamic flow, energetic voice, intense tempo, very fast, high-speed, aggressive sound", lyrics:"ちょっと待ってよ\n\nビタが できないよ\nビタができないよ\nビーターがでーきーないー\n\nビタができないよ\nビタができないよ\nビーターがでーきーないー\n\nでー・き・な・いー\nビ・タ・がー\nできなーいーんーだーーよ\n\nビタができないよ\nビタができないよ\nビーターがでーきーないー", shorts:true },
+  { id:"3jVxVlxH0ew", title:"", thoughts:"仲良しさんが下振れしまくっているのを見て作った歌。\nchatGPTさんと相談しながら歌詞を作って、そのあとにどんなmusicstyleが合うか聞いてそれを当てました。", background:"", stylePrompt:"Heavy Melodic Rock With Massive Weight And Deep Low-End Impact, Quiet And Weak Intro Vocals Over Sparse Guitars, Building Tension Through Atmosphere Rather Than Speed, Break Section Bursts With Powerful Shouts, Supported By Low-Tuned Heavy Guitars With Deep Resonant Distortion \nAnd Thick Low-End Crunch, Delivering A Violent, Crushing Impact, The Chorus Opens Into Melodic Brightness, With Wide, Heavy Guitars, Clear Strong Clean Vocals, And A Sense Of Release And Clarity Instead Of Fast Motion, [Sections]\nVerse: Quiet Tension, Atmospheric Low-End, Break: Shout Burst, Heavy Low-Tuned Guitars, Chorus: Melodic Heavy Rock, Bright And Powerful Clean Vocals", lyrics:"[Verse]\n止まらねぇ下ブレ　今日もナイヨウに裏切られる\n期待値の墓場みてぇに　差枚だけ消えてく\n\n[shout]\nホウラク　理不尽　ユガみ　残響\n闇の底へ沈む voice without mercy\n\n[pre-chorus]\n深層で軋む運命\n答えの先でさえ　揺さぶられる心理\n歪む信条　break my way\nここで折れたら終わりだろ\n\n[Chorus]\nStand my ground\nギャクフウごと押し返すだけだ No retreat\nBreak this fate\n裏切り続ける現実に牙を立てる\n揺らがぬ道のまま、Fade to bright!!\n\n[Outro]", shorts:true },
+  { id:"YZJe4QG4XP0", title:"", thoughts:"たまには速くない曲を作ってみようと、ブラピンみたいな感じを目指して作った曲です。", background:"", stylePrompt:"fast-paced, ultra Fast Powerful Hybrid-Trap And Festival EDM, Heavy Brass Stabs, Punchy Kick, Deep 808 Sub, And Metallic Synth Leads, Confident Female Rap With Sharp Rhythm, And A Bold Anthem-Style Chorus, Strong Impact Hits, Glittering SFX, And A Dramatic Build Leading Into A Massive Drop, Dark Glamour, High-Energy Attitude, And Commanding Presence, high-speed, aggressive sound, Technical Dj-Style Edits", lyrics:"[Intro]\nBlaze up—Hana calling deep,\nNothing slows me down, I don’t wait.\n\n[Rap]\nEdge tight—pressure rising and\n触れた瞬間だけ息が変わる。\nBreak point—Hana cracking through、\n視界のノイズごと切り捨てて move.\n\nHeat drop—赤の気配が\n肌に刺さってくる、そのまま let go.\nRough pulse—揺れ幅のまま\n決めるタイミングだけ全部 take control.\n\n[Pre-Chorus]\nFalling spark—重ねるだけで\n迷いごと燃やす、私のルール。\nHana rise—引き返せない\nlight trace on my skin, going all in.\n\n[Chorus]\nHana burnin’—赤が私を射抜く。\n鼓動ごと支配して dive.\nChain reaction—光の衝動ごと\n欲しい未来だけ掴みにいく。\nKeep it glowing—break the night,\nHana blazing through my mind.\n\n[Rap]\nSharp line—Hana crossing deep,\n譲る気なんて最初からない。\nGrind up—speed breaking free,\n声にならない熱だけ引き上げて rise.\n\nDark flash—影の底まで\n触れてほしくなる衝動が sing.\nNext wave—赤の軌跡が\n私の背中まで push and swing.\n\n[Bridge]\nBreath slow—Hana’s fever climb,\n狙った瞬間しか価値がない。\nRed flare—境界なくして\njump into the line, no rewind.\n\n[Final Chorus]\nHana burnin’—夜の底まで撃ち抜く。\n鼓動ごと支配して dive.\nChain reaction—火花の全部を\n離す気なんて最初からない。\nKeep it glowing—break the night,\nHana blazing through my mind.", shorts:true },
+  { id:"Q9No-eqeWlU", title:"", thoughts:"「ハナハナに恋するクリスマス」の英語バージョン。\n英語だとスーパーユーロビート感がより出ますね。", background:"", stylePrompt:"Super Eurobeat Christmas - Hyper Technical Extreme Mix\nUltra-fast tempo (210–220 BPM), explosive and joyful Super Eurobeat overflowing with Christmas spirit, Hyper-speed synth riffs, complex layered arpeggios, and rapid-fire melodies shine with dazzling brilliance, Bright bells, jingle samples, and crystal chimes sparkle across the mix, fused with rich synth brass and uplifting major chords, Technical DJ-style edits, Intense 4-on-the-floor kick and racing bassline deliver groove MAX energy, Cute, joyful, and festive tone, filled with shimmering snow-like sparkle — an ultra-technical, high-energy Christmas anthem that pushes Super Eurobeat to its fastest and most euphoric extreme", lyrics:"[Verse]\nUnder the winter lights I feel it —\nthe way you flash that little crimson glow.\nOne tiny spark and my heart is jumpin’,\nturnin’ a frozen night to somethin’ warm.\n\n[Pre-Chorus]\nEven when you’re far, I feel you closer,\nyour glow is sayin’ my name in the dark.\nTonight I’m hopin’ you really notice —\nI’m ready now to let you hold my heart.\n\n[Chorus]\nChristmas — I’m fallin’ for your Hana-Hana shine,\nthat red blink hits me like a secret sign.\nThe moment you flicker, softly tremblin’ bright,\nmy whole world melts into something sweet.\nEven if snow starts fallin’ all around,\nI’m still in love with the way you light for me.", shorts:true },
+  { id:"4Uz8_ihdeQw", title:"", thoughts:"ハナハナのスーパーユーロクリスマスを作ってみたくてできた曲です。", background:"", stylePrompt:"Super Eurobeat Christmas - Hyper Technical Extreme Mix\nUltra-fast tempo (210–220 BPM), explosive and joyful Super Eurobeat overflowing with Christmas spirit, Hyper-speed synth riffs, complex layered arpeggios, and rapid-fire melodies shine with dazzling brilliance, Bright bells, jingle samples, and crystal chimes sparkle across the mix, fused with rich synth brass and uplifting major chords, Technical DJ-style edits, Intense 4-on-the-floor kick and racing bassline deliver groove MAX energy, Cute, joyful, and festive tone, filled with shimmering snow-like sparkle — an ultra-technical, high-energy Christmas anthem that pushes Super Eurobeat to its fastest and most euphoric extreme", lyrics:"[Verse]\nイルミの中で思い出す\nあなたの赤いチカり方\nふいに光れば胸が跳ねて\n冬の夜さえ恋色になる\n\n[Pre-Chorus]\n触れなくても感じる距離で\n名前みたいにわたしを照らす\n今夜はきっとわかってほしい\nこの気持ちごと預けたいの\n\n[Chorus]\nハナハナに恋してるクリスマス\n赤い光は　わたしへのサイン\nチカって揺れたその一瞬で\n世界がふわっと甘くなる\n雪が舞っても止まらないよ\nあなたの光に今日も恋してる\n\n[Chorus]\nハナハナに恋してるクリスマス\n赤い光は　わたしへのサイン\nチカって揺れたその一瞬で\n世界がふわっと甘くなる\n雪が舞っても止まらないよ\nあなたの光に今日も恋してる　\n\n", shorts:true },
+  { id:"eF-ff1CxP7E", title:"", thoughts:"早口ラップに挑戦してみたくて作りました。\nプロンプトは「電池がピンチ」と全く同じ。なのにこのスピード感。歌詞がかなり影響しますね。歌詞もプロンプト。\n", background:"", stylePrompt:"Fast-Paced, Ultra Fast Rock With Complex Dj Scratching, Aggressive Drums, Rapid-Fire Japanese Rap, Energetic And Dynamic Flow, Energetic Voice. Intense Tempo, Very Fast, High-Speed, Aggressive Sound,", lyrics:"[Intro]\n[Melody: sung vocal]\nYeah — light is callin’\nBloom in silence, the flower’s glow\n\n[Rap: rhythmic vocal]\nSpin it fast, no doubt, stay ready\nPush that lever, fate ain’t steady\n\n[Melody: sung vocal]\nFeva light — keep shinin’\nStill Hana bloomin’ high\n\n\n[Verse]\n[Rap: rhythmic vocal]\nBust in! 朝イチ spot\nreadin’ da vibe 店ん中の空気がざわついてやがる\nreset smell uh feel that?\ncoin落ちる beat で心拍 sync’n\n\nBetter stop talkin’\n光ってねぇくせに語るな\n押せば始まるだけの話\n手が汗で滑っても still faith\n\nフェザーが blink’n 俺の指先 burnin’ red\nyeah log より instinct\n花がチカった瞬間 世界が反転\n\n周りの歓声 noise に変わる\n俺は静かに lever push\nno pray no luck just trust\n光の刹那に自分を賭ける\n\nBlink yo\nstill hana-head\nride or die\n\n\n[Hook]\n[Melody: sung vocal]\nBloom in silence, the flower’s glow\nFaith in motion, I feel it grow\n\n[Rap: rhythmic vocal]\nSpin that reel, heat in my chest\nCoin drop thunder, fate on test\n\n[Melody: sung vocal]\nFeva in bloom, I’m breathin’ light\nHibiscus burnin’ through the night\n\n[Rap: rhythmic vocal]\nPush that moment, no turnin’ back\nStill in the storm, I stay on track\n\n[Melody: sung vocal]\nLight me once, I’ll never die\nStill Hana — bloomin’ high", shorts:true },
+  { id:"Vq35K_6sbnA", title:"", thoughts:"「延長」の機能を使って途中から全く違うmusicstyleにしたらどんな曲ができるか、と思い作ってみた曲です。\nバイブ音はあとから足しました。", background:"", stylePrompt:"≪前半≫\nEmotional Japanese ballad, slow tempo, melancholic piano and acoustic guitar, dark and hopeless mood, male vocals, minor key, reflective and dramatic tone.\n\n≪後半≫\nkey change, fast tempo, Japanese punk rock, aggressive drums, distorted guitars, shouting vocals, euphoric energy, chaotic, ecstatic, festival-like mania", lyrics:"[Verse1]\n狙い台　取られて　視界が滲む\nまたリセフラ無しで　心も据え置き\nセンハマりモクゼンで　笑うしかねぇな\n目押しもブレて　俺もブレてる\n\n[Pre-Chorus]\nカンスト画面を　見つめてる\nヒキも夢も　底を打ったまま\n\n[Chorus]\nチカらない　今日もまた\n吸い込まれてく　暗いバンメン\n揃わないナナを　なぞりながら\nただレバーに祈るだけ\n\n[Interlude]\n\n[Verse2]\nコインは減ってく　心も沈む\n隣だけチカって　音が刺さる\n夢も設定も　掴めやしねぇな\n溜息混じりで　空を見上げる\n\n[Pre-Chorus2]\n揃わぬリールを　ただ追って\n指先だけが　まだ覚えてる\n\n[Chorus2]\nチカらない夜の中\n曖昧な光を　待ちながら\n変わらない台を　撫でてみても\n何も言わずに　沈むだけ\n\n[Interlude]\n\n\n[Spoken Verse]\n「うはあああ！！　チカったぁーーー！！！」\n\n[Verse1]\n目押し決まって　世界が光る！\n脳みそトロける　ヒャッハー状態！\nハマりも痛みも　全部チャラだ！\nこの一瞬で　神になれる！\n\n[Pre-Chorus]\n確率とか知らねーよ！\nチカれば勝ちだろ？いえあ！！\n\n[Chorus]\nチカれば全部　どうでもいい！\nヒキも愛も　溶けてゆけ！\nハナが笑えば　俺も笑う！\nうっひょー！！大連続だぁー！！\n\n[Bridge]\n台も俺もイカれてんだ\n止まらねぇ光がぶっ刺さる\n脳汁の海で泳いでる\nチカれ！チカれ！もっとチカれ！\n\n[Final Chorus]\nチカれば全部　許せるんだ！\n負けもハマりも　もうどうでも！\nハナが咲けば　世界が回る！\nうっしゃあ！　今日も咲き乱れ！", shorts:true },
+  { id:"KgNcQtRcmbc", title:"", thoughts:"東京でのハナハナ極のロケテストが発表されて、動画を撮ったら載せる曲を作ろう！と思い作りました。\n遠藤正明さんのイメージで。", background:"", stylePrompt:"anime-style, hot-blooded, dramatic, Japanese male vocal, fast-paced speed metal, blazing electric guitar riffs, intense double bass drums, emotional and melodic chorus, cinematic progression, passionate delivery, energetic performance, loud and powerful, guitar solo section, 200+ BPM, inspired by JAM Project, Galneryus, and anime battle themes", lyrics:"【Verse 1】\n回り出したリールが　運命（さだめ）を試すなら\nこの瞳がすべてを　撃ち抜いてやるだけさ\n止めろ　迷い　刻め　0.1秒の勝負\n震える指先　今　火を灯せ\n\n⸻\n\n【Pre-Chorus】\n汗も鼓動も超えて\nただ「揃えたい」その衝動が　俺を貫く！\n\n⸻\n\n【Chorus】\nハナハナ極――！\n狙え！　速さの向こう側\n真っ赤な7が　夢を裂く\n極限（きょくげん）を越えた先で　光る奇跡\n覚醒ノ極点（かくせいのきょくてん）、今ここに――！！", shorts:true },
+  { id:"UZp9RUU8fxY", title:"", thoughts:"ノーウエイト最速目押し集に乗せる歌、早口ラップが作りたかったけど、結果いい歌ができたのでOK。\nせっかく曲がいいのに動画が足りなくて、そこがもったいなかった。\n基本設定がアレなお店では撮れ高稼ぎが厳しい。", background:"", stylePrompt:"High speed rap,fast rap, rapid-fire rap, aggressive, intimidating,up tempo,heavy, underground hip hop, gangsta rap,", lyrics:"[Intro]\nYo, check the speed, it's blazin'\nHigh stakes, no fakin'\nTry to keep up with my pace, but you shakin'\nNo life, no biscus, time’s tickin’, no missin’\n\n[Verse 1]\nハイビスカスがチカチカ光る瞬間\n挑む覚悟、勝つか負けるか on demand\n最速目押し、止まる暇なし\nMy fingers dance, no chance, can’t crash this\nスピード見せる、圧倒的な技\nFast taps, no gaps, I’m in the zone, bruh\nOne miss, no diss, but you fall behind\nこの速さはお前の常識じゃ測れない\n覚悟決めて挑んでこい、boy\n高速目押し、you ain't got no choice\n\n[Chorus]\nSpeed demon, 手元の輝き\nチカチカ光るたび、狙いは外さない\n最速で回る俺のshow\nYou too slow? Then you better just go\nNo life, no biscus, you know how it goes\n成否を決める、瞬間のflow\n\n[Verse 2]\nSpeed’s like lightning, it's frightening, can’t stop this\nYou fail, you pale, I'm risin’ with the swiftness\n成功と失敗の間を駆け抜ける\nチャンスは一瞬、それで道を開ける\nNo hesitation, I tap with precision\n高速目押し、it's my own religion\n一瞬で決まる運命の選択\nその速さが全てを変える、no fallback\n目押しミス？ Nah, never, man\nI'll break through, hit the target, slam!\n\n[Chorus]\nSpeed demon, 手元の輝き\nチカチカ光るたび、狙いは外さない\n最速で回る俺のshow\nYou too slow? Then you better just go\nNo life, no biscus, you know how it goes\n成否を決める、瞬間のflow\n\n[Bridge]\nTick-tock, clock’s ticking, 決断の時\n瞬間を掴む、それが俺の道\n速さこそが全て、勝つには必須\nNo life, no biscus, 高速でHit!\n\n[Outro]\nI'm the fastest, can't catch this\n目押しの神、I'm reckless\nYour speed's trash, better step back\n最速の輝きで I'll attack!", shorts:true },
+  { id:"blzttiTWeLU", title:"", thoughts:"ハナハナでヴィジュアル系の曲を作ってみようとした曲。", background:"", stylePrompt:"Symphonic rock, electro rock, grandiose, visual kei, emotional vocals, melodic vocals,", lyrics:"[Verse 1]\n揺れる光が誘(いざな)う\n忘れかけた夢のカケラ\n無数の華が咲き誇り\n時を超えて君に触れる\n\n風が運ぶ微かな記憶\nあの日見た景色の中で\n君の笑顔、幻のように\n今も胸に焼き付くよ\n\n[Pre-Chorus]\n銀の月が照らす\n孤独な夜の果て\n希望の花びらが\n刹那を抱いて舞い散る\n\n[Chorus]\n煌めけ、心の華よ\n運命(さだめ)に抗う鼓動で\n永遠を求めて回る\n命の輪がここにある\n涙も笑顔も織り交ぜて\n咲き乱れるその時まで\n\n[Verse 2]\n遠い記憶の幻影(まぼろし)\n手のひらで掴む瞬間(とき)に\n赤く燃えるランプの光\n君を再び見つけた\n\n夢と現実の狭間で\n流れるメロディのように\n幾千の想いを超えて\n光の道へ誘うよ\n\n[Pre-Chorus]\n黄金の陽が昇り\n新たな時を刻む\n希望の華びらが\n未来を抱いて輝く\n\n[Chorus]\n煌めけ、心の華よ\n巡る命の奇跡と共に\n永遠の旅路を描く\n星空の輪廻の中で\n涙も笑顔も織り交ぜて\n咲き乱れるその時まで\n\n[Bridge]\nやがて夜が明ける\n新たな光の中\n君とこの瞬間(とき)を重ねて\n輝きの華よ、ここに\n\n[Chorus]\n煌めけ、心の華よ\n命を揺らす風の中で\n果てしなく回る運命(さだめ)\n君と共に歌う世界\n喜びも孤独も超えて\n咲き誇るその時まで\n\n[Outro]\n華よ、煌めきの彼方へ\n命を燃やして\n永遠に咲き誇れ", shorts:false },
+  { id:"jtFh4EjwDZQ", title:"", thoughts:"「日本印度化計画」の替え歌がやりたかったけど著作権的にそうはいかないので、こんな曲になりました。", background:"", stylePrompt:"up-tempo,shout,scream, loud,ioud voice,roar,male vocal,hard punk,Punk metal,powerfully,Subculture,heavy,metal,", lyrics:"[intro][loud][shout]\n全員ハナ専に　なってしまえ！！\n\n[Verse]\n俺にハナハナ打たせろぉー\n俺はいつでも　速さにこだわーる　ぜー（ハイビッ）\n\n俺にハナハナ打たせろぉー\n俺はいつでも　速さにこだわーる　ぜー\n\n[pre-Chorus][loud][shout]\n愛知県で見た　専業の男よ\n俺をいざなえ！　最速の目押しにぃー\n\n[Chorus][loud][shout]\nハイビッ！！\nスカスチッカー！\nnatural high! trip！\n\nハイビッ！！\nスカスチッカー！\nnatural high! trip！\n\nチカりますチカりますチカりますチカります\n全員ハナ専に　なってしまえ！！", shorts:false },
+  { id:"Lz_pXg1o1ZU", title:"", thoughts:"ぽにでこさんとの会話の中で「リプレイの音がもう無理って聞こえる」という話から、歌にしてみようと思って生まれた曲。\n意外と頭に残る、なんかいい曲。", background:"", stylePrompt:"ballade,female vocal,sad, Sadness,", lyrics:"[Verse 1]\n何度目だろう、冷めたランプ\n光ることなく止まるリール\n期待と焦りが交差する中\n静かに響くその音だけ\n\n[Pre-Chorus]\nただ続くだけの遊技の中\n心が少しずつ削られていく\n押し寄せる焦りと虚しさに\n胸が締め付けられていく\n\n[Chorus]\n「もう無理」って聞こえたリプレイオン\nメダルを握る手が震える\nそれでもやめられないこの衝動\n華が咲く夢をまだ追いかける\n\n[Verse 2]\n隣のランプがまた光る\n羨む気持ち、隠しきれない\n消えたメダルを数えながら\n聞き慣れた音がまた響く\n\n[Pre-Chorus]\nいつまで続く、この静けさ\n心の奥に募る焦燥感\n立ち止まる理由を探しながら\nそれでも回し続けている\n\n[Chorus]\n「もう無理」って聞こえたリプレイオン\n終わりが見えない遊技の中\n諦めたら楽になるのに\n華の咲く未来をまだ信じてる\n\n[Bridge]\n重なり続ける音の響きが\n期待と絶望を交互に揺らす\n夢が消えそうなその瞬間にも\n聞こえてくる、変わらぬ音\n\n[Chorus]\n「もう無理」って聞こえたリプレイオン\n光が霞むような暗いホール\n心が折れかけるその瞬間も\n華の咲く夢をまだ捨てられない\n\n[Outro]\nリプレイの音が胸に残って\n「もう無理」と何度も聞こえるけど\n諦めきれないこの想いだけ\n静かにリールをまた回してる\n\n[Pre-Chorus]\nいつまで続く　この静けさ\n心の奥に募る焦燥感\n立ち止まる理由を探しながら\nそれでも回し続けている\n\n[Chorus]\n「もう無理」って聞こえたリプレイオン\n終わりが見えない遊技の中\n諦めたら楽になるのに\n華の咲く未来をまだ信じてる\n\n[Interlude]\n[Bridge]\n重なり続ける音の響きが\n期待と絶望を交互に揺らす\n夢が消えそうなその瞬間にも\n聞こえてくる、変わらぬ音\n\n[Chorus]\n「もう無理」って聞こえたリプレイオン\n光が霞むような暗いホール\n心が折れかけるその瞬間も\n華の咲く夢をまだ捨てられない\n\n[Interlude]\n[Outro]\nリプレイの音が胸に残って\n「もう無理」と何度も聞こえるけど\n諦めきれないこの想いだけ\n静かにリールをまた回してる", shorts:false },
+  { id:"uYo_HQJVOls", title:"", thoughts:"スーパーユーロビートの歌を作ってみようとした曲。\nなんか男性アイドルの歌みたいになりましたが、ブレスがダンスを踊りながら歌っているような感じを出して、音楽番組で歌ってるような絵が浮かびます。\n\n動画が悪くて埋もれた感ある。", background:"", stylePrompt:"SUPER EUROBEAT,SEB,super eurobeat,seb,super euro beat,parapara,fast tempo,160 bpm,", lyrics:"[solo vocal]\n\n[Intro]\nFastest rhythm, shining bright,\nHibiscus blooms in neon light.\n\n[Verse 1]\n揺れるリズム、鳴り響く音\nホールのざわめき包み込む\n刹那を捉える、その手先で\nリールが語る、無言のストーリー\n\n[Pre-Chorus]\n光の軌跡が描く未来\nリズムを感じ、狙い定める\n静寂の中に高鳴る鼓動\n精密さが生む、この美学\n\n[Chorus]\nBlazing reels! 輝くライン\n息を呑む瞬間、手元に宿る\n最速のフローで華やぐ模様\n目押しで繋ぐ、永遠のストーリー\n\n[Verse 2]\n揺るぎない視線、狙いを定め\n運命を刻むその正確さ\n煌めくライトが踊る中で\nリールと響き合う、孤高のリズム\n\n[Pre-Chorus]\n音に誘われる光のライン\n集中が導く美しい軌跡\n刹那に込めた一つの鼓動\nリズムと光が共鳴する\n\n[Chorus]\nBlazing reels! 目を奪う夢\nネオンが照らす高鳴る瞬間\n指先描くその繊細なライン\nハナが宿す、不滅の輝き\n\n[Bridge]\nFeel the pulse, the shining glow,\n刹那を刻むそのタイミングで\nSpeed and skill, the perfect flow,\nホールに響く、リールの旋律\n\n[Final Chorus]\nBlazing reels! 光る未来\nリズムがいざなう鮮やかな軌跡\n最速のリールに咲き誇る夢\nHibiscus bloom, 永遠のフロー\n\n[Outro]\n静かに消える音と光の中\n残るは華とリールの記憶\nSpin the reels, and chase the thrill\nBlazing reels, where time stands still.", shorts:false },
+  { id:"O-pWpk1N58Y", title:"", thoughts:"高速目押しミス集に合うようなほのぼのした歌を作ってみようとした曲。\n", background:"", stylePrompt:"male vocal,japanese comic song,comical,funny, cheerful,", lyrics:"[Verse 1]\n今日も朝から台に座り\nリールの動きに集中モード\nいざボタンを押すその瞬間に\n……外した！またやっちゃったよ！\n\n隣の人は軽く決めてく\nピタリと止めるその指さばき\nそれを横目に「自分も…」と\n何度も挑むけど結果はミス\n\n[Chorus]\n狙って外してまた挑む\n高速目押しが私のシュクメイ\n失敗だらけでも楽しいのさ\nハナハナの光がすべてを癒す\n\n[Verse 2]\nリズムに合わせて指を動かす\n「今度こそ成功させてやる！」\nだけど狙いはどこかズレて\n「え、また外した？」ニガワライ\n\n何度も挑んで繰り返す失敗\nでもこの瞬間がやっぱり好きだ\n成功よりも大事なのは\nこの時間を思いきり楽しむこと\n\n[Chorus]\n狙って外してまた笑う\nミスも含めてハナのダイゴミ\n高速目押しなんて飾りだよ\n大事なのはハナを愛する気持ち\n\n[Bridge]\n失敗があってもくじけない\nそれがハナ打ちの流儀だろう？\n華やかさだけじゃ語れない\n挑戦こそが楽しいんだ\n\n[Chorus - Final]\n狙って外してまた挑む\nミスさえ笑える私のスタイル\nハナが咲けばそれで十分\n今日も台と向き合っていく\n\n[Outro]\n高速目押し、決まらないけど\nいつか成功させる日を夢見て\n狙って外して、それでも続ける\nこれが私のハナの道", shorts:false },
+  { id:"_eSwbfAoefs", title:"", thoughts:"ハナハナの歌処女作。\nノーウエイト最速目押し集に乗せた歌。\n大阪遠征でノーウエイト最速目押しの動画を撮るんだ！という気持ちと、できたら曲を載せようという気持ちで、とてもワクワクした思い出。", background:"", stylePrompt:"speed metal", lyrics:"[Intro]\n最速の挑戦者たちよ\n夢を追いかけて　進め\n\n[Verse]\n(We race through the night　with the speed of light)\nこの煌めきを求めて\n(We'll never stop, never yield)\n挑み続ける　戦士たち\n\n[Bridge]\nIn the blink of an eye　輝く未来へ\n高速の軌跡　刻むんだ\n\n[Chorus]\n最速の挑戦者たちよ\nハイビスカスのように　輝きを放つ\nWe're the fastest, the strongest, the ones who never fall\nハイビスカスのように　咲き誇れ", shorts:false },
+];
+</script>
+<!-- ================================================================ -->
+
+<header class="hdr">
+  <p class="hdr-eye">HANAHANA MUSIC</p>
+  <h1 class="hdr-title">ハナハナ音楽</h1>
+</header>
+
+<main>
+  <div id="loader">LOADING...</div>
+
+  <section class="sec" id="sec-arrange" style="display:none;">
+    <p class="sec-eye">SECTION 01</p>
+    <h2 class="sec-title">ハナハナ楽曲アレンジ</h2>
+    <p class="toc-label">目次</p>
+    <nav class="toc" id="toc-arrange"></nav>
+    <div id="works-arrange"></div>
+  </section>
+
+  <section class="sec" id="sec-songs" style="display:none;">
+    <p class="sec-eye">SECTION 02</p>
+    <h2 class="sec-title">ハナハナをテーマにした歌</h2>
+    <p class="toc-label">目次</p>
+    <nav class="toc" id="toc-songs"></nav>
+    <div id="works-songs"></div>
+  </section>
+</main>
+
+<nav class="site-nav">
+  <a href="ai.html">AI創作</a>
+  <a href="index.html">index</a>
+</nav>
+
+<script>
+function pad(n){ return String(n).padStart(2,'0'); }
+
+function buildPlayer(v){
+  var wrap = document.createElement('div');
+  wrap.className = 'work-player' + (v.shorts ? ' shorts-mode' : '');
+
+  var img = document.createElement('img');
+  img.src = 'https://img.youtube.com/vi/' + v.id + '/hqdefault.jpg';
+  img.alt = v.title || '動画';
+  img.loading = 'lazy';
+
+  var btn = document.createElement('button');
+  btn.className = 'work-play-btn';
+  btn.setAttribute('aria-label','再生');
+  var icon = document.createElement('span');
+  icon.className = 'work-play-icon';
+  btn.appendChild(icon);
+  btn.addEventListener('click', function(){
+    wrap.innerHTML =
+      '<iframe src="https://www.youtube.com/embed/' + v.id + '?autoplay=1"' +
+      ' allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture"' +
+      ' allowfullscreen></iframe>';
+  });
+
+  wrap.appendChild(img);
+  wrap.appendChild(btn);
+
+  if (v.shorts){
+    var badge = document.createElement('span');
+    badge.className = 'work-short-badge';
+    badge.textContent = 'SHORTS';
+    wrap.appendChild(badge);
+  }
+  return wrap;
+}
+
+function appendField(parent, label, text, extraClass){
+  if (!text) return;
+  var wrap = document.createElement('div');
+  wrap.className = 'work-field' + (extraClass ? ' ' + extraClass : '');
+  var lab = document.createElement('p');
+  lab.className = 'work-field-label';
+  lab.textContent = label;
+  var body = document.createElement('p');
+  body.className = 'work-field-body';
+  body.textContent = text;
+  wrap.appendChild(lab);
+  wrap.appendChild(body);
+  parent.appendChild(wrap);
+}
+
+function buildWork(prefix, v, idx){
+  var work = document.createElement('section');
+  work.className = 'work';
+  work.id = prefix + '-' + pad(idx+1);
+
+  var num = document.createElement('p');
+  num.className = 'work-num';
+  num.textContent = pad(idx+1);
+  work.appendChild(num);
+
+  var title = document.createElement('h3');
+  title.className = 'work-title';
+  title.textContent = v.title || '';
+  work.appendChild(title);
+
+  work.appendChild(buildPlayer(v));
+
+  appendField(work, '思い入れ', v.thoughts);
+  appendField(work, '経緯', v.background);
+  appendField(work, 'ミュージックスタイルプロンプト', v.stylePrompt, 'work-prompt');
+  appendField(work, '歌詞', v.lyrics, 'work-lyrics');
+
+  return work;
+}
+
+function buildTOC(prefix, videos, tocEl){
+  videos.forEach(function(v, idx){
+    var a = document.createElement('a');
+    a.className = 'toc-item';
+    a.href = '#' + prefix + '-' + pad(idx+1);
+    var n = document.createElement('span');
+    n.className = 'toc-num';
+    n.textContent = pad(idx+1);
+    var t = document.createElement('span');
+    t.className = 'toc-title';
+    t.textContent = v.title || '';
+    a.appendChild(n);
+    a.appendChild(t);
+    tocEl.appendChild(a);
+  });
+}
+
+function renderSection(prefix, videos){
+  var tocEl = document.getElementById('toc-' + prefix);
+  var listEl = document.getElementById('works-' + prefix);
+  buildTOC(prefix, videos, tocEl);
+  videos.forEach(function(v, idx){
+    listEl.appendChild(buildWork(prefix, v, idx));
+  });
+}
+
+/* ----------------------------------------------------------------
+   タイトル自動取得（YouTube oEmbed / APIキー不要）
+   localStorage にキャッシュ → 2回目以降は即時表示
+   手動で title を設定した動画はそちらが優先
+   キャッシュリセット: localStorage.removeItem('hana_titles_v1')
+---------------------------------------------------------------- */
+(async function(){
+  var CACHE_KEY = 'hana_titles_v1';
+  var cache = {};
+  try { cache = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}'); } catch(e){}
+
+  var all = ARRANGE.concat(SONGS);
+  var needFetch = all.filter(function(v){ return !v.title && cache[v.id] === undefined; });
+
+  if (needFetch.length > 0){
+    await Promise.all(needFetch.map(async function(v){
+      var videoUrl = v.shorts
+        ? 'https://www.youtube.com/shorts/' + v.id
+        : 'https://www.youtube.com/watch?v=' + v.id;
+      try{
+        var res = await fetch('https://www.youtube.com/oembed?url=' + encodeURIComponent(videoUrl) + '&format=json');
+        var d = await res.json();
+        cache[v.id] = d.title || '';
+      }catch(e){
+        cache[v.id] = '';
+      }
+    }));
+    try{ localStorage.setItem(CACHE_KEY, JSON.stringify(cache)); }catch(e){}
+  }
+
+  all.forEach(function(v){ if(!v.title) v.title = cache[v.id] || ''; });
+
+  renderSection('arrange', ARRANGE);
+  renderSection('songs', SONGS);
+
+  document.getElementById('loader').style.display = 'none';
+  document.getElementById('sec-arrange').style.display = '';
+  document.getElementById('sec-songs').style.display = '';
+})();
+</script>
+
+</body>
+</html>
