@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI創作 | グレイト・プレ・善太</title>
+<link rel="icon" type="image/png" sizes="32x32" href="icon_32x32.png">
+
+<style>
+:root{
+  --accent:#ff2a6d;
+  --bg:#0d0d0d;
+  --border:#252525;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{
+  background:var(--bg);
+  color:#fff;
+  font-family:system-ui,-apple-system,"Segoe UI","Noto Sans JP",sans-serif;
+  line-height:1.6;
+  min-height:100vh;
+}
+
+.hdr{padding:64px 20px 48px;text-align:center;border-bottom:1px solid var(--border);}
+.hdr-eye{font-size:10px;letter-spacing:6px;color:var(--accent);margin-bottom:16px;}
+.hdr-title{font-size:clamp(28px,6vw,52px);font-weight:300;letter-spacing:8px;line-height:1.2;}
+
+.wrap{max-width:720px;margin:0 auto;padding:56px 20px 80px;}
+
+.cat-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+  gap:16px;
+}
+
+.cat-card{
+  display:block;
+  position:relative;
+  padding:32px 28px 40px;
+  border-radius:12px;
+  text-decoration:none;
+  color:#fff;
+  background:#111;
+  border:1px solid var(--border);
+  overflow:hidden;
+  transition:transform 0.18s, border-color 0.18s;
+}
+.cat-card:hover{
+  transform:translateY(-4px);
+  border-color:#3a3a3a;
+}
+.cat-card-bar{
+  width:36px;height:3px;border-radius:2px;
+  background:var(--accent);
+  margin-bottom:20px;
+}
+.cat-card-title{font-size:20px;font-weight:700;margin-bottom:4px;}
+.cat-card-eye{font-size:10px;letter-spacing:2px;color:#666;margin-bottom:14px;}
+.cat-card-desc{font-size:13px;color:#888;line-height:1.7;}
+.cat-card-arrow{
+  position:absolute;bottom:20px;right:24px;
+  color:var(--accent);font-size:18px;
+  opacity:0;transform:translateX(-6px);
+  transition:opacity 0.18s, transform 0.18s;
+}
+.cat-card:hover .cat-card-arrow{opacity:1;transform:translateX(0);}
+
+.site-nav{border-top:1px solid var(--border);padding:30px 20px;display:flex;gap:14px;justify-content:center;flex-wrap:wrap;}
+.site-nav a{
+  display:inline-block;padding:12px 30px;border:2px solid var(--accent);
+  color:#fff;text-decoration:none;border-radius:8px;font-size:15px;
+  font-weight:700;letter-spacing:1px;transition:background 0.15s;
+}
+.site-nav a:hover{background:var(--accent);}
+
+@media(max-width:600px){
+  .wrap{padding:40px 16px 60px;}
+}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <p class="hdr-eye">AI CREATIVE WORKS</p>
+  <h1 class="hdr-title">AI創作</h1>
+</header>
+
+<main class="wrap">
+  <div class="cat-grid">
+
+    <a class="cat-card" href="hanahana_music.html">
+      <div class="cat-card-bar"></div>
+      <p class="cat-card-eye">MUSIC</p>
+      <p class="cat-card-title">音楽</p>
+      <p class="cat-card-desc">ハナハナをテーマにしたAI生成楽曲。<br>楽曲アレンジとテーマソング。</p>
+      <span class="cat-card-arrow">→</span>
+    </a>
+
+  </div>
+</main>
+
+<nav class="site-nav">
+  <a href="index.html">index</a>
+</nav>
+
+</body>
+</html>
