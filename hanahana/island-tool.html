@@ -214,12 +214,8 @@ details#inp summary::marker{color:var(--aend);}
       <summary>角台・単台 入力</summary>
       <div class="inp-body">
         <div class="inp-col">
-          <label>角A（一方の端）</label>
-          <textarea id="cA" placeholder="901&#10;938&#10;801"></textarea>
-        </div>
-        <div class="inp-col">
-          <label>角B（もう一方の端）</label>
-          <textarea id="cB" placeholder="920&#10;921&#10;820"></textarea>
+          <label>角台番号（順不同・自動でペアを検出）</label>
+          <textarea id="cCorner" placeholder="561・560・525・524&#10;399・434・435・470"></textarea>
         </div>
         <div class="inp-col">
           <label>単台（1台ずつ）</label>
@@ -316,26 +312,55 @@ function buildSeats(a,b){
   else     { for(let x=b;x<=a;x++){ if(!mode49||!has49(x)) seats.push(x); } }
   return seats;
 }
-function hasDup(lo,hi){ return S.pieces.some(p=>{const lo2=Math.min(...p.seats),hi2=Math.max(...p.seats);return lo2===lo&&hi2===hi;}); }
+function seatExistsIn(pieces,n){ return pieces.some(p=>p.seats.includes(n)); }
 
 function parseAndGenerate(){
-  const aN=allNums($('#cA').value), bN=allNums($('#cB').value);
+  const cornerNums=allNums($('#cCorner').value);
   const sN=allNums($('#cS').value); // 単台
-  const n=Math.min(aN.length,bN.length);
-  let add=0,skip=0;
-  for(let i=0;i<n;i++){
-    const a=aN[i],b=bN[i],lo=Math.min(a,b),hi=Math.max(a,b);
-    if(hasDup(lo,hi)){skip++;continue;}
-    S.pieces.push({id:nid(),seats:buildSeats(a,b),endA:a,endB:b,rotation:'V',placed:false,gr:null,gc:null,single:false});
-    add++;
+
+  // ① 未配置の角台ピース（単台以外）を一旦解体し端点をプールへ戻す
+  //    → 2回に分けて入力しても全体で正しく再ペアリングされる
+  const keep=[]; const pool=[...cornerNums];
+  S.pieces.forEach(p=>{
+    if(!p.placed && !p.single){ pool.push(p.endA,p.endB); if(S.sel===p.id)S.sel=null; }
+    else keep.push(p);
+  });
+  S.pieces=keep;
+
+  // ② 同じ番号は1つの列にしか属せない → 重複値を除去
+  let uniq=[...new Set(pool)];
+  // ③ 既存ピース（配置済み・単台）に既に含まれる番号を除外（起点ズレの連鎖破壊を防止）
+  const before=uniq.length;
+  uniq=uniq.filter(n=>!seatExistsIn(S.pieces,n));
+  const removedExisting=before-uniq.length;
+
+  uniq.sort((x,y)=>x-y);
+
+  let add=0, overlapSkip=0;
+  let i=0;
+  while(i+1<uniq.length){
+    const a=uniq[i],b=uniq[i+1];
+    const seats=buildSeats(a,b);
+    // ④ ペア範囲内に既存ピースの台番が挟まっていないか（重複台番の禁止）
+    if(seats.some(s=>seatExistsIn(S.pieces,s))){ overlapSkip++; i+=2; continue; }
+    S.pieces.push({id:nid(),seats,endA:a,endB:b,rotation:'V',placed:false,gr:null,gc:null,single:false});
+    add++; i+=2;
   }
+  const leftover=(i<uniq.length)?uniq[i]:null;
+
   sN.forEach(n=>{
-    if(hasDup(n,n)){skip++;return;}
+    if(seatExistsIn(S.pieces,n)){overlapSkip++;return;}
     S.pieces.push({id:nid(),seats:[n],endA:n,endB:n,rotation:'V',placed:false,gr:null,gc:null,single:true});
     add++;
   });
-  if(add>0)toast(`${add}件生成${skip?'（'+skip+'件重複スキップ）':''}`);
-  else toast(`全て重複のためスキップ（${skip}件）`);
+
+  let msg=add>0?`${add}件生成`:'生成対象がありません';
+  const notes=[];
+  if(removedExisting)notes.push(`既存と重複する番号${removedExisting}件を除外`);
+  if(overlapSkip)notes.push(`既存と重なるペア${overlapSkip}件をスキップ`);
+  if(leftover!==null)notes.push(`ペアにならない番号が1件: ${leftover}`);
+  if(notes.length)msg+=`（${notes.join('・')}）`;
+  toast(msg);
 }
 
 /* canPlace: 負方向のみチェック、正方向は autoExpand が補う */
