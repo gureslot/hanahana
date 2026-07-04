@@ -25,6 +25,15 @@ body{
 .hdr-title{font-size:clamp(26px,5.5vw,48px);font-weight:300;letter-spacing:4px;line-height:1.3;}
 .hdr-sub{font-size:13px;color:#666;margin-top:16px;letter-spacing:1px;}
 
+.cat-switch{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;padding:0 20px 40px;border-bottom:1px solid var(--border);}
+.cat-btn{
+  background:transparent;border:2px solid var(--border);color:#888;
+  padding:12px 34px;border-radius:10px;font-size:14px;font-weight:700;
+  letter-spacing:1px;cursor:pointer;transition:border-color .15s,color .15s,background .15s;
+}
+.cat-btn:hover{border-color:#555;color:#ccc;}
+.cat-btn.active{border-color:var(--accent);background:var(--accent);color:#fff;}
+
 #loader{text-align:center;padding:80px 20px;font-size:11px;letter-spacing:4px;color:#333;}
 
 .sec{max-width:680px;margin:0 auto;padding:56px 20px 72px;}
@@ -73,6 +82,36 @@ body{
 .work-field-label{font-size:10px;letter-spacing:2px;color:#555;border-left:2px solid var(--accent);padding-left:10px;margin-bottom:9px;}
 .work-field-body{font-size:14.5px;line-height:1.85;color:#ccc;white-space:pre-line;padding-left:12px;}
 .work-field-body a{color:var(--accent);word-break:break-all;}
+
+/* X links: category tabs + numbered TOC + one-at-a-time viewer (2-col on desktop) */
+.x-cat-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px;}
+.x-cat-tab{
+  background:transparent;border:2px solid var(--border);color:#888;
+  padding:8px 16px;border-radius:8px;font-size:12.5px;font-weight:700;
+  letter-spacing:0.5px;cursor:pointer;transition:border-color .15s,color .15s,background .15s;
+}
+.x-cat-tab:hover{border-color:#555;color:#ccc;}
+.x-cat-tab.active{border-color:var(--accent);background:var(--accent);color:#fff;}
+
+.x-toc-items{display:flex;flex-wrap:wrap;gap:8px;}
+.x-toc-item{
+  background:transparent;border:2px solid var(--border);color:#888;
+  padding:7px 13px;border-radius:7px;font-size:12px;font-family:monospace;
+  letter-spacing:1px;cursor:pointer;transition:border-color .15s,color .15s,background .15s;
+}
+.x-toc-item:hover{border-color:#555;color:#ccc;}
+.x-toc-item.active{border-color:var(--accent);background:var(--accent);color:#fff;}
+
+.x-viewer{margin-top:40px;}
+.x-embed-single{max-width:550px;margin:0 auto;min-height:200px;}
+.x-embed-single .twitter-tweet{margin:0 auto !important;}
+.x-embed-loading{text-align:center;padding:40px 0;font-size:11px;letter-spacing:2px;color:#333;}
+
+@media(min-width:900px){
+  .x-cols{display:grid;grid-template-columns:480px 1fr;gap:44px;align-items:start;}
+  .x-viewer{order:-1;position:sticky;top:24px;margin-top:0;}
+  .x-embed-single{margin:0;}
+}
 
 .site-nav{border-top:1px solid var(--border);padding:30px 20px;display:flex;gap:14px;justify-content:center;flex-wrap:wrap;}
 .site-nav a{display:inline-block;padding:12px 30px;border:2px solid var(--accent);color:#fff;text-decoration:none;border-radius:8px;font-size:15px;font-weight:700;letter-spacing:1px;transition:background .15s;}
@@ -124,18 +163,92 @@ var VIDEOS = [
 </script>
 <!-- ================================================================ -->
 
+<!-- ================================================================
+  ▼ Xリンクデータ ― ここを編集してください
+  category : 見出し
+  links    : X(旧Twitter)投稿URLの配列
+================================================================ -->
+<script>
+var XLINKS = [
+  { category:"本日のシマエナガ", links:[
+    "https://x.com/GreatPresenter/status/2017249098274099310?s=20",
+    "https://x.com/GreatPresenter/status/2016913597457453441?s=20",
+    "https://x.com/GreatPresenter/status/2005443495528681543?s=20"
+  ]},
+  { category:"おもちゃの兵隊ペカ", links:[
+    "https://x.com/GreatPresenter/status/2015476604441612440?s=20"
+  ]},
+  { category:"正しいねこ吸いの作法", links:[
+    "https://x.com/GreatPresenter/status/2011013151165481458?s=20"
+  ]},
+  { category:"本日のめしべだけ", links:[
+    "https://x.com/GreatPresenter/status/2010537033148878910?s=20",
+    "https://x.com/GreatPresenter/status/2003078791913218071?s=20",
+    "https://x.com/GreatPresenter/status/2002431712958300518?s=20"
+  ]},
+  { category:"架空のクソゲー", links:[
+    "https://x.com/GreatPresenter/status/2007072885370999028?s=20"
+  ]},
+  { category:"眼鏡の人", links:[
+    "https://x.com/GreatPresenter/status/2006753775349035086?s=20",
+    "https://x.com/GreatPresenter/status/2001972591377211757?s=20",
+    "https://x.com/GreatPresenter/status/1995701771336122573?s=20"
+  ]},
+  { category:"リミックス系", links:[
+    "https://x.com/GreatPresenter/status/2006743269880074643?s=20",
+    "https://x.com/GreatPresenter/status/2006751199635386658?s=20",
+    "https://x.com/GreatPresenter/status/2004473521049866448?s=20",
+    "https://x.com/GreatPresenter/status/2004202193470345636?s=20",
+    "https://x.com/GreatPresenter/status/2003113448788709439?s=20",
+    "https://x.com/GreatPresenter/status/2002732505221447862?s=20",
+    "https://x.com/GreatPresenter/status/2002351925702856888?s=20",
+    "https://x.com/GreatPresenter/status/1987188086363856926?s=20"
+  ]},
+  { category:"その他", links:[
+    "https://x.com/GreatPresenter/status/2004816739775979524?s=20",
+    "https://x.com/GreatPresenter/status/2003853911875281042?s=20",
+    "https://x.com/GreatPresenter/status/2003827477379211353?s=20",
+    "https://x.com/GreatPresenter/status/2001669740507599092?s=20",
+    "https://x.com/GreatPresenter/status/1999680273391452237?s=20",
+    "https://x.com/GreatPresenter/status/1997287023166828796?s=20",
+    "https://x.com/GreatPresenter/status/1996953699806249328?s=20",
+    "https://x.com/GreatPresenter/status/1997248738927243377?s=20",
+    "https://x.com/GreatPresenter/status/1996580781062496387?s=20",
+    "https://x.com/GreatPresenter/status/1995670838239265245?s=20",
+    "https://x.com/GreatPresenter/status/1987184387566543067?s=20",
+    "https://x.com/GreatPresenter/status/1986717210052899299?s=20"
+  ]}
+];
+</script>
+<!-- ================================================================ -->
+
 <header class="hdr">
   <p class="hdr-eye">SORA2 SERIES</p>
   <h1 class="hdr-title">sora2</h1>
   <p class="hdr-sub">Sora2で制作したAI動画</p>
 </header>
 
+<div class="cat-switch">
+  <button class="cat-btn" id="cat-btn-youtube" data-cat="youtube">youtube</button>
+  <button class="cat-btn" id="cat-btn-x" data-cat="x">Xリンク</button>
+</div>
+
 <main>
   <div id="loader">LOADING...</div>
 
-  <section class="sec" id="sec-main" style="display:none;">
+  <section class="sec" id="sec-youtube" style="display:none;">
     <div class="strip" id="strip-main"></div>
     <div id="exhibit-main"></div>
+  </section>
+
+  <section class="sec" id="sec-x" style="display:none;">
+    <div class="x-cols">
+      <div class="x-toc-col">
+        <div class="x-cat-tabs" id="x-cat-tabs"></div>
+        <div class="x-toc-items" id="x-toc-items"></div>
+      </div>
+      <div class="x-viewer" id="x-viewer"></div>
+    </div>
   </section>
 </main>
 
@@ -284,6 +397,154 @@ function setupSection(videos){
   show(0, false);
 }
 
+var xSectionBuilt = false;
+var xWidgetsScriptAdded = false;
+
+function buildXSection(){
+  var tabsEl = document.getElementById('x-cat-tabs');
+  var itemsEl = document.getElementById('x-toc-items');
+  var viewerEl = document.getElementById('x-viewer');
+
+  // 全投稿をフラット化 + カテゴリごとの開始位置を記録
+  var flat = [];      // { catIdx, category, localIdx, url }
+  var offsets = [];   // カテゴリ先頭のグローバルindex
+  XLINKS.forEach(function(group, gi){
+    offsets.push(flat.length);
+    group.links.forEach(function(url, li){
+      flat.push({ catIdx: gi, category: group.category, localIdx: li, url: url });
+    });
+  });
+
+  var selectedCat = 0;  // 目次で選択中のカテゴリタブ
+  var currentIdx = 0;   // 表示中の投稿(グローバルindex)
+
+  var tabButtons = XLINKS.map(function(group, gi){
+    var btn = document.createElement('button');
+    btn.className = 'x-cat-tab';
+    btn.textContent = group.category;
+    btn.addEventListener('click', function(){ selectCat(gi); });
+    tabsEl.appendChild(btn);
+    return btn;
+  });
+
+  function selectCat(gi){
+    selectedCat = gi;
+    tabButtons.forEach(function(b, i){ b.classList.toggle('active', i === gi); });
+    renderItems();
+  }
+
+  function renderItems(){
+    itemsEl.innerHTML = '';
+    XLINKS[selectedCat].links.forEach(function(url, li){
+      var globalIdx = offsets[selectedCat] + li;
+      var btn = document.createElement('button');
+      btn.className = 'x-toc-item';
+      btn.textContent = pad(li + 1);
+      btn.classList.toggle('active', globalIdx === currentIdx);
+      btn.addEventListener('click', function(){ showX(globalIdx, true); });
+      itemsEl.appendChild(btn);
+    });
+  }
+
+  function buildXNavRow(idx){
+    var row = document.createElement('div');
+    row.className = 'exhibit-nav';
+    var prev = document.createElement('button');
+    prev.className = 'exhibit-nav-btn';
+    prev.textContent = '← 前の投稿';
+    prev.disabled = (idx === 0);
+    prev.addEventListener('click', function(){ showX(idx - 1, true); });
+    var next = document.createElement('button');
+    next.className = 'exhibit-nav-btn';
+    next.textContent = '次の投稿 →';
+    next.disabled = (idx === flat.length - 1);
+    next.addEventListener('click', function(){ showX(idx + 1, true); });
+    row.appendChild(prev);
+    row.appendChild(next);
+    return row;
+  }
+
+  // 表示中の投稿のみ埋め込みを生成する（全件同時ロードによる重量化を避けるため）
+  function showX(idx, scroll){
+    currentIdx = idx;
+    var item = flat[idx];
+    viewerEl.innerHTML = '';
+
+    viewerEl.appendChild(buildXNavRow(idx));
+
+    var num = document.createElement('p');
+    num.className = 'work-num';
+    num.textContent = item.category + '　·　' + pad(item.localIdx + 1) + ' / ' + pad(XLINKS[item.catIdx].links.length);
+    viewerEl.appendChild(num);
+
+    var embedWrap = document.createElement('div');
+    embedWrap.className = 'x-embed-single';
+    var loading = document.createElement('p');
+    loading.className = 'x-embed-loading';
+    loading.textContent = 'LOADING...';
+    embedWrap.appendChild(loading);
+
+    var bq = document.createElement('blockquote');
+    bq.className = 'twitter-tweet';
+    bq.setAttribute('data-theme', 'dark');
+    var a = document.createElement('a');
+    a.href = item.url;
+    bq.appendChild(a);
+    embedWrap.appendChild(bq);
+
+    viewerEl.appendChild(embedWrap);
+    viewerEl.appendChild(buildXNavRow(idx));
+
+    // 前後送りでカテゴリをまたいだ場合はタブも追従させる
+    if (selectedCat !== item.catIdx){
+      selectCat(item.catIdx);
+    } else {
+      renderItems();
+    }
+
+    window.twttr.ready(function(twttr){
+      twttr.widgets.load(embedWrap).then(function(){
+        if (loading.parentNode) loading.remove();
+      });
+    });
+
+    if (scroll) viewerEl.scrollIntoView({ behavior:'smooth', block:'start' });
+  }
+
+  if (!xWidgetsScriptAdded){
+    xWidgetsScriptAdded = true;
+    window.twttr = (function(d, s, id){
+      var js, fjs = d.getElementsByTagName(s)[0], t = window.twttr || {};
+      if (d.getElementById(id)) return t;
+      js = d.createElement(s);
+      js.id = id;
+      js.src = 'https://platform.twitter.com/widgets.js';
+      js.charset = 'utf-8';
+      fjs.parentNode.insertBefore(js, fjs);
+      t._e = [];
+      t.ready = function(f){ t._e.push(f); };
+      return t;
+    }(document, 'script', 'twitter-wjs'));
+  }
+
+  selectCat(0);
+  showX(0, false);
+}
+
+function switchTab(cat){
+  ['youtube','x'].forEach(function(c){
+    document.getElementById('sec-' + c).style.display = (c === cat) ? '' : 'none';
+    document.getElementById('cat-btn-' + c).classList.toggle('active', c === cat);
+  });
+  if (cat === 'x' && !xSectionBuilt){
+    xSectionBuilt = true;
+    buildXSection();
+  }
+}
+['youtube','x'].forEach(function(c){
+  document.getElementById('cat-btn-' + c).addEventListener('click', function(){ switchTab(c); });
+});
+
 function sortByDateDesc(videos){
   return videos.slice().sort(function(a, b){
     var da = a.createdAt || '';
@@ -320,7 +581,7 @@ function sortByDateDesc(videos){
   setupSection(sortByDateDesc(VIDEOS));
 
   document.getElementById('loader').style.display = 'none';
-  document.getElementById('sec-main').style.display = '';
+  switchTab('youtube');
 })();
 </script>
 
