@@ -201,10 +201,8 @@ body.lb-open{overflow:hidden;}
        そのまま下の ASSIGN = { ... } に貼り替えれば、画像の更新は完了。
     2. タイトル・コメント・経緯・プロンプト・作成日・ナビ用サムネを
        付けたい作品だけ EXTRA に書く（空欄の項目は自動非表示）。
-    3. このページの置き場所：ai/ フォルダ配下を想定
-       （画像フォルダ ai_art_gallery/ はサイトルート直下）。
-       ルート直下に置く場合は PATH_PREFIX を "" にし、
-       下部ナビの ../ai.html ../index.html と favicon の ../ を外す。
+    3. 配置：ページは ai/ai_art_gallery.html、画像フォルダは ai/ai_art_gallery/
+       （どちらも ai/ の中）。この配置に合わせて PATH_PREFIX は "" になっている。
 
   【データの形】
     POST_ORDER : カテゴリごとのポストIDの並び（＝展示順）
@@ -216,9 +214,10 @@ body.lb-open{overflow:hidden;}
 <script>
 var HANDLE = "GreatPresenter"; // Xのユーザー名（埋め込み失敗時のリンクに使用）
 
-// このページから見たサイトルートへの相対パス。
-// ai/ 配下に置く想定なので "../"。ルート直下に置くなら "" にする。
-var PATH_PREFIX = "../";
+// 画像フォルダへの前置きパス。
+// ページ（ai/ai_art_gallery.html）と画像フォルダ（ai/ai_art_gallery/）は
+// どちらも ai/ の中にあるため ""。
+var PATH_PREFIX = "";
 
 var CAT_DEFS = [
   { key:"neonhair",    label:"ネオンヘアー" },
