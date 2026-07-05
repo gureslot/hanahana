@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ハナハナの打ち方 | グレイト・プレ・善太</title>
+<link rel="icon" type="image/png" sizes="32x32" href="../icon_32x32.png">
+
+<style>
+:root{
+  --accent:#ff2a6d;
+  --bg:#0d0d0d;
+  --border:#252525;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{
+  background:var(--bg);
+  color:#fff;
+  font-family:system-ui,-apple-system,"Segoe UI","Noto Sans JP",sans-serif;
+  line-height:1.6;
+}
+
+.hdr{padding:64px 20px 36px;text-align:center;}
+.hdr-eye{font-size:10px;letter-spacing:6px;color:var(--accent);margin-bottom:16px;}
+.hdr-title{font-size:clamp(28px,6vw,52px);font-weight:300;letter-spacing:8px;line-height:1.2;}
+
+/* 目次（テキストのみ・横並び） */
+.toc{display:flex;flex-wrap:wrap;justify-content:center;gap:10px 32px;padding:0 20px 36px;border-bottom:1px solid var(--border);}
+.toc-btn{
+  background:none;border:none;padding:2px 0;
+  font-family:inherit;font-size:14px;font-weight:700;
+  letter-spacing:1px;line-height:1.6;color:#888;
+  cursor:pointer;max-width:100%;
+  transition:color .15s;
+}
+.toc-btn:hover{color:#ccc;}
+.toc-btn.active{color:var(--accent);}
+.toc-btn:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px;}
+
+.sec{max-width:680px;margin:0 auto;padding:48px 20px 72px;}
+
+/* Exhibit nav (prev / next through the single work shown) */
+.exhibit-nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;}
+.exhibit-nav-btn{
+  background:transparent;border:1px solid var(--border);color:#aaa;
+  padding:9px 18px;border-radius:8px;font-size:13px;cursor:pointer;
+  transition:border-color .15s,color .15s;
+}
+.exhibit-nav-btn:hover:not(:disabled){border-color:var(--accent);color:#fff;}
+.exhibit-nav-btn:disabled{opacity:0.25;cursor:default;}
+
+/* Exhibit (the single work currently on display) */
+.work-num{font-size:11px;letter-spacing:3px;color:var(--accent);margin-bottom:8px;font-family:monospace;}
+.work-title{font-size:21px;font-weight:700;margin-bottom:22px;line-height:1.5;min-height:1px;}
+
+.exhibit-cols{ }
+.exhibit-media{ }
+.exhibit-text{ }
+
+/* PC: video left (fixed in place) / text right (scrolls) */
+@media(min-width:900px){
+  .sec{max-width:1040px;}
+  .exhibit-cols{
+    display:grid;
+    grid-template-columns:420px 1fr;
+    gap:40px;
+    align-items:start;
+  }
+  .exhibit-media{position:sticky;top:24px;}
+  .work-player{position:static;}
+}
+
+.work-player{position:sticky;top:0;z-index:5;width:100%;aspect-ratio:16/9;background:#111;border-radius:10px;overflow:hidden;margin-bottom:28px;box-shadow:0 10px 26px rgba(0,0,0,.65);}
+.work-player.shorts-mode{max-width:min(300px, calc(62vh * 0.5625));aspect-ratio:9/16;}
+.work-player img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;}
+.work-player iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;}
+.work-play-btn{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;border:none;background:transparent;cursor:pointer;transition:background .15s;}
+.work-play-btn:hover{background:rgba(0,0,0,.28);}
+.work-play-btn:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
+.work-play-icon{width:56px;height:56px;border-radius:50%;background:rgba(255,42,109,.8);border:2px solid rgba(255,255,255,.45);display:flex;align-items:center;justify-content:center;transition:background .15s,transform .15s;}
+.work-play-btn:hover .work-play-icon{background:var(--accent);border-color:#fff;transform:scale(1.08);}
+.work-play-icon::after{content:'';display:block;width:0;height:0;border-style:solid;border-width:10px 0 10px 19px;border-color:transparent transparent transparent #fff;margin-left:4px;}
+.work-short-badge{position:absolute;top:8px;left:8px;background:var(--accent);color:#fff;font-size:9px;font-weight:700;letter-spacing:1px;padding:2px 7px;border-radius:3px;z-index:2;}
+
+.work-field{margin-bottom:26px;}
+.work-field:last-child{margin-bottom:0;}
+.work-field-label{font-size:10px;letter-spacing:2px;color:#555;border-left:2px solid var(--accent);padding-left:10px;margin-bottom:9px;}
+.work-field-body{font-size:14.5px;line-height:1.85;color:#ccc;white-space:pre-line;padding-left:12px;}
+.work-field-body a{color:var(--accent);word-break:break-all;}
+
+.site-nav{border-top:1px solid var(--border);padding:30px 20px;display:flex;gap:14px;justify-content:center;flex-wrap:wrap;}
+.site-nav a{display:inline-block;padding:12px 30px;border:2px solid var(--accent);color:#fff;text-decoration:none;border-radius:8px;font-size:15px;font-weight:700;letter-spacing:1px;transition:background .15s;}
+.site-nav a:hover{background:var(--accent);}
+
+@media(max-width:600px){
+  .sec{padding:36px 16px 56px;}
+  .toc{gap:8px 22px;padding-bottom:28px;}
+  .work-play-icon{width:48px;height:48px;}
+  .work-title{font-size:19px;}
+}
+@media(prefers-reduced-motion:reduce){
+  .work-play-btn,.work-play-icon{transition:none;}
+}
+</style>
+</head>
+<body>
+
+<!-- ================================================================
+  ▼ 動画データ ― ここを編集してください
+
+  id        : YouTube動画ID
+  title     : タイトル（目次ボタンと作品名に表示）
+  thoughts  : コメント
+  shorts    : true/false（Shortsは再生時に縦長表示）
+  createdAt : 作成日時（YYYY-MM-DD）。書いた場合のみ番号の横に表示
+
+  ※ 表示順は配列の順番どおり（上から順）。
+  ※ 空欄の項目は書かない（書かなければ自動的に非表示になります）。
+================================================================ -->
+<script>
+var VIDEOS = [
+  { id:"Gs0O4JYu2N8", shorts:true,
+    title:"ハナハナの打ち方【初心者・ジャグラーユーザー向け】",
+    thoughts:"「ハナハナはスイカ目押しがめんどくさい。\nジャグラーの方が左BARだけ狙っておけばいいから楽」\nと言われるのをよく目にするので、\n「左BARだけ狙いだったらジャグラーもハナハナも同じくらいの欠損」\n「ジャグラーでベルピエロのこぼしを気にしない方なら、ハナハナも左BARだけ狙いで大丈夫」\nというのを伝えたくて動画を作りました。\n\nハナハナも身構えることなく気楽に楽しんでいただきたいです。\n\nREGのALL逆押しに関しては、\nお店やその時の催し物にもよりますが、現場判断で高設定の場所を見つけるときにサイドの色情報を得られないと、結構困るんですよね😅\nそれを逆にあえて狙ってやってみてもいいんじゃないかなと思い、おススメしてみました。\n\nニューキングハナハナはBIG後半ゲームで逆押ししたら取りこぼすのでご注意。\n2026年現行機だと、\n天翔、キンハナ、ドラハナ、スタハナまでの、ジェネシス筐体とベガ筐体までのREG中の押し方です。" }
+];
+</script>
+<!-- ================================================================ -->
+
+<header class="hdr">
+  <p class="hdr-eye">HANAHANA UCHIKATA</p>
+  <h1 class="hdr-title">ハナハナの打ち方</h1>
+</header>
+
+<div class="toc" id="toc"></div>
+
+<main>
+  <section class="sec">
+    <div id="exhibit"></div>
+  </section>
+</main>
+
+<nav class="site-nav">
+  <a href="../hanahana.html">ハナハナ関連</a>
+  <a href="../index.html">index</a>
+</nav>
+
+<script>
+function pad(n){ return String(n).padStart(2,'0'); }
+
+function buildPlayer(v){
+  var wrap = document.createElement('div');
+  wrap.className = 'work-player' + (v.shorts ? ' shorts-mode' : '');
+
+  var img = document.createElement('img');
+  img.src = 'https://img.youtube.com/vi/' + v.id + '/hqdefault.jpg';
+  img.alt = v.title || '動画';
+  img.loading = 'lazy';
+
+  var btn = document.createElement('button');
+  btn.className = 'work-play-btn';
+  btn.setAttribute('aria-label','再生');
+  var icon = document.createElement('span');
+  icon.className = 'work-play-icon';
+  btn.appendChild(icon);
+  btn.addEventListener('click', function(){
+    wrap.innerHTML =
+      '<iframe src="https://www.youtube.com/embed/' + v.id + '?autoplay=1"' +
+      ' allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture"' +
+      ' allowfullscreen></iframe>';
+  });
+
+  wrap.appendChild(img);
+  wrap.appendChild(btn);
+
+  if (v.shorts){
+    var badge = document.createElement('span');
+    badge.className = 'work-short-badge';
+    badge.textContent = 'SHORTS';
+    wrap.appendChild(badge);
+  }
+  return wrap;
+}
+
+function appendField(parent, label, text, extraClass){
+  if (!text) return;
+  var wrap = document.createElement('div');
+  wrap.className = 'work-field' + (extraClass ? ' ' + extraClass : '');
+  var lab = document.createElement('p');
+  lab.className = 'work-field-label';
+  lab.textContent = label;
+  var body = document.createElement('p');
+  body.className = 'work-field-body';
+  var urlRe = /(https?:\/\/[^\s]+)/g;
+  text.split(urlRe).forEach(function(part){
+    if (/^https?:\/\//.test(part)) {
+      var a = document.createElement('a');
+      a.href = part;
+      a.textContent = part;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      body.appendChild(a);
+    } else if (part) {
+      body.appendChild(document.createTextNode(part));
+    }
+  });
+  wrap.appendChild(lab);
+  wrap.appendChild(body);
+  parent.appendChild(wrap);
+}
+
+var tocEl = document.getElementById('toc');
+var exhibitEl = document.getElementById('exhibit');
+
+VIDEOS.forEach(function(v, idx){
+  var btn = document.createElement('button');
+  btn.className = 'toc-btn';
+  btn.textContent = v.title || '';
+  btn.addEventListener('click', function(){ show(idx, true); });
+  tocEl.appendChild(btn);
+});
+
+function updateActiveToc(idx){
+  Array.prototype.forEach.call(tocEl.children, function(el, i){
+    el.classList.toggle('active', i === idx);
+  });
+}
+
+function buildNavRow(idx){
+  var row = document.createElement('div');
+  row.className = 'exhibit-nav';
+
+  var prev = document.createElement('button');
+  prev.className = 'exhibit-nav-btn';
+  prev.textContent = '← 前の動画';
+  prev.disabled = (idx === 0);
+  prev.addEventListener('click', function(){ show(idx - 1, true); });
+
+  var next = document.createElement('button');
+  next.className = 'exhibit-nav-btn';
+  next.textContent = '次の動画 →';
+  next.disabled = (idx === VIDEOS.length - 1);
+  next.addEventListener('click', function(){ show(idx + 1, true); });
+
+  row.appendChild(prev);
+  row.appendChild(next);
+  return row;
+}
+
+function show(idx, scroll){
+  var v = VIDEOS[idx];
+  exhibitEl.innerHTML = '';
+
+  exhibitEl.appendChild(buildNavRow(idx));
+
+  var num = document.createElement('p');
+  num.className = 'work-num';
+  var numText = pad(idx+1) + ' / ' + pad(VIDEOS.length);
+  if (v.createdAt) numText += '　·　' + v.createdAt.replace(/-/g, '.');
+  num.textContent = numText;
+  exhibitEl.appendChild(num);
+
+  var title = document.createElement('h3');
+  title.className = 'work-title';
+  title.textContent = v.title || '';
+  exhibitEl.appendChild(title);
+
+  var cols = document.createElement('div');
+  cols.className = 'exhibit-cols';
+
+  var media = document.createElement('div');
+  media.className = 'exhibit-media';
+  media.appendChild(buildPlayer(v));
+  cols.appendChild(media);
+
+  var textCol = document.createElement('div');
+  textCol.className = 'exhibit-text';
+  appendField(textCol, 'コメント', v.thoughts);
+  cols.appendChild(textCol);
+
+  exhibitEl.appendChild(cols);
+
+  exhibitEl.appendChild(buildNavRow(idx));
+
+  updateActiveToc(idx);
+  if (scroll) exhibitEl.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+show(0, false);
+</script>
+
+</body>
+</html>
