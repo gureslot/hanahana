@@ -143,7 +143,7 @@ details#inp summary::marker{color:var(--aend);}
   position:fixed;z-index:500;background:var(--bg2);
   border:1px solid var(--line2);border-radius:var(--r);
   padding:10px 12px;box-shadow:0 4px 24px rgba(0,0,0,.6);
-  display:none;min-width:200px;
+  display:none;min-width:200px;max-width:calc(100vw - 16px);
 }
 #cpop.show{display:block;}
 #cpop .cp-ttl{font-size:9.5px;color:var(--faint);margin-bottom:8px;}
@@ -185,6 +185,11 @@ details#inp summary::marker{color:var(--aend);}
   .pc-n{font-size:8px;}
 }
 
+/* ── finish (view) mode ── */
+body.finishmode #sb{display:none;}
+body.finishmode .edit-only{display:none;}
+#finishToggle.on{background:var(--bend);border-color:var(--bend);color:#062822;font-weight:700;}
+
 /* ── toast ── */
 #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--soft);border:1px solid var(--line2);border-radius:var(--r);color:var(--ink);font-size:12px;padding:7px 16px;opacity:0;transition:opacity .18s,transform .18s;pointer-events:none;z-index:9000;white-space:nowrap;}
 #toast.on{opacity:1;transform:translateX(-50%) translateY(0);}
@@ -221,9 +226,9 @@ details#inp summary::marker{color:var(--aend);}
           <label>単台（1台ずつ）</label>
           <textarea id="cS" placeholder="2001&#10;2002&#10;2003"></textarea>
         </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:2px;">
-          <button id="genBtn" class="pri" style="font-size:10px;padding:4px;flex:1;">ピースを生成</button>
-          <button id="btn49" class="t49" title="4・9無し：台番号に4または9を含む番号が存在しない店舗用" style="margin-left:5px;">4・9有り</button>
+        <div style="display:flex;flex-direction:column;gap:5px;margin-top:2px;">
+          <button id="btn49" class="t49" title="4・9無し：台番号に4または9を含む番号が存在しない店舗用" style="width:100%;white-space:nowrap;">4・9有り</button>
+          <button id="genBtn" class="pri" style="width:100%;font-size:11px;padding:6px 4px;white-space:nowrap;">ピースを生成</button>
         </div>
       </div>
     </details>
@@ -236,18 +241,20 @@ details#inp summary::marker{color:var(--aend);}
 
   <div id="main">
     <div id="tb">
+      <button class="mb" id="finishToggle">🎨 仕上げモード</button>
+      <div class="sep edit-only"></div>
       <div class="mg">
-        <button class="mb on" data-m="place">📦 配置</button>
-        <button class="mb" data-m="drag">✋ 移動</button>
-        <button class="mb" data-m="split">✂ 分割</button>
+        <button class="mb on edit-only" data-m="place">📦 配置</button>
+        <button class="mb edit-only" data-m="drag">✋ 移動</button>
+        <button class="mb edit-only" data-m="split">✂ 分割</button>
         <button class="mb" id="colorModeBtn" data-m="color">🎨 色付け</button>
-        <button class="mb" data-m="delete">🗑 削除</button>
+        <button class="mb edit-only" data-m="delete">🗑 削除</button>
       </div>
-      <div class="sep"></div>
-      <button class="mb" id="rotBtn" disabled>↻ 回転</button>
-      <button class="mb" id="flipBtn" disabled>⇅ 反転</button>
-      <button class="mb" id="rmvBtn" disabled>⬅ 取外し</button>
-      <button class="mb" id="mergeBtn" disabled>⛓ 結合</button>
+      <div class="sep edit-only"></div>
+      <button class="mb edit-only" id="rotBtn" disabled>↻ 回転</button>
+      <button class="mb edit-only" id="flipBtn" disabled>⇅ 反転</button>
+      <button class="mb edit-only" id="rmvBtn" disabled>⬅ 取外し</button>
+      <button class="mb edit-only" id="mergeBtn" disabled>⛓ 結合</button>
       <div class="sep"></div>
       <button class="mb" id="ziBtn">＋</button>
       <span id="zl">100%</span>
@@ -264,6 +271,7 @@ details#inp summary::marker{color:var(--aend);}
 <div id="cpop">
   <div class="cp-ttl">色を選択（同じ色でタップ→解除）</div>
   <div class="cp-row" id="cpopRow"></div>
+  <button id="clearAllColors" style="width:100%;margin-top:8px;font-size:10.5px;padding:5px;border:1px solid var(--danger);color:#FFD3CF;background:transparent;border-radius:var(--r);cursor:pointer;">全クリア（色を全て消す）</button>
 </div>
 
 <div id="dg"></div>
@@ -281,7 +289,7 @@ const $=s=>document.querySelector(s);
 const $$=s=>[...document.querySelectorAll(s)];
 
 /* ═══ state ════════════════════════════════════════════════════════════ */
-let S={meta:{storeName:''},pieces:[],grid:{},colors:{},sel:null,mode:'place',brush:'c1',rows:25,cols:32,nid:1};
+let S={meta:{storeName:''},pieces:[],grid:{},colors:{},sel:null,mode:'place',brush:'',rows:25,cols:32,nid:1};
 let zoom=1, cellEls={}, drag={active:false}, dpSet=new Set();
 let mergeWaiting=false, mergePid=null;
 let mode49=false; // 4・9無しモード
@@ -558,11 +566,17 @@ function showCpop(){
   const btn=$('#colorModeBtn');
   const rect=btn.getBoundingClientRect();
   const pop=$('#cpop');
-  pop.style.left=rect.left+'px';
-  pop.style.top=(rect.bottom+6)+'px';
+  buildCpop();
   pop.classList.add('show');
   cpopVisible=true;
-  buildCpop();
+  // 一旦表示して実寸を測り、画面内に収まるようクランプ
+  const pw=pop.offsetWidth, ph=pop.offsetHeight;
+  const vw=window.innerWidth, vh=window.innerHeight;
+  let left=rect.left, top=rect.bottom+6;
+  if(left+pw>vw-8) left=Math.max(8, vw-8-pw);      // 右はみ出し→左へ寄せる
+  if(top+ph>vh-8)  top=Math.max(8, rect.top-ph-6); // 下はみ出し→ボタンの上に出す
+  pop.style.left=left+'px';
+  pop.style.top=top+'px';
 }
 function hideCpop(){$('#cpop').classList.remove('show');cpopVisible=false;}
 
@@ -575,7 +589,7 @@ $('#cpopRow').addEventListener('click',e=>{
 });
 
 document.addEventListener('click',e=>{
-  if(cpopVisible&&!e.target.closest('#cpop')&&!e.target.closest('#colorModeBtn')){
+  if(cpopVisible&&!e.target.closest('#cpop')&&!e.target.closest('#colorModeBtn')&&!e.target.closest('#finishToggle')){
     hideCpop();
   }
 });
@@ -726,11 +740,33 @@ gridEl.addEventListener('click',e=>{
   }
 });
 
+/* ═══ finish mode & clear-all ═════════════════════════════════════════ */
+let finishMode=false;
+$('#finishToggle').addEventListener('click',()=>{
+  finishMode=!finishMode;
+  document.body.classList.toggle('finishmode',finishMode);
+  const b=$('#finishToggle');
+  b.textContent=finishMode?'🔧 編集モードへ':'🎨 仕上げモード';
+  b.classList.toggle('on',finishMode);
+  mergeWaiting=false;mergePid=null;
+  if(finishMode){ S.mode='color'; S.sel=null; showCpop(); }
+  else{ S.mode='place'; hideCpop(); }
+  render();
+});
+
+$('#clearAllColors').addEventListener('click',()=>{
+  if(!Object.keys(S.colors).length){toast('色は付いていません');hideCpop();return;}
+  if(!confirm('全ての色付けを消しますか？'))return;
+  pushH(); S.colors={};
+  renderGrid(); schedAS(); hideCpop();
+  toast('色を全てクリアしました');
+});
+
 /* ═══ toolbar ══════════════════════════════════════════════════════════ */
 $$('.mb[data-m]').forEach(b=>b.addEventListener('click',()=>{
   const m=b.dataset.m;
   S.mode=m;mergeWaiting=false;mergePid=null;
-  if(m==='color')showCpop(); else hideCpop();
+  if(m==='color'){ cpopVisible?hideCpop():showCpop(); } else hideCpop();
   renderToolbar();
 }));
 $('#rotBtn').addEventListener('click',()=>{if(S.sel)rotatePiece(S.sel);});
@@ -851,7 +887,7 @@ function deserialize(d){
   if(!d||d.v!==5){alert('このJSONは認識できません（v5形式）');return;}
   S.meta=d.meta||{storeName:''};S.pieces=d.pieces||[];S.colors=d.colors||{};
   S.rows=d.rows||25;S.cols=d.cols||32;S.nid=d.nid||1;
-  S.grid={};S.sel=null;S.mode='place';S.brush='c1';
+  S.grid={};S.sel=null;S.mode='place';S.brush='';
   // 4・9無し設定を復元
   mode49=!!d.mode49;
   const btn49=$('#btn49');
@@ -892,7 +928,7 @@ $('#mdBtn').addEventListener('click',()=>{
 });
 $('#resetBtn').addEventListener('click',()=>{
   if(!confirm('全データをリセットしますか？'))return;
-  S={meta:{storeName:''},pieces:[],grid:{},colors:{},sel:null,mode:'place',brush:'c1',rows:25,cols:32,nid:1};
+  S={meta:{storeName:''},pieces:[],grid:{},colors:{},sel:null,mode:'place',brush:'',rows:25,cols:32,nid:1};
   undoStack=[];redoStack=[];zoom=1;buildGrid();applyZoom();render();updHUI();
   try{window.storage&&window.storage.delete('island_v5');}catch(e){}
 });
