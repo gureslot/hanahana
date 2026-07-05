@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>画像作品 | グレイト・プレ・善太</title>
+<link rel="icon" type="image/png" sizes="32x32" href="../icon_32x32.png">
+
+<style>
+:root{
+  --accent:#ff2a6d;
+  --bg:#0d0d0d;
+  --border:#252525;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{
+  background:var(--bg);
+  color:#fff;
+  font-family:system-ui,-apple-system,"Segoe UI","Noto Sans JP",sans-serif;
+  line-height:1.6;
+}
+body.lb-open{overflow:hidden;}
+
+.hdr{padding:64px 20px 36px;text-align:center;}
+.hdr-eye{font-size:10px;letter-spacing:6px;color:var(--accent);margin-bottom:16px;}
+.hdr-title{font-size:clamp(28px,6vw,52px);font-weight:300;letter-spacing:8px;line-height:1.2;}
+
+/* Category switch */
+.cat-switch{display:flex;justify-content:center;flex-wrap:wrap;gap:12px;padding:0 20px 40px;border-bottom:1px solid var(--border);}
+.cat-btn{
+  background:transparent;border:2px solid var(--border);color:#888;
+  padding:12px 26px;border-radius:10px;font-size:14px;font-weight:700;
+  letter-spacing:1px;cursor:pointer;transition:border-color .15s,color .15s,background .15s;
+}
+.cat-btn:hover{border-color:#555;color:#ccc;}
+.cat-btn.active{border-color:var(--accent);background:var(--accent);color:#fff;}
+
+.sec{max-width:760px;margin:0 auto;padding:52px 20px 72px;}
+
+/* Person filter (人物タブ) */
+.person-label{font-size:10px;letter-spacing:3px;color:#3a3a3a;margin-bottom:10px;}
+.person-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:34px;}
+.person-chip{
+  background:transparent;border:1px solid var(--border);color:#888;
+  padding:7px 16px;border-radius:999px;font-size:12.5px;cursor:pointer;
+  transition:border-color .15s,color .15s,background .15s;
+}
+.person-chip:hover{border-color:#555;color:#ccc;}
+.person-chip.active{border-color:var(--accent);color:#fff;background:rgba(255,42,109,.14);}
+.person-chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+/* Navigation thumbnail strip (switches between works) */
+.strip-label{font-size:10px;letter-spacing:3px;color:#3a3a3a;margin-bottom:10px;}
+.strip{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:44px;}
+.strip-thumb{
+  position:relative;width:64px;height:44px;padding:0;flex-shrink:0;
+  border:2px solid transparent;border-radius:6px;overflow:hidden;
+  background:#141414;cursor:pointer;color:#555;
+  font-size:11px;font-family:monospace;
+  display:flex;align-items:center;justify-content:center;
+}
+.strip-thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;opacity:.5;transition:opacity .15s;}
+.strip-thumb:hover img{opacity:.85;}
+.strip-thumb.active{border-color:var(--accent);}
+.strip-thumb.active img{opacity:1;}
+.strip-thumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+/* Exhibit navigation (prev / next through the single work shown) */
+.exhibit-nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;}
+.exhibit-nav-btn{
+  background:transparent;border:1px solid var(--border);color:#aaa;
+  padding:9px 18px;border-radius:8px;font-size:13px;cursor:pointer;
+  transition:border-color .15s,color .15s;
+}
+.exhibit-nav-btn:hover:not(:disabled){border-color:var(--accent);color:#fff;}
+.exhibit-nav-btn:disabled{opacity:.25;cursor:default;}
+
+.work-num{font-size:11px;letter-spacing:3px;color:var(--accent);margin-bottom:8px;font-family:monospace;}
+.work-title{font-size:21px;font-weight:700;margin-bottom:24px;line-height:1.5;}
+
+/* Artwork (本体 = 画像・動画) */
+.artwork{margin-bottom:34px;}
+
+/* 1点のとき：大きめに1点。縦長でも画面に収まるよう高さを制限 */
+.art-hero{
+  position:relative;display:block;margin:0 auto;padding:0;max-width:100%;
+  border:1px solid var(--border);border-radius:12px;overflow:hidden;
+  background:#141414;cursor:zoom-in;transition:border-color .15s;
+}
+.art-hero:hover{border-color:var(--accent);}
+.art-hero img,.art-hero video{display:block;margin:0 auto;max-width:100%;max-height:78vh;width:auto;height:auto;}
+.art-hero video{pointer-events:none;}
+.art-hero:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+/* 複数のとき：一覧として画面に収まる正方形サムネイル。
+   枚数が少なくても横幅いっぱいに伸びて寂しくならない（auto-fit + 1fr）。
+   多いと自動で列が増える（最小 約160px = 認識できる大きさ）。 */
+.art-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;}
+.art-grid-item{
+  position:relative;display:block;padding:0;aspect-ratio:1/1;
+  border:1px solid var(--border);border-radius:10px;overflow:hidden;
+  background:#141414;cursor:zoom-in;transition:border-color .15s;
+}
+.art-grid-item:hover{border-color:var(--accent);}
+.art-grid-item img,.art-grid-item video{width:100%;height:100%;object-fit:cover;display:block;}
+.art-grid-item video{pointer-events:none;}
+.art-grid-item:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+/* 動画の再生マーク */
+.play-badge{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;}
+.play-badge::before{
+  content:"";position:absolute;width:48px;height:48px;border-radius:50%;
+  background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.55);
+}
+.play-badge::after{
+  content:"";position:absolute;margin-left:4px;
+  border-style:solid;border-width:10px 0 10px 16px;
+  border-color:transparent transparent transparent #fff;
+}
+
+/* X post (コメント／備考 — 画像より下位) */
+.remark{margin-bottom:30px;}
+.remark-label{font-size:10px;letter-spacing:2px;color:#555;border-left:2px solid var(--accent);padding-left:10px;margin-bottom:12px;}
+.work-tweet{min-height:120px;display:flex;justify-content:flex-start;}
+.work-tweet .twitter-tweet{margin:0 !important;}
+.tweet-loading{
+  width:100%;max-width:400px;padding:32px 20px;text-align:center;
+  border:1px solid var(--border);border-radius:12px;background:#141414;
+  font-size:12px;letter-spacing:1px;color:#666;line-height:1.9;
+}
+.tweet-loading a{display:inline-block;margin-top:12px;color:var(--accent);text-decoration:none;font-weight:700;letter-spacing:1px;}
+.tweet-loading a:hover{text-decoration:underline;}
+
+/* Text fields */
+.work-field{margin-bottom:26px;}
+.work-field:last-child{margin-bottom:0;}
+.work-field-label{font-size:10px;letter-spacing:2px;color:#555;border-left:2px solid var(--accent);padding-left:10px;margin-bottom:9px;}
+.work-field-body{font-size:14.5px;line-height:1.85;color:#ccc;white-space:pre-line;padding-left:12px;}
+.work-prompt .work-field-body{
+  font-family:"SF Mono",Consolas,Menlo,monospace;font-size:12.5px;color:#999;
+  background:#141414;border:1px solid var(--border);border-radius:8px;
+  padding:14px 16px;line-height:1.7;
+}
+
+/* Lightbox (全画面表示 ＋ ホイール拡大／ドラッグ移動) */
+.lightbox{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.94);display:none;align-items:center;justify-content:center;overflow:hidden;}
+.lightbox.open{display:flex;}
+.lightbox-img{
+  max-width:100vw;max-height:100vh;width:auto;height:auto;display:block;
+  transform-origin:0 0;will-change:transform;
+  user-select:none;-webkit-user-select:none;-webkit-user-drag:none;cursor:zoom-in;
+}
+.lightbox-img.zoomed{cursor:grab;}
+.lightbox-img.grabbing{cursor:grabbing;}
+.lightbox-video{max-width:100vw;max-height:100vh;width:auto;height:auto;display:none;background:#000;}
+.lb-btn{
+  position:fixed;z-index:1002;background:rgba(20,20,20,.72);border:1px solid rgba(255,255,255,.28);
+  color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  border-radius:50%;transition:background .15s,border-color .15s;line-height:1;
+}
+.lb-btn:hover{background:var(--accent);border-color:#fff;}
+.lb-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+.lb-close{top:18px;right:18px;width:46px;height:46px;font-size:24px;}
+.lb-prev,.lb-next{top:50%;transform:translateY(-50%);width:52px;height:52px;font-size:24px;}
+.lb-prev{left:18px;}
+.lb-next{right:18px;}
+.lb-counter{
+  position:fixed;z-index:1002;bottom:20px;left:50%;transform:translateX(-50%);
+  font-size:12px;letter-spacing:3px;color:#ccc;font-family:monospace;
+  background:rgba(20,20,20,.72);padding:6px 16px;border-radius:20px;
+}
+
+/* Bottom nav */
+.site-nav{border-top:1px solid var(--border);padding:30px 20px;display:flex;gap:14px;justify-content:center;flex-wrap:wrap;}
+.site-nav a{display:inline-block;padding:12px 30px;border:2px solid var(--accent);color:#fff;text-decoration:none;border-radius:8px;font-size:15px;font-weight:700;letter-spacing:1px;transition:background .15s;}
+.site-nav a:hover{background:var(--accent);}
+
+@media(max-width:600px){
+  .sec{padding:40px 16px 56px;}
+  .work-title{font-size:19px;}
+  .lb-prev,.lb-next{width:44px;height:44px;font-size:22px;}
+  .lb-close{width:42px;height:42px;font-size:22px;}
+}
+@media(prefers-reduced-motion:reduce){
+  .lb-btn,.art-hero,.art-grid-item,.strip-thumb img,.person-chip{transition:none;}
+}
+</style>
+</head>
+<body>
+
+<!-- ================================================================
+  ▼ 作品データ ― ここを編集してください
+
+  【この展示の考え方】
+    ・作品の「本体」は画像（動画 .mp4 も可）。
+    ・Xポスト（tweetId）は「コメント／備考」の位置づけで、画像の下に補助表示。
+    ・画像は1枚ごとに人物タグ（person）を持ち、人物タブで絞り込みできる。
+
+  【更新のしかた】
+    1. 割り当てツール（ai_art_gallery_editor.html）の「共有用データ」を
+       そのまま下の ASSIGN = { ... } に貼り替えれば、画像の更新は完了。
+    2. タイトル・コメント・経緯・プロンプト・作成日・ナビ用サムネを
+       付けたい作品だけ EXTRA に書く（空欄の項目は自動非表示）。
+    3. このページの置き場所：ai/ フォルダ配下を想定
+       （画像フォルダ ai_art_gallery/ はサイトルート直下）。
+       ルート直下に置く場合は PATH_PREFIX を "" にし、
+       下部ナビの ../ai.html ../index.html と favicon の ../ を外す。
+
+  【データの形】
+    POST_ORDER : カテゴリごとのポストIDの並び（＝展示順）
+    ASSIGN     : ポストID → { images:[ { src, person } ] }
+                 src はサイトルートからの相対パス。.mp4 は動画として表示。
+    EXTRA      : ポストID → { title, thoughts, background, prompt,
+                 createdAt(YYYY-MM-DD), thumb } すべて任意
+================================================================ -->
+<script>
+var HANDLE = "GreatPresenter"; // Xのユーザー名（埋め込み失敗時のリンクに使用）
+
+// このページから見たサイトルートへの相対パス。
+// ai/ 配下に置く想定なので "../"。ルート直下に置くなら "" にする。
+var PATH_PREFIX = "../";
+
+var CAT_DEFS = [
+  { key:"neonhair",    label:"ネオンヘアー" },
+  { key:"hibiscusman", label:"ハイビスカスマン" },
+  { key:"other",       label:"その他" }
+];
+
+var POST_ORDER = {
+  neonhair: [
+    "2057957245376458846","2057816212126810612","2057750360257880238","2057747843079930286",
+    "2056993580968001875","2056762172324315327","2055615841644023966","2053872856405262714",
+    "2052342538800140502","2052342365579559149","2051990173194543252","2051985615982559545",
+    "2051985020521468337","2050631663240290702","2049553472484495432","2049140528500097283",
+    "2049117527016652859","2049074819413766596","2049036864385077568","2048339565522686359"
+  ],
+  hibiscusman: ["2047566787261427851","2047519709562868106"],
+  other: ["2055574713045524915"]
+};
+
+// 人物タブの並び順（この順でタブが出る。データに登場する人物だけ表示）
+var PERSON_ORDER = [
+  "ねおねおん",
+  "ショートカットさん20",
+  "ショートカットさん30",
+  "ルーズアップさん20",
+  "ルーズアップさん30",
+  "くせ毛ショートカットさん",
+  "ギャルさん"
+];
+
+// 画像の割り当て（割り当てツールの「共有用データ」をそのまま貼り替え）
+var ASSIGN =
+{
+  "2057957245376458846": {
+    "category": "neonhair",
+    "images": [
+      { "src": "ai_art_gallery/Neoneon/CA063FDD-81B8-460D-945B-228B61CB29AD.png", "person": "ねおねおん" }
+    ]
+  },
+  "2057816212126810612": {
+    "category": "neonhair",
+    "images": [
+      { "src": "ai_art_gallery/Short-Hair/AD096E1B-7BEE-4C18-B561-5CB5DED7F5D5.png", "person": "ショートカットさん20" },
+      { "src": "ai_art_gallery/Short-Hair/BD600FBF-B52E-40F2-A494-0ABB4809BB7C.png", "person": "ショートカットさん30" },
+      { "src": "ai_art_gallery/Neoneon/791184F9-C7D3-48A3-ABC7-0A6CC2D6345D.png", "person": "ねおねおん" },
+      { "src": "ai_art_gallery/Loose-Up/9BD25B4D-9AED-4A6D-B2F7-DC145A179E88.png", "person": "ルーズアップさん20" },
+      { "src": "ai_art_gallery/Short-Hair/32B864C7-F434-4F46-BAFA-F29CEB881C76.png", "person": "ショートカットさん30" },
+      { "src": "ai_art_gallery/Short-Hair/475FD83E-F38B-4FE7-8E60-5A97E75A19D9.png", "person": "ショートカットさん30" },
+      { "src": "ai_art_gallery/Short-Hair/CFF0FC38-5E97-433C-AF1C-B538D442C88A.png", "person": "ショートカットさん30" },
+      { "src": "ai_art_gallery/Short-Hair/BCE73358-764D-4130-A66F-E2E492CEB4E7.png", "person": "ショートカットさん30" }
+    ]
+  },
+  "2057750360257880238": {
+    "category": "neonhair",
+    "images": [
+      { "src": "ai_art_gallery/Short-Hair/2653C697-5425-4D60-9AA1-F975A05AAC48.png", "person": "ショートカットさん20" },
+      { "src": "ai_art_gallery/Short-Hair/E9BC4252-648F-46A4-A5B7-05E03F5C2A59.png", "person": "ショートカットさん20" },
+      { "src": "ai_art_gallery/Short-Hair/42045685-B36C-4658-8796-83F6107A9A6A.png", "person": "ショートカットさん20" },
+      { "src": "ai_art_gallery/Short-Hair/B1323201-D47E-4B53-AC7D-B0F2216B8430.png", "person": "ショートカットさん20" },
+      { "src": "ai_art_gallery/Short-Hair/360428AF-6085-4B8F-BFDB-465207FD4710.png", "person": "ショートカットさん20" },
+      { "src": "ai_art_gallery/Short-Hair/92A80573-08ED-48A9-BB6C-82538C87E31D.png", "person": "ショートカットさん20" },
+      { "src": "ai_art_gallery/Short-Hair/38BAAC82-0A9F-4E0F-8C2E-13A182FFA1B6.png", "person": "ショートカットさん20" }
+    ]
+  },
+  "2057747843079930286": {
+    "category": "neonhair",
+    "images": [
+      { "src": "ai_art_gallery/Short-Hair/AC617142-172C-4A5E-BA1F-8CBA2BF83E8A.png", "person": "ショートカットさん20" },
+      { "src": "ai_art_gallery/curly Short hair/B9283BB3-5FF2-467A-A30D-157ABE21EF14.png", "person": "くせ毛ショートカットさん" }
+    ]
+  },
+  "2056993580968001875": {
+    "category": "neonhair",
+    "images": [
+      { "src": "ai_art_gallery/Short-Hair/394FF04E-609A-4F7C-BE3E-60C1A3EF497A.png", "person": "ショートカットさん30" },
+      { "src": "ai_art_gallery/gal/A3CCEAA6-1F38-450A-9DED-04571F49B73F.png", "person": "ギャルさん" }
+    ]
+  },
+  "2056762172324315327": {
+    "category": "neonhair",
+    "images": [
+      { "src": "ai_art_gallery/Short-Hair/E587E95A-0245-499E-A6F8-1DD7166DCCD6.png", "person": "ショートカットさん20" },
+      { "src": "ai_art_gallery/Short-Hair/88E5639E-B57B-4779-BA0A-7087DCBA5502.png", "person": "ショートカットさん30" },
+      { "src": "ai_art_gallery/Loose-Up/3867AFEF-9A0D-4264-A24D-5237C2A76BD6.png", "person": "ルーズアップさん20" }
+    ]
+  },
+  "2055615841644023966": {
+    "category": "neonhair",
+    "images": [
+      { "src": "ai_art_gallery/Short-Hair/91307FA7-30FF-42AF-8F17-2D4B7907D92A.png", "person": "ショートカットさん20" },
+      { "src": "ai_art_gallery/Short-Hair/2BEF6AA8-ABFA-4C3B-93C5-E1D7D73001CF.png", "person": "ショートカットさん20" }
+    ]
+  },
+  "2053872856405262714": {
+    "category": "neonhair",
+    "images": [
+      { "src": "ai_art_gallery/Short-Hair/C990E5AD-EDAC-4371-8B38-8EB14E1268F4.png", "person": "ショートカットさん20" },
+      { "src": "ai_art_gallery/Short-Hair/5ADCA247-90EA-4743-AABB-4E42B3E5CF18.png", "person": "ショートカットさん20" },
+      { "src": "ai_art_gallery/Short-Hair/6E8929AF-16B1-41AD-92A1-7C656AA0188E.png", "person": "ショートカットさん20" },
+      { "src": "ai_art_gallery/Short-Hair/A870558D-1F96-4BC0-84D1-521C310D2395.png", "person": "ショートカットさん20" }
+    ]
+  },
+  "2052342538800140502": {
+    "category": "neonhair",
+    "images": [
+      { "src": "ai_art_gallery/Loose-Up/AFE09221-57D1-431B-AE6D-0DDA937CD408.png", "person": "ルーズアップさん30" },
+      { "src": "ai_art_gallery/Loose-Up/3CBA2063-69EA-47F8-BA3E-467BB9FD64DD.png", "person": "ルーズアップさん30" },
+      { "src": "ai_art_gallery/Loose-Up/C426945B-E731-45BE-B44F-21147DE57F39.png", "person": "ルーズアップさん30" },
+      { "src": "ai_art_gallery/Loose-Up/AF930840-CE19-4062-B1F8-C84E4C5088BC.png", "person": "ルーズアップさん30" },
+      { "src": "ai_art_gallery/Loose-Up/524527ED-F7A9-49B5-A37D-2958462C3B59.png", "person": "ルーズアップさん30" },
+      { "src": "ai_art_gallery/Loose-Up/EB03DB38-C904-4090-9795-FD37103ED013.png", "person": "ルーズアップさん30" },
+      { "src": "ai_art_gallery/Loose-Up/9141301B-CF3E-45DB-B772-EAF699107853.png", "person": "ルーズアップさん30" },
+      { "src": "ai_art_gallery/Loose-Up/BCFD77FE-D02E-4CFA-8ED3-57FE644DB575.png", "person": "ルーズアップさん30" },
+      { "src": "ai_art_gallery/Loose-Up/CCA32125-B935-4C8F-A11F-2900A8CE4F70.png", "person": "ルーズアップさん30" },
+      { "src": "ai_art_gallery/Loose-Up/1AACD309-5AB0-4011-A3B1-C643349C9EF1.png", "person": "ルーズアップさん30" },
+      { "src": "ai_art_gallery/Loose-Up/HHubGiRbcAAZP3R.jpg", "person": "ルーズアップさん30" }
+    ]
+  },
+  "2052342365579559149": {
+    "category": "neonhair",
+    "images": [
+      { "src": "ai_art_gallery/Loose-Up/F0CB1935-CF13-4346-8669-4A39834127A8.png", "person": "ルーズアップさん20" },
+      { "src": "ai_art_gallery/Loose-Up/94E3FD6D-6131-4E9C-B0BD-4F82BEB31D7C.png", "person": "ルーズアップさん20" },
+      { "src": "ai_art_gallery/Loose-Up/ED11FF86-6393-487C-A944-DFE5963D54F3.png", "person": "ルーズアップさん20" },
+      { "src": "ai_art_gallery/Loose-Up/9DCED8C8-3363-4565-AFCA-3570CA7ADBBE.png", "person": "ルーズアップさん20" },
+      { "src": "ai_art_gallery/Loose-Up/C0E6ECD8-CAB7-49E7-810B-D2C4AB05C60F.png", "person": "ルーズアップさん20" },
+      { "src": "ai_art_gallery/Loose-Up/21305DA3-4624-4223-9496-9B3B53291ECF.png", "person": "ルーズアップさん20" },
+      { "src": "ai_art_gallery/Loose-Up/43A46F03-DBDB-425D-9ADB-08E784AD8123.png", "person": "ルーズアップさん20" },
+      { "src": "ai_art_gallery/Loose-Up/9D6C6AF1-D4D4-46EA-8CC1-0D84776AACB0.png", "person": "ルーズアップさん20" },
+      { "src": "ai_art_gallery/Loose-Up/E5A0D096-80B3-41E4-894E-1563803CA1D6.png", "person": "ルーズアップさん20" },
+      { "src": "ai_art_gallery/Loose-Up/599EDC4C-38D4-4325-AA16-EB5822B12288.png", "person": "ルーズアップさん20" },
+      { "src": "ai_art_gallery/Loose-Up/HHubGiRbcAAZP3R.jpg", "person": "ルーズアップさん20" }
+    ]
+  },
+  "2051990173194543252": {
+    "category": "neonhair",
+    "images": [
+      { "src": "ai_art_gallery/Short-Hair/A81E92A1-6D48-45FB-B1FE-CBC5B52CC0EB.png", "person": "ショートカットさん30" },
+      { "src": "ai_art_gallery/Short-Hair/3CDFE440-3403-422B-A9F3-5CAA5FC72253.png", "person": "ショートカットさん30" },
+      { "src": "ai_art_gallery/Short-Hair/DC02667E-85C5-4368-8C1A-2DC353207072.png", "person": "ショートカットさん30" },
+      { "src": "ai_art_gallery/Short-Hair/CC3E9218-3506-487B-92BB-39F52A901378.png", "person": "ショートカットさん30" },
+      { "src": "ai_art_gallery/Short-Hair/4F1AD814-D282-4DB6-BB33-35493F94CB1E.png", "person": "ショートカットさん30" },
+      { "src": "ai_art_gallery/Short-Hair/C48DF061-3CAC-418D-A385-831D17ABE663.png", "person": "ショートカットさん30" },
+      { "src": "ai_art_gallery/Short-Hair/95243F56-3AD7-487C-BCB5-A4B34716C648.png", "person": "ショートカットさん30" },
+      { "src": "ai_art_gallery/Short-Hair/FFA068AE-509F-479B-85B6-168CBE336C77.png", "person": "ショートカットさん30" }
+    ]
+  },
+  "2051985615982559545": {
+    "category": "neonhair",
+    "images": [
+      { "src": "ai_art_gallery/Short-Hair/3D52C4DB-BB4F-4CE3-8BBD-51E18235B0FC.png", "person": "ショートカットさん30" },
+      { "src": "ai_art_gallery/Short-Hair/ADF883B2-8817-4C96-AB8F-C02D5B8A30EA.png", "person": "ショートカットさん30" },
+      { "src": "ai_art_gallery/Short-Hair/B1DDADE4-6F6B-443C-9520-D170F6D7CF56.png", "person": "ショートカットさん30" },
+      { "src": "ai_art_gallery/Short-Hair/BCBC6645-9678-46E2-BFDA-2AE01D078CFB.png", "person": "ショートカットさん30" },
+      { "src": "ai_art_gallery/Short-Hair/78D6C079-B593-4DE0-83FD-197FE75691AC.png", "person": "ショートカットさん30" },
+      { "src": "ai_art_gallery/Short-Hair/4FEB67E9-533E-4396-AFEC-75798BAA6728.png", "person": "ショートカットさん30" },
+      { "src": "ai_art_gallery/Short-Hair/EB0C1877-5C73-4C38-8439-BDF38387E49B.png", "person": "ショートカットさん30" },
+      { "src": "ai_art_gallery/Short-Hair/94FEDD8B-DD88-471C-BE05-9282DFE0AD08.png", "person": "ショートカットさん30" },
+      { "src": "ai_art_gallery/Short-Hair/344E707A-51C0-426C-ADCD-0997FFCC00DC.png", "person": "ショートカットさん30" },
+      { "src": "ai_art_gallery/Short-Hair/D3CFCA0D-4704-431D-B967-7AFFDA66687E.png", "person": "ショートカットさん30" },
+      { "src": "ai_art_gallery/Short-Hair/F0B89EA2-7922-4E84-BA97-BB75F39B93F6.png", "person": "ショートカットさん30" }
+    ]
+  },
+  "2051985020521468337": {
+    "category": "neonhair",
+    "images": [
+      { "src": "ai_art_gallery/Short-Hair/EDC50AA4-5B26-4A7E-A5FC-994B7E7DB1BE.png", "person": "ショートカットさん20" },
+      { "src": "ai_art_gallery/Short-Hair/986A6FF1-B9C1-4952-AFED-CCCFEF20E771.png", "person": "ショートカットさん20" },
+      { "src": "ai_art_gallery/Short-Hair/33785841-06E5-4AAB-8CBE-56A8E38CD073.png", "person": "ショートカットさん20" },
+      { "src": "ai_art_gallery/Short-Hair/0E5B7423-4673-4B65-9FD8-C3A9B3E144D4.png", "person": "ショートカットさん20" },
+      { "src": "ai_art_gallery/Short-Hair/2B260111-9822-4DFB-8337-0FC85A2422E5.png", "person": "ショートカットさん20" },
+      { "src": "ai_art_gallery/Short-Hair/740F2D24-DC73-4838-839E-8D4C51D5A16F.png", "person": "ショートカットさん20" },
+      { "src": "ai_art_gallery/Short-Hair/FA903FBF-C7E3-427F-BB2F-4E1652FE2FFB.png", "person": "ショートカットさん20" },
+      { "src": "ai_art_gallery/Short-Hair/D1FD661D-22AD-4C74-9134-05C075883F07.png", "person": "ショートカットさん20" },
+      { "src": "ai_art_gallery/Short-Hair/A785C0F3-0E94-4A48-AE72-E15C75900650.png", "person": "ショートカットさん20" }
+    ]
+  },
+  "2050631663240290702": {
+    "category": "neonhair",
+    "images": [
+      { "src": "ai_art_gallery/Neoneon/09451299-3D2E-422C-AB9E-2D6EEC9ABCAA.png", "person": "ねおねおん" },
+      { "src": "ai_art_gallery/Neoneon/IMG_1994.JPG", "person": "ねおねおん" },
+      { "src": "ai_art_gallery/Neoneon/E462C26F-ED61-4116-9032-ABCA7094AC49.png", "person": "ねおねおん" },
+      { "src": "ai_art_gallery/Neoneon/84FFD601-1FC3-422B-93D1-2AD33DFF9C85.png", "person": "ねおねおん" },
+      { "src": "ai_art_gallery/Neoneon/38B7419F-C6C9-490D-AE6E-6053C25FA290.png", "person": "ねおねおん" }
+    ]
+  },
+  "2049553472484495432": {
+    "category": "neonhair",
+    "images": [
+      { "src": "ai_art_gallery/Neoneon/9BB5697C-7751-4219-8B53-F32DF6F57C63.png", "person": "ねおねおん" },
+      { "src": "ai_art_gallery/Neoneon/2FE4AA4F-2893-447C-8740-65F878328B1F.png", "person": "ねおねおん" },
+      { "src": "ai_art_gallery/Neoneon/0683C3DF-0FCF-401C-8621-F1DFB14D008F.png", "person": "ねおねおん" },
+      { "src": "ai_art_gallery/Neoneon/283315D1-A44A-4CAA-87C6-031FD7257583.png", "person": "ねおねおん" },
+      { "src": "ai_art_gallery/Neoneon/233D4B5B-D774-49C4-8441-C3A495F8B9AF.png", "person": "ねおねおん" },
+      { "src": "ai_art_gallery/Neoneon/94D8B1BE-7F55-4B34-A5A2-541662E70363.png", "person": "ねおねおん" },
+      { "src": "ai_art_gallery/Neoneon/91BFB67E-7DCE-4D74-97B1-860D22EA005D.png", "person": "ねおねおん" },
+      { "src": "ai_art_gallery/Neoneon/4F47C5AA-08A3-4B6A-9003-8F627B7B8F42.png", "person": "ねおねおん" },
+      { "src": "ai_art_gallery/Neoneon/CE080328-16F9-41CA-8FB9-6917E698A22F.png", "person": "ねおねおん" },
+      { "src": "ai_art_gallery/Neoneon/C1082C5C-F301-4307-BA77-A4225FA4116D.png", "person": "ねおねおん" }
+    ]
+  },
+  "2049140528500097283": {
+    "category": "neonhair",
+    "images": [
+      { "src": "ai_art_gallery/Neoneon/2C6C5C95-A33E-4BA1-A7B8-857AA90DCC60.png", "person": "ねおねおん" }
+    ]
+  },
+  "2049117527016652859": {
+    "category": "neonhair",
+    "images": [
+      { "src": "ai_art_gallery/Neoneon/15EA125D-92CF-4EC8-B344-1A3FE0406359.png", "person": "ねおねおん" },
+      { "src": "ai_art_gallery/Neoneon/4F4912CA-5F06-46D7-8940-CB4BF16A2051.png", "person": "ねおねおん" },
+      { "src": "ai_art_gallery/Neoneon/8F2ECD00-2B7C-46B7-B064-B224E08E0017.png", "person": "ねおねおん" },
+      { "src": "ai_art_gallery/Neoneon/444993A3-5B94-46FD-8C47-575C55C094BC.png", "person": "ねおねおん" },
+      { "src": "ai_art_gallery/Neoneon/DF80CB43-69E6-4731-88C1-2964D81FA3AB.png", "person": "ねおねおん" },
+      { "src": "ai_art_gallery/Neoneon/91061C25-A3F9-4576-91CD-636EA83CA5AE.png", "person": "ねおねおん" },
+      { "src": "ai_art_gallery/Neoneon/81A82AED-BE76-4F4A-ADCA-DFEC1DEE477C.png", "person": "ねおねおん" }
+    ]
+  },
+  "2049074819413766596": {
+    "category": "neonhair",
+    "images": [
+      { "src": "ai_art_gallery/Neoneon/6D5B1A98-DEF7-4B38-B5DF-B4052A50FA06.png", "person": "ねおねおん" },
+      { "src": "ai_art_gallery/Neoneon/D3D3E4B8-CBA3-4915-92DC-9A584D7E7DB7.png", "person": "ねおねおん" },
+      { "src": "ai_art_gallery/Neoneon/D38F7588-90CF-4B53-BE87-669599A6F3DC.png", "person": "ねおねおん" }
+    ]
+  },
+  "2049036864385077568": {
+    "category": "neonhair",
+    "images": [
+      { "src": "ai_art_gallery/Neoneon/A5E659CA-2C8C-4DFA-992C-E59B33EA9E4F.png", "person": "ねおねおん" },
+      { "src": "ai_art_gallery/Neoneon/_users_e87054a8-9156-4fb9-b25e-674b84f648c7_generated_47b3277b-d639-4758-b8d5-0878631e1220_generated_video.mp4", "person": "ねおねおん" },
+      { "src": "ai_art_gallery/Neoneon/_users_e87054a8-9156-4fb9-b25e-674b84f648c7_generated_c83c00df-6017-4bda-b0b2-20d5e29543ae_generated_video.mp4", "person": "ねおねおん" },
+      { "src": "ai_art_gallery/Neoneon/839062C0-F421-47DD-8D7B-8CD0D503C685.png", "person": "ねおねおん" },
+      { "src": "ai_art_gallery/Neoneon/1056FB69-2260-4A43-90C0-8179A8FD9299.png", "person": "ねおねおん" }
+    ]
+  },
+  "2048339565522686359": {
+    "category": "neonhair",
+    "images": [
+      { "src": "ai_art_gallery/Neoneon/E86300ED-0E2B-4484-851E-E6054B9CDDB0.png", "person": "ねおねおん" },
+      { "src": "ai_art_gallery/Neoneon/C342EA9C-56B3-4D15-AF65-0143DCAE1371.png", "person": "ねおねおん" }
+    ]
+  }
+};
+
+// 作品ごとの任意情報（書いた項目だけ表示される）
+var EXTRA = {
+  // "2057957245376458846": { title:"", thoughts:"", background:"", prompt:"", createdAt:"", thumb:"" }
+};
+
+// カテゴリ構造を組み立て
+var CATEGORIES = CAT_DEFS.map(function(def){
+  return {
+    key: def.key,
+    label: def.label,
+    works: (POST_ORDER[def.key] || []).map(function(id){
+      var a = ASSIGN[id] || {};
+      return { tweetId: id, images: a.images || [] };
+    })
+  };
+});
+</script>
+<!-- ================================================================ -->
+
+<header class="hdr">
+  <p class="hdr-eye">GALLERY</p>
+  <h1 class="hdr-title">画像作品</h1>
+</header>
+
+<div class="cat-switch" id="cat-switch"></div>
+
+<main id="sections"></main>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" aria-hidden="true">
+  <img class="lightbox-img" id="lb-img" alt="">
+  <video class="lightbox-video" id="lb-video" controls playsinline preload="metadata"></video>
+  <button class="lb-btn lb-prev" id="lb-prev" aria-label="前の画像">&#8592;</button>
+  <button class="lb-btn lb-next" id="lb-next" aria-label="次の画像">&#8594;</button>
+  <button class="lb-btn lb-close" id="lb-close" aria-label="閉じる">&#215;</button>
+  <div class="lb-counter" id="lb-counter"></div>
+</div>
+
+<nav class="site-nav">
+  <a href="../ai.html">AI創作</a>
+  <a href="../index.html">index</a>
+</nav>
+
+<script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+<script>
+function pad(n){ return String(n).padStart(2,'0'); }
+function isVideo(src){ return /\.(mp4|webm|mov)$/i.test(src || ""); }
+function mediaURL(src){ return encodeURI(PATH_PREFIX + src); } // フォルダ名の空白等を安全に
+
+/* ---- プレースホルダー画像（未配置のときに表示） ---- */
+function placeholderURI(w, h, label){
+  w = w || 4; h = h || 3;
+  var vw = 800, vh = Math.round(vw * h / w);
+  var svg =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="'+vw+'" height="'+vh+'" viewBox="0 0 '+vw+' '+vh+'">' +
+      '<rect width="100%" height="100%" fill="#141414"/>' +
+      '<rect x="10" y="10" width="'+(vw-20)+'" height="'+(vh-20)+'" fill="none" stroke="#ff2a6d" stroke-width="2" stroke-dasharray="10 8" opacity="0.55"/>' +
+      '<text x="50%" y="46%" fill="#8a8a8a" font-family="monospace" font-size="26" text-anchor="middle">'+ (label || 'IMAGE') +'</text>' +
+      '<text x="50%" y="57%" fill="#555" font-family="monospace" font-size="18" text-anchor="middle">ファイルを配置すると表示されます</text>' +
+    '</svg>';
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+}
+function withPlaceholder(img, w, h, label){
+  img.addEventListener('error', function onerr(){
+    img.removeEventListener('error', onerr);
+    img.src = placeholderURI(w, h, label);
+  });
+}
+
+/* ---- Xポスト埋め込み（コメント／備考） ---- */
+function whenTwttrReady(cb){
+  if (window.twttr && twttr.widgets){ cb(); return; }
+  var t = setInterval(function(){
+    if (window.twttr && twttr.widgets){ clearInterval(t); cb(); }
+  }, 120);
+  setTimeout(function(){ clearInterval(t); }, 12000);
+}
+
+var tweetNodeCache = {}; // tweetId をキーに、埋め込み済みノードを再利用
+function getTweetNode(work){
+  if (!work.tweetId) return null;
+  if (tweetNodeCache[work.tweetId]) return tweetNodeCache[work.tweetId];
+
+  var node = document.createElement('div');
+  node.className = 'work-tweet';
+
+  var url = 'https://twitter.com/' + HANDLE + '/status/' + work.tweetId;
+  var loading = document.createElement('div');
+  loading.className = 'tweet-loading';
+  loading.innerHTML = 'ポストを読み込み中…<br><a href="'+url+'" target="_blank" rel="noopener noreferrer">Xで見る</a>';
+  node.appendChild(loading);
+
+  whenTwttrReady(function(){
+    twttr.widgets.createTweet(work.tweetId, node, {
+      theme:'dark', dnt:true, conversation:'none', align:'left', width:400
+    }).then(function(el){
+      if (el){ if (loading.parentNode) loading.parentNode.removeChild(loading); }
+      else { loading.innerHTML = 'ポストを表示できませんでした。<br><a href="'+url+'" target="_blank" rel="noopener noreferrer">Xで見る</a>'; }
+    }).catch(function(){
+      loading.innerHTML = 'ポストを表示できませんでした。<br><a href="'+url+'" target="_blank" rel="noopener noreferrer">Xで見る</a>';
+    });
+  });
+
+  tweetNodeCache[work.tweetId] = node;
+  return node;
+}
+
+/* ---- テキスト項目 ---- */
+function appendField(parent, label, text, extraClass){
+  if (!text) return;
+  var wrap = document.createElement('div');
+  wrap.className = 'work-field' + (extraClass ? ' ' + extraClass : '');
+  var lab = document.createElement('p');
+  lab.className = 'work-field-label';
+  lab.textContent = label;
+  var body = document.createElement('p');
+  body.className = 'work-field-body';
+  body.textContent = text;
+  wrap.appendChild(lab); wrap.appendChild(body);
+  parent.appendChild(wrap);
+}
+
+/* ---- 本体（画像・動画。クリックで全画面） ---- */
+function makeArtButton(images, i, cls){
+  var im = images[i];
+  var btn = document.createElement('button');
+  btn.className = cls;
+  btn.setAttribute('aria-label', (i+1)+'点目を全画面表示');
+
+  if (isVideo(im.src)){
+    var v = document.createElement('video');
+    v.muted = true;
+    v.preload = 'metadata';
+    v.playsInline = true;
+    v.setAttribute('playsinline','');
+    v.onerror = function(){
+      v.onerror = null;
+      var img = document.createElement('img');
+      img.alt = im.alt || '';
+      img.src = placeholderURI(16, 9, 'VIDEO');
+      if (v.parentNode) v.parentNode.replaceChild(img, v);
+    };
+    v.src = mediaURL(im.src);
+    btn.appendChild(v);
+    var badge = document.createElement('span');
+    badge.className = 'play-badge';
+    btn.appendChild(badge);
+  } else {
+    var img = document.createElement('img');
+    img.alt = im.alt || '';
+    img.loading = 'lazy';
+    withPlaceholder(img, im.w, im.h, im.alt || 'IMAGE');
+    img.src = mediaURL(im.src);
+    btn.appendChild(img);
+  }
+
+  btn.addEventListener('click', function(){ openLightbox(images, i); });
+  return btn;
+}
+function buildArtwork(images){
+  if (!images || !images.length) return null;
+  var wrap = document.createElement('div');
+  wrap.className = 'artwork';
+  if (images.length === 1){
+    wrap.appendChild(makeArtButton(images, 0, 'art-hero'));
+  } else {
+    var grid = document.createElement('div');
+    grid.className = 'art-grid';
+    images.forEach(function(im, i){
+      grid.appendChild(makeArtButton(images, i, 'art-grid-item'));
+    });
+    wrap.appendChild(grid);
+  }
+  return wrap;
+}
+
+/* ---- ライトボックス（全画面表示 ＋ ホイール拡大／ドラッグ移動／動画再生） ---- */
+var LB = {
+  el:null, img:null, video:null, prev:null, next:null, counter:null,
+  images:[], idx:0,
+  scale:1, tx:0, ty:0, MAX:6,
+  dragging:false, sx:0, sy:0
+};
+function lbIsVideoShown(){ return LB.video && LB.video.style.display !== 'none'; }
+function lbApply(){
+  LB.img.style.transform = 'translate('+LB.tx+'px,'+LB.ty+'px) scale('+LB.scale+')';
+  LB.img.classList.toggle('zoomed', LB.scale > 1.001);
+}
+function lbResetZoom(){
+  LB.scale = 1; LB.tx = 0; LB.ty = 0;
+  LB.img.classList.remove('zoomed','grabbing');
+  lbApply();
+}
+/* カーソル位置(cx,cy)を中心に factor 倍する（transform-origin:0 0 前提） */
+function lbZoomAt(cx, cy, factor){
+  var newScale = Math.min(LB.MAX, Math.max(1, LB.scale * factor));
+  if (newScale === LB.scale) return;
+  if (newScale <= 1.001){ lbResetZoom(); return; }
+  var rect = LB.img.getBoundingClientRect();
+  var ox = cx - rect.left, oy = cy - rect.top;
+  var k = newScale / LB.scale;
+  LB.tx -= ox * (k - 1);
+  LB.ty -= oy * (k - 1);
+  LB.scale = newScale;
+  lbApply();
+}
+function initLightbox(){
+  LB.el = document.getElementById('lightbox');
+  LB.img = document.getElementById('lb-img');
+  LB.video = document.getElementById('lb-video');
+  LB.prev = document.getElementById('lb-prev');
+  LB.next = document.getElementById('lb-next');
+  LB.counter = document.getElementById('lb-counter');
+  document.getElementById('lb-close').addEventListener('click', closeLightbox);
+  LB.prev.addEventListener('click', function(e){ e.stopPropagation(); step(-1); });
+  LB.next.addEventListener('click', function(e){ e.stopPropagation(); step(1); });
+
+  document.addEventListener('keydown', function(e){
+    if (!LB.el.classList.contains('open')) return;
+    if (e.key === 'Escape') closeLightbox();
+    else if (e.key === 'ArrowLeft') step(-1);
+    else if (e.key === 'ArrowRight') step(1);
+    else if (e.key === '0') lbResetZoom();
+  });
+
+  // ホイールでカーソル位置を中心に拡大／縮小（画像のみ）
+  LB.el.addEventListener('wheel', function(e){
+    if (!LB.el.classList.contains('open')) return;
+    if (lbIsVideoShown()) return;
+    e.preventDefault();
+    var factor = e.deltaY < 0 ? 1.15 : (1/1.15);
+    lbZoomAt(e.clientX, e.clientY, factor);
+  }, { passive:false });
+
+  // ダブルクリックで拡大↔等倍（画像のみ）
+  LB.img.addEventListener('dblclick', function(e){
+    e.preventDefault();
+    if (LB.scale > 1.001) lbResetZoom();
+    else lbZoomAt(e.clientX, e.clientY, 2.4);
+  });
+
+  // 拡大中はドラッグで移動（画像のみ）
+  LB.img.addEventListener('mousedown', function(e){
+    if (LB.scale <= 1.001) return;
+    e.preventDefault();
+    LB.dragging = true; LB.sx = e.clientX; LB.sy = e.clientY;
+    LB.img.classList.add('grabbing');
+  });
+  window.addEventListener('mousemove', function(e){
+    if (!LB.dragging) return;
+    LB.tx += (e.clientX - LB.sx);
+    LB.ty += (e.clientY - LB.sy);
+    LB.sx = e.clientX; LB.sy = e.clientY;
+    lbApply();
+  });
+  window.addEventListener('mouseup', function(){
+    if (!LB.dragging) return;
+    LB.dragging = false;
+    LB.img.classList.remove('grabbing');
+  });
+}
+function renderLB(){
+  var im = LB.images[LB.idx];
+  lbResetZoom();
+  LB.video.pause();
+
+  if (isVideo(im.src)){
+    LB.img.style.display = 'none';
+    LB.img.removeAttribute('src');
+    LB.video.style.display = '';
+    LB.video.onerror = function(){
+      LB.video.onerror = null;
+      LB.video.style.display = 'none';
+      LB.img.style.display = '';
+      LB.img.src = placeholderURI(16, 9, 'VIDEO');
+    };
+    LB.video.src = mediaURL(im.src);
+    LB.video.play().catch(function(){});
+  } else {
+    LB.video.style.display = 'none';
+    LB.video.removeAttribute('src');
+    LB.img.style.display = '';
+    LB.img.onerror = function(){ LB.img.onerror = null; LB.img.src = placeholderURI(im.w, im.h, im.alt || 'IMAGE'); };
+    LB.img.alt = im.alt || '';
+    LB.img.src = mediaURL(im.src);
+  }
+
+  var multi = LB.images.length > 1;
+  LB.prev.style.display = multi ? '' : 'none';
+  LB.next.style.display = multi ? '' : 'none';
+  LB.counter.style.display = multi ? '' : 'none';
+  LB.counter.textContent = (LB.idx+1) + ' / ' + LB.images.length;
+}
+function step(d){
+  LB.idx = (LB.idx + d + LB.images.length) % LB.images.length;
+  renderLB();
+}
+function openLightbox(images, startIdx){
+  LB.images = images; LB.idx = startIdx || 0;
+  renderLB();
+  LB.el.classList.add('open');
+  LB.el.setAttribute('aria-hidden','false');
+  document.body.classList.add('lb-open');
+}
+function closeLightbox(){
+  LB.el.classList.remove('open');
+  LB.el.setAttribute('aria-hidden','true');
+  document.body.classList.remove('lb-open');
+  LB.video.pause();
+  LB.video.removeAttribute('src');
+  lbResetZoom();
+  LB.img.removeAttribute('src');
+}
+
+/* ---- 1カテゴリ分の個展セットアップ（人物タブ付き） ---- */
+function setupCategory(cat){
+  var stripEl = cat._stripEl;
+  var exhibitEl = cat._exhibitEl;
+  cat._filter = "";
+  cat._list = [];
+
+  // 人物タブ（データに登場する人物だけ、PERSON_ORDER の順で）
+  var present = PERSON_ORDER.filter(function(p){
+    return cat.works.some(function(w){
+      return (w.images || []).some(function(im){ return im.person === p; });
+    });
+  });
+
+  function viewList(){
+    if (!cat._filter){
+      return cat.works.map(function(w){ return { work:w, images:(w.images || []) }; });
+    }
+    var out = [];
+    cat.works.forEach(function(w){
+      var imgs = (w.images || []).filter(function(im){ return im.person === cat._filter; });
+      if (imgs.length) out.push({ work:w, images:imgs });
+    });
+    return out;
+  }
+
+  function buildStrip(){
+    stripEl.innerHTML = '';
+    cat._list.forEach(function(entry, idx){
+      var btn = document.createElement('button');
+      btn.className = 'strip-thumb';
+      btn.setAttribute('aria-label', (idx+1)+'番目の作品を表示');
+      var extra = EXTRA[entry.work.tweetId] || {};
+      var firstImg = null;
+      for (var k = 0; k < entry.images.length; k++){
+        if (!isVideo(entry.images[k].src)){ firstImg = entry.images[k]; break; }
+      }
+      var thumbSrc = extra.thumb || (firstImg && firstImg.src) || '';
+      if (thumbSrc){
+        var img = document.createElement('img');
+        img.alt = '';
+        img.loading = 'lazy';
+        withPlaceholder(img, 4, 3, '');
+        img.src = mediaURL(thumbSrc);
+        btn.appendChild(img);
+      } else {
+        btn.textContent = pad(idx+1);
+      }
+      btn.addEventListener('click', function(){ show(idx, true); });
+      stripEl.appendChild(btn);
+    });
+  }
+
+  function updateActiveThumb(idx){
+    Array.prototype.forEach.call(stripEl.children, function(el, i){
+      el.classList.toggle('active', i === idx);
+    });
+  }
+
+  function buildNavRow(idx){
+    var row = document.createElement('div');
+    row.className = 'exhibit-nav';
+    var prev = document.createElement('button');
+    prev.className = 'exhibit-nav-btn';
+    prev.textContent = '← 前の作品';
+    prev.disabled = (idx === 0);
+    prev.addEventListener('click', function(){ show(idx-1, true); });
+    var next = document.createElement('button');
+    next.className = 'exhibit-nav-btn';
+    next.textContent = '次の作品 →';
+    next.disabled = (idx === cat._list.length - 1);
+    next.addEventListener('click', function(){ show(idx+1, true); });
+    row.appendChild(prev); row.appendChild(next);
+    return row;
+  }
+
+  function show(idx, scroll){
+    var entry = cat._list[idx];
+    if (!entry) return;
+    var work = entry.work;
+    var extra = EXTRA[work.tweetId] || {};
+    exhibitEl.innerHTML = '';
+    exhibitEl.appendChild(buildNavRow(idx));
+
+    var num = document.createElement('p');
+    num.className = 'work-num';
+    var numText = pad(idx+1) + ' / ' + pad(cat._list.length);
+    if (extra.createdAt) numText += '　·　' + extra.createdAt.replace(/-/g, '.');
+    num.textContent = numText;
+    exhibitEl.appendChild(num);
+
+    if (extra.title){
+      var title = document.createElement('h3');
+      title.className = 'work-title';
+      title.textContent = extra.title;
+      exhibitEl.appendChild(title);
+    }
+
+    // 本体：画像・動画（人物で絞り込み中は、その人物の分だけ）
+    var art = buildArtwork(entry.images);
+    if (art) exhibitEl.appendChild(art);
+
+    // コメント／備考：Xポスト
+    var tnode = getTweetNode(work);
+    if (tnode){
+      var remark = document.createElement('div');
+      remark.className = 'remark';
+      var rlab = document.createElement('p');
+      rlab.className = 'remark-label';
+      rlab.textContent = 'Xでの投稿';
+      remark.appendChild(rlab);
+      remark.appendChild(tnode);
+      exhibitEl.appendChild(remark);
+    }
+
+    // 任意のテキスト
+    appendField(exhibitEl, 'コメント', extra.thoughts);
+    appendField(exhibitEl, '経緯', extra.background);
+    appendField(exhibitEl, 'プロンプト', extra.prompt, 'work-prompt');
+
+    exhibitEl.appendChild(buildNavRow(idx));
+
+    updateActiveThumb(idx);
+    if (scroll) exhibitEl.scrollIntoView({ behavior:'smooth', block:'start' });
+  }
+
+  function updateChips(){
+    if (!cat._chips) return;
+    cat._chips.forEach(function(c){
+      c.el.classList.toggle('active', c.value === cat._filter);
+    });
+  }
+
+  function applyFilter(p, scroll){
+    cat._filter = p || '';
+    cat._list = viewList();
+    buildStrip();
+    updateChips();
+    if (cat._list.length) show(0, !!scroll);
+    else exhibitEl.innerHTML = '';
+  }
+
+  if (present.length){
+    var plabel = document.createElement('p');
+    plabel.className = 'person-label';
+    plabel.textContent = 'PERSON';
+    var prow = document.createElement('div');
+    prow.className = 'person-row';
+    cat._chips = [];
+
+    var chipDefs = [{ label:'すべて', value:'' }].concat(present.map(function(p){ return { label:p, value:p }; }));
+    chipDefs.forEach(function(def){
+      var chip = document.createElement('button');
+      chip.className = 'person-chip';
+      chip.textContent = def.label;
+      chip.addEventListener('click', function(){ applyFilter(def.value, false); });
+      cat._chips.push({ el:chip, value:def.value });
+      prow.appendChild(chip);
+    });
+
+    cat._personWrap.appendChild(plabel);
+    cat._personWrap.appendChild(prow);
+  }
+
+  applyFilter('', false);
+}
+
+/* ---- カテゴリ切り替えUIとセクションを配列から自動生成 ---- */
+function buildUI(categories){
+  var switchEl = document.getElementById('cat-switch');
+  var sectionsEl = document.getElementById('sections');
+
+  categories.forEach(function(cat){
+    var btn = document.createElement('button');
+    btn.className = 'cat-btn';
+    btn.textContent = cat.label;
+    btn.addEventListener('click', function(){ activate(cat.key); });
+    cat._btn = btn;
+    switchEl.appendChild(btn);
+
+    var sec = document.createElement('section');
+    sec.className = 'sec';
+
+    var personWrap = document.createElement('div');
+
+    var lbl = document.createElement('p');
+    lbl.className = 'strip-label';
+    lbl.textContent = 'WORKS';
+
+    var strip = document.createElement('div');
+    strip.className = 'strip';
+
+    var exhibit = document.createElement('div');
+
+    sec.appendChild(personWrap);
+    sec.appendChild(lbl);
+    sec.appendChild(strip);
+    sec.appendChild(exhibit);
+    sectionsEl.appendChild(sec);
+
+    cat._sec = sec;
+    cat._personWrap = personWrap;
+    cat._stripEl = strip;
+    cat._exhibitEl = exhibit;
+  });
+
+  categories.forEach(setupCategory);
+
+  function activate(key){
+    categories.forEach(function(c){
+      var on = (c.key === key);
+      c._sec.style.display = on ? '' : 'none';
+      c._btn.classList.toggle('active', on);
+    });
+  }
+
+  if (categories.length) activate(categories[0].key);
+}
+
+/* ---- 起動 ---- */
+initLightbox();
+buildUI(CATEGORIES);
+</script>
+
+</body>
+</html>
