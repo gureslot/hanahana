@@ -447,7 +447,7 @@ let S={ level:1, expInto:0, dailyGot:0, total:0, lastDate:todayKey(), firstDate:
   if(S.level<1) S.level=1;
   save();
 })();
-let viewLv = S.level;                                   // 鑑賞ギャラリーで表示中のレベル（MAX解禁後のみ操作可能）
+let viewLv = (S.viewLv!=null) ? Math.max(1,Math.min(MAX_LEVEL,S.viewLv)) : S.level;   // 鑑賞ギャラリーで表示中のレベル。保存済みなら復元（開きなおしても維持）
 function dispLv(){ return (S.level>=MAX_LEVEL) ? Math.max(1,Math.min(MAX_LEVEL,viewLv)) : S.level; }   // 画面に出す立ち絵・揺れのレベル
 function save(){ store.set(SAVE_KEY,JSON.stringify(S)); cloudPush(); }
 function daysPlayed(){ const a=new Date(S.firstDate+'T00:00:00'), b=new Date(todayKey()+'T00:00:00');
@@ -867,6 +867,7 @@ function wipeSave(){
 function browseLevel(n){
   if(S.level<MAX_LEVEL) return;                    // MAX未満は解禁前
   viewLv = Math.max(1, Math.min(MAX_LEVEL, Math.round(n)));
+  S.viewLv = viewLv; save();                       // 選択したレベルを保存（開きなおしても維持）
   loadHome(viewLv, true); loadTrain(viewLv);       // その段階の立ち絵（無い段階は近い下を流用）
   applyRig();                                      // その段階の揺れ（座標＋物理）
   syncViewPanel();
@@ -943,7 +944,7 @@ function updateAuthUI(){
   const acc=$('title-account'); if(acc) acc.style.display = sbSignedIn?'block':'none';
   if(sbSignedIn && sbUser){ const em=$('auth-email'); if(em) em.textContent = sbUser.email || 'Googleアカウント'; }
 }
-function reloadFromState(){ viewLv=S.level; loadHome(dispLv(),true); loadTrain(dispLv()); applyRig(); setHomeBg(); updateAllUI(); }
+function reloadFromState(){ viewLv=(S.viewLv!=null)?Math.max(1,Math.min(MAX_LEVEL,S.viewLv)):S.level; loadHome(dispLv(),true); loadTrain(dispLv()); applyRig(); setHomeBg(); updateAllUI(); }
 async function pullMergeCloud(){
   if(!window.sb || !sbUser) return;
   try{
