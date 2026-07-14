@@ -60,6 +60,9 @@
   .colheader>div.sortable{cursor:pointer;background:#cfd6df;color:#1d3a8a;}
   .colheader>div.sortable:active{background:#bfc8d4;}
   .sortarw{font-size:9px;margin-left:2px;line-height:1;}
+  .hdots{display:inline-flex;gap:2px;vertical-align:middle;}
+  .hdot{width:7px;height:7px;border-radius:50%;border:1px solid rgba(0,0,0,.15);flex:none;}
+  .hdot.rainbow{background:linear-gradient(95deg,#ff2b4e,#ff8a00,#ffd500,#23c552,#1aa7ff,#8a5cff);}
 
   /* ---- table body ---- */
   .tbody{
@@ -219,11 +222,11 @@
   </div>
   <div class="colheader">
     <div id="colDaiban" class="sortable">台番<span id="sortArrow" class="sortarw">▲</span></div>
-    <div>サイド</div>
+    <div>サイド<br><span class="hdots" id="hdSide"></span></div>
     <div>BIG<br>スイカ</div>
     <div>REG<br>スイカ</div>
-    <div>BIG後</div>
-    <div>REG後</div>
+    <div>BIG後<br><span class="hdots" id="hdBigAfter"></span></div>
+    <div>REG後<br><span class="hdots" id="hdRegAfter"></span></div>
     <div>ガックン</div>
     <div>朝フラ</div>
   </div>
@@ -256,6 +259,9 @@ var tabFront  = document.getElementById('tabFront');
 var tabBack   = document.getElementById('tabBack');
 var colDaiban = document.getElementById('colDaiban');
 var sortArrow = document.getElementById('sortArrow');
+var hdSide     = document.getElementById('hdSide');
+var hdBigAfter = document.getElementById('hdBigAfter');
+var hdRegAfter = document.getElementById('hdRegAfter');
 
 /* ---- state ---- */
 /* two independent pages: front (表/手前) and back (裏/背面). Each {mode,rows}. */
@@ -444,8 +450,31 @@ function cellText(r, col){
   return '';
 }
 
+/* ---- column header colour marks (サイド / BIG後 / REG後) ---- */
+function colHasRainbow(key){
+  var rows = pg().rows, i;
+  for (i=0;i<rows.length;i++){ if (rows[i][key] && rows[i][key][4] > 0) return true; }
+  return false;
+}
+function hdotsHtml(colors, withRainbow){
+  var n = withRainbow ? colors.length : colors.length - 1;   /* 末尾は虹 */
+  var h = '', i, c;
+  for (i=0;i<n;i++){
+    c = colors[i];
+    if (c.rainbow) h += '<span class="hdot rainbow"></span>';
+    else h += '<span class="hdot" style="background:' + (c.grad || c.sw) + '"></span>';
+  }
+  return h;
+}
+function updateColHeadMarks(){
+  if (hdSide)     hdSide.innerHTML     = hdotsHtml(COLORS_SIDE,  colHasRainbow('side'));
+  if (hdBigAfter) hdBigAfter.innerHTML = hdotsHtml(COLORS_AFTER, colHasRainbow('bigAfter'));
+  if (hdRegAfter) hdRegAfter.innerHTML = hdotsHtml(COLORS_AFTER, colHasRainbow('regAfter'));
+}
+
 /* ---- render ---- */
 function renderBody(){
+  updateColHeadMarks();
   if (pg().rows.length === 0){
     tbody.innerHTML = '<div class="empty">「台番」ボタンを押して<br>台番号を作成してください。<br><br>各マスを<b>ダブルタップ</b>すると<br>入力画面が開きます。</div>';
     updateUI();
@@ -888,7 +917,7 @@ function openSettings(){
   var countInp = el('input','dinput');
   countInp.type='tel'; countInp.inputMode='numeric';
   countInp.style.width='100%'; countInp.style.maxWidth='none';
-  countInp.value='5'; countInp.placeholder='5';
+  countInp.placeholder='例: 5';
   d2.appendChild(countInp);
   f2.appendChild(d1); f2.appendChild(d2);
   wrap.appendChild(f2);
@@ -898,7 +927,8 @@ function openSettings(){
     var start = parseInt((startInp.value||'').replace(/[^0-9]/g,''), 10);
     var count = parseInt((countInp.value||'').replace(/[^0-9]/g,''), 10);
     if (isNaN(start)){ startInp.focus(); startInp.style.borderColor='#ef4444'; return; }
-    var c = isNaN(count) ? 16 : Math.min(300, Math.max(1, count));
+    if (isNaN(count)){ countInp.focus(); countInp.style.borderColor='#ef4444'; return; }
+    var c = Math.min(300, Math.max(1, count));
     var doGen = function(){ pg().rows = genRows(start, c, pg().mode, pg().desc); closeModal(); tbody.scrollTop = 0; };
     if (pg().rows.length > 0){
       showConfirm('既存の ' + pg().rows.length + ' 行をすべて置き換えます。\nよろしいですか？', doGen, '置き換える', true);
@@ -931,7 +961,7 @@ function openSettings(){
   var clr = el('button','mini danger wide','「' + pageName() + '」のデータを消去（リセット）');
   clr.onclick = function(){
     showConfirm('「' + pageName() + '」のすべての行と入力内容を消去します。\nよろしいですか？',
-      function(){ pg().rows = []; closeModal(); }, '消去する', true);
+      function(){ pg().rows = []; renderBody(); save(); checkpoint(); }, '消去する', true);
   };
   wrap.appendChild(clr);
 
