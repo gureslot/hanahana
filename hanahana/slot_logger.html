@@ -60,7 +60,8 @@
   .colheader>div.sortable{cursor:pointer;background:#cfd6df;color:#1d3a8a;}
   .colheader>div.sortable:active{background:#bfc8d4;}
   .sortarw{font-size:9px;margin-left:2px;line-height:1;}
-  .hdots{display:inline-flex;gap:2px;vertical-align:middle;}
+  .colheader>div.hcol{flex-direction:column;gap:2px;}
+  .hdots{display:inline-flex;gap:2px;}
   .hdot{width:7px;height:7px;border-radius:50%;border:1px solid rgba(0,0,0,.15);flex:none;}
   .hdot.rainbow{background:linear-gradient(95deg,#ff2b4e,#ff8a00,#ffd500,#23c552,#1aa7ff,#8a5cff);}
 
@@ -222,11 +223,11 @@
   </div>
   <div class="colheader">
     <div id="colDaiban" class="sortable">台番<span id="sortArrow" class="sortarw">▲</span></div>
-    <div>サイド<br><span class="hdots" id="hdSide"></span></div>
+    <div class="hcol">サイド<span class="hdots" id="hdSide"></span></div>
     <div>BIG<br>スイカ</div>
     <div>REG<br>スイカ</div>
-    <div>BIG後<br><span class="hdots" id="hdBigAfter"></span></div>
-    <div>REG後<br><span class="hdots" id="hdRegAfter"></span></div>
+    <div class="hcol">BIG後<span class="hdots" id="hdBigAfter"></span></div>
+    <div class="hcol">REG後<span class="hdots" id="hdRegAfter"></span></div>
     <div>ガックン</div>
     <div>朝フラ</div>
   </div>
