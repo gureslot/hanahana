@@ -1061,16 +1061,39 @@ function drawFit(ctx, txt, cx, cy, maxw, baseFs, fw, color, scale){
   while (ctx.measureText(txt).width > maxw && fs > 6){ fs -= 0.5; ctx.font = fw + ' ' + (fs*scale) + 'px ' + FF; }
   ctx.fillText(txt, cx, cy);
 }
+var RAINBOW_STOPS = ['#ff2b4e','#ff8a00','#ffd500','#23c552','#1aa7ff','#8a5cff'];
+function drawHeaderDot(ctx, x, y, r, c){
+  var g, stops, i;
+  if (c.rainbow){
+    g = ctx.createLinearGradient(x - r, y, x + r, y);
+    for (i = 0; i < RAINBOW_STOPS.length; i++) g.addColorStop(i / (RAINBOW_STOPS.length - 1), RAINBOW_STOPS[i]);
+    ctx.fillStyle = g;
+  } else if (c.grad){
+    stops = c.grad.match(/#[0-9a-fA-F]{3,8}/g) || ['#888888'];
+    if (stops.length < 2){ ctx.fillStyle = stops[0]; }
+    else {
+      g = ctx.createLinearGradient(x - r, y - r, x + r, y + r);
+      for (i = 0; i < stops.length; i++) g.addColorStop(i / (stops.length - 1), stops[i]);
+      ctx.fillStyle = g;
+    }
+  } else {
+    ctx.fillStyle = c.sw;
+  }
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,.15)'; ctx.lineWidth = 1; ctx.stroke();
+}
 function exportImage(){
   if (pg().rows.length === 0){ showAlert('台番号がありません。先に行を作成してください。'); return; }
 
-  var headers = ['台番','サイド','BIGスイカ','REGスイカ','BIG後','REG後','ガックン','朝フラ'];
-  var wcss = [64,104,72,72,84,84,72,60];
+  var headers = ['台番','サイド','BIG','REG','BIG後','REG後','ガックン','朝フラ'];
+  var HEAD_SUB  = { 2:'スイカ', 3:'スイカ' };   /* 画面と同じ2行見出し */
+  var HEAD_DOTS = { 1:{key:'side',colors:COLORS_SIDE}, 4:{key:'bigAfter',colors:COLORS_AFTER}, 5:{key:'regAfter',colors:COLORS_AFTER} };
+  var wcss = [52,84,56,56,84,84,62,56];
   var scale = 2;
   var colW = wcss.map(function(w){ return w*scale; });
   var tableW = colW.reduce(function(a,b){ return a+b; }, 0);
-  var rowH = 34*scale, headH = 40*scale;
-  var padTop = 10*scale, padBot = 12*scale, padX = 8*scale, titleH = 28*scale;
+  var rowH = 34*scale, headH = 44*scale;
+  var padTop = 10*scale, padBot = 12*scale, padX = 8*scale, titleH = 30*scale;
   var n = pg().rows.length;
   var W = tableW + padX*2;
   var H = padTop + titleH + headH + rowH*n + padBot;
@@ -1083,14 +1106,27 @@ function exportImage(){
 
   /* title */
   var heading = ((state.title || '').trim() || 'スロットデータ') + '（' + pageName() + '） ' + stamp().replace('_',' ');
-  drawFit(ctx, heading, W/2, padTop + titleH/2, W - padX*2, 14, '800', '#1c2532', scale);
+  drawFit(ctx, heading, W/2, padTop + titleH/2, W - padX*2, 17, '800', '#1c2532', scale);
 
   var top = padTop + titleH;
   /* header bg + text */
   ctx.fillStyle = '#d6dbe2'; ctx.fillRect(padX, top, tableW, headH);
-  var cx = padX, i;
+  var cx = padX, i, k;
   for (i=0;i<headers.length;i++){
-    drawFit(ctx, headers[i], cx + colW[i]/2, top + headH/2, colW[i] - 6*scale, 11, '800', '#2b3340', scale);
+    var hd = HEAD_DOTS[i];
+    if (hd){
+      var dn = colHasRainbow(hd.key) ? hd.colors.length : hd.colors.length - 1;
+      drawFit(ctx, headers[i], cx + colW[i]/2, top + headH*0.30, colW[i] - 6*scale, 15, '800', '#2b3340', scale);
+      var dr = 5*scale, dgap = 3*scale;
+      var dx = cx + colW[i]/2 - (dn*2*dr + (dn-1)*dgap)/2 + dr;
+      var dy = top + headH*0.72;
+      for (k=0;k<dn;k++){ drawHeaderDot(ctx, dx, dy, dr, hd.colors[k]); dx += 2*dr + dgap; }
+    } else if (HEAD_SUB[i]){
+      drawFit(ctx, headers[i], cx + colW[i]/2, top + headH*0.30, colW[i] - 6*scale, 15, '800', '#2b3340', scale);
+      drawFit(ctx, HEAD_SUB[i], cx + colW[i]/2, top + headH*0.72, colW[i] - 6*scale, 15, '800', '#2b3340', scale);
+    } else {
+      drawFit(ctx, headers[i], cx + colW[i]/2, top + headH/2, colW[i] - 6*scale, 15, '800', '#2b3340', scale);
+    }
     cx += colW[i];
   }
 
@@ -1104,7 +1140,7 @@ function exportImage(){
       if (t){
         var color = (col.type==='asa') ? (ASA_TEXT[t] || '#15191f')
                   : (col.type==='daiban') ? '#10151c' : '#1d2531';
-        var fs = (col.type==='count' || col.type==='pair') ? 9.5 : (col.type==='daiban' ? 12 : (col.type==='gakkun' ? 14 : 11));
+        var fs = (col.type==='count' || col.type==='pair') ? 16 : (col.type==='daiban' ? 17 : (col.type==='gakkun' ? 17 : 16));
         var fw = (col.type==='daiban' || col.type==='gakkun') ? '800' : '600';
         drawFit(ctx, t, x + colW[ci]/2, y + rowH/2, colW[ci] - 6*scale, fs, fw, color, scale);
       }
