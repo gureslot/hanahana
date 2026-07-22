@@ -142,6 +142,7 @@
   .cbtn.up:active{background:#d3ddff;}
   .cbtn.dn{background:#f0f2f5;color:#5a6472;}
   .cbtn.dn:active{background:#e2e6ea;}
+  .haptic-probe{position:fixed;left:-9999px;bottom:0;width:44px;height:26px;opacity:.001;pointer-events:none;}
 
   /* single counter (unused) */
   .singlewrap{display:flex;flex-direction:column;align-items:center;gap:8px;padding:4px 0 2px;}
@@ -235,6 +236,8 @@
 </div>
 <div class="overlay" id="overlay"><div class="modal" id="modalHost"></div></div>
 <div class="overlay confirm" id="confirmOverlay"><div class="confirmcard" id="confirmCard"></div></div>
+<!-- iOS18+ の触覚フィードバック発火用（画面外・非表示）。navigator.vibrate 非対応のSafari向け -->
+<label id="hapticLabel" for="hapticSwitch" aria-hidden="true" class="haptic-probe"><input type="checkbox" switch id="hapticSwitch" tabindex="-1"></label>
 <input type="file" id="fileInput" accept="application/json,.json" style="display:none">
 <script>
 /* ============== スロットデータ記録 ============== */
@@ -277,6 +280,24 @@ var state = {
 function pg(){ return state.pages[state.active]; }
 var idc = 0;
 var LS_KEY = 'slot_logger_v1';
+
+/* ---- haptics (端末の振動 / 触覚) ---- */
+/* データとは別の端末プリファレンス。既定オン。'0' が保存されていればオフ */
+var HAPTIC_KEY = 'slot_logger_haptic';
+var hapticOn = true;
+try { hapticOn = (localStorage.getItem(HAPTIC_KEY) !== '0'); } catch(e){}
+var hapticLabel = document.getElementById('hapticLabel');
+function setHaptic(on){
+  hapticOn = !!on;
+  try { localStorage.setItem(HAPTIC_KEY, hapticOn ? '1' : '0'); } catch(e){}
+}
+function haptic(){
+  if (!hapticOn) return;
+  /* Android/Chrome 等: Vibration API */
+  if (typeof navigator !== 'undefined' && navigator.vibrate){ navigator.vibrate(12); return; }
+  /* iOS18+/macOS Safari: switch属性チェックボックスをトグルして触覚を発火 */
+  if (hapticLabel){ try { hapticLabel.click(); } catch(e){} }
+}
 var mem = { v:null };
 var histStack = [];     // snapshots (JSON strings) for undo/redo
 var histIdx = -1;
@@ -745,8 +766,8 @@ function openCountModal(r, key){
     var up  = el('button','cbtn up','▲');
     var num = el('div','cnum', String(arr[i]));
     var dn  = el('button','cbtn dn','▼');
-    up.onclick = function(){ arr[i]++; num.textContent = arr[i]; refresh(); save(); };
-    dn.onclick = function(){ if (arr[i] > 0){ arr[i]--; num.textContent = arr[i]; refresh(); save(); } };
+    up.onclick = function(){ haptic(); arr[i]++; num.textContent = arr[i]; refresh(); save(); };
+    dn.onclick = function(){ haptic(); if (arr[i] > 0){ arr[i]--; num.textContent = arr[i]; refresh(); save(); } };
 
     st.appendChild(sw); st.appendChild(up); st.appendChild(num); st.appendChild(dn);
     grid.appendChild(st);
@@ -772,8 +793,8 @@ function openPairModal(r, key){
     var up  = el('button','cbtn up','▲');
     var num = el('div','cnum', String(arr[idx]));
     var dn  = el('button','cbtn dn','▼');
-    up.onclick = function(){ arr[idx]++; num.textContent = arr[idx]; refresh(); save(); };
-    dn.onclick = function(){ if (arr[idx] > 0){ arr[idx]--; num.textContent = arr[idx]; refresh(); save(); } };
+    up.onclick = function(){ haptic(); arr[idx]++; num.textContent = arr[idx]; refresh(); save(); };
+    dn.onclick = function(){ haptic(); if (arr[idx] > 0){ arr[idx]--; num.textContent = arr[idx]; refresh(); save(); } };
     st.appendChild(up); st.appendChild(num); st.appendChild(dn);
     row.appendChild(st);
     if (idx === 0) row.appendChild(el('div','pairdash','-'));
@@ -957,6 +978,23 @@ function openSettings(){
   var noteT = el('div','note');
   noteT.innerHTML = '画像の上部に表示されます。未記入なら「スロットデータ」になります。';
   wrap.appendChild(noteT);
+
+  wrap.appendChild(el('hr','sep'));
+
+  /* 触覚（振動）オン/オフ … データとは独立した端末プリファレンス */
+  var fh = el('div','field');
+  fh.appendChild(el('label', null, 'ボタンを押したときの振動（触覚）'));
+  var segh = el('div','segwrap');
+  var segHon  = el('button','seg' + ( hapticOn ? ' on' : ''), 'オン');
+  var segHoff = el('button','seg' + (!hapticOn ? ' on' : ''), 'オフ');
+  segHon.onclick  = function(){ setHaptic(true);  segHon.classList.add('on'); segHoff.classList.remove('on'); haptic(); };
+  segHoff.onclick = function(){ setHaptic(false); segHoff.classList.add('on'); segHon.classList.remove('on'); };
+  segh.appendChild(segHon); segh.appendChild(segHoff);
+  fh.appendChild(segh);
+  wrap.appendChild(fh);
+  var noteH = el('div','note');
+  noteH.innerHTML = '数値の▲▼を押すたびに短く振動します。iPhoneはiOS18以降のSafariで触覚（コッという感触）になります。端末や設定によっては動作しないことがあります。';
+  wrap.appendChild(noteH);
 
   wrap.appendChild(el('hr','sep'));
   var clr = el('button','mini danger wide','「' + pageName() + '」のデータを消去（リセット）');
