@@ -142,7 +142,6 @@
   .cbtn.up:active{background:#d3ddff;}
   .cbtn.dn{background:#f0f2f5;color:#5a6472;}
   .cbtn.dn:active{background:#e2e6ea;}
-  .haptic-probe{position:fixed;left:-9999px;bottom:0;width:44px;height:26px;opacity:.001;pointer-events:none;}
 
   /* single counter (unused) */
   .singlewrap{display:flex;flex-direction:column;align-items:center;gap:8px;padding:4px 0 2px;}
@@ -236,8 +235,9 @@
 </div>
 <div class="overlay" id="overlay"><div class="modal" id="modalHost"></div></div>
 <div class="overlay confirm" id="confirmOverlay"><div class="confirmcard" id="confirmCard"></div></div>
-<!-- iOS18+ の触覚フィードバック発火用（画面外・非表示）。navigator.vibrate 非対応のSafari向け -->
-<label id="hapticLabel" for="hapticSwitch" aria-hidden="true" class="haptic-probe"><input type="checkbox" switch id="hapticSwitch" tabindex="-1"></label>
+<!-- iOS18+ の触覚フィードバック発火用トリガー。実タップ直後にlabelをclickすると触覚が出る。
+     iOS18.4以降の制限に対応するため、動作実績のある構成(無スタイルlabel＋display:noneのswitch input)に合わせている -->
+<label id="hapticLabel" aria-hidden="true" tabindex="-1"><input type="checkbox" switch id="hapticSwitch" tabindex="-1" style="display:none !important"></label>
 <input type="file" id="fileInput" accept="application/json,.json" style="display:none">
 <script>
 /* ============== スロットデータ記録 ============== */
