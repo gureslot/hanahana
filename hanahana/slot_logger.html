@@ -137,7 +137,9 @@
   .swatch.rainbow{background:linear-gradient(95deg,#ff2b4e,#ff8a00,#ffd500,#23c552,#1aa7ff,#8a5cff);}
   .clabel{font-size:10px;font-weight:800;color:#3a4452;}
   .cnum{font-size:18px;font-weight:800;min-width:26px;text-align:center;color:#10151c;}
-  .cbtn{width:100%;height:36px;border:none;border-radius:8px;font-size:17px;font-weight:800;line-height:1;}
+  .cbtn{width:100%;height:36px;border:none;border-radius:8px;font-size:17px;font-weight:800;line-height:1;
+    display:flex;align-items:center;justify-content:center;box-sizing:border-box;flex:none;
+    -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;}
   .cbtn.up{background:#e7ecff;color:#2c3da8;}
   .cbtn.up:active{background:#d3ddff;}
   .cbtn.dn{background:#f0f2f5;color:#5a6472;}
@@ -192,6 +194,8 @@
   .segwrap{display:flex;gap:6px;}
   .seg{flex:1;height:38px;border:2px solid #dfe4ea;border-radius:9px;background:#fff;font-size:13px;font-weight:800;color:#27313f;}
   .seg.on{border-color:#3b50c4;background:#eef1ff;color:#2c3da8;}
+  .seg.aslabel{display:flex;align-items:center;justify-content:center;box-sizing:border-box;
+    -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;}
   .mini{height:40px;border:none;border-radius:9px;background:#eef1f5;color:#2b3340;font-size:13px;font-weight:800;padding:0 10px;}
   .mini:disabled{opacity:.4;}
   .mini:active{background:#e1e6ec;}
@@ -235,9 +239,7 @@
 </div>
 <div class="overlay" id="overlay"><div class="modal" id="modalHost"></div></div>
 <div class="overlay confirm" id="confirmOverlay"><div class="confirmcard" id="confirmCard"></div></div>
-<!-- iOS18+ の触覚フィードバック発火用トリガー。実タップ直後にlabelをclickすると触覚が出る。
-     iOS18.4以降の制限に対応するため、動作実績のある構成(無スタイルlabel＋display:noneのswitch input)に合わせている -->
-<label id="hapticLabel" aria-hidden="true" tabindex="-1"><input type="checkbox" switch id="hapticSwitch" tabindex="-1" style="display:none !important"></label>
+
 <input type="file" id="fileInput" accept="application/json,.json" style="display:none">
 <script>
 /* ============== スロットデータ記録 ============== */
@@ -286,17 +288,44 @@ var LS_KEY = 'slot_logger_v1';
 var HAPTIC_KEY = 'slot_logger_haptic';
 var hapticOn = true;
 try { hapticOn = (localStorage.getItem(HAPTIC_KEY) !== '0'); } catch(e){}
-var hapticLabel = document.getElementById('hapticLabel');
 function setHaptic(on){
   hapticOn = !!on;
   try { localStorage.setItem(HAPTIC_KEY, hapticOn ? '1' : '0'); } catch(e){}
 }
-function haptic(){
-  if (!hapticOn) return;
-  /* Android/Chrome 等: Vibration API */
-  if (typeof navigator !== 'undefined' && navigator.vibrate){ navigator.vibrate(12); return; }
-  /* iOS18+/macOS Safari: switch属性チェックボックスをトグルして触覚を発火 */
-  if (hapticLabel){ try { hapticLabel.click(); } catch(e){} }
+/* ボタン本体を<label>にして、中のswitchを実タップで直接トグルさせる。
+   iOS18.4以降は合成clickでの触覚が制限されるため、実タップの既定動作で鳴らす。 */
+function hbtn(cls, txt){
+  var l = document.createElement('label');
+  l.className = cls;
+  l.appendChild(document.createTextNode(txt));
+  var i = document.createElement('input');
+  i.type = 'checkbox';
+  i.setAttribute('switch', '');
+  i.setAttribute('style', 'display:none !important');
+  i.tabIndex = -1;
+  i.setAttribute('aria-hidden', 'true');
+  l.appendChild(i);
+  return l;
+}
+/* labelの既定動作は中のswitchへclickを転送し、それがlabelまでbubbleして
+   ハンドラが2回走る。転送分(target=input)は無視して1回だけ処理する */
+function onTap(elm, fn){
+  elm.onclick = function(e){
+    if (e && e.target && e.target.tagName === 'INPUT') return;
+    fn(e);
+  };
+}
+/* labelのclickハンドラ内で呼ぶ。既定動作を通すか止めるかで触覚を制御する */
+function haptic(e){
+  /* オフ: switchのトグル自体を止める＝触覚が鳴らない */
+  if (!hapticOn){ if (e && e.preventDefault) e.preventDefault(); return; }
+  /* Android/Chrome等: Vibration APIを使い、switchのトグルは止める */
+  if (typeof navigator !== 'undefined' && navigator.vibrate){
+    if (e && e.preventDefault) e.preventDefault();
+    navigator.vibrate(12);
+    return;
+  }
+  /* iOS/Safari: 何もしない。実タップによるlabel→switchの既定動作で触覚が鳴る */
 }
 var mem = { v:null };
 var histStack = [];     // snapshots (JSON strings) for undo/redo
@@ -763,11 +792,11 @@ function openCountModal(r, key){
     sw.appendChild(dot);
     sw.appendChild(el('div','clabel', c.label));
 
-    var up  = el('button','cbtn up','▲');
+    var up  = hbtn('cbtn up','▲');
     var num = el('div','cnum', String(arr[i]));
-    var dn  = el('button','cbtn dn','▼');
-    up.onclick = function(){ haptic(); arr[i]++; num.textContent = arr[i]; refresh(); save(); };
-    dn.onclick = function(){ haptic(); if (arr[i] > 0){ arr[i]--; num.textContent = arr[i]; refresh(); save(); } };
+    var dn  = hbtn('cbtn dn','▼');
+    onTap(up, function(e){ haptic(e); arr[i]++; num.textContent = arr[i]; refresh(); save(); });
+    onTap(dn, function(e){ haptic(e); if (arr[i] > 0){ arr[i]--; num.textContent = arr[i]; refresh(); save(); } });
 
     st.appendChild(sw); st.appendChild(up); st.appendChild(num); st.appendChild(dn);
     grid.appendChild(st);
@@ -790,11 +819,11 @@ function openPairModal(r, key){
   var row = el('div','pairgrid');
   [0,1].forEach(function(idx){
     var st  = el('div','cstack');
-    var up  = el('button','cbtn up','▲');
+    var up  = hbtn('cbtn up','▲');
     var num = el('div','cnum', String(arr[idx]));
-    var dn  = el('button','cbtn dn','▼');
-    up.onclick = function(){ haptic(); arr[idx]++; num.textContent = arr[idx]; refresh(); save(); };
-    dn.onclick = function(){ haptic(); if (arr[idx] > 0){ arr[idx]--; num.textContent = arr[idx]; refresh(); save(); } };
+    var dn  = hbtn('cbtn dn','▼');
+    onTap(up, function(e){ haptic(e); arr[idx]++; num.textContent = arr[idx]; refresh(); save(); });
+    onTap(dn, function(e){ haptic(e); if (arr[idx] > 0){ arr[idx]--; num.textContent = arr[idx]; refresh(); save(); } });
     st.appendChild(up); st.appendChild(num); st.appendChild(dn);
     row.appendChild(st);
     if (idx === 0) row.appendChild(el('div','pairdash','-'));
@@ -985,9 +1014,9 @@ function openSettings(){
   var fh = el('div','field');
   fh.appendChild(el('label', null, 'ボタンを押したときの振動（触覚）'));
   var segh = el('div','segwrap');
-  var segHon  = el('button','seg' + ( hapticOn ? ' on' : ''), 'オン');
+  var segHon  = hbtn('seg aslabel' + ( hapticOn ? ' on' : ''), 'オン');
   var segHoff = el('button','seg' + (!hapticOn ? ' on' : ''), 'オフ');
-  segHon.onclick  = function(){ setHaptic(true);  segHon.classList.add('on'); segHoff.classList.remove('on'); haptic(); };
+  onTap(segHon, function(e){ setHaptic(true); segHon.classList.add('on'); segHoff.classList.remove('on'); haptic(e); });
   segHoff.onclick = function(){ setHaptic(false); segHoff.classList.add('on'); segHon.classList.remove('on'); };
   segh.appendChild(segHon); segh.appendChild(segHoff);
   fh.appendChild(segh);
