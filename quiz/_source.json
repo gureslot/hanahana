@@ -1,0 +1,42 @@
+{
+  "bell": {
+    "count": 15,
+    "source": "left_04.png"
+  },
+  "cherry": {
+    "count": 8,
+    "source": "left_20.png"
+  },
+  "hana": {
+    "count": 4,
+    "source": "middle_18.png"
+  },
+  "hibiscus": {
+    "count": 2,
+    "source": "left_11.png"
+  },
+  "pink7": {
+    "count": 3,
+    "source": "left_03.png"
+  },
+  "pinkBAR": {
+    "count": 2,
+    "source": "left_09.png"
+  },
+  "replay": {
+    "count": 15,
+    "source": "middle_21.png"
+  },
+  "suika": {
+    "count": 9,
+    "source": "left_14.png"
+  },
+  "white7": {
+    "count": 3,
+    "source": "left_15.png"
+  },
+  "whiteBAR": {
+    "count": 2,
+    "source": "right_10.png"
+  }
+}

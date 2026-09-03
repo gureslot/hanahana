@@ -1,5 +1,8 @@
 *.local.bak
 
+# クイズ実装の検算スクリプト置き場（GitHubに上げない）
+quiz/tmp/
+
 # 設計・作業資料（Googleドライブ管理／GitHubに上げない）
 Chikarian/canon-*.md
 Chikarian/*-spec-*.md

@@ -1,0 +1,86 @@
+{
+  "note": "配列は1番から21番の順。index0 が1番。番号のプラス方向に回転し、21番の次は1番",
+  "reels": {
+    "left": [
+      "hibiscus",
+      "cherry",
+      "whiteBAR",
+      "replay",
+      "bell",
+      "suika",
+      "white7",
+      "suika",
+      "replay",
+      "bell",
+      "hibiscus",
+      "cherry",
+      "pinkBAR",
+      "replay",
+      "bell",
+      "suika",
+      "replay",
+      "bell",
+      "pink7",
+      "replay",
+      "bell"
+    ],
+    "middle": [
+      "replay",
+      "cherry",
+      "bell",
+      "hana",
+      "replay",
+      "hana",
+      "bell",
+      "replay",
+      "suika",
+      "white7",
+      "cherry",
+      "bell",
+      "replay",
+      "hana",
+      "bell",
+      "hana",
+      "suika",
+      "replay",
+      "pink7",
+      "bell",
+      "suika"
+    ],
+    "right": [
+      "bell",
+      "replay",
+      "cherry",
+      "suika",
+      "bell",
+      "replay",
+      "cherry",
+      "suika",
+      "bell",
+      "replay",
+      "white7",
+      "whiteBAR",
+      "bell",
+      "replay",
+      "cherry",
+      "suika",
+      "bell",
+      "replay",
+      "pink7",
+      "cherry",
+      "pinkBAR"
+    ]
+  },
+  "sevens": {
+    "pink7": {
+      "left": 19,
+      "middle": 19,
+      "right": 19
+    },
+    "white7": {
+      "left": 7,
+      "middle": 10,
+      "right": 11
+    }
+  }
+}

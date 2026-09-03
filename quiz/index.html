@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ハナハナ最速目押しクイズ（判定確認用）</title>
+<link rel="stylesheet" href="quiz.css">
+</head>
+<body>
+<main>
+  <section id="titleScreen" class="title-screen">
+    <div class="title-logos">
+      <img src="images/title1.png" alt="ハナハナ" class="title-logo1">
+      <img src="images/title2.png" alt="最速目押しクイズ" class="title-logo2">
+    </div>
+    <button type="button" id="titleStartBtn" class="title-start-btn">スタート</button>
+  </section>
+
+  <div id="appScreen" hidden>
+  <div id="timerDisplay" class="timer-display" hidden>
+    <div class="timer-clock">
+      <span class="timer-spacer" aria-hidden="true"></span><span id="timerSec" class="timer-ss">00</span><span class="timer-cc-wrap">:<span id="timerCenti">00</span></span>
+    </div>
+    <p class="timer-prompt">この出目から最速で揃えられる7はどれ？</p>
+    <div class="timer-counts">
+      <span class="count-correct">正解 <span id="correctCountValue">0</span></span>
+      <span class="count-wrong">誤答 <span id="wrongCountValue">0</span></span>
+    </div>
+  </div>
+
+  <audio id="bgmAudio" src="sounds/quizBGM.mp3" preload="auto"></audio>
+
+  <section class="stage-wrap">
+    <div id="stage"></div>
+  </section>
+
+  <section class="choices-wrap">
+    <div id="choices" class="choices-grid"></div>
+  </section>
+
+  <div id="gameControls" class="game-controls" hidden>
+    <button type="button" id="abortBtn" class="abort-btn">中断</button>
+  </div>
+
+  <p id="resultMessage" class="result-message" aria-live="polite"></p>
+
+  <section id="resultScreen" class="result-screen" hidden>
+    <div class="result-titles">
+      <img src="images/title1.png" alt="ハナハナ" class="result-title1">
+      <img src="images/title2.png" alt="最速目押しクイズ" class="result-title2">
+    </div>
+    <div class="result-score-wrap">
+      <img src="images/scoredaiza.png" alt="" class="result-score-daiza">
+      <span id="resultScore" class="result-score-value">0</span>
+    </div>
+    <p class="result-detail">正解 <span id="resultCorrect">0</span>　誤答 <span id="resultWrong">0</span></p>
+    <p class="result-meta"><span id="resultDiffLabel">-</span>／<span id="resultTimeLabel">-</span>秒</p>
+    <div class="result-buttons">
+      <button type="button" id="retryBtn" class="retry-btn">もう一度</button>
+      <button type="button" id="backToTitleBtn" class="back-title-btn">タイトルへ戻る</button>
+    </div>
+  </section>
+
+  <section id="debugPanel" class="debug-panel" hidden></section>
+
+  <section class="dev-controls">
+    <p class="dev-controls-label">確認用UI（本番では出ません）</p>
+    <div class="difficulty-buttons" id="difficultyButtons">
+      <button type="button" class="diff-btn" data-diff="beginner">初心者</button>
+      <button type="button" class="diff-btn" data-diff="easy">易</button>
+      <button type="button" class="diff-btn" data-diff="normal">並</button>
+      <button type="button" class="diff-btn" data-diff="hard">極</button>
+    </div>
+    <div class="time-buttons" id="timeButtons">
+      <button type="button" class="time-btn" data-time="30">30秒</button>
+      <button type="button" class="time-btn" data-time="60">60秒</button>
+    </div>
+    <div class="dev-action-buttons">
+      <button type="button" id="startBtn" class="start-btn">スタート</button>
+      <button type="button" id="previewBtn" class="preview-btn">1問だけ表示</button>
+    </div>
+
+    <div class="sound-controls">
+      <div class="sound-control-row">
+        <span class="sound-control-label">BGM</span>
+        <input type="range" id="bgmVolumeSlider" class="volume-slider" min="0" max="100" value="80">
+        <button type="button" id="bgmMuteBtn" class="mute-btn">ミュート</button>
+      </div>
+      <div class="sound-control-row">
+        <span class="sound-control-label">SE</span>
+        <input type="range" id="seVolumeSlider" class="volume-slider" min="0" max="100" value="80">
+        <button type="button" id="seMuteBtn" class="mute-btn">ミュート</button>
+      </div>
+    </div>
+  </section>
+  </div>
+</main>
+
+<script src="quiz.js" defer></script>
+</body>
+</html>
