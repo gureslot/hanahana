@@ -335,20 +335,27 @@ function rangeSize(A) {
 }
 
 // リールごとに順（左→中→右）に o_i を適用し、適用時点で表示範囲が21コマを
-// 超えるならそのリールだけ符号を反転する（2リールまとめての反転はしない）。
+// 超えるなら、そのリールだけ21コマに収まる位置まで切り上げ（または切り下げ）て
+// 縮める（符号反転はしない。2リールまとめての調整もしない）。
+// 下端をA=0で固定する必要がなくなったため、min(A)が0でない選択肢も出てよい。
 function applyShiftsWithFlip(baseA, rawOffsets) {
   const A = { ...baseA };
   const finalOffsets = { left: 0, middle: 0, right: 0 };
   for (const reel of REEL_NAMES) {
-    let amt = rawOffsets[reel] || 0;
+    const amt = rawOffsets[reel] || 0;
     if (amt === 0) continue;
     A[reel] += amt;
     if (rangeSize(A) > 21) {
-      A[reel] -= amt;
-      amt = -amt;
-      A[reel] += amt;
+      const others = REEL_NAMES.filter((r) => r !== reel).map((r) => A[r]);
+      const otherMax = Math.max(...others);
+      const otherMin = Math.min(...others);
+      if (A[reel] < otherMin) {
+        A[reel] = otherMax - 20; // 下端を切り上げて21コマに収める
+      } else if (A[reel] > otherMax) {
+        A[reel] = otherMin + 20; // 上端を切り下げて21コマに収める
+      }
     }
-    finalOffsets[reel] = amt;
+    finalOffsets[reel] = A[reel] - baseA[reel];
   }
   return { A, offsets: finalOffsets };
 }
@@ -454,22 +461,23 @@ function renderStage(container, S) {
 /* ---------- 描画：選択肢（仕様書 第4章）----------
  * 基準は受付開始ライン（X）。A_i = (P_i − X_i) mod 21 + o_i を
  * buildChoices() で choice.layout として計算済み。
+ * 表示範囲は全難易度共通でminA〜maxA（下端をA=0で固定する必要はない。
+ * applyShiftsWithFlipにより常に21コマ以内に収まる）。
  *
- * 極（hard）は従来どおり：下端＝各リールの最小A（受付ライン以降で最初の7）、
- * 7以外の図柄は描かず格子線だけを引く。
+ * 極（hard）は従来どおり：7以外の図柄は描かず格子線だけを引く。
  *
- * 初・易・並：下端を受付開始ライン（A=0）で固定し、上端は従来どおりmax(A)。
- * 表示範囲0〜max(A)の各行・各リールについて、リールiの (refX_i + 行) 番の
- * 図柄（7以外も含む実際のリール配列）を描く。ずらし選択肢はrefXがo_iぶん
- * ずれているため、ずらした位置の図柄がそのまま出る。
+ * 初・易・並：密度を抑えるため、各リールの対象色の7（A_i）を中心に
+ * 上下5コマ（計11コマ分）だけ実際の図柄を描き、それ以外の行は空セルにする。
+ * 格子線は表示範囲の全行に引く（これは変えない）。
  */
+const SYMBOL_VISIBLE_SPREAD = 5; // 対象の7から上下何コマまで図柄を描くか
 
 function renderChoiceStrip(container, choice, diffKey) {
   const layout = choice.layout;
   const sevenSymbol = choice.color === 'pink' ? 'pink7' : 'white7';
   const showFull = diffKey !== 'hard';
   const top = layout.maxA;
-  const bottom = showFull ? 0 : layout.minA;
+  const bottom = layout.minA;
   const rows = top - bottom + 1;
 
   const grid = document.createElement('div');
@@ -482,12 +490,14 @@ function renderChoiceStrip(container, choice, diffKey) {
       const slot = document.createElement('div');
       slot.className = 'choice-slot';
       if (showFull) {
-        const symbolName = symbolAt(reel, layout.refX[reel] + a);
-        const img = document.createElement('img');
-        img.className = 'choice-symbol';
-        img.src = symbolImages[symbolName].src;
-        img.alt = symbolName;
-        slot.appendChild(img);
+        if (Math.abs(a - layout.A[reel]) <= SYMBOL_VISIBLE_SPREAD) {
+          const symbolName = symbolAt(reel, layout.refX[reel] + a);
+          const img = document.createElement('img');
+          img.className = 'choice-symbol';
+          img.src = symbolImages[symbolName].src;
+          img.alt = symbolName;
+          slot.appendChild(img);
+        }
       } else if (layout.A[reel] === a) {
         const img = document.createElement('img');
         img.className = 'choice-symbol';

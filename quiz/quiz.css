@@ -94,9 +94,11 @@ main {
   color: #ff5a5a;
 }
 
-/* タイトル画面。titleBG.pngは縦長（1024×1536）。centerのcoverだと横画面比の
-   コンテナでは左右がクロップされるため、containで画像全体を必ず見せる
-   （縦画面390×844相当を想定し、幅基準でレターボックスになる分はmin-heightで確保）。
+/* タイトル画面。titleBG.pngは縦長（1179×2556、スマホ縦画面相当）。
+   画面いっぱい（ステータスバー下〜画面下端）に敷くため、min-heightを
+   ビューポート高さ基準にしたうえでcoverではみ出し分をクロップする
+   （containだと箱の高さが画像のアスペクト比と揃わない限り上下左右に
+   地の色の余白が出てしまうため）。
    title1/title2は透過PNG。ロゴの動きは未確定のため、今回は静止で配置するのみ。 */
 
 .title-screen {
@@ -106,8 +108,10 @@ main {
   border-radius: 12px;
   overflow: hidden;
   margin-bottom: 16px;
-  min-height: 560px;
-  background: #12131a top center/contain no-repeat;
+  min-height: 560px; /* dvh未対応ブラウザ向けフォールバック */
+  min-height: calc(100vh - 24px); /* bodyのpadding(上下12px×2)ぶんを差し引く */
+  min-height: calc(100dvh - 24px);
+  background: #12131a center/cover no-repeat;
   background-image: url('images/titleBG.png');
 }
 
@@ -118,13 +122,11 @@ main {
 }
 
 .title-logo1 {
-  width: 85%;
-  max-width: 320px;
+  width: 75%;
 }
 
 .title-logo2 {
-  width: 90%;
-  max-width: 240px;
+  width: 95%;
   margin-top: 12px;
 }
 
@@ -199,6 +201,14 @@ main {
 .title-start-btn img {
   display: block;
   width: 100%;
+}
+
+/* 出題画面全体の背景（quizBG.png）。#appScreen はタイトル・リザルト以外の
+   全画面（タイマー・出題・選択肢・確認用UI等）を包む要素で、常時表示される。 */
+#appScreen {
+  background: #12131a center/cover no-repeat;
+  background-image: url('images/quizBG.png');
+  border-radius: 12px;
 }
 
 /* 出題（3x3 + 枠上枠下） */
@@ -328,18 +338,18 @@ main {
   grid-template-columns: repeat(2, 1fr);
 }
 
-/* 枠の高さは23コマ分（1コマ16px×23=368px）で固定。
-   初・易・並は下端を受付ライン（A=0）で固定し上端をmax(A)とするため、
-   ずらし選択肢でmax(A)が21を超えることがある（全9261出目×2色×ずらし
-   総当たりで実測した最大A=22、つまり0〜22の23行）。
-   中の格子は行数分しか描かないため、縦横中央に置いて余白を均等にする。 */
+/* 枠の高さは21コマ分（1コマ16px×21=336px）で固定。
+   applyShiftsWithFlip（quiz.js）が表示範囲(maxA-minA+1)を常に21コマ以内に
+   収めるため（全9261出目×2色×全ずらしパターンで実測済み、21コマ超は0件）、
+   これが表示され得る最大行数。中の格子は行数分しか描かないため、
+   縦横中央に置いて余白を均等にする。 */
 .choice-cell {
   background: #1c1d27;
   border: 2px solid #333;
   border-radius: 8px;
   padding: 6px;
   cursor: pointer;
-  height: 384px; /* 368px(格子) + padding 6px×2 + border 2px×2 */
+  height: 352px; /* 336px(格子) + padding 6px×2 + border 2px×2 */
   min-width: 0; /* グリッドアイテムの既定min-width:autoのままだと
     .choice-strip側のmin(100%,96px)が96px側で最小サイズと見なされ、
     枠(1fr)がそれ未満に縮まらずグリッドがはみ出す。0にして枠側の
@@ -368,6 +378,10 @@ main {
    帯自体の高さは行数分だけ（枠は埋めない）。 */
 .choice-strip {
   width: min(100%, 96px); /* 1コマ32px × 3列 が上限 */
+  min-width: 0; /* .choice-cell(flex)の子として既定min-width:autoのままだと、
+    孫の choice-symbol（symbol画像、実寸160×80px）のintrinsicサイズが
+    min-content契約として伝播し、widthのmin()指定を無視して96pxより
+    広がり枠からはみ出す。0にしてwidth指定どおりに縮められるようにする。 */
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 0;
@@ -377,6 +391,9 @@ main {
   border: 1px solid #4a4a58;
   box-sizing: border-box;
   aspect-ratio: 2 / 1;
+  min-width: 0; /* .choice-strip(grid)の子として既定min-width:autoのままだと、
+    子のchoice-symbol画像のintrinsicサイズ(160×80px)がこのセルの
+    最小幅として伝播し、1fr列がそれ未満に縮まらずグリッドがはみ出す。 */
 }
 
 .choice-symbol {
@@ -414,15 +431,18 @@ main {
 .result-screen {
   position: relative;
   text-align: center;
-  padding: 20px 16px 24px;
+  padding: 20px 16px 20px;
   border-radius: 12px;
   overflow: hidden;
+  min-height: 560px; /* dvh未対応ブラウザ向けフォールバック */
+  min-height: calc(100vh - 24px); /* bodyのpadding(上下12px×2)ぶんを差し引く */
+  min-height: calc(100dvh - 24px);
   background: #12131a center/cover no-repeat;
   background-image: url('images/titleBG.png');
 }
 
 .result-titles {
-  margin-bottom: 14px;
+  margin-bottom: 8px;
 }
 
 .result-title1,
@@ -441,14 +461,14 @@ main {
 .result-title2 {
   width: 50%;
   max-width: 190px;
-  margin-top: 8px;
+  margin-top: 4px;
 }
 
 .result-score-wrap {
   position: relative;
   width: 88%;
   max-width: 340px;
-  margin: 10px auto 14px;
+  margin: 6px auto 10px;
 }
 
 .result-score-daiza {
@@ -473,21 +493,21 @@ main {
 .result-detail {
   font-size: 15px;
   color: #fff;
-  margin: 0 0 6px;
+  margin: 0 0 4px;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
 }
 
 .result-meta {
   font-size: 13px;
   color: #ddd;
-  margin: 0 0 18px;
+  margin: 0 0 10px;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
 }
 
 .result-buttons {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .retry-btn,
