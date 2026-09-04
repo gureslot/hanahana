@@ -731,48 +731,33 @@ function showPreviewQuestion() {
 }
 
 // 初心者モードは30秒のみ：60秒ボタンを無効化し、60秒が選ばれていたら30秒に戻す
-function applyDifficultyTimeConstraint(diffKey) {
-  const time60Btn = document.querySelector('.time-btn[data-time="60"]');
-  const time30Btn = document.querySelector('.time-btn[data-time="30"]');
-  const isBeginner = diffKey === 'beginner';
+function applyTitleTimeConstraint() {
+  const time60Btn = document.querySelector('.title-time-btn[data-time="60"]');
+  const time30Btn = document.querySelector('.title-time-btn[data-time="30"]');
+  const isBeginner = currentDifficulty === 'beginner';
   if (time60Btn) time60Btn.disabled = isBeginner;
   if (isBeginner && currentTimeLimit === 60) {
     currentTimeLimit = 30;
-    document.querySelectorAll('.time-btn').forEach((b) => b.classList.remove('active'));
+    document.querySelectorAll('.title-time-btn').forEach((b) => b.classList.remove('active'));
     if (time30Btn) time30Btn.classList.add('active');
   }
 }
 
-// タイトル画面 → 確認用UIを含む本編画面への切り替え（未実装の難易度・時間選択UIの代わり）
-function showAppScreen() {
-  document.getElementById('titleScreen').hidden = true;
-  document.getElementById('appScreen').hidden = false;
-}
-
-function setupTitleScreen() {
-  document.getElementById('titleStartBtn').addEventListener('click', showAppScreen);
-}
-
-function setupUI() {
-  const buttons = document.querySelectorAll('.diff-btn');
-  buttons.forEach((btn) => {
+// タイトル画面：難易度・時間の選択（平面の横並び。画像はmix-blend-mode:screenで黒を抜く）
+function setupTitleSelectors() {
+  const diffButtons = document.querySelectorAll('.title-diff-btn');
+  diffButtons.forEach((btn) => {
     btn.addEventListener('click', () => {
-      buttons.forEach((b) => b.classList.remove('active'));
+      diffButtons.forEach((b) => b.classList.remove('active'));
       btn.classList.add('active');
       currentDifficulty = btn.dataset.diff;
-      applyDifficultyTimeConstraint(currentDifficulty);
-      // プレイ中・終了処理中は難易度切替でゲームを乱さない
-      if (gamePhase !== 'playing' && gamePhase !== 'ending') {
-        setPhase('preview');
-        newQuestion();
-      }
+      applyTitleTimeConstraint();
     });
   });
-  const activeBtn = document.querySelector('.diff-btn[data-diff="' + currentDifficulty + '"]');
-  if (activeBtn) activeBtn.classList.add('active');
-  applyDifficultyTimeConstraint(currentDifficulty);
+  const activeDiffBtn = document.querySelector('.title-diff-btn[data-diff="' + currentDifficulty + '"]');
+  if (activeDiffBtn) activeDiffBtn.classList.add('active');
 
-  const timeButtons = document.querySelectorAll('.time-btn');
+  const timeButtons = document.querySelectorAll('.title-time-btn');
   timeButtons.forEach((btn) => {
     btn.addEventListener('click', () => {
       if (btn.disabled) return;
@@ -781,17 +766,44 @@ function setupUI() {
       currentTimeLimit = parseInt(btn.dataset.time, 10);
     });
   });
-  const activeTimeBtn = document.querySelector('.time-btn[data-time="' + currentTimeLimit + '"]');
+  const activeTimeBtn = document.querySelector('.title-time-btn[data-time="' + currentTimeLimit + '"]');
   if (activeTimeBtn) activeTimeBtn.classList.add('active');
 
+  applyTitleTimeConstraint();
+}
+
+function showAppScreen() {
+  document.getElementById('titleScreen').hidden = true;
+  document.getElementById('appScreen').hidden = false;
+}
+
+// タイトルへ戻る：ゲーム画面をidleに戻したうえでタイトル画面を再表示する
+function backToTitle() {
+  backToSetup();
+  document.getElementById('appScreen').hidden = true;
+  document.getElementById('titleScreen').hidden = false;
+}
+
+function setupTitleScreen() {
+  document.getElementById('titleStartBtn').addEventListener('click', () => {
+    showAppScreen();
+    startGame();
+  });
+  setupTitleSelectors();
+}
+
+function setupUI() {
   document.getElementById('startBtn').addEventListener('click', startGame);
   document.getElementById('previewBtn').addEventListener('click', showPreviewQuestion);
-  document.getElementById('retryBtn').addEventListener('click', backToSetup);
-  // タイトル画面は未実装のため、タイトルへ戻るも現状は確認用UIへ戻る動作にする
-  document.getElementById('backToTitleBtn').addEventListener('click', backToSetup);
+  // もう一度：同じ難易度・時間で即再スタート
+  document.getElementById('retryBtn').addEventListener('click', startGame);
+  document.getElementById('backToTitleBtn').addEventListener('click', backToTitle);
 
   // 中断ボタン：押したら即リザルトへ（ゲーム画面にのみ表示。仕様上の動作は現状のまま）
   document.getElementById('abortBtn').addEventListener('click', abortGame);
+
+  // 確認用UI全体は ?debug=1 のときだけ表示する
+  document.getElementById('devControls').hidden = !debugMode;
 
   setupSoundUI();
 }

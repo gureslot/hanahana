@@ -94,9 +94,10 @@ main {
   color: #ff5a5a;
 }
 
-/* タイトル画面。titleBG.pngは縦長（1024×1536）なのでbackground:center/coverで
-   幅に合わせクロップする（result-screenと同じ考え方）。title1/title2は
-   黒背景・透過なし素材なのでmix-blend-mode:screenで黒を抜く。
+/* タイトル画面。titleBG.pngは縦長（1024×1536）。centerのcoverだと横画面比の
+   コンテナでは左右がクロップされるため、containで画像全体を必ず見せる
+   （縦画面390×844相当を想定し、幅基準でレターボックスになる分はmin-heightで確保）。
+   title1/title2は黒背景・透過なし素材なのでmix-blend-mode:screenで黒を抜く。
    ロゴの動きは未確定のため、今回は静止で配置するのみ。 */
 
 .title-screen {
@@ -106,7 +107,8 @@ main {
   border-radius: 12px;
   overflow: hidden;
   margin-bottom: 16px;
-  background: #12131a center/cover no-repeat;
+  min-height: 560px;
+  background: #12131a top center/contain no-repeat;
   background-image: url('images/titleBG.png');
 }
 
@@ -123,9 +125,68 @@ main {
 }
 
 .title-logo2 {
-  width: 60%;
-  max-width: 220px;
+  width: 65%;
+  max-width: 240px;
   margin-top: 12px;
+}
+
+/* 難易度・時間の選択（平面の横並び。円形3D回転UIは次段階）。
+   6枚とも黒背景素材なのでmix-blend-mode:screenで黒を抜く。
+   選択中は光らせて分かるようにする。 */
+
+.title-select-group {
+  position: relative;
+  margin-top: 28px;
+}
+
+.title-diff-buttons,
+.title-time-buttons {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.title-diff-buttons {
+  margin-bottom: 14px;
+}
+
+.title-diff-btn,
+.title-time-btn {
+  padding: 4px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 8px;
+  opacity: 0.55;
+  transition: opacity .15s ease, filter .15s ease;
+}
+
+.title-diff-btn img,
+.title-time-btn img {
+  display: block;
+  mix-blend-mode: screen;
+}
+
+.title-diff-btn img {
+  width: 62px;
+}
+
+.title-time-btn img {
+  width: 68px;
+}
+
+.title-diff-btn.active,
+.title-time-btn.active {
+  opacity: 1;
+  filter: drop-shadow(0 0 6px #fff44d) drop-shadow(0 0 12px #4a6cf7);
+}
+
+.title-time-btn:disabled {
+  opacity: 0.2;
+  cursor: not-allowed;
+  filter: none;
 }
 
 .title-start-btn {
@@ -462,56 +523,6 @@ main {
   font-size: 11px;
   color: #778;
   margin: 0 0 8px;
-}
-
-.difficulty-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-
-.diff-btn {
-  padding: 8px 18px;
-  border-radius: 8px;
-  border: 1px solid #555;
-  background: #22232e;
-  color: #eee;
-  font-size: 14px;
-}
-
-.diff-btn.active {
-  background: #4a6cf7;
-  border-color: #4a6cf7;
-  color: #fff;
-}
-
-.time-buttons {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-
-.time-btn {
-  padding: 8px 14px;
-  border-radius: 8px;
-  border: 1px solid #555;
-  background: #22232e;
-  color: #eee;
-  font-size: 14px;
-}
-
-.time-btn.active {
-  background: #4a6cf7;
-  border-color: #4a6cf7;
-  color: #fff;
-}
-
-.time-btn:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
 }
 
 .dev-action-buttons {
