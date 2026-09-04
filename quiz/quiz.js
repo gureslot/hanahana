@@ -55,8 +55,8 @@ let beginnerCandidates = []; // 初心者モードの出目候補（起動時に
 /* ---------- 音（仕様書 第6章：BGM・SE） ---------- */
 
 let audioCtx = null; // ユーザーのタップ（スタートボタン）でresume()する
-let seGainNode = null; // SE用のゲインノード（音量・ミュートをまとめて反映）
-let currentSeSource = null; // 再生中のSEソース（新しいSEを鳴らす前に止める＝1チャンネル）
+let seGainNode = null; // SE用のゲインノード（音量・ミュートをまとめて反映。正誤SE・end.wav共通）
+let currentJudgeSeSource = null; // 再生中の正誤SEソース（新しい方を鳴らす前に止める＝1チャンネル）
 let soundBuffers = { seikai: null, huseikai: null, end: null }; // decodeAudioData済みのAudioBuffer
 let bgmEl = null;
 let bgmVolume = 0.8;
@@ -120,8 +120,14 @@ function preloadImages() {
  * AudioContextは起動時に生成してdecodeAudioDataまで済ませる（生成・デコード自体は
  * ユーザー操作なしでも可能）。実際の再生をアンロックするresume()はスタートボタンの
  * タップで行う（モバイルの自動再生制限対策）。
- * wavの読み込み・デコードに失敗した場合はbufferがnullのままになり、playSe()が
- * 何もせず無視する＝無音になるだけでゲーム進行（判定・スコア）には影響しない。 */
+ * wavの読み込み・デコードに失敗した場合はbufferがnullのままになり、再生関数が
+ * 何もせず無視する＝無音になるだけでゲーム進行（判定・スコア）には影響しない。
+ *
+ * SEは2チャンネル構成：
+ * ・正誤SE（seikai/huseikai）は従来どおり1チャンネル（新しい方を鳴らす前に前を止める）。
+ * ・end.wav（残り3秒の笛）は正誤SEとは独立したチャンネルで鳴らし、一度鳴り始めたら
+ *   途中で止めない。正誤SEを鳴らしても end.wav の再生には影響しない（かき消されない）。
+ * どちらも同じ seGainNode を通すため、音量・ミュートは共通で反映される。 */
 
 async function loadSoundBuffer(url) {
   try {
@@ -158,20 +164,31 @@ async function preloadSounds() {
   soundBuffers.end = end;
 }
 
-// SEは1チャンネル：新しいSEを鳴らす前に再生中のSEを止める（正解SE等の重なりを防ぐ）
-function playSe(name) {
+// 正誤SE（seikai/huseikai）：1チャンネル。新しい方を鳴らす前に再生中のものを止める。
+function playJudgeSe(name) {
   if (!audioCtx || !seGainNode) return;
   const buffer = soundBuffers[name];
   if (!buffer) return; // 読み込み失敗時は無音のまま
-  if (currentSeSource) {
-    try { currentSeSource.stop(); } catch (err) { /* 既に停止済みなら無視 */ }
-    currentSeSource = null;
+  if (currentJudgeSeSource) {
+    try { currentJudgeSeSource.stop(); } catch (err) { /* 既に停止済みなら無視 */ }
+    currentJudgeSeSource = null;
   }
   const source = audioCtx.createBufferSource();
   source.buffer = buffer;
   source.connect(seGainNode);
   source.start();
-  currentSeSource = source;
+  currentJudgeSeSource = source;
+}
+
+// end.wav専用チャンネル：正誤SEとは独立に鳴らし、途中で止めない（最後まで鳴らしきる）。
+function playEndSe() {
+  if (!audioCtx || !seGainNode) return;
+  const buffer = soundBuffers.end;
+  if (!buffer) return; // 読み込み失敗時は無音のまま
+  const source = audioCtx.createBufferSource();
+  source.buffer = buffer;
+  source.connect(seGainNode);
+  source.start();
 }
 
 function applyBgmVolume() {
@@ -464,18 +481,13 @@ function renderStage(container, S) {
  * 表示範囲は全難易度共通でminA〜maxA（下端をA=0で固定する必要はない。
  * applyShiftsWithFlipにより常に21コマ以内に収まる）。
  *
- * 極（hard）は従来どおり：7以外の図柄は描かず格子線だけを引く。
- *
- * 初・易・並：密度を抑えるため、各リールの対象色の7（A_i）を中心に
- * 上下5コマ（計11コマ分）だけ実際の図柄を描き、それ以外の行は空セルにする。
- * 格子線は表示範囲の全行に引く（これは変えない）。
+ * 全難易度共通：7以外の図柄は描かず、各リールの対象色の7（A_i行）だけを
+ * 描く。それ以外の行は空セル。格子線は表示範囲の全行に引く。
  */
-const SYMBOL_VISIBLE_SPREAD = 5; // 対象の7から上下何コマまで図柄を描くか
 
-function renderChoiceStrip(container, choice, diffKey) {
+function renderChoiceStrip(container, choice) {
   const layout = choice.layout;
   const sevenSymbol = choice.color === 'pink' ? 'pink7' : 'white7';
-  const showFull = diffKey !== 'hard';
   const top = layout.maxA;
   const bottom = layout.minA;
   const rows = top - bottom + 1;
@@ -489,16 +501,7 @@ function renderChoiceStrip(container, choice, diffKey) {
     for (const reel of REEL_NAMES) {
       const slot = document.createElement('div');
       slot.className = 'choice-slot';
-      if (showFull) {
-        if (Math.abs(a - layout.A[reel]) <= SYMBOL_VISIBLE_SPREAD) {
-          const symbolName = symbolAt(reel, layout.refX[reel] + a);
-          const img = document.createElement('img');
-          img.className = 'choice-symbol';
-          img.src = symbolImages[symbolName].src;
-          img.alt = symbolName;
-          slot.appendChild(img);
-        }
-      } else if (layout.A[reel] === a) {
+      if (layout.A[reel] === a) {
         const img = document.createElement('img');
         img.className = 'choice-symbol';
         img.src = symbolImages[sevenSymbol].src;
@@ -549,7 +552,7 @@ function renderChoices(container, choices, diffKey) {
   choices.forEach((choice) => {
     const cell = document.createElement('div');
     cell.className = 'choice-cell';
-    renderChoiceStrip(cell, choice, diffKey);
+    renderChoiceStrip(cell, choice);
     cell.addEventListener('click', () => onChoiceClick(choice));
     choice._cell = cell;
     container.appendChild(cell);
@@ -567,7 +570,7 @@ function onChoiceClick(choice) {
   if (!choice.isCorrect) choice._cell.classList.add('wrong');
 
   showResult(choice.isCorrect);
-  playSe(choice.isCorrect ? 'seikai' : 'huseikai');
+  playJudgeSe(choice.isCorrect ? 'seikai' : 'huseikai');
 
   if (gamePhase === 'playing') {
     if (choice.isCorrect) correctCount++; else wrongCount++;
@@ -673,7 +676,7 @@ function timerTick(now) {
   // end.wav：残り3.00秒の時点で1回だけ再生を開始する
   if (!endSePlayed && remainingMs <= 3000) {
     endSePlayed = true;
-    playSe('end');
+    playEndSe();
   }
 
   if (remainingMs <= 0) {

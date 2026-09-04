@@ -213,8 +213,10 @@ main {
 
 /* 出題（3x3 + 枠上枠下） */
 
+/* 背景（quizBG.png、#appScreen）を見せるため透明にする。格子の中（.stage-cell・
+   .number-badge）は個別に不透明な背景を持っているので、この枠の塗りだけがなくなる。 */
 .stage-wrap {
-  background: #1c1d27;
+  background: transparent;
   border-radius: 12px;
   padding: 8px;
   margin-bottom: 16px;
@@ -344,7 +346,10 @@ main {
    これが表示され得る最大行数。中の格子は行数分しか描かないため、
    縦横中央に置いて余白を均等にする。 */
 .choice-cell {
-  background: #1c1d27;
+  /* 背景（quizBG.png、#appScreen）を見せるため透明にする。格子の中（.choice-slot）は
+     個別に不透明な背景を持っているので、この枠の塗り（padding分の余白）だけがなくなる。
+     枠線（border）は残す。 */
+  background: transparent;
   border: 2px solid #333;
   border-radius: 8px;
   padding: 6px;
@@ -388,6 +393,7 @@ main {
 }
 
 .choice-slot {
+  background: #1c1d27; /* .choice-cellが透明になったぶん、格子の中の塗りはここで持つ */
   border: 1px solid #4a4a58;
   box-sizing: border-box;
   aspect-ratio: 2 / 1;
@@ -451,16 +457,14 @@ main {
   margin: 0 auto;
 }
 
-/* title1（ハナハナ）を主・title2（最速目押しクイズ）を従とする。
-   title1を大きく、title2はひとまわり小さく下に添える。 */
+/* title1・title2ともタイトル画面（.title-logo1/.title-logo2）と同じ比率に揃える。 */
 .result-title1 {
   width: 75%;
   max-width: 260px;
 }
 
 .result-title2 {
-  width: 50%;
-  max-width: 190px;
+  width: 95%;
   margin-top: 4px;
 }
 
