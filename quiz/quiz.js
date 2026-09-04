@@ -49,8 +49,9 @@ let endingTimeoutId = null; // 時間切れ後の3秒静止用
 let endSePlayed = false; // end.wav（残り3秒の笛）を1ゲームにつき1回だけ鳴らすためのフラグ
 let correctCount = 0;
 let wrongCount = 0;
-let records = []; // 1問ごとの出題・回答記録（振り返り用。今回は蓄積のみ）
+let records = []; // 1問ごとの出題・回答記録（振り返り画面で使用）
 let beginnerCandidates = []; // 初心者モードの出目候補（起動時に一度だけ生成）
+let reviewIndex = 0; // 振り返り画面で現在表示中の問題番号（0始まり、records基準）
 
 /* ---------- 音（仕様書 第6章：BGM・SE） ---------- */
 
@@ -233,6 +234,10 @@ function symbolAt(reel, num) {
 
 function randNum() {
   return Math.floor(Math.random() * 21) + 1;
+}
+
+function colorLabel(color) {
+  return color === 'pink' ? 'ピンク7' : '白7';
 }
 
 /* ---------- 出題生成・判定ロジック（仕様書 第5章） ---------- */
@@ -516,6 +521,46 @@ function renderChoiceStrip(container, choice) {
   container.appendChild(grid);
 }
 
+// A（各リールの受付ラインからの行数）からminA/maxAを求め、renderChoiceStrip()に
+// そのまま渡せる最小限のlayoutを組み立てる（振り返り画面：記録済みのAだけから
+// 「答えた時と同じ表示」を再現するために使う）。
+function layoutFromA(A) {
+  return {
+    A,
+    minA: Math.min(A.left, A.middle, A.right),
+    maxA: Math.max(A.left, A.middle, A.right),
+  };
+}
+
+/* ---------- 描画：振り返り画面の「正解」側（21コマ全表示） ----------
+ * 下端を受付ライン（A=0）に固定し、21コマ分（0〜20）すべてを表示する。
+ * 7以外も含めてリール配列どおりの図柄を描く（判定ロジックは使わない、表示のみ）。
+ * 正解の形（isCorrectForm）は常にo_i=0なので、refX=Xのまま。 */
+function renderFullReelStrip(container, X) {
+  const rows = 21;
+  const grid = document.createElement('div');
+  grid.className = 'choice-strip';
+  grid.style.gridTemplateRows = 'repeat(' + rows + ', auto)';
+
+  for (let j = 0; j < rows; j++) {
+    const a = 20 - j; // 上端20〜下端0（受付ライン）
+    for (const reel of REEL_NAMES) {
+      const slot = document.createElement('div');
+      slot.className = 'choice-slot';
+      const symbolName = symbolAt(reel, X[reel] + a);
+      const img = document.createElement('img');
+      img.className = 'choice-symbol';
+      img.src = symbolImages[symbolName].src;
+      img.alt = symbolName;
+      slot.appendChild(img);
+      grid.appendChild(slot);
+    }
+  }
+
+  container.innerHTML = '';
+  container.appendChild(grid);
+}
+
 /* ---------- 出題の組み立て・UI ---------- */
 
 let advanceTimer = null;
@@ -616,13 +661,15 @@ function clearResult() {
 function setPhase(newPhase) {
   gamePhase = newPhase;
   const isResult = newPhase === 'result';
+  const isReview = newPhase === 'review';
 
   // .stage-wrap / .choices-wrap は display:flex 等をCSSで明示しているため、
   // hidden属性ではなくインラインstyleで確実に切り替える。
-  document.querySelector('.stage-wrap').style.display = isResult ? 'none' : '';
-  document.querySelector('.choices-wrap').style.display = isResult ? 'none' : '';
-  document.getElementById('resultMessage').hidden = isResult;
+  document.querySelector('.stage-wrap').style.display = (isResult || isReview) ? 'none' : '';
+  document.querySelector('.choices-wrap').style.display = (isResult || isReview) ? 'none' : '';
+  document.getElementById('resultMessage').hidden = isResult || isReview;
   document.getElementById('resultScreen').hidden = !isResult;
+  document.getElementById('reviewScreen').hidden = !isReview;
   const showGameChrome = newPhase === 'playing' || newPhase === 'ending';
   document.getElementById('timerDisplay').hidden = !showGameChrome;
   document.getElementById('gameControls').hidden = !showGameChrome;
@@ -753,6 +800,8 @@ function renderGameResult() {
   document.getElementById('resultWrong').textContent = String(wrongCount);
   document.getElementById('resultDiffLabel').textContent = DIFFICULTIES[currentDifficulty].label;
   document.getElementById('resultTimeLabel').textContent = String(currentTimeLimit);
+  // 1問も回答せず終わった場合（即中断など）は振り返る記録が無いのでボタンを無効化する
+  document.getElementById('reviewBtn').disabled = records.length === 0;
 }
 
 function backToSetup() {
@@ -761,8 +810,75 @@ function backToSetup() {
   setPhase('idle');
   document.getElementById('stage').innerHTML = '';
   document.getElementById('choices').innerHTML = '';
+  document.getElementById('reviewStage').innerHTML = '';
+  document.getElementById('reviewPickedCell').innerHTML = '';
+  document.getElementById('reviewCorrectCell').innerHTML = '';
   clearResult();
   currentQuestion = null;
+}
+
+/* ---------- 振り返り画面（リザルトの「答え合わせ」から遷移） ----------
+ * records（第6章：1問ごとの出題・回答記録）を1問ずつ表示する。判定ロジックは
+ * 使わず、記録済みの値とcomputeTiming(S)（表示用の再計算。判定結果には影響しない）
+ * だけで「出題」「あなたの回答」「正解」を再現する。 */
+
+function openReview() {
+  if (records.length === 0) return; // 記録が無ければ何もしない（reviewBtnはdisabled済み）
+  reviewIndex = 0;
+  setPhase('review');
+  renderReviewQuestion();
+}
+
+function renderReviewQuestion() {
+  const rec = records[reviewIndex];
+  document.getElementById('reviewIndexLabel').textContent = String(reviewIndex + 1);
+  document.getElementById('reviewTotalLabel').textContent = String(records.length);
+
+  renderStage(document.getElementById('reviewStage'), rec.S);
+
+  const pickedChoice = rec.choices[rec.pickedIndex];
+  // 正解表示は、答えが正解だった場合は「実際に選んだ色」をそのまま使う
+  // （tie＝両色正解のとき、選んだのと違う色を「正解」として出すと紛らわしいため）。
+  // 誤答だった場合のみ、記録の中から「正しい形かつ正解」の選択肢を探す。
+  const correctChoice = pickedChoice.isCorrect
+    ? pickedChoice
+    : (rec.choices.find((c) => c.isCorrectForm && c.isCorrect) || pickedChoice);
+
+  const pickedCellEl = document.getElementById('reviewPickedCell');
+  pickedCellEl.classList.remove('correct', 'wrong');
+  pickedCellEl.classList.add(rec.wasCorrect ? 'correct' : 'wrong');
+  renderChoiceStrip(pickedCellEl, { color: pickedChoice.color, layout: layoutFromA(pickedChoice.A) });
+  document.getElementById('reviewPickedLabel').textContent = 'あなたの回答（' + colorLabel(pickedChoice.color) + '）';
+
+  const correctCellEl = document.getElementById('reviewCorrectCell');
+  correctCellEl.classList.remove('correct', 'wrong');
+  correctCellEl.classList.add('correct');
+  const X = computeTiming(rec.S).X; // 表示専用の再計算（判定ロジックには使わない）
+  renderFullReelStrip(correctCellEl, X);
+  document.getElementById('reviewCorrectLabel').textContent = '正解（' + colorLabel(correctChoice.color) + '）';
+
+  const judgeEl = document.getElementById('reviewJudge');
+  judgeEl.textContent = rec.wasCorrect ? '正解' : '不正解';
+  judgeEl.className = 'review-judge ' + (rec.wasCorrect ? 'correct' : 'wrong');
+
+  document.getElementById('reviewPrevBtn').disabled = reviewIndex === 0;
+  document.getElementById('reviewNextBtn').disabled = reviewIndex === records.length - 1;
+}
+
+function reviewGoPrev() {
+  if (reviewIndex <= 0) return;
+  reviewIndex--;
+  renderReviewQuestion();
+}
+
+function reviewGoNext() {
+  if (reviewIndex >= records.length - 1) return;
+  reviewIndex++;
+  renderReviewQuestion();
+}
+
+function backToResultFromReview() {
+  setPhase('result');
 }
 
 // 確認用「1問だけ表示」：タイマーなしで出題と判定だけ見る（従来の動作）
@@ -841,6 +957,15 @@ function setupUI() {
   document.getElementById('retryBtn').addEventListener('click', startGame);
   document.getElementById('backToTitleBtn').addEventListener('click', backToTitle);
 
+  // リザルト：答え合わせ（振り返り画面へ）／Xシェア（今回は配置のみ・押しても何もしない）
+  document.getElementById('reviewBtn').addEventListener('click', openReview);
+  document.getElementById('shareBtn').addEventListener('click', () => {});
+
+  // 振り返り画面：前後送り・リザルトへ戻る
+  document.getElementById('reviewPrevBtn').addEventListener('click', reviewGoPrev);
+  document.getElementById('reviewNextBtn').addEventListener('click', reviewGoNext);
+  document.getElementById('reviewBackBtn').addEventListener('click', backToResultFromReview);
+
   // 中断ボタン：押したら即リザルトへ（ゲーム画面にのみ表示。仕様上の動作は現状のまま）
   document.getElementById('abortBtn').addEventListener('click', abortGame);
 
@@ -892,7 +1017,6 @@ function renderDebugPanel(q) {
 
   const { S, timing, pinkCalc, whiteCalc, correctColors, choices, diffKey } = q;
   const fmt = (o) => '左' + o.left + ' 中' + o.middle + ' 右' + o.right;
-  const colorLabel = (c) => (c === 'pink' ? 'ピンク7' : '白7');
 
   const lines = [];
   lines.push('=== デバッグ情報（難易度: ' + DIFFICULTIES[diffKey].label + '） ===');

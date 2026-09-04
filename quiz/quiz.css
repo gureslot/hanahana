@@ -27,7 +27,8 @@ main {
 .title-screen,
 .stage-wrap,
 .choices-wrap,
-.result-screen {
+.result-screen,
+.review-screen {
   width: 100%;
   margin-left: 0;
   margin-right: 0;
@@ -494,17 +495,55 @@ main {
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
 }
 
+/* 正解誤答／難易度秒数の左右にできるスペースへ「答え合わせ」「Xシェア」ボタンを置く。
+   中央のテキスト(result-stats)はそのまま、両サイドにテキストボタンを配置するだけ。
+   画像素材が無いのでテキストボタン。Xシェアは配置のみで押しても何もしない。 */
+.result-stats-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 10px;
+}
+
+.result-stats {
+  flex: 1;
+  min-width: 0;
+}
+
+.result-side-btn {
+  flex: 0 0 auto;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #666;
+  background: rgba(20, 20, 28, 0.6);
+  color: #eee;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.review-entry-btn {
+  border-color: #4a6cf7;
+  color: #9db2ff;
+}
+
+.result-side-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 .result-detail {
   font-size: 15px;
   color: #fff;
-  margin: 0 0 4px;
+  margin: 0 0 2px;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
 }
 
 .result-meta {
   font-size: 13px;
   color: #ddd;
-  margin: 0 0 10px;
+  margin: 0;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
 }
 
@@ -530,6 +569,105 @@ main {
 .back-title-btn img {
   display: block;
   width: 100%;
+}
+
+/* 振り返り画面（リザルトの「答え合わせ」から遷移する静止画面。1ページ1問）。
+   出題（.review-stage-wrap内は.stage-wrapと同じ見た目）→ 正誤表示 →
+   「あなたの回答」「正解」を横並びで表示 → 前後送り・リザルトへ戻る、の構成。
+   choice-cell/choice-strip/choice-slotのスタイルをそのまま流用して見た目を揃える。 */
+
+.review-position {
+  text-align: center;
+  font-size: 13px;
+  color: #ccd;
+  margin: 0 0 8px;
+}
+
+.review-stage-wrap {
+  background: transparent;
+  border-radius: 12px;
+  padding: 8px;
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: center;
+}
+
+.review-judge {
+  text-align: center;
+  font-size: 16px;
+  font-weight: bold;
+  margin: 0 0 10px;
+}
+
+.review-judge.correct {
+  color: #3ddc84;
+}
+
+.review-judge.wrong {
+  color: #ff5a5a;
+}
+
+.review-choices {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.review-choice-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.review-choice-label {
+  text-align: center;
+  font-size: 12px;
+  color: #ccd;
+  margin: 0 0 6px;
+}
+
+/* .choice-cellを流用（透明背景・枠線・21コマぶんの高さ・中央寄せ）。
+   クリック対象ではないのでカーソルだけ上書きする。 */
+.review-panel {
+  cursor: default;
+  width: 100%;
+}
+
+.review-nav {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.review-nav-btn {
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #555;
+  background: #22232e;
+  color: #eee;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.review-nav-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.review-back-btn {
+  display: block;
+  width: 100%;
+  max-width: 260px;
+  margin: 0 auto;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #555;
+  background: #22232e;
+  color: #eee;
+  font-size: 14px;
+  cursor: pointer;
 }
 
 /* 確認用UI（本番では出ない。難易度切替・中断ボタンを最下部にまとめる） */

@@ -67,12 +67,41 @@
       <img src="images/scoredaiza.png" alt="" class="result-score-daiza">
       <span id="resultScore" class="result-score-value">0</span>
     </div>
-    <p class="result-detail">正解 <span id="resultCorrect">0</span>　誤答 <span id="resultWrong">0</span></p>
-    <p class="result-meta"><span id="resultDiffLabel">-</span>／<span id="resultTimeLabel">-</span>秒</p>
+    <div class="result-stats-row">
+      <button type="button" id="reviewBtn" class="result-side-btn review-entry-btn">答え合わせ</button>
+      <div class="result-stats">
+        <p class="result-detail">正解 <span id="resultCorrect">0</span>　誤答 <span id="resultWrong">0</span></p>
+        <p class="result-meta"><span id="resultDiffLabel">-</span>／<span id="resultTimeLabel">-</span>秒</p>
+      </div>
+      <button type="button" id="shareBtn" class="result-side-btn share-btn">Xでシェア</button>
+    </div>
     <div class="result-buttons">
       <button type="button" id="retryBtn" class="retry-btn"><img src="images/retry.png" alt="もう一度"></button>
       <button type="button" id="backToTitleBtn" class="back-title-btn"><img src="images/title.png" alt="タイトルへ戻る"></button>
     </div>
+  </section>
+
+  <section id="reviewScreen" class="review-screen" hidden>
+    <p class="review-position"><span id="reviewIndexLabel">1</span>問目 / 全<span id="reviewTotalLabel">0</span>問</p>
+    <div class="review-stage-wrap">
+      <div id="reviewStage"></div>
+    </div>
+    <p id="reviewJudge" class="review-judge"></p>
+    <div class="review-choices">
+      <div class="review-choice-col">
+        <p id="reviewPickedLabel" class="review-choice-label">あなたの回答</p>
+        <div id="reviewPickedCell" class="choice-cell review-panel"></div>
+      </div>
+      <div class="review-choice-col">
+        <p id="reviewCorrectLabel" class="review-choice-label">正解</p>
+        <div id="reviewCorrectCell" class="choice-cell review-panel"></div>
+      </div>
+    </div>
+    <div class="review-nav">
+      <button type="button" id="reviewPrevBtn" class="review-nav-btn">◀ 前へ</button>
+      <button type="button" id="reviewNextBtn" class="review-nav-btn">次へ ▶</button>
+    </div>
+    <button type="button" id="reviewBackBtn" class="review-back-btn">リザルトへ戻る</button>
   </section>
 
   <section id="debugPanel" class="debug-panel" hidden></section>
