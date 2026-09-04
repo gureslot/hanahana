@@ -1516,44 +1516,57 @@ function showPreviewQuestion() {
  * 各リングは { items, selected, displaySelected, rafId, cardEls, onChange,
  * dragStartX, dragAccum, dragged } を持つ状態オブジェクト。
  * items[i] = { key, imgSrc, alt, disabled }。
- * selected：確定している選択（整数、ゲーム状態に反映される）。
- * displaySelected：表示用の実数。rAFでselectedへ滑らかに近づけ、毎フレーム
- * この値からθ→x,y,scaleを計算し直す（＝位置のx,y自体を直線補間するのではなく、
- * 角度を補間してから毎回x,y,scaleを算出する。2枚リングでθ=-90°/+90°の
- * 間をcosの0同士で結んで直線移動＝縦に往復するだけになる問題を避けられる）。
+ * selected：確定している選択。0〜(枚数-1)に丸めない「累積する整数」で持つ
+ * （左ドラッグ／▶で+1、右ドラッグ／◀で-1）。カードのインデックス解決や
+ * 「今どれが選択中か」の判定は ringCanonicalIndex()（((selected%n)+n)%n）で
+ * 行う。selectedを毎回0〜n-1に丸めてしまうと、たとえば2枚リングで
+ * 0→1のときは常に+1、1→0のときは常に-1の回転にしかならず、ドラッグの
+ * 向きが反映されない（左右どちらにドラッグしても同じ動きになる）。
+ * displaySelected：表示用の実数。rAFでselected（累積値）へ滑らかに近づけ、
+ * 毎フレームこの値からθ→x,y,scaleを計算し直す（＝位置のx,yを直線補間する
+ * のではなく、角度を累積値のまま補間してから毎回x,y,scaleを算出する）。
  * カード自体は3D回転させない（画像=文字は常に正面向きのまま）。 */
 
 const RING_ANIM_EASE = 0.25; // 毎フレーム、残り角度差のこの割合ぶん近づける
 const RING_ANIM_EPS = 0.001; // これ未満になったら到達とみなしてrAFを止める
+
+function ringCanonicalIndex(index, count) {
+  return ((index % count) + count) % count;
+}
 
 function ringTheta(index, displaySelected, count) {
   // 度。0 = 正面（選択中）。baseAngle=-90°で正面をy軸上の「手前寄り」に置く。
   return (index - displaySelected) * (360 / count) - 90;
 }
 
-// 隣接カードへ進める。disabled（60秒など）はスキップし、行き場が無ければ動かない
-// （＝「回しても止まらない」の実装）。
+// 隣接カードへ進める（累積値のまま±1し、disabledな正準位置はスキップする）。
+// 行き場が無ければ動かない（＝「回しても止まらない」の実装）。
 function ringStepIndex(state, dir) {
   const n = state.items.length;
   let next = state.selected;
   for (let tries = 0; tries < n; tries++) {
-    next = ((next + dir) % n + n) % n;
-    if (!state.items[next].disabled) break;
+    next += dir;
+    if (!state.items[ringCanonicalIndex(next, n)].disabled) break;
   }
   return next;
 }
 
-// target-currentの差を、周回を跨ぐ最短経路になるよう[-count/2, count/2]に畳み込む。
-function wrapRingDiff(diff, count) {
-  let d = diff % count;
-  if (d > count / 2) d -= count;
-  if (d < -count / 2) d += count;
-  return d;
+// state.selectedの現在値から見て、canonicalTarget（0〜n-1）に最短距離で
+// 到達する累積値を返す。ユーザー操作（advanceRing/ドラッグ）では使わない
+// （そちらは向きをそのまま反映したいため）。初心者⇔他難易度の自動切替のような
+// プログラム側の強制スナップだけに使う、最短経路での見た目にするための補助。
+function ringNearestAccumulatorFor(state, canonicalTarget) {
+  const n = state.items.length;
+  const currentCanonical = ringCanonicalIndex(state.selected, n);
+  let delta = ((canonicalTarget - currentCanonical) % n + n) % n;
+  if (delta > n / 2) delta -= n;
+  return state.selected + delta;
 }
 
 // 現在のdisplaySelected（実数）を使って全カードのtransform/filterを反映する。
 function applyRingCardStyles(state) {
   const n = state.items.length;
+  const selectedCanonical = ringCanonicalIndex(state.selected, n);
   state.cardEls.forEach((card, i) => {
     const rad = ringTheta(i, state.displaySelected, n) * Math.PI / 180;
     const rawX = RING_RX * Math.cos(rad);
@@ -1567,7 +1580,7 @@ function applyRingCardStyles(state) {
     card.style.zIndex = String(Math.round(scale * 100));
 
     const item = state.items[i];
-    const isSelected = i === state.selected;
+    const isSelected = i === selectedCanonical;
     let brightness = RING_BRIGHTNESS_UNSELECTED;
     if (item.disabled) brightness = RING_BRIGHTNESS_DISABLED;
     else if (isSelected) brightness = RING_BRIGHTNESS_SELECTED;
@@ -1579,10 +1592,11 @@ function applyRingCardStyles(state) {
 }
 
 function stepRingAnimation(state) {
-  const n = state.items.length;
-  const diff = wrapRingDiff(state.selected - state.displaySelected, n);
+  // 累積値どうしの差をそのまま使う（最短経路への畳み込みはしない）。
+  // これにより、ユーザーが回した向きどおりにカードが楕円上を移動する。
+  const diff = state.selected - state.displaySelected;
   if (Math.abs(diff) < RING_ANIM_EPS) {
-    state.displaySelected = state.selected; // 最短経路を辿った結果ズレていても正準値へ寄せる
+    state.displaySelected = state.selected;
     applyRingCardStyles(state);
     state.rafId = null;
     return;
@@ -1592,13 +1606,12 @@ function stepRingAnimation(state) {
   state.rafId = requestAnimationFrame(() => stepRingAnimation(state));
 }
 
-// selected（目標）へdisplaySelectedをrAFで近づけるアニメーションを（未開始なら）開始する。
-// 既にアニメーション中なら何もしない：ループ側が毎フレーム最新のselectedを見るため、
-// 連続してselectedが変わっても自然に追従する。
+// selected（目標の累積値）へdisplaySelectedをrAFで近づけるアニメーションを
+// （未開始なら）開始する。既にアニメーション中なら何もしない：ループ側が
+// 毎フレーム最新のselectedを見るため、連続してselectedが変わっても自然に追従する。
 function renderRing(state) {
   if (state.rafId) return;
-  const n = state.items.length;
-  const diff = wrapRingDiff(state.selected - state.displaySelected, n);
+  const diff = state.selected - state.displaySelected;
   if (Math.abs(diff) < RING_ANIM_EPS) {
     applyRingCardStyles(state);
     return;
@@ -1608,12 +1621,14 @@ function renderRing(state) {
 
 // 矢印ボタン用：1枚ぶん進める。動けなければ何もしない（音も鳴らさない）。
 function advanceRing(state, dir) {
+  const n = state.items.length;
   const next = ringStepIndex(state, dir);
-  if (next === state.selected) return;
+  if (ringCanonicalIndex(next, n) === ringCanonicalIndex(state.selected, n)) return;
   state.selected = next;
   renderRing(state);
   playRingTickSe();
-  state.onChange(state.items[next].key, next);
+  const canonicalIndex = ringCanonicalIndex(next, n);
+  state.onChange(state.items[canonicalIndex].key, canonicalIndex);
 }
 
 // スワイプ：ドラッグ量をRING_STEP_PXぶん消費するたびに1枚ずつ進める
@@ -1631,6 +1646,7 @@ function setupRingDrag(trackEl, state) {
 
   trackEl.addEventListener('pointermove', (e) => {
     if (!dragging) return;
+    const n = state.items.length;
     const dx = e.clientX - state.dragStartX;
     state.dragStartX = e.clientX;
     state.dragAccum += dx;
@@ -1640,14 +1656,15 @@ function setupRingDrag(trackEl, state) {
       const sign = state.dragAccum > 0 ? 1 : -1;
       const dir = sign > 0 ? -1 : 1; // 右へドラッグ(正)なら前へ、左(負)なら次へ
       const next = ringStepIndex(state, dir);
-      if (next === state.selected) {
+      if (ringCanonicalIndex(next, n) === ringCanonicalIndex(state.selected, n)) {
         state.dragAccum = 0; // これ以上動けない（disabledでブロック）
         break;
       }
       state.selected = next;
       renderRing(state);
       playRingTickSe();
-      state.onChange(state.items[next].key, next);
+      const canonicalIndex = ringCanonicalIndex(next, n);
+      state.onChange(state.items[canonicalIndex].key, canonicalIndex);
       state.dragAccum -= sign * RING_STEP_PX;
     }
   });
@@ -1695,6 +1712,8 @@ function createRing(trackEl, items, initialIndex, onChange) {
 // ここでは書き換えない：初心者を抜けたときにこの値へ戻すため。
 // 初心者以外に切り替わった際、現在値がlastManualTimeLimitとズレていれば
 // （＝初心者中に30へ強制されていたなら）記憶していた値に戻す。
+// どちらもユーザーがドラッグしたわけではない自動スナップなので、
+// ringNearestAccumulatorFor()で最短経路の見た目にする。
 function applyTitleTimeConstraint() {
   if (!timeRingState) return;
   const isBeginner = currentDifficulty === 'beginner';
@@ -1705,11 +1724,12 @@ function applyTitleTimeConstraint() {
   if (isBeginner) {
     if (currentTimeLimit === 60) {
       currentTimeLimit = 30;
-      timeRingState.selected = thirtyIndex;
+      timeRingState.selected = ringNearestAccumulatorFor(timeRingState, thirtyIndex);
     }
   } else if (currentTimeLimit !== lastManualTimeLimit) {
     currentTimeLimit = lastManualTimeLimit;
-    timeRingState.selected = RING_TIME_VALUES.indexOf(lastManualTimeLimit);
+    const targetIndex = RING_TIME_VALUES.indexOf(lastManualTimeLimit);
+    timeRingState.selected = ringNearestAccumulatorFor(timeRingState, targetIndex);
   }
 
   renderRing(timeRingState);

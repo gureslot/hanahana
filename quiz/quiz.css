@@ -135,19 +135,71 @@ main {
   background-image: url('images/titleBG.png');
 }
 
-.title-logo1,
-.title-logo2 {
+/* ロゴの光の演出：帯（::after、斜めの半透明白グラデーション）をtranslateXで
+   左から右へ通過させる。まず素直に半透明の白帯を重ねる方式（mix-blend-mode
+   不使用）で実装。position:relative + overflow:hiddenだけではz-indexを
+   指定しない限り新しいスタッキングコンテキストは生まれないため、
+   別セクション（.title-select-group内のリングUI）のz-indexには影響しない
+   （filterやz-index付きpositionは付けていない）。
+   width/marginはimgからこのwrapに移した（overflow:hiddenでクリップする
+   範囲をロゴの実寸に合わせるため）。 */
+.title-logo-wrap {
+  position: relative;
   display: block;
   margin: 0 auto;
+  overflow: hidden;
 }
 
-.title-logo1 {
+.title-logo1-wrap {
   width: 75%;
 }
 
-.title-logo2 {
+.title-logo2-wrap {
   width: 95%;
   margin-top: 12px;
+}
+
+.title-logo1,
+.title-logo2 {
+  display: block;
+  width: 100%;
+}
+
+.title-logo-wrap::after {
+  content: '';
+  position: absolute;
+  top: -20%;
+  left: -50%; /* 帯（幅40%）が完全に隠れる開始位置（右端が-10%＝ロゴの外） */
+  width: 40%;
+  height: 140%;
+  background: linear-gradient(
+    75deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.65) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  pointer-events: none;
+  animation: title-logo-shine 4.5s ease-in-out infinite;
+}
+
+.title-logo2-wrap::after {
+  animation-delay: 1.5s; /* title1と少しずらして同時に動きすぎないようにする */
+}
+
+/* translateXの%は要素自身の幅(40%)基準。0%で開始位置(左端-50%)のまま静止、
+   18%(4.5s中の約0.8秒)でtranslateX(380%)＝左端が+102%まで移動＝完全に
+   ロゴの右外へ抜ける。そこで100%まで静止し続け、ループの先頭で瞬時に
+   開始位置へ戻る＝「数秒に1回、光がさっと通過する」動きになる。 */
+@keyframes title-logo-shine {
+  0% {
+    transform: translateX(0%);
+  }
+  18% {
+    transform: translateX(380%);
+  }
+  100% {
+    transform: translateX(380%);
+  }
 }
 
 /* 難易度・時間の選択：リングUI（楕円軌道、奥行きは大きさで表現）。
