@@ -1844,4 +1844,42 @@ function renderDebugPanel(q) {
   panel.textContent = lines.join('\n');
 }
 
+/* ---------- ダブルタップズームの抑止（JS版） ----------
+ * html, body に touch-action: manipulation を指定しても、実機では画面下部
+ * （はみ出してスクロールした先の領域など）でダブルタップズームが効いてしまう
+ * ケースがあるため、JS側でも touchend を見て止める。
+ * 直前のtouchendから300ms未満・かつタップ位置が前回から近い場合のみ
+ * preventDefault()する（＝ダブルタップとみなせる場合だけ）。
+ * ピンチズームは残す：touchend時点で他の指がまだ残っている（e.touches.length>0）
+ * 場合や、直前に複数指が絡んでいた場合は対象外にする。 */
+(function setupDoubleTapZoomGuard() {
+  const DOUBLE_TAP_MS = 300;
+  const DOUBLE_TAP_DIST_PX = 30; // これ以上位置が離れていたら別タップとみなす（誤爆防止）
+  let lastTapTime = 0;
+  let lastTapX = 0;
+  let lastTapY = 0;
+
+  document.addEventListener('touchend', (e) => {
+    // 他の指がまだ画面に残っている（ピンチ操作の途中など）は対象外にする
+    if (e.touches.length > 0) return;
+    if (!e.changedTouches || e.changedTouches.length !== 1) return;
+
+    const touch = e.changedTouches[0];
+    const now = Date.now();
+    const dx = touch.clientX - lastTapX;
+    const dy = touch.clientY - lastTapY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    if (lastTapTime && now - lastTapTime < DOUBLE_TAP_MS && dist < DOUBLE_TAP_DIST_PX) {
+      e.preventDefault();
+      lastTapTime = 0; // 3回連続タップ等で誤ってまた二重判定しないようリセット
+      return;
+    }
+
+    lastTapTime = now;
+    lastTapX = touch.clientX;
+    lastTapY = touch.clientY;
+  }, { passive: false });
+})();
+
 document.addEventListener('DOMContentLoaded', init);

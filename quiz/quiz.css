@@ -111,24 +111,27 @@ main {
   color: #ff5a5a;
 }
 
-/* タイトル画面。titleBG.pngは縦長（1179×2556、スマホ縦画面相当）。
-   画面いっぱい（ステータスバー下〜画面下端）に敷くため、min-heightを
-   ビューポート高さ基準にしたうえでcoverではみ出し分をクロップする
-   （containだと箱の高さが画像のアスペクト比と揃わない限り上下左右に
-   地の色の余白が出てしまうため）。
+/* タイトル画面。titleBG.pngは縦長（1179×2556、スマホの物理画面フルサイズの
+   スクリーンショット相当）。実際の表示領域（100dvhの箱）はステータスバーの
+   ぶんだけ物理画面より低いため、画像をそのままcoverで敷くと画像側が
+   「余分に長い」状態になり、はみ出したぶんがクロップされる。
+   containにすると左右に地の色の余白が出て中途半端に見えるため、coverは
+   維持しつつ、クロップする位置をbackground-position: bottomにする
+   （箱の下端は常に物理画面の下端と一致するため、はみ出し＝クロップは
+   常に「本来ステータスバーの裏に隠れる上端側」に寄せるのが実態に近い）。
    title1/title2は透過PNG。ロゴの動きは未確定のため、今回は静止で配置するのみ。 */
 
 .title-screen {
   position: relative;
   text-align: center;
-  padding: 56px 16px 40px;
+  padding: 32px 16px 20px;
   border-radius: 12px;
   overflow: hidden;
   margin-bottom: 16px;
   min-height: 560px; /* dvh未対応ブラウザ向けフォールバック */
   min-height: calc(100vh - 24px); /* bodyのpadding(上下12px×2)ぶんを差し引く */
   min-height: calc(100dvh - 24px);
-  background: #12131a center/cover no-repeat;
+  background: #12131a bottom/cover no-repeat;
   background-image: url('images/titleBG.png');
 }
 
@@ -153,28 +156,31 @@ main {
    常に正面を向いたまま＝要素自体の回転はしない。数値の詳細はquiz.jsの
    RING_*定数を参照（実測値は報告に記載）。 */
 
-/* margin-top: ロゴ(title-logo1/title-logo2)にリングが重ならないよう下げる。 */
+/* margin-top: ロゴ(title-logo1/title-logo2)にリングが重ならないよう下げる。
+   40pxから24pxに詰めた（縦の内訳・削った場所は報告に記載）。 */
 .title-select-group {
   position: relative;
-  margin-top: 40px;
+  margin-top: 24px;
 }
 
 .ring-row {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  margin-bottom: 8px;
+  gap: 14px; /* ◀▶をカードから少し離す（押しやすさ優先。track幅とセットで重なりなし） */
+  margin-bottom: 6px;
 }
 
 /* 幅は「◀ボタンにカードが重ならない」ための余白込みで決める：RING_RX=70pxに
    カード半径(scale込みで最大約27px)を足した約97pxがカード中心からの最大の
    横方向のはみ出し。track幅200pxならtrack端(100px)からさらに約13pxの
-   余裕を持って◀▶ボタン側に届かない（quiz.jsのRING_RX変更とセットで調整）。 */
+   余裕を持って◀▶ボタン側に届かない（quiz.jsのRING_RX変更とセットで調整。
+   gapを14pxに広げたことでさらに余裕が増えている）。 */
 .ring-track {
   position: relative;
   width: 200px;
-  height: 150px;
+  height: 130px; /* 縦を詰めるため150pxから縮小（カードの実際の縦の広がりは
+    約107px＋余白なので視覚的なクリッピングは起きない想定） */
   touch-action: pan-y; /* 横方向のドラッグはJSで処理、縦スクロールはブラウザに任せる */
   cursor: grab;
 }
@@ -221,7 +227,7 @@ main {
   display: block;
   width: 60%;
   max-width: 220px;
-  margin: 36px auto 0;
+  margin: 16px auto 0; /* 時間リングとの間隔を詰める（36pxから縮小） */
   padding: 0;
   border: none;
   background: transparent;
@@ -235,8 +241,10 @@ main {
 
 /* 出題画面全体の背景（quizBG.png）。#appScreen はタイトル・リザルト以外の
    全画面（タイマー・出題・選択肢・確認用UI等）を包む要素で、常時表示される。 */
+/* background-position: titleBG.pngと同じ理由でbottom（箱の下端=物理画面の
+   下端という前提でクロップを上端側に寄せる）。 */
 #appScreen {
-  background: #12131a center/cover no-repeat;
+  background: #12131a bottom/cover no-repeat;
   background-image: url('images/quizBG.png');
   border-radius: 12px;
 }
@@ -458,8 +466,10 @@ main {
 }
 
 /* リザルト画面。
-   titleBG.pngは縦長（1024×1536）なので background:center/cover にして幅に合わせ、
-   はみ出す分だけクロップする（伸縮による歪みを避ける。引き伸ばしすぎ対策）。
+   titleBG.pngは縦長（1179×2556、スマホの物理画面フルサイズ）。表示領域は
+   ステータスバーのぶん物理画面より低いため、background-position: bottomで
+   クロップを常に上端側（本来ステータスバーの裏になる側）に寄せる
+   （.title-screenと同じ理由。詳細はそちらのコメント参照）。
    title1/title2は透過PNG。scoredaiza.pngのみ黒背景・透過なしの素材（台座デザイン上、
    黒背景のまま screen なしで重ねる想定。titleBG.png の中央付近はほぼ黒一色のため
    境目は目立たない見込みだが、実機・実ブラウザでの確認はできていない）。 */
@@ -473,7 +483,7 @@ main {
   min-height: 560px; /* dvh未対応ブラウザ向けフォールバック */
   min-height: calc(100vh - 24px); /* bodyのpadding(上下12px×2)ぶんを差し引く */
   min-height: calc(100dvh - 24px);
-  background: #12131a center/cover no-repeat;
+  background: #12131a bottom/cover no-repeat;
   background-image: url('images/titleBG.png');
 }
 
