@@ -565,6 +565,11 @@ function computeChoiceLayout(X, color, rawOffsets) {
 function buildChoices(judgeResult, diffKey) {
   const X = judgeResult.timing.X;
 
+  if (diffKey === 'easy' || diffKey === 'normal') {
+    return buildEasyNormalChoices(judgeResult, diffKey, X);
+  }
+
+  // 極（hard）は従来どおり4択（正しい形2つ＋ずらし2つ）。
   const choices = [
     { color: 'pink', isCorrectForm: true },
     { color: 'white', isCorrectForm: true },
@@ -576,6 +581,46 @@ function buildChoices(judgeResult, diffKey) {
     const raw = c.isCorrectForm
       ? { left: 0, middle: 0, right: 0 }
       : c.rawOffsets;
+    c.layout = computeChoiceLayout(X, c.color, raw);
+    c.isCorrect = c.isCorrectForm && judgeResult.correctColors.includes(c.color);
+  }
+
+  shuffleArray(choices);
+  return choices;
+}
+
+/* ---------- 選択肢生成：易・並（2択） ----------
+ * 1つ目は必ず正解（速い方の色・正しい形）。
+ * 2つ目は不正解で、以下から50:50でランダムに選ぶ：
+ *   (a) 遅い方の色・正しい形
+ *   (b) ずらし不正解（色はピンク・白からランダム。ずらし方＝リール・コマ数・
+ *       21コマ超のクランプは既存のmakeRawOffsets/applyShiftsWithFlipのまま）
+ * 同着（ピンク・白の所要が同値）の場合はサービス問題として扱い、必ず
+ * 両方を正しい形にする（どちらを押しても正解。ずらし不正解は抽選しない）。 */
+function buildEasyNormalChoices(judgeResult, diffKey, X) {
+  const isTie = judgeResult.correctColors.length === 2;
+  let choices;
+
+  if (isTie) {
+    choices = [
+      { color: 'pink', isCorrectForm: true },
+      { color: 'white', isCorrectForm: true },
+    ];
+  } else {
+    const correctColor = judgeResult.correctColors[0];
+    const wrongColor = correctColor === 'pink' ? 'white' : 'pink';
+    const useShiftedWrong = Math.random() < 0.5;
+    const secondChoice = useShiftedWrong
+      ? { color: (Math.random() < 0.5 ? 'pink' : 'white'), isCorrectForm: false, rawOffsets: makeRawOffsets(diffKey) }
+      : { color: wrongColor, isCorrectForm: true };
+    choices = [
+      { color: correctColor, isCorrectForm: true },
+      secondChoice,
+    ];
+  }
+
+  for (const c of choices) {
+    const raw = c.isCorrectForm ? { left: 0, middle: 0, right: 0 } : c.rawOffsets;
     c.layout = computeChoiceLayout(X, c.color, raw);
     c.isCorrect = c.isCorrectForm && judgeResult.correctColors.includes(c.color);
   }
