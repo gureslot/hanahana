@@ -185,6 +185,15 @@
     text-align:center;font-size:18px;font-weight:800;color:#10151c;
   }
   .dinput:focus{outline:none;border-color:#3b50c4;}
+  .inpwrap{position:relative;display:block;}
+  .inpclear{
+    position:absolute;right:9px;top:50%;transform:translateY(-50%);
+    width:28px;height:28px;padding:0;border:none;border-radius:50%;
+    background:#dde2e9;color:#4d5765;font-size:16px;font-weight:800;line-height:1;
+    display:none;align-items:center;justify-content:center;
+  }
+  .inpclear.show{display:flex;}
+  .inpclear:active{background:#ccd3dc;}
   .drow{display:flex;gap:8px;margin-top:8px;}
   .drow .mini{flex:1;min-width:0;}
   .field{margin-bottom:9px;}
@@ -987,10 +996,6 @@ function openSettings(){
   };
   wrap.appendChild(gen);
 
-  var note = el('div','note');
-  note.innerHTML = '「開始台番」は<b>一番上</b>の台番です。向きは上の「増加／減少」で選べます。<br>「4・9なし」は4または9を<b>含む番号すべて</b>を飛ばします（例：88 → 100）。<br>入力した内容は端末内へ自動保存され、途中でリセットされません。';
-  wrap.appendChild(note);
-
   wrap.appendChild(el('hr','sep'));
 
   /* image heading (store name etc.) — shared by 表/裏 */
@@ -999,14 +1004,20 @@ function openSettings(){
   var titleInp = el('input','dinput');
   titleInp.type='text';
   titleInp.style.width='100%'; titleInp.style.maxWidth='none'; titleInp.style.textAlign='left'; titleInp.style.fontSize='16px'; titleInp.style.fontWeight='600';
+  titleInp.style.paddingLeft='10px'; titleInp.style.paddingRight='42px'; titleInp.style.boxSizing='border-box';
   titleInp.placeholder='スロットデータ';
   titleInp.value = state.title || '';
-  titleInp.addEventListener('input', function(){ state.title = titleInp.value; save(); });
-  ft.appendChild(titleInp);
+  var tw = el('div','inpwrap');
+  var tclr = el('button','inpclear','×');
+  tclr.type = 'button';
+  tclr.setAttribute('aria-label','見出しを消去');
+  function syncClear(){ tclr.classList.toggle('show', titleInp.value.length > 0); }
+  titleInp.addEventListener('input', function(){ state.title = titleInp.value; save(); syncClear(); });
+  tclr.onclick = function(){ titleInp.value=''; state.title=''; save(); syncClear(); };
+  syncClear();
+  tw.appendChild(titleInp); tw.appendChild(tclr);
+  ft.appendChild(tw);
   wrap.appendChild(ft);
-  var noteT = el('div','note');
-  noteT.innerHTML = '画像の上部に表示されます。未記入なら「スロットデータ」になります。';
-  wrap.appendChild(noteT);
 
   wrap.appendChild(el('hr','sep'));
 
@@ -1021,9 +1032,6 @@ function openSettings(){
   segh.appendChild(segHon); segh.appendChild(segHoff);
   fh.appendChild(segh);
   wrap.appendChild(fh);
-  var noteH = el('div','note');
-  noteH.innerHTML = '数値の▲▼を押すたびに短く振動します。iPhoneはiOS18以降のSafariで触覚（コッという感触）になります。端末や設定によっては動作しないことがあります。';
-  wrap.appendChild(noteH);
 
   wrap.appendChild(el('hr','sep'));
   var clr = el('button','mini danger wide','「' + pageName() + '」のデータを消去（リセット）');
