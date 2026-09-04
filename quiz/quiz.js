@@ -13,11 +13,14 @@ const REEL_LABEL = { left: '左', middle: '中', right: '右' };
 // 同期的に完結させる（iOS Safariでのnavigator.share/ダウンロードの成功率を上げる）。
 const RESULT_IMAGE_NAMES = ['title1', 'title2', 'titleBG', 'scoredaiza'];
 
+// bgm：難易度ごとのBGM。初心者・易はquizBGM2.mp3（138.7秒）、並・極は
+// quizBGM.mp3（156.05秒、従来どおり）。どちらも制限時間の最大60秒より
+// 十分長いためループは不要。
 const DIFFICULTIES = {
-  beginner: { label: '初心者', special: true },
-  easy: { label: '易', shift: 2, reelCount: 1, fixLeft: true },
-  normal: { label: '並', shift: 2, reelCount: 2, fixLeft: false },
-  hard: { label: '極', shift: 1, reelCount: 1, fixLeft: false },
+  beginner: { label: '初心者', special: true, bgm: 'sounds/quizBGM2.mp3' },
+  easy: { label: '易', shift: 2, reelCount: 1, fixLeft: true, bgm: 'sounds/quizBGM2.mp3' },
+  normal: { label: '並', shift: 2, reelCount: 2, fixLeft: false, bgm: 'sounds/quizBGM.mp3' },
+  hard: { label: '極', shift: 1, reelCount: 1, fixLeft: false, bgm: 'sounds/quizBGM.mp3' },
 };
 
 // 初心者モードの出目条件（仕様：左中段4or14・正解色のAがmax-min<=4）。
@@ -224,12 +227,17 @@ function applySeVolume() {
   if (seGainNode) seGainNode.gain.value = seMuted ? 0 : seVolume;
 }
 
-// スタートボタンのタップ（ユーザー操作）をきっかけにAudioContextを起こし、BGMを再生する
+// スタートボタンのタップ（ユーザー操作）をきっかけにAudioContextを起こし、BGMを再生する。
+// BGMは難易度（DIFFICULTIES[].bgm）で切り替える：ここでスタート時に反映する。
 function unlockAndPlayBgm() {
   if (audioCtx && audioCtx.state === 'suspended') {
     audioCtx.resume().catch((err) => console.error('AudioContextの再開に失敗しました', err));
   }
   if (!bgmEl) return;
+  const bgmSrc = DIFFICULTIES[currentDifficulty].bgm;
+  if (bgmSrc && !bgmEl.src.endsWith(bgmSrc)) {
+    bgmEl.src = bgmSrc;
+  }
   bgmEl.currentTime = 0;
   applyBgmVolume();
   bgmEl.play().catch((err) => console.error('BGMの再生に失敗しました（無音のまま続行します）', err));

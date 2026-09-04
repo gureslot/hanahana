@@ -14,6 +14,17 @@ body {
   background: #12131a;
   color: #eee;
   padding: 12px;
+  /* ダブルタップでのズームだけを無効化する（誤タップでの拡大・操作しづらさ対策）。
+     user-scalable=noはiOS Safariが無視するうえアクセシビリティ上望ましくないため
+     使わない。touch-action:manipulationはピンチズーム（2本指の拡大）は妨げない。 */
+  touch-action: manipulation;
+}
+
+/* 選択肢の連打などでテキストが選択状態になるのを防ぐ（操作要素全般）。 */
+button,
+.choice-cell {
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 main {
