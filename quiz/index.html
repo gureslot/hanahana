@@ -15,15 +15,15 @@
     </div>
 
     <div class="title-select-group">
-      <div class="title-diff-buttons" id="titleDiffButtons">
-        <button type="button" class="title-diff-btn" data-diff="beginner"><img src="images/syo.png" alt="初心者"></button>
-        <button type="button" class="title-diff-btn" data-diff="easy"><img src="images/yasa.png" alt="易"></button>
-        <button type="button" class="title-diff-btn" data-diff="normal"><img src="images/nami.png" alt="並"></button>
-        <button type="button" class="title-diff-btn" data-diff="hard"><img src="images/kiwami.png" alt="極"></button>
+      <div class="ring-row" id="diffRingRow">
+        <button type="button" class="ring-arrow ring-arrow-left" id="diffRingLeft" aria-label="前の難易度">◀</button>
+        <div class="ring-track" id="diffRingTrack"></div>
+        <button type="button" class="ring-arrow ring-arrow-right" id="diffRingRight" aria-label="次の難易度">▶</button>
       </div>
-      <div class="title-time-buttons" id="titleTimeButtons">
-        <button type="button" class="title-time-btn" data-time="30"><img src="images/30.png" alt="30秒"></button>
-        <button type="button" class="title-time-btn" data-time="60"><img src="images/60.png" alt="60秒"></button>
+      <div class="ring-row" id="timeRingRow">
+        <button type="button" class="ring-arrow ring-arrow-left" id="timeRingLeft" aria-label="前の制限時間">◀</button>
+        <div class="ring-track" id="timeRingTrack"></div>
+        <button type="button" class="ring-arrow ring-arrow-right" id="timeRingRight" aria-label="次の制限時間">▶</button>
       </div>
     </div>
 

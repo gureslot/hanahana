@@ -26,6 +26,25 @@ const DIFFICULTIES = {
 // 初心者モードの出目条件（仕様：左中段4or14・正解色のAがmax-min<=4）。
 const BEGINNER_SPREAD_MAX = 4;
 
+const DIFFICULTY_ICON = { beginner: 'syo', easy: 'yasa', normal: 'nami', hard: 'kiwami' };
+const RING_TIME_VALUES = [30, 60];
+
+/* ---------- タイトル画面：難易度・時間のリングUI ----------
+ * 楕円軌道上にカードをposition:absoluteで並べる（3D transform/preserve-3dは
+ * 使わない。カード自体は回転させず、常に正面を向いたまま）。
+ * RING_RX/RING_RYが軌道の横/縦半径、RING_TILT_SKEWがxに比例してyをずらす
+ * 傾き係数（左が下がり・右が上がる）、RING_SCALE_*が手前/奥のスケール範囲。
+ * 実際に使った数値は報告に記載。 */
+const RING_STEP_PX = 50; // スワイプでカード1枚ぶん送るのに必要なドラッグ距離(px)
+const RING_RX = 100; // 楕円軌道の横半径(px)
+const RING_RY = 26; // 楕円軌道の縦半径(px)
+const RING_TILT_SKEW = 0.35; // 左下がり・右上がりの傾き係数（xの大きさに比例してyをずらす）
+const RING_SCALE_MAX = 1.15; // 手前（選択中）のスケール
+const RING_SCALE_MIN = 0.62; // 奥（正面から最も遠い位置）のスケール
+const RING_BRIGHTNESS_SELECTED = 1;
+const RING_BRIGHTNESS_UNSELECTED = 0.55;
+const RING_BRIGHTNESS_DISABLED = 0.25;
+
 /* ---------- ランキング（Supabase REST API） ----------
  * supabase-jsは使わずfetchで直接叩く。anon keyはブラウザ埋め込み前提の
  * 公開キー（RLSでSELECT/INSERTのみ許可・UPDATE/DELETEは不可）。
@@ -83,6 +102,8 @@ let beginnerCandidates = []; // 初心者モードの出目候補（起動時に
 let easyCandidates = []; // 易モードの出目候補（起動時に一度だけ生成。左中段4/14固定）
 let normalHardCandidates = []; // 並・極モードの出目候補（起動時に一度だけ生成。左中段自由）
 let reviewIndex = 0; // 振り返り画面で現在表示中の問題番号（0始まり、records基準）
+let diffRingState = null; // タイトル画面：難易度リングの状態
+let timeRingState = null; // タイトル画面：時間リングの状態
 
 /* ---------- ランキング：状態 ---------- */
 let pendingRankEntry = null; // ランクイン確定後、送信待ちのデータ（difficulty/time_limit/score/correct/wrong）
@@ -96,7 +117,7 @@ let rankingRequestSeq = 0; // 板を切り替えたときに古いリクエス�
 let audioCtx = null; // ユーザーのタップ（スタートボタン）でresume()する
 let seGainNode = null; // SE用のゲインノード（音量・ミュートをまとめて反映。正誤SE・end.wav共通）
 let currentJudgeSeSource = null; // 再生中の正誤SEソース（新しい方を鳴らす前に止める＝1チャンネル）
-let soundBuffers = { seikai: null, huseikai: null, end: null }; // decodeAudioData済みのAudioBuffer
+let soundBuffers = { seikai: null, huseikai: null, end: null, tick: null }; // decodeAudioData済みのAudioBuffer
 let bgmEl = null;
 let bgmVolume = 0.8;
 let seVolume = 0.8;
@@ -177,12 +198,14 @@ function preloadResultImages() {
  * wavの読み込み・デコードに失敗した場合はbufferがnullのままになり、再生関数が
  * 何もせず無視する＝無音になるだけでゲーム進行（判定・スコア）には影響しない。
  *
- * SEは2チャンネル構成：
+ * SEは3チャンネル構成：
  * ・正誤SE（seikai/huseikai）は従来どおり1チャンネル（新しい方を鳴らす前に前を止める）。
  * ・end.wav（時間切れの瞬間の笛）は正誤SEとは独立したチャンネルで鳴らし、一度鳴り
  *   始めたら途中で止めない（時間切れ後の3秒静止のあいだも鳴り終わるまで続く）。
- *   正誤SEを鳴らしても end.wav の再生には影響しない（かき消されない）。
- * どちらも同じ seGainNode を通すため、音量・ミュートは共通で反映される。 */
+ * ・tsu.wav（リングが回って正面に来た瞬間のSE）も独立したチャンネル。連続で
+ *   回すと短い間隔で複数回鳴るが、前を止めずに毎回新しいソースを鳴らすだけ。
+ * どれも正誤SEを鳴らしても他の再生には影響しない（かき消されない）。
+ * すべて同じ seGainNode を通すため、音量・ミュートは共通で反映される。 */
 
 async function loadSoundBuffer(url) {
   try {
@@ -209,14 +232,16 @@ async function preloadSounds() {
   seGainNode.connect(audioCtx.destination);
   applySeVolume();
 
-  const [seikai, huseikai, end] = await Promise.all([
+  const [seikai, huseikai, end, tick] = await Promise.all([
     loadSoundBuffer('sounds/seikai.wav'),
     loadSoundBuffer('sounds/huseikai.wav'),
     loadSoundBuffer('sounds/end.wav'),
+    loadSoundBuffer('sounds/tsu.wav'),
   ]);
   soundBuffers.seikai = seikai;
   soundBuffers.huseikai = huseikai;
   soundBuffers.end = end;
+  soundBuffers.tick = tick;
 }
 
 // 正誤SE（seikai/huseikai）：1チャンネル。新しい方を鳴らす前に再生中のものを止める。
@@ -239,6 +264,23 @@ function playJudgeSe(name) {
 function playEndSe() {
   if (!audioCtx || !seGainNode) return;
   const buffer = soundBuffers.end;
+  if (!buffer) return; // 読み込み失敗時は無音のまま
+  const source = audioCtx.createBufferSource();
+  source.buffer = buffer;
+  source.connect(seGainNode);
+  source.start();
+}
+
+// tsu.wav専用チャンネル：リング（難易度・時間）が回って選択が正面に来た瞬間に鳴らす。
+// 正誤SE・end.wavとは独立で、前を止めずに毎回新しいソースを鳴らすだけ（連続で回すと
+// 短い間隔で重なって鳴る）。タイトル画面はスタートボタンをまだ押していない状態でも
+// リング操作できるため、AudioContextが未resumeならここでも起こす。
+function playRingTickSe() {
+  if (!audioCtx || !seGainNode) return;
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume().catch(() => { /* 無視：次回以降の操作で再試行される */ });
+  }
+  const buffer = soundBuffers.tick;
   if (!buffer) return; // 読み込み失敗時は無音のまま
   const source = audioCtx.createBufferSource();
   source.buffer = buffer;
@@ -1421,44 +1463,189 @@ function showPreviewQuestion() {
   newQuestion();
 }
 
-// 初心者モードは30秒のみ：60秒ボタンを無効化し、60秒が選ばれていたら30秒に戻す
-function applyTitleTimeConstraint() {
-  const time60Btn = document.querySelector('.title-time-btn[data-time="60"]');
-  const time30Btn = document.querySelector('.title-time-btn[data-time="30"]');
-  const isBeginner = currentDifficulty === 'beginner';
-  if (time60Btn) time60Btn.disabled = isBeginner;
-  if (isBeginner && currentTimeLimit === 60) {
-    currentTimeLimit = 30;
-    document.querySelectorAll('.title-time-btn').forEach((b) => b.classList.remove('active'));
-    if (time30Btn) time30Btn.classList.add('active');
-  }
+/* ---------- タイトル画面：難易度・時間のリングUI ----------
+ * 各リングは { items, selected, cardEls, onChange, dragStartX, dragAccum, dragged }
+ * を持つ状態オブジェクト。items[i] = { key, imgSrc, alt, disabled }。
+ * カードの位置計算は renderRing() に集約する（3D transformは使わず、
+ * translate/scaleのみのposition:absolute配置）。 */
+
+function ringTheta(index, selected, count) {
+  // 度。0 = 正面（選択中）。baseAngle=-90°で正面をy軸上の「手前寄り」に置く。
+  return (index - selected) * (360 / count) - 90;
 }
 
-// タイトル画面：難易度・時間の選択（平面の横並び）
-function setupTitleSelectors() {
-  const diffButtons = document.querySelectorAll('.title-diff-btn');
-  diffButtons.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      diffButtons.forEach((b) => b.classList.remove('active'));
-      btn.classList.add('active');
-      currentDifficulty = btn.dataset.diff;
-      applyTitleTimeConstraint();
-    });
-  });
-  const activeDiffBtn = document.querySelector('.title-diff-btn[data-diff="' + currentDifficulty + '"]');
-  if (activeDiffBtn) activeDiffBtn.classList.add('active');
+// 隣接カードへ進める。disabled（60秒など）はスキップし、行き場が無ければ動かない
+// （＝「回しても止まらない」の実装）。
+function ringStepIndex(state, dir) {
+  const n = state.items.length;
+  let next = state.selected;
+  for (let tries = 0; tries < n; tries++) {
+    next = ((next + dir) % n + n) % n;
+    if (!state.items[next].disabled) break;
+  }
+  return next;
+}
 
-  const timeButtons = document.querySelectorAll('.title-time-btn');
-  timeButtons.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      if (btn.disabled) return;
-      timeButtons.forEach((b) => b.classList.remove('active'));
-      btn.classList.add('active');
-      currentTimeLimit = parseInt(btn.dataset.time, 10);
-    });
+function renderRing(state) {
+  const n = state.items.length;
+  state.cardEls.forEach((card, i) => {
+    const rad = ringTheta(i, state.selected, n) * Math.PI / 180;
+    const rawX = RING_RX * Math.cos(rad);
+    const rawY = RING_RY * Math.sin(rad);
+    const skewedY = rawY - rawX * RING_TILT_SKEW; // 左下がり・右上がりの傾き
+    const depth = (Math.sin(rad) + 1) / 2; // 0(手前)〜1(奥)
+    const scale = RING_SCALE_MAX + depth * (RING_SCALE_MIN - RING_SCALE_MAX);
+
+    card.style.transform =
+      'translate(-50%, -50%) translate(' + rawX.toFixed(1) + 'px, ' + skewedY.toFixed(1) + 'px) scale(' + scale.toFixed(3) + ')';
+    card.style.zIndex = String(Math.round(scale * 100));
+
+    const item = state.items[i];
+    const isSelected = i === state.selected;
+    let brightness = RING_BRIGHTNESS_UNSELECTED;
+    if (item.disabled) brightness = RING_BRIGHTNESS_DISABLED;
+    else if (isSelected) brightness = RING_BRIGHTNESS_SELECTED;
+
+    card.style.filter = isSelected && !item.disabled
+      ? 'brightness(' + brightness + ') drop-shadow(0 0 6px #fff44d) drop-shadow(0 0 10px #4a6cf7)'
+      : 'brightness(' + brightness + ')';
   });
-  const activeTimeBtn = document.querySelector('.title-time-btn[data-time="' + currentTimeLimit + '"]');
-  if (activeTimeBtn) activeTimeBtn.classList.add('active');
+}
+
+// 矢印ボタン用：1枚ぶん進める。動けなければ何もしない（音も鳴らさない）。
+function advanceRing(state, dir) {
+  const next = ringStepIndex(state, dir);
+  if (next === state.selected) return;
+  state.selected = next;
+  renderRing(state);
+  playRingTickSe();
+  state.onChange(state.items[next].key, next);
+}
+
+// スワイプ：ドラッグ量をRING_STEP_PXぶん消費するたびに1枚ずつ進める
+// （＝連続で回すとそのぶん複数回、正面に来るたびに鳴る）。
+function setupRingDrag(trackEl, state) {
+  let dragging = false;
+
+  trackEl.addEventListener('pointerdown', (e) => {
+    dragging = true;
+    state.dragStartX = e.clientX;
+    state.dragAccum = 0;
+    state.dragged = false;
+    trackEl.setPointerCapture(e.pointerId);
+  });
+
+  trackEl.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    const dx = e.clientX - state.dragStartX;
+    state.dragStartX = e.clientX;
+    state.dragAccum += dx;
+    if (Math.abs(dx) > 3) state.dragged = true;
+
+    while (Math.abs(state.dragAccum) >= RING_STEP_PX) {
+      const sign = state.dragAccum > 0 ? 1 : -1;
+      const dir = sign > 0 ? -1 : 1; // 右へドラッグ(正)なら前へ、左(負)なら次へ
+      const next = ringStepIndex(state, dir);
+      if (next === state.selected) {
+        state.dragAccum = 0; // これ以上動けない（disabledでブロック）
+        break;
+      }
+      state.selected = next;
+      renderRing(state);
+      playRingTickSe();
+      state.onChange(state.items[next].key, next);
+      state.dragAccum -= sign * RING_STEP_PX;
+    }
+  });
+
+  const endDrag = () => {
+    dragging = false;
+    state.dragAccum = 0;
+  };
+  trackEl.addEventListener('pointerup', endDrag);
+  trackEl.addEventListener('pointercancel', endDrag);
+}
+
+function createRing(trackEl, items, initialIndex, onChange) {
+  const state = {
+    items,
+    selected: initialIndex,
+    cardEls: [],
+    onChange,
+    dragStartX: null,
+    dragAccum: 0,
+    dragged: false,
+  };
+
+  items.forEach((item) => {
+    const card = document.createElement('div');
+    card.className = 'ring-card';
+    const img = document.createElement('img');
+    img.src = item.imgSrc;
+    img.alt = item.alt;
+    card.appendChild(img);
+    trackEl.appendChild(card);
+    state.cardEls.push(card);
+  });
+
+  setupRingDrag(trackEl, state);
+  renderRing(state);
+  return state;
+}
+
+// 初心者モードは30秒のみ：時間リングの60秒を選択不可にし、60秒が選ばれていたら
+// 30秒に戻す（見た目はrenderRingのRING_BRIGHTNESS_DISABLEDでさらに暗くなる）。
+function applyTitleTimeConstraint() {
+  if (!timeRingState) return;
+  const isBeginner = currentDifficulty === 'beginner';
+  const sixtyIndex = RING_TIME_VALUES.indexOf(60);
+  timeRingState.items[sixtyIndex].disabled = isBeginner;
+  if (isBeginner && currentTimeLimit === 60) {
+    currentTimeLimit = 30;
+    timeRingState.selected = RING_TIME_VALUES.indexOf(30);
+  }
+  renderRing(timeRingState);
+}
+
+// タイトル画面：難易度・時間のリングを生成し、矢印ボタンを配線する。
+function setupTitleRings() {
+  const diffKeys = Object.keys(DIFFICULTIES);
+  const diffItems = diffKeys.map((key) => ({
+    key,
+    imgSrc: 'images/' + DIFFICULTY_ICON[key] + '.png',
+    alt: DIFFICULTIES[key].label,
+    disabled: false,
+  }));
+  const timeItems = RING_TIME_VALUES.map((t) => ({
+    key: String(t),
+    imgSrc: 'images/' + t + '.png',
+    alt: t + '秒',
+    disabled: false,
+  }));
+
+  diffRingState = createRing(
+    document.getElementById('diffRingTrack'),
+    diffItems,
+    Math.max(0, diffKeys.indexOf(currentDifficulty)),
+    (key) => {
+      currentDifficulty = key;
+      applyTitleTimeConstraint();
+    }
+  );
+
+  timeRingState = createRing(
+    document.getElementById('timeRingTrack'),
+    timeItems,
+    Math.max(0, RING_TIME_VALUES.indexOf(currentTimeLimit)),
+    (key) => {
+      currentTimeLimit = parseInt(key, 10);
+    }
+  );
+
+  document.getElementById('diffRingLeft').addEventListener('click', () => advanceRing(diffRingState, -1));
+  document.getElementById('diffRingRight').addEventListener('click', () => advanceRing(diffRingState, 1));
+  document.getElementById('timeRingLeft').addEventListener('click', () => advanceRing(timeRingState, -1));
+  document.getElementById('timeRingRight').addEventListener('click', () => advanceRing(timeRingState, 1));
 
   applyTitleTimeConstraint();
 }
@@ -1480,7 +1667,7 @@ function setupTitleScreen() {
     showAppScreen();
     startGame();
   });
-  setupTitleSelectors();
+  setupTitleRings();
 }
 
 function setupUI() {

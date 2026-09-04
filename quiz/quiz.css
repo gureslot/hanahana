@@ -143,61 +143,67 @@ main {
   margin-top: 12px;
 }
 
-/* 難易度・時間の選択（平面の横並び。円形3D回転UIは次段階）。
-   選択中は光らせて分かるようにする。 */
+/* 難易度・時間の選択：リングUI（楕円軌道、奥行きは大きさで表現）。
+   3D transform/preserve-3dは使わず、position:absoluteでJS(quiz.js)が
+   カードごとのtranslate/scale/filterを計算して敷き詰める。文字（画像）は
+   常に正面を向いたまま＝要素自体の回転はしない。数値の詳細はquiz.jsの
+   RING_*定数を参照（実測値は報告に記載）。 */
 
 .title-select-group {
   position: relative;
-  margin-top: 28px;
+  margin-top: 12px;
 }
 
-.title-diff-buttons,
-.title-time-buttons {
+.ring-row {
   display: flex;
-  justify-content: center;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
+  justify-content: center;
+  gap: 4px;
+  margin-bottom: 8px;
 }
 
-.title-diff-buttons {
-  margin-bottom: 14px;
+.ring-track {
+  position: relative;
+  width: 220px;
+  height: 150px;
+  touch-action: pan-y; /* 横方向のドラッグはJSで処理、縦スクロールはブラウザに任せる */
+  cursor: grab;
 }
 
-.title-diff-btn,
-.title-time-btn {
-  padding: 4px;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  border-radius: 8px;
-  opacity: 0.55;
-  transition: opacity .15s ease, filter .15s ease;
+.ring-track:active {
+  cursor: grabbing;
 }
 
-.title-diff-btn img,
-.title-time-btn img {
-  display: block;
-}
-
-.title-diff-btn img {
+.ring-card {
+  position: absolute;
+  left: 50%;
+  top: 50%;
   width: 62px;
+  height: 62px;
+  margin: -31px 0 0 -31px;
+  pointer-events: none; /* 操作はスワイプと矢印ボタンのみ（カード直接タップは対象外） */
+  transition: transform .28s ease, filter .28s ease;
+  will-change: transform;
 }
 
-.title-time-btn img {
-  width: 68px;
+.ring-card img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
-.title-diff-btn.active,
-.title-time-btn.active {
-  opacity: 1;
-  filter: drop-shadow(0 0 6px #fff44d) drop-shadow(0 0 12px #4a6cf7);
-}
-
-.title-time-btn:disabled {
-  opacity: 0.2;
-  cursor: not-allowed;
-  filter: none;
+.ring-arrow {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid #555;
+  background: #22232e;
+  color: #ccd;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
 }
 
 .title-start-btn {
@@ -573,17 +579,19 @@ main {
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
 }
 
+/* ランキングUI追加で縦が伸び、RETRY/TITLEが画面下に埋もれるようになったため、
+   行間を最小限に詰め、サイズも元のmax-width:260pxの約半分(130px)にした。 */
 .result-buttons {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 2px;
 }
 
 .retry-btn,
 .back-title-btn {
   display: block;
   width: 100%;
-  max-width: 260px;
+  max-width: 130px;
   margin: 0 auto;
   padding: 0;
   border: none;
