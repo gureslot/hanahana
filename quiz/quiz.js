@@ -26,6 +26,26 @@ const DIFFICULTIES = {
 // 初心者モードの出目条件（仕様：左中段4or14・正解色のAがmax-min<=4）。
 const BEGINNER_SPREAD_MAX = 4;
 
+/* ---------- ランキング（Supabase REST API） ----------
+ * supabase-jsは使わずfetchで直接叩く。anon keyはブラウザ埋め込み前提の
+ * 公開キー（RLSでSELECT/INSERTのみ許可・UPDATE/DELETEは不可）。
+ * Supabase Authは使わない（ログインなし）。 */
+const SUPABASE_URL = 'https://pyzgeadtvpjjgoqvihuw.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5emdlYWR0dnBqamdvcXZpaHV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg1MjA3MDksImV4cCI6MjEwNDA5NjcwOX0.O8tBN6MtQy5_liMFJnGesJZLtzCB6CdkPBFMR1LmJOk';
+const SCORES_URL = SUPABASE_URL + '/rest/v1/scores';
+const RANKING_TOP_N = 20;
+
+// ランキングは難易度×制限時間で7本（初心者は30秒のみ）。
+const RANKING_BOARDS = [
+  { diff: 'beginner', time: 30, label: '初心者' },
+  { diff: 'easy', time: 30, label: '易 30秒' },
+  { diff: 'easy', time: 60, label: '易 60秒' },
+  { diff: 'normal', time: 30, label: '並 30秒' },
+  { diff: 'normal', time: 60, label: '並 60秒' },
+  { diff: 'hard', time: 30, label: '極 30秒' },
+  { diff: 'hard', time: 60, label: '極 60秒' },
+];
+
 const ROW_DEFS = [
   { offset: 2, mode: 'peekBottom' },  // 枠上：N+2 の下側1/3
   { offset: 1, mode: 'full' },        // 上段：N+1
@@ -63,6 +83,13 @@ let beginnerCandidates = []; // 初心者モードの出目候補（起動時に
 let easyCandidates = []; // 易モードの出目候補（起動時に一度だけ生成。左中段4/14固定）
 let normalHardCandidates = []; // 並・極モードの出目候補（起動時に一度だけ生成。左中段自由）
 let reviewIndex = 0; // 振り返り画面で現在表示中の問題番号（0始まり、records基準）
+
+/* ---------- ランキング：状態 ---------- */
+let pendingRankEntry = null; // ランクイン確定後、送信待ちのデータ（difficulty/time_limit/score/correct/wrong）
+let rankSubmitted = false; // 二重送信防止（このリザルト表示中に送信済みか）
+let lastSubmittedEntry = null; // 直近に登録できた1件（ランキング画面で自分の行を目立たせるために使う）
+let currentRankingBoard = null; // ランキング画面で表示中の板 { diff, time }
+let rankingRequestSeq = 0; // 板を切り替えたときに古いリクエストの結果を無視するための連番
 
 /* ---------- 音（仕様書 第6章：BGM・SE） ---------- */
 
@@ -756,14 +783,17 @@ function setPhase(newPhase) {
   gamePhase = newPhase;
   const isResult = newPhase === 'result';
   const isReview = newPhase === 'review';
+  const isRanking = newPhase === 'ranking';
+  const isOverlayScreen = isResult || isReview || isRanking;
 
   // .stage-wrap / .choices-wrap は display:flex 等をCSSで明示しているため、
   // hidden属性ではなくインラインstyleで確実に切り替える。
-  document.querySelector('.stage-wrap').style.display = (isResult || isReview) ? 'none' : '';
-  document.querySelector('.choices-wrap').style.display = (isResult || isReview) ? 'none' : '';
-  document.getElementById('resultMessage').hidden = isResult || isReview;
+  document.querySelector('.stage-wrap').style.display = isOverlayScreen ? 'none' : '';
+  document.querySelector('.choices-wrap').style.display = isOverlayScreen ? 'none' : '';
+  document.getElementById('resultMessage').hidden = isOverlayScreen;
   document.getElementById('resultScreen').hidden = !isResult;
   document.getElementById('reviewScreen').hidden = !isReview;
+  document.getElementById('rankingScreen').hidden = !isRanking;
   const showGameChrome = newPhase === 'playing' || newPhase === 'ending';
   document.getElementById('timerDisplay').hidden = !showGameChrome;
   document.getElementById('gameControls').hidden = !showGameChrome;
@@ -896,6 +926,9 @@ function renderGameResult() {
   document.getElementById('resultTimeLabel').textContent = String(currentTimeLimit);
   // 1問も回答せず終わった場合（即中断など）は振り返る記録が無いのでボタンを無効化する
   document.getElementById('reviewBtn').disabled = records.length === 0;
+
+  resetRankEntryUI();
+  checkRankInAndOfferEntry(currentDifficulty, currentTimeLimit, score, correctCount, wrongCount);
 }
 
 function backToSetup() {
@@ -973,6 +1006,265 @@ function reviewGoNext() {
 
 function backToResultFromReview() {
   setPhase('result');
+}
+
+/* ---------- ランキング：Supabase REST通信 ----------
+ * supabase-jsは使わずfetchで直接叩く（CDN読み込みを増やさないため）。
+ * anon keyはブラウザ埋め込み前提の公開キー。Supabase Authは使わない。 */
+
+function supabaseHeaders(isWrite) {
+  const headers = {
+    apikey: SUPABASE_ANON_KEY,
+    Authorization: 'Bearer ' + SUPABASE_ANON_KEY,
+  };
+  if (isWrite) {
+    headers['Content-Type'] = 'application/json';
+    headers['Prefer'] = 'return=minimal';
+  }
+  return headers;
+}
+
+// difficulty/time_limitの板の上位RANKING_TOP_N件を取得する
+// （score降順、同スコアはcreated_at昇順＝先に記録した方が上位）。
+async function fetchTopScores(difficulty, timeLimit, selectFields) {
+  const params = new URLSearchParams({
+    select: selectFields,
+    difficulty: 'eq.' + difficulty,
+    time_limit: 'eq.' + timeLimit,
+    order: 'score.desc,created_at.asc',
+    limit: String(RANKING_TOP_N),
+  });
+  const res = await fetch(SCORES_URL + '?' + params.toString(), {
+    headers: supabaseHeaders(false),
+  });
+  if (!res.ok) throw new Error('ランキングの取得に失敗しました（status ' + res.status + '）');
+  return res.json();
+}
+
+// 送信前に「その難易度・時間の上位RANKING_TOP_N位以内に入るか」を判定する。
+// 現在の登録が20件未満なら常にランクイン。20件埋まっていれば、20位の点数を
+// 上回っている必要がある（同点の場合は既存の記録の方がcreated_at昇順で先に
+// 並ぶため、同点では入れ替われない＝ランクインとしない）。
+async function checkRankIn(difficulty, timeLimit, score) {
+  const rows = await fetchTopScores(difficulty, timeLimit, 'score');
+  if (rows.length < RANKING_TOP_N) return true;
+  const lowestScore = rows[rows.length - 1].score;
+  return score > lowestScore;
+}
+
+async function submitScore(entry) {
+  const res = await fetch(SCORES_URL, {
+    method: 'POST',
+    headers: supabaseHeaders(true),
+    body: JSON.stringify(entry),
+  });
+  if (!res.ok) throw new Error('登録に失敗しました（status ' + res.status + '）');
+}
+
+/* ---------- ランキング：リザルト画面（ランクイン判定・名前登録） ---------- */
+
+function resetRankEntryUI() {
+  pendingRankEntry = null;
+  rankSubmitted = false;
+
+  const note = document.getElementById('rankCheckNote');
+  note.hidden = true;
+  note.textContent = '';
+
+  document.getElementById('rankEntry').hidden = true;
+
+  const nameInput = document.getElementById('rankNameInput');
+  nameInput.value = '';
+  nameInput.disabled = false;
+
+  const submitBtn = document.getElementById('rankSubmitBtn');
+  submitBtn.disabled = false;
+  submitBtn.textContent = '登録';
+
+  const statusEl = document.getElementById('rankEntryStatus');
+  statusEl.textContent = '';
+  statusEl.className = 'rank-entry-status';
+}
+
+// リザルト表示のたびに呼ぶ：送信前にSELECTでランクイン（上位RANKING_TOP_N位以内）を
+// 判定し、入っていれば名前入力欄を出す。通信に失敗した場合は正しく判定できないため
+// 入力欄は出さず、小さくメッセージだけ出す（ゲーム本体・リザルトの他の操作には
+// 影響しない＝Supabaseに繋がらなくてもゲームは通常どおり遊べる）。
+async function checkRankInAndOfferEntry(difficulty, timeLimit, score, correct, wrong) {
+  try {
+    const eligible = await checkRankIn(difficulty, timeLimit, score);
+    if (gamePhase !== 'result') return; // 判定中に画面が切り替わっていたら反映しない
+    if (eligible) {
+      pendingRankEntry = { difficulty, time_limit: timeLimit, score, correct, wrong };
+      document.getElementById('rankEntry').hidden = false;
+    }
+  } catch (err) {
+    console.error('ランクイン判定に失敗しました（ランキング機能のみに影響）', err);
+    if (gamePhase !== 'result') return;
+    const note = document.getElementById('rankCheckNote');
+    note.textContent = 'ランキングの確認に失敗しました（通信環境をご確認ください）';
+    note.hidden = false;
+  }
+}
+
+// 前後の空白を除いた長さが1〜12文字であることを確認する。範囲外はnull（送信しない）。
+function normalizeRankName(raw) {
+  const trimmed = raw.trim();
+  if (trimmed.length === 0 || trimmed.length > 12) return null;
+  return trimmed;
+}
+
+async function submitRankEntry() {
+  if (rankSubmitted || !pendingRankEntry) return;
+
+  const nameInput = document.getElementById('rankNameInput');
+  const statusEl = document.getElementById('rankEntryStatus');
+  const name = normalizeRankName(nameInput.value);
+  if (!name) {
+    statusEl.textContent = '名前を入力してください（1〜12文字）';
+    statusEl.className = 'rank-entry-status error';
+    return;
+  }
+
+  const submitBtn = document.getElementById('rankSubmitBtn');
+  submitBtn.disabled = true;
+  nameInput.disabled = true;
+  statusEl.textContent = '送信中…';
+  statusEl.className = 'rank-entry-status';
+
+  const entry = { ...pendingRankEntry, name };
+  try {
+    await submitScore(entry);
+    rankSubmitted = true;
+    lastSubmittedEntry = entry; // ランキング画面で自分の行を目立たせるために保持
+    statusEl.textContent = '登録しました';
+    statusEl.className = 'rank-entry-status success';
+    submitBtn.textContent = '登録済み';
+  } catch (err) {
+    console.error('スコアの登録に失敗しました（ランキング機能のみに影響）', err);
+    statusEl.textContent = '登録に失敗しました。通信環境をご確認のうえもう一度お試しください';
+    statusEl.className = 'rank-entry-status error';
+    submitBtn.disabled = false;
+    nameInput.disabled = false;
+  }
+}
+
+/* ---------- ランキング：ランキング画面 ---------- */
+
+function findRankingBoard(diff, time) {
+  return RANKING_BOARDS.find((b) => b.diff === diff && b.time === time) || RANKING_BOARDS[0];
+}
+
+function setupRankingBoardButtons() {
+  const container = document.getElementById('rankingBoardButtons');
+  RANKING_BOARDS.forEach((board) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'ranking-board-btn';
+    btn.textContent = board.label;
+    btn.dataset.diff = board.diff;
+    btn.dataset.time = String(board.time);
+    btn.addEventListener('click', () => loadRankingBoard(board.diff, board.time));
+    container.appendChild(btn);
+  });
+}
+
+function updateRankingBoardButtonsActive() {
+  document.querySelectorAll('.ranking-board-btn').forEach((btn) => {
+    const isActive = !!currentRankingBoard &&
+      btn.dataset.diff === currentRankingBoard.diff &&
+      Number(btn.dataset.time) === currentRankingBoard.time;
+    btn.classList.toggle('active', isActive);
+  });
+}
+
+// リザルトの「ランキングを見る」から開く：初期表示は直前にプレイした難易度・時間の板。
+function openRankingScreen() {
+  setPhase('ranking');
+  const board = findRankingBoard(currentDifficulty, currentTimeLimit);
+  loadRankingBoard(board.diff, board.time);
+}
+
+function backToResultFromRanking() {
+  setPhase('result');
+}
+
+async function loadRankingBoard(diff, time) {
+  currentRankingBoard = { diff, time };
+  updateRankingBoardButtonsActive();
+
+  const bodyEl = document.getElementById('rankingBody');
+  bodyEl.innerHTML = '';
+  const loading = document.createElement('p');
+  loading.className = 'ranking-status';
+  loading.textContent = '読み込み中…';
+  bodyEl.appendChild(loading);
+
+  const seq = ++rankingRequestSeq;
+  try {
+    const rows = await fetchTopScores(diff, time, 'name,score,correct,wrong,created_at');
+    if (seq !== rankingRequestSeq) return; // 途中で別の板に切り替えられていたら破棄
+    renderRankingRows(bodyEl, rows, diff, time);
+  } catch (err) {
+    if (seq !== rankingRequestSeq) return;
+    console.error('ランキングの取得に失敗しました', err);
+    bodyEl.innerHTML = '';
+    const errorEl = document.createElement('p');
+    errorEl.className = 'ranking-status ranking-error';
+    errorEl.textContent = 'ランキングの取得に失敗しました。通信環境をご確認のうえもう一度お試しください。';
+    bodyEl.appendChild(errorEl);
+  }
+}
+
+// 送信データを保持していないので、直近に自分が登録した1件（lastSubmittedEntry）と
+// name/score/correct/wrongが一致する行を「自分の行」とみなして目立たせる
+// （POSTはPrefer: return=minimalのため挿入行のidが返らず、他に照合手段がない）。
+function renderRankingRows(container, rows, diff, time) {
+  container.innerHTML = '';
+  if (rows.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'ranking-status';
+    empty.textContent = 'まだ記録がありません';
+    container.appendChild(empty);
+    return;
+  }
+
+  const table = document.createElement('table');
+  table.className = 'ranking-table';
+
+  const thead = document.createElement('thead');
+  const headRow = document.createElement('tr');
+  ['順位', '名前', 'スコア', '正解', '誤答'].forEach((text) => {
+    const th = document.createElement('th');
+    th.textContent = text;
+    headRow.appendChild(th);
+  });
+  thead.appendChild(headRow);
+  table.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+  const isSelfBoard = !!lastSubmittedEntry &&
+    lastSubmittedEntry.difficulty === diff &&
+    lastSubmittedEntry.time_limit === time;
+
+  rows.forEach((row, i) => {
+    const tr = document.createElement('tr');
+    const isSelf = isSelfBoard &&
+      row.name === lastSubmittedEntry.name &&
+      row.score === lastSubmittedEntry.score &&
+      row.correct === lastSubmittedEntry.correct &&
+      row.wrong === lastSubmittedEntry.wrong;
+    if (isSelf) tr.classList.add('ranking-row-self');
+
+    [String(i + 1), row.name, String(row.score), String(row.correct), String(row.wrong)].forEach((text) => {
+      const td = document.createElement('td');
+      td.textContent = text;
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  container.appendChild(table);
 }
 
 /* ---------- リザルト：Xシェア・画像保存 ---------- */
@@ -1207,6 +1499,17 @@ function setupUI() {
   document.getElementById('reviewPrevBtn').addEventListener('click', reviewGoPrev);
   document.getElementById('reviewNextBtn').addEventListener('click', reviewGoNext);
   document.getElementById('reviewBackBtn').addEventListener('click', backToResultFromReview);
+
+  // リザルト：ランキング登録・ランキングを見る
+  document.getElementById('rankSubmitBtn').addEventListener('click', submitRankEntry);
+  document.getElementById('rankNameInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') submitRankEntry();
+  });
+  document.getElementById('viewRankingBtn').addEventListener('click', openRankingScreen);
+
+  // ランキング画面：板の切り替えボタン・リザルトへ戻る
+  setupRankingBoardButtons();
+  document.getElementById('rankingBackBtn').addEventListener('click', backToResultFromRanking);
 
   // 中断ボタン：押したら即リザルトへ（ゲーム画面にのみ表示。仕様上の動作は現状のまま）
   document.getElementById('abortBtn').addEventListener('click', abortGame);

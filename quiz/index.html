@@ -76,6 +76,18 @@
       <button type="button" id="shareBtn" class="result-side-btn share-btn">Xでシェア</button>
     </div>
     <button type="button" id="saveImageBtn" class="save-image-btn">画像を保存</button>
+
+    <p id="rankCheckNote" class="rank-check-note" hidden></p>
+    <div id="rankEntry" class="rank-entry" hidden>
+      <p class="rank-entry-label">ランクイン！ランキングに登録できます</p>
+      <div class="rank-entry-row">
+        <input type="text" id="rankNameInput" class="rank-name-input" maxlength="12" placeholder="名前（1〜12文字）">
+        <button type="button" id="rankSubmitBtn" class="rank-submit-btn">登録</button>
+      </div>
+      <p id="rankEntryStatus" class="rank-entry-status"></p>
+    </div>
+    <button type="button" id="viewRankingBtn" class="view-ranking-btn">ランキングを見る</button>
+
     <div class="result-buttons">
       <button type="button" id="retryBtn" class="retry-btn"><img src="images/retry.png" alt="もう一度"></button>
       <button type="button" id="backToTitleBtn" class="back-title-btn"><img src="images/title.png" alt="タイトルへ戻る"></button>
@@ -103,6 +115,13 @@
       <button type="button" id="reviewNextBtn" class="review-nav-btn">次へ ▶</button>
     </div>
     <button type="button" id="reviewBackBtn" class="review-back-btn">リザルトへ戻る</button>
+  </section>
+
+  <section id="rankingScreen" class="ranking-screen" hidden>
+    <p class="ranking-title">ランキング</p>
+    <div class="ranking-board-buttons" id="rankingBoardButtons"></div>
+    <div id="rankingBody" class="ranking-body"></div>
+    <button type="button" id="rankingBackBtn" class="ranking-back-btn">リザルトへ戻る</button>
   </section>
 
   <section id="debugPanel" class="debug-panel" hidden></section>

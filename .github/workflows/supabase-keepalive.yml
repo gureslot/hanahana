@@ -1,0 +1,24 @@
+name: Supabase keep-alive
+
+# Supabaseの無料プランはDBアクセスが十分にないと自動休止するため、
+# scoresテーブルに毎日1回SELECTを投げて休止を防ぐ。
+
+"on":
+  schedule:
+    - cron: '0 3 * * *' # 毎日 03:00 UTC（正午JST）
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: https://pyzgeadtvpjjgoqvihuw.supabase.co
+      # anon keyはブラウザに埋め込む前提の公開キー（RLSでSELECT/INSERTのみ許可）。
+      SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5emdlYWR0dnBqamdvcXZpaHV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg1MjA3MDksImV4cCI6MjEwNDA5NjcwOX0.O8tBN6MtQy5_liMFJnGesJZLtzCB6CdkPBFMR1LmJOk
+    steps:
+      - name: Select 1 row from scores
+        run: |
+          curl -sf \
+            "${SUPABASE_URL}/rest/v1/scores?select=id&limit=1" \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}"
