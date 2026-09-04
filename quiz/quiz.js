@@ -52,7 +52,7 @@ let timerPausedTotalMs = 0; // これまでに停止していた合計時間（�
 let timerPauseStartedAt = null; // 現在停止中ならその開始時刻。停止中でなければnull
 let timerRafId = null; // requestAnimationFrame のID
 let endingTimeoutId = null; // 時間切れ後の3秒静止用
-let endSePlayed = false; // end.wav（残り3秒の笛）を1ゲームにつき1回だけ鳴らすためのフラグ
+let endSePlayed = false; // end.wav（時間切れの瞬間の笛）を1ゲームにつき1回だけ鳴らすためのフラグ
 let correctCount = 0;
 let wrongCount = 0;
 let records = []; // 1問ごとの出題・回答記録（振り返り画面で使用）
@@ -149,8 +149,9 @@ function preloadResultImages() {
  *
  * SEは2チャンネル構成：
  * ・正誤SE（seikai/huseikai）は従来どおり1チャンネル（新しい方を鳴らす前に前を止める）。
- * ・end.wav（残り3秒の笛）は正誤SEとは独立したチャンネルで鳴らし、一度鳴り始めたら
- *   途中で止めない。正誤SEを鳴らしても end.wav の再生には影響しない（かき消されない）。
+ * ・end.wav（時間切れの瞬間の笛）は正誤SEとは独立したチャンネルで鳴らし、一度鳴り
+ *   始めたら途中で止めない（時間切れ後の3秒静止のあいだも鳴り終わるまで続く）。
+ *   正誤SEを鳴らしても end.wav の再生には影響しない（かき消されない）。
  * どちらも同じ seGainNode を通すため、音量・ミュートは共通で反映される。 */
 
 async function loadSoundBuffer(url) {
@@ -805,8 +806,8 @@ function resumeTimer() {
 function timerTick(now) {
   const remainingMs = timerRemainingMs(now);
 
-  // end.wav：残り3.00秒の時点で1回だけ再生を開始する
-  if (!endSePlayed && remainingMs <= 3000) {
+  // end.wav：残り0.00秒（時間切れの瞬間）に1回だけ再生を開始する
+  if (!endSePlayed && remainingMs <= 0) {
     endSePlayed = true;
     playEndSe();
   }

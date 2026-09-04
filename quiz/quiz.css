@@ -606,6 +606,31 @@ main {
   justify-content: center;
 }
 
+/* 振り返り画面の出題エリアだけ縮小する（クイズ中の#stageは.stage-wrap配下の
+   ままなので影響を受けない）。1コマを96px→72px（3/4倍）にすると、行の高さも
+   48px→36px・24px→18pxと整数のまま縮小でき、縦の合計は192px→144pxで48px縮む。
+   この48pxを.review-panelの高さに回して
+   「正解」側21コマぶん(336px)を352px→400pxの枠で余裕を持って収める
+   （352pxちょうどだとaspect-ratio×21行のサブピクセル丸め次第で枠からあふれうる）。
+   .stage-grid::before/::afterは96px基準の固定pxなので、ここで72px基準に
+   引き直す（幅=72*3+2*2=220px、上段境目=18px、下段境目=18+36*3=126px）。 */
+.review-stage-wrap .stage-grid {
+  grid-template-columns: repeat(3, 72px) auto;
+}
+
+.review-stage-wrap .stage-grid::before,
+.review-stage-wrap .stage-grid::after {
+  width: 220px;
+}
+
+.review-stage-wrap .stage-grid::before {
+  top: 18px;
+}
+
+.review-stage-wrap .stage-grid::after {
+  top: 126px;
+}
+
 .review-judge {
   text-align: center;
   font-size: 16px;
@@ -632,6 +657,10 @@ main {
   display: flex;
   flex-direction: column;
   align-items: center;
+  min-width: 0; /* .review-choices(grid)の子として既定min-width:autoのままだと、
+    孫のchoice-strip（min(100%,96px)）のintrinsicサイズがこの列の最小幅として
+    伝播し、1fr列がそれ未満に縮まらず左右にはみ出す。.choice-cell/.choice-strip/
+    .choice-slotに施したのと同じmin-width:0の扱いをこの階層にも広げる。 */
 }
 
 .review-choice-label {
@@ -641,11 +670,14 @@ main {
   margin: 0 0 6px;
 }
 
-/* .choice-cellを流用（透明背景・枠線・21コマぶんの高さ・中央寄せ）。
-   クリック対象ではないのでカーソルだけ上書きする。 */
+/* .choice-cellを流用（透明背景・枠線・中央寄せ）。クリック対象ではないので
+   カーソルを上書きし、高さは出題エリアの縮小ぶん(48px)を上乗せした400pxに
+   広げる（.review-stage-wrapのコメント参照）。「あなたの回答」「正解」は
+   どちらもこのクラスを使うため、枠の高さは自動的に同じになる。 */
 .review-panel {
   cursor: default;
   width: 100%;
+  height: 400px;
 }
 
 .review-nav {
