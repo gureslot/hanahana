@@ -135,19 +135,20 @@ main {
   background-image: url('images/titleBG.png');
 }
 
-/* ロゴの光の演出：帯（::after、斜めの半透明白グラデーション）をtranslateXで
-   左から右へ通過させる。まず素直に半透明の白帯を重ねる方式（mix-blend-mode
-   不使用）で実装。position:relative + overflow:hiddenだけではz-indexを
-   指定しない限り新しいスタッキングコンテキストは生まれないため、
-   別セクション（.title-select-group内のリングUI）のz-indexには影響しない
-   （filterやz-index付きpositionは付けていない）。
-   width/marginはimgからこのwrapに移した（overflow:hiddenでクリップする
-   範囲をロゴの実寸に合わせるため）。 */
+/* ロゴの光の演出：Chikarian（../Chikarian/title-mockup.html の .logoShine、
+   ../Chikarian/index.html の .ttl-logoShine と同じ実装）を移植したもの。
+   前回の実装（帯を::afterでtranslateXするだけ）は矩形のエリアごと光って
+   しまっていた。文字の部分だけを光らせるには、光の帯を描くレイヤーに
+   「ロゴ画像そのもの」をCSSのmaskとしてかける＝画像の不透明部分（文字の
+   形）だけがマスクを通り、透明部分（背景）はそのまま透明のまま光が
+   一切乗らない。mix-blend-mode:screenで下の文字色に重なるようにする。
+   position:relative + overflow:hiddenは使わない（Chikarian側もmaskで
+   形が絞られるためoverflow:hiddenは不要。新しいスタッキングコンテキストも
+   作らないため、.title-select-group内のリングUIのz-indexには影響しない）。 */
 .title-logo-wrap {
   position: relative;
   display: block;
   margin: 0 auto;
-  overflow: hidden;
 }
 
 .title-logo1-wrap {
@@ -165,40 +166,39 @@ main {
   width: 100%;
 }
 
-.title-logo-wrap::after {
-  content: '';
+.title-logo1-shine,
+.title-logo2-shine {
   position: absolute;
-  top: -20%;
-  left: -50%; /* 帯（幅40%）が完全に隠れる開始位置（右端が-10%＝ロゴの外） */
-  width: 40%;
-  height: 140%;
-  background: linear-gradient(
-    75deg,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.65) 50%,
-    rgba(255, 255, 255, 0) 100%
-  );
+  inset: 0;
+  mix-blend-mode: screen;
   pointer-events: none;
-  animation: title-logo-shine 4.5s ease-in-out infinite;
+  background: linear-gradient(108deg, transparent 42%, rgba(255, 248, 214, .9) 50%, transparent 58%);
+  background-size: 260% 100%;
+  background-repeat: no-repeat;
+  animation: title-logo-shine 5s ease-in-out infinite;
 }
 
-.title-logo2-wrap::after {
+.title-logo1-shine {
+  -webkit-mask: url('images/title1.png') center/contain no-repeat;
+  mask: url('images/title1.png') center/contain no-repeat;
+}
+
+.title-logo2-shine {
+  -webkit-mask: url('images/title2.png') center/contain no-repeat;
+  mask: url('images/title2.png') center/contain no-repeat;
   animation-delay: 1.5s; /* title1と少しずらして同時に動きすぎないようにする */
 }
 
-/* translateXの%は要素自身の幅(40%)基準。0%で開始位置(左端-50%)のまま静止、
-   18%(4.5s中の約0.8秒)でtranslateX(380%)＝左端が+102%まで移動＝完全に
-   ロゴの右外へ抜ける。そこで100%まで静止し続け、ループの先頭で瞬時に
-   開始位置へ戻る＝「数秒に1回、光がさっと通過する」動きになる。 */
+/* Chikarianの@keyframes shineと同じ値。background-sizeを260%に広げておき、
+   background-positionを170%→-70%へずらすことで光の帯が左から右へ流れる
+   （55%地点で到達、残りは-70%のまま静止＝5秒に1回のペースになる）。 */
 @keyframes title-logo-shine {
   0% {
-    transform: translateX(0%);
+    background-position: 170% 0;
   }
-  18% {
-    transform: translateX(380%);
-  }
+  55%,
   100% {
-    transform: translateX(380%);
+    background-position: -70% 0;
   }
 }
 
