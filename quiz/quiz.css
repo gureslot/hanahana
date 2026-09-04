@@ -97,8 +97,7 @@ main {
 /* タイトル画面。titleBG.pngは縦長（1024×1536）。centerのcoverだと横画面比の
    コンテナでは左右がクロップされるため、containで画像全体を必ず見せる
    （縦画面390×844相当を想定し、幅基準でレターボックスになる分はmin-heightで確保）。
-   title1/title2は黒背景・透過なし素材なのでmix-blend-mode:screenで黒を抜く。
-   ロゴの動きは未確定のため、今回は静止で配置するのみ。 */
+   title1/title2は透過PNG。ロゴの動きは未確定のため、今回は静止で配置するのみ。 */
 
 .title-screen {
   position: relative;
@@ -116,7 +115,6 @@ main {
 .title-logo2 {
   display: block;
   margin: 0 auto;
-  mix-blend-mode: screen;
 }
 
 .title-logo1 {
@@ -125,13 +123,12 @@ main {
 }
 
 .title-logo2 {
-  width: 65%;
+  width: 90%;
   max-width: 240px;
   margin-top: 12px;
 }
 
 /* 難易度・時間の選択（平面の横並び。円形3D回転UIは次段階）。
-   6枚とも黒背景素材なのでmix-blend-mode:screenで黒を抜く。
    選択中は光らせて分かるようにする。 */
 
 .title-select-group {
@@ -166,7 +163,6 @@ main {
 .title-diff-btn img,
 .title-time-btn img {
   display: block;
-  mix-blend-mode: screen;
 }
 
 .title-diff-btn img {
@@ -194,13 +190,15 @@ main {
   width: 60%;
   max-width: 220px;
   margin: 36px auto 0;
-  padding: 14px;
-  border-radius: 10px;
+  padding: 0;
   border: none;
-  background: #4a6cf7;
-  color: #fff;
-  font-size: 17px;
-  font-weight: bold;
+  background: transparent;
+  cursor: pointer;
+}
+
+.title-start-btn img {
+  display: block;
+  width: 100%;
 }
 
 /* 出題（3x3 + 枠上枠下） */
@@ -330,15 +328,22 @@ main {
   grid-template-columns: repeat(2, 1fr);
 }
 
-/* 枠の高さは21コマ分（1コマ16px×21=336px）で固定。中の格子は行数分しか
-   描かないため、縦横中央に置いて余白を均等にする。 */
+/* 枠の高さは23コマ分（1コマ16px×23=368px）で固定。
+   初・易・並は下端を受付ライン（A=0）で固定し上端をmax(A)とするため、
+   ずらし選択肢でmax(A)が21を超えることがある（全9261出目×2色×ずらし
+   総当たりで実測した最大A=22、つまり0〜22の23行）。
+   中の格子は行数分しか描かないため、縦横中央に置いて余白を均等にする。 */
 .choice-cell {
   background: #1c1d27;
   border: 2px solid #333;
   border-radius: 8px;
   padding: 6px;
   cursor: pointer;
-  height: 352px; /* 336px(格子) + padding 6px×2 + border 2px×2 */
+  height: 384px; /* 368px(格子) + padding 6px×2 + border 2px×2 */
+  min-width: 0; /* グリッドアイテムの既定min-width:autoのままだと
+    .choice-strip側のmin(100%,96px)が96px側で最小サイズと見なされ、
+    枠(1fr)がそれ未満に縮まらずグリッドがはみ出す。0にして枠側の
+    実幅で縮められるようにする。 */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -402,10 +407,9 @@ main {
 /* リザルト画面。
    titleBG.pngは縦長（1024×1536）なので background:center/cover にして幅に合わせ、
    はみ出す分だけクロップする（伸縮による歪みを避ける。引き伸ばしすぎ対策）。
-   4つのPNGは黒背景・透過なしの素材のため、背景(titleBG)の上に重ねる
-   title1/title2/scoredaizaにはmix-blend-mode:screenで黒を抜く。
-   ※screenはpreserve-3dを無効化するため、今後この3枚に3D変形（回転UI等）を
-   　かける場合はscreen自体を外すか、別要素に分離すること。 */
+   title1/title2は透過PNG。scoredaiza.pngのみ黒背景・透過なしの素材（台座デザイン上、
+   黒背景のまま screen なしで重ねる想定。titleBG.png の中央付近はほぼ黒一色のため
+   境目は目立たない見込みだが、実機・実ブラウザでの確認はできていない）。 */
 
 .result-screen {
   position: relative;
@@ -425,7 +429,6 @@ main {
 .result-title2 {
   display: block;
   margin: 0 auto;
-  mix-blend-mode: screen;
 }
 
 /* title1（ハナハナ）を主・title2（最速目押しクイズ）を従とする。
@@ -451,7 +454,6 @@ main {
 .result-score-daiza {
   display: block;
   width: 100%;
-  mix-blend-mode: screen;
 }
 
 /* 台座（scoredaiza.png）の平行四辺形の傾きに合わせてskewXをかける。
@@ -492,22 +494,18 @@ main {
 .back-title-btn {
   display: block;
   width: 100%;
-  padding: 12px;
-  border-radius: 8px;
-  font-size: 15px;
-}
-
-.retry-btn {
+  max-width: 260px;
+  margin: 0 auto;
+  padding: 0;
   border: none;
-  background: #4a6cf7;
-  color: #fff;
-  font-weight: bold;
+  background: transparent;
+  cursor: pointer;
 }
 
-.back-title-btn {
-  border: 1px solid #999;
-  background: rgba(0, 0, 0, 0.35);
-  color: #fff;
+.retry-btn img,
+.back-title-btn img {
+  display: block;
+  width: 100%;
 }
 
 /* 確認用UI（本番では出ない。難易度切替・中断ボタンを最下部にまとめる） */

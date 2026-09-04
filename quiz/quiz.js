@@ -354,6 +354,9 @@ function applyShiftsWithFlip(baseA, rawOffsets) {
 }
 
 // 仕様書 第4章：A_i = (P_i − X_i) mod 21 + o_i
+// refX：描画時に「リールiの (refX_i + 行) 番」で実際の図柄を引くための基準番号。
+// ずらしなし（o_i=0）ならrefX=X。ずらしありの場合、7がA_i行に来る位置を保ったまま
+// 基準をo_iぶんずらす（refX = X − o_i）。
 function computeChoiceLayout(X, color, rawOffsets) {
   const P = sevens[COLOR_KEY[color]];
   const baseA = {};
@@ -361,7 +364,9 @@ function computeChoiceLayout(X, color, rawOffsets) {
   const { A, offsets } = applyShiftsWithFlip(baseA, rawOffsets);
   const minA = Math.min(A.left, A.middle, A.right);
   const maxA = Math.max(A.left, A.middle, A.right);
-  return { baseA, A, offsets, minA, maxA, rows: maxA - minA + 1 };
+  const refX = {};
+  for (const r of REEL_NAMES) refX[r] = X[r] - offsets[r];
+  return { baseA, A, offsets, minA, maxA, rows: maxA - minA + 1, refX };
 }
 
 function buildChoices(judgeResult, diffKey) {
@@ -387,19 +392,25 @@ function buildChoices(judgeResult, diffKey) {
 }
 
 /* ---------- 選択肢生成：初心者モード（2択・色の見分けのみを問う）----------
- * 選択肢は「正解」（正解色・正解の形）と「不正解」（同じAのまま7の画像だけ
- * もう一方の色に変えたもの）の2つのみ。不正解側は配列上ありえない配置に
- * なるが、色を見分ける練習用のモードなので意図的にそうしている。
- * 他難易度の「ずらし」ロジック（makeRawOffsets等）は使わない。 */
+ * 選択肢は「正解」（正解色・正解の形）と「不正解」の2つのみ。
+ * 不正解側は「7の形（3つの7の相対位置＝A）は正解と同じ」にしつつ、
+ * 周囲の図柄は正解色のものを流用せず、もう一方の色の7の実際の位置を
+ * 基準にしたrefXで描く（＝もう一方の色の7が正解と同じ形に並んだ状態を
+ * そのリール配列で描く）。他難易度の「ずらし」ロジックは使わない。 */
 function buildBeginnerChoices(judgeResult) {
   const correctColor = judgeResult.correctColors[0];
   const wrongColor = correctColor === 'pink' ? 'white' : 'pink';
   const X = judgeResult.timing.X;
-  const layout = computeChoiceLayout(X, correctColor, { left: 0, middle: 0, right: 0 });
+  const correctLayout = computeChoiceLayout(X, correctColor, { left: 0, middle: 0, right: 0 });
+
+  const wrongP = sevens[COLOR_KEY[wrongColor]];
+  const wrongRefX = {};
+  for (const r of REEL_NAMES) wrongRefX[r] = wrongP[r] - correctLayout.A[r];
+  const wrongLayout = { ...correctLayout, A: { ...correctLayout.A }, refX: wrongRefX };
 
   const choices = [
-    { color: correctColor, isCorrectForm: true, layout, isCorrect: true },
-    { color: wrongColor, isCorrectForm: true, layout: { ...layout, A: { ...layout.A } }, isCorrect: false },
+    { color: correctColor, isCorrectForm: true, layout: correctLayout, isCorrect: true },
+    { color: wrongColor, isCorrectForm: true, layout: wrongLayout, isCorrect: false },
   ];
 
   shuffleArray(choices);
@@ -442,24 +453,42 @@ function renderStage(container, S) {
 
 /* ---------- 描画：選択肢（仕様書 第4章）----------
  * 基準は受付開始ライン（X）。A_i = (P_i − X_i) mod 21 + o_i を
- * buildChoices() で choice.layout として計算済み。7以外の図柄は描かず、
- * 格子線だけを帯の全セルに引く。1コマの表示サイズは4択で統一する（CSS側）。
+ * buildChoices() で choice.layout として計算済み。
+ *
+ * 極（hard）は従来どおり：下端＝各リールの最小A（受付ライン以降で最初の7）、
+ * 7以外の図柄は描かず格子線だけを引く。
+ *
+ * 初・易・並：下端を受付開始ライン（A=0）で固定し、上端は従来どおりmax(A)。
+ * 表示範囲0〜max(A)の各行・各リールについて、リールiの (refX_i + 行) 番の
+ * 図柄（7以外も含む実際のリール配列）を描く。ずらし選択肢はrefXがo_iぶん
+ * ずれているため、ずらした位置の図柄がそのまま出る。
  */
 
-function renderChoiceStrip(container, choice) {
+function renderChoiceStrip(container, choice, diffKey) {
   const layout = choice.layout;
   const sevenSymbol = choice.color === 'pink' ? 'pink7' : 'white7';
+  const showFull = diffKey !== 'hard';
+  const top = layout.maxA;
+  const bottom = showFull ? 0 : layout.minA;
+  const rows = top - bottom + 1;
 
   const grid = document.createElement('div');
   grid.className = 'choice-strip';
-  grid.style.gridTemplateRows = 'repeat(' + layout.rows + ', auto)';
+  grid.style.gridTemplateRows = 'repeat(' + rows + ', auto)';
 
-  for (let j = 0; j < layout.rows; j++) {
-    const a = layout.maxA - j;
+  for (let j = 0; j < rows; j++) {
+    const a = top - j;
     for (const reel of REEL_NAMES) {
       const slot = document.createElement('div');
       slot.className = 'choice-slot';
-      if (layout.A[reel] === a) {
+      if (showFull) {
+        const symbolName = symbolAt(reel, layout.refX[reel] + a);
+        const img = document.createElement('img');
+        img.className = 'choice-symbol';
+        img.src = symbolImages[symbolName].src;
+        img.alt = symbolName;
+        slot.appendChild(img);
+      } else if (layout.A[reel] === a) {
         const img = document.createElement('img');
         img.className = 'choice-symbol';
         img.src = symbolImages[sevenSymbol].src;
@@ -497,20 +526,20 @@ function newQuestion() {
   };
 
   renderStage(document.getElementById('stage'), S);
-  renderChoices(document.getElementById('choices'), choices);
+  renderChoices(document.getElementById('choices'), choices, diffKey);
   clearResult();
 
   if (debugMode) renderDebugPanel(currentQuestion);
 }
 
-function renderChoices(container, choices) {
+function renderChoices(container, choices, diffKey) {
   container.innerHTML = '';
   container.classList.remove('answered');
   container.classList.toggle('choices-2', choices.length === 2);
   choices.forEach((choice) => {
     const cell = document.createElement('div');
     cell.className = 'choice-cell';
-    renderChoiceStrip(cell, choice);
+    renderChoiceStrip(cell, choice, diffKey);
     cell.addEventListener('click', () => onChoiceClick(choice));
     choice._cell = cell;
     container.appendChild(cell);
@@ -743,7 +772,7 @@ function applyTitleTimeConstraint() {
   }
 }
 
-// タイトル画面：難易度・時間の選択（平面の横並び。画像はmix-blend-mode:screenで黒を抜く）
+// タイトル画面：難易度・時間の選択（平面の横並び）
 function setupTitleSelectors() {
   const diffButtons = document.querySelectorAll('.title-diff-btn');
   diffButtons.forEach((btn) => {
