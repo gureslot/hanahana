@@ -8,6 +8,11 @@ const SYMBOL_NAMES = [
 const COLOR_KEY = { pink: 'pink7', white: 'white7' };
 const REEL_LABEL = { left: '左', middle: '中', right: '右' };
 
+// リザルト画像（画像を保存ボタン）の合成に使う素材。SYMBOL_NAMESとは別に
+// 事前読み込みしておき、canvas生成をユーザー操作（クリック）と同じタスク内で
+// 同期的に完結させる（iOS Safariでのnavigator.share/ダウンロードの成功率を上げる）。
+const RESULT_IMAGE_NAMES = ['title1', 'title2', 'titleBG', 'scoredaiza'];
+
 const DIFFICULTIES = {
   beginner: { label: '初心者', special: true },
   easy: { label: '易', shift: 2, reelCount: 1, fixLeft: true },
@@ -29,6 +34,7 @@ const ROW_DEFS = [
 let reelsData = null;
 let sevens = null;
 let symbolImages = {};
+let resultImages = {}; // リザルト画像合成用（RESULT_IMAGE_NAMES参照）
 let currentDifficulty = 'normal';
 let currentQuestion = null;
 let debugMode = false;
@@ -51,6 +57,8 @@ let correctCount = 0;
 let wrongCount = 0;
 let records = []; // 1問ごとの出題・回答記録（振り返り画面で使用）
 let beginnerCandidates = []; // 初心者モードの出目候補（起動時に一度だけ生成）
+let easyCandidates = []; // 易モードの出目候補（起動時に一度だけ生成。左中段4/14固定）
+let normalHardCandidates = []; // 並・極モードの出目候補（起動時に一度だけ生成。左中段自由）
 let reviewIndex = 0; // 振り返り画面で現在表示中の問題番号（0始まり、records基準）
 
 /* ---------- 音（仕様書 第6章：BGM・SE） ---------- */
@@ -84,7 +92,10 @@ async function init() {
     sevens = data.sevens;
     bgmEl = document.getElementById('bgmAudio');
     await preloadImages();
+    await preloadResultImages();
     beginnerCandidates = buildBeginnerCandidates();
+    easyCandidates = buildStopCandidates(true).candidates;
+    normalHardCandidates = buildStopCandidates(false).candidates;
     await preloadSounds();
     setupUI();
     setupTitleScreen();
@@ -110,6 +121,18 @@ function preloadImages() {
     const img = new Image();
     img.onload = () => {
       symbolImages[name] = img;
+      resolve();
+    };
+    img.onerror = () => reject(new Error('画像の読み込みに失敗: images/' + name + '.png'));
+    img.src = 'images/' + name + '.png';
+  })));
+}
+
+function preloadResultImages() {
+  return Promise.all(RESULT_IMAGE_NAMES.map((name) => new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      resultImages[name] = img;
       resolve();
     };
     img.onerror = () => reject(new Error('画像の読み込みに失敗: images/' + name + '.png'));
@@ -242,17 +265,15 @@ function colorLabel(color) {
 
 /* ---------- 出題生成・判定ロジック（仕様書 第5章） ---------- */
 
+// 出目は難易度ごとに起動時生成済みの候補リストから選ぶ（同時押しになる／コマ数が
+// 足りない出目を除外済み。buildStopCandidates参照）。
 function generateStops(diffKey) {
   if (forcedStops) return forcedStops;
-  if (diffKey === 'beginner') {
-    const idx = Math.floor(Math.random() * beginnerCandidates.length);
-    return beginnerCandidates[idx];
-  }
-  const diff = DIFFICULTIES[diffKey];
-  const left = diff.fixLeft ? (Math.random() < 0.5 ? 4 : 14) : randNum();
-  const middle = randNum();
-  const right = randNum();
-  return { left, middle, right };
+  const pool = diffKey === 'beginner' ? beginnerCandidates
+    : diffKey === 'easy' ? easyCandidates
+    : normalHardCandidates; // 並・極は同じ候補プール（制限がshift/reelCountに依存しないため）
+  const idx = Math.floor(Math.random() * pool.length);
+  return pool[idx];
 }
 
 function computeTiming(S) {
@@ -288,9 +309,33 @@ function judgeQuestion(S) {
   return { S, timing, pinkCalc, whiteCalc, correctColors };
 }
 
+/* ---------- 出目の制限（同時押し・コマ数不足の除外） ----------
+ * ハナハナは3つのストップボタンを同時に押せない。正解色のA（=Dline。受付ライン
+ * から対象色7までのコマ数、ずらしなし）に対してのみ、以下を判定する：
+ * 1) A=0のリールが2つ以上ある出目は除外（min(A)=0のときA=0のリールが1つだけ
+ *    であること＝同時押しになる出目を弾く）
+ * 2) max(A)<=1の出目は除外（3リール止めるには最低3コマ必要なため、第三停止が
+ *    2コマ目までに来てしまう出目を弾く）
+ * 同着（両色とも正解）の場合は両方の色を判定し、どちらか一方でも条件を
+ * 満たさなければ除外する。不正解になる側の色は判定しない。 */
+function passesStopTimingConstraint(Dline) {
+  const zeroCount = REEL_NAMES.filter((r) => Dline[r] === 0).length;
+  const maxD = Math.max(Dline.left, Dline.middle, Dline.right);
+  return zeroCount <= 1 && maxD >= 2;
+}
+
+function passesStopConstraint(judge) {
+  for (const color of judge.correctColors) {
+    const Dline = color === 'pink' ? judge.pinkCalc.Dline : judge.whiteCalc.Dline;
+    if (!passesStopTimingConstraint(Dline)) return false;
+  }
+  return true;
+}
+
 /* ---------- 初心者モード：出目候補の生成（起動時に一度だけ） ----------
  * 条件：左中段が4または14 / 正解色のA（受付ラインから7までのコマ数、
- * ずらしなし）についてmax(A)-min(A)<=BEGINNER_SPREAD_MAX。
+ * ずらしなし）についてmax(A)-min(A)<=BEGINNER_SPREAD_MAX / 出目の制限
+ * （passesStopConstraint）を満たすこと。
  * 同着（正解色が定まらない）出目は候補から除外する。
  * 判定ロジック（judgeQuestion）は他難易度と共通・無変更。 */
 function buildBeginnerCandidates() {
@@ -298,6 +343,7 @@ function buildBeginnerCandidates() {
   let pinkCount = 0;
   let whiteCount = 0;
   let tieCount = 0;
+  let stopConstraintExcluded = 0;
 
   for (const left of [4, 14]) {
     for (let middle = 1; middle <= 21; middle++) {
@@ -313,6 +359,10 @@ function buildBeginnerCandidates() {
         const vals = [Dline.left, Dline.middle, Dline.right];
         const spread = Math.max(...vals) - Math.min(...vals);
         if (spread <= BEGINNER_SPREAD_MAX) {
+          if (!passesStopConstraint(judge)) {
+            stopConstraintExcluded++;
+            continue;
+          }
           candidates.push(S);
           if (color === 'pink') pinkCount++; else whiteCount++;
         }
@@ -322,9 +372,44 @@ function buildBeginnerCandidates() {
 
   console.log(
     '[初心者モード] 候補' + candidates.length + '件' +
-    '（ピンク' + pinkCount + '・白' + whiteCount + '）、同着除外' + tieCount + '件'
+    '（ピンク' + pinkCount + '・白' + whiteCount + '）、同着除外' + tieCount + '件' +
+    '、出目の制限で除外' + stopConstraintExcluded + '件'
   );
   return candidates;
+}
+
+/* ---------- 易・並・極：出目候補の生成（起動時に一度だけ） ----------
+ * fixLeft=true（易）は左中段4/14固定、fixLeft=false（並・極）は左中段自由。
+ * 並・極は出目の制限がずらしのshift/reelCountに依存しないため、同じ候補
+ * プールを共有する。同着（両色正解）も候補に含める（passesStopConstraint内で
+ * 両方の色を判定済み）。 */
+function buildStopCandidates(fixLeft) {
+  const candidates = [];
+  let pinkCount = 0;
+  let whiteCount = 0;
+  let tieCount = 0;
+  const leftValues = fixLeft ? [4, 14] : Array.from({ length: 21 }, (_, i) => i + 1);
+
+  for (const left of leftValues) {
+    for (let middle = 1; middle <= 21; middle++) {
+      for (let right = 1; right <= 21; right++) {
+        const S = { left, middle, right };
+        const judge = judgeQuestion(S);
+        if (!passesStopConstraint(judge)) continue;
+        candidates.push(S);
+        if (judge.correctColors.length === 2) tieCount++;
+        else if (judge.correctColors[0] === 'pink') pinkCount++;
+        else whiteCount++;
+      }
+    }
+  }
+
+  const total = leftValues.length * 21 * 21;
+  console.log(
+    '[' + (fixLeft ? '易' : '並・極') + 'モード] 候補' + candidates.length + '件（全' + total + '通り中）' +
+    '（ピンク' + pinkCount + '・白' + whiteCount + '・同着' + tieCount + '）'
+  );
+  return { candidates, pinkCount, whiteCount, tieCount };
 }
 
 /* ---------- 選択肢生成（仕様書 第4章） ---------- */
@@ -881,6 +966,153 @@ function backToResultFromReview() {
   setPhase('result');
 }
 
+/* ---------- リザルト：Xシェア・画像保存 ---------- */
+
+const SHARE_URL = 'https://gureslot.github.io/hanahana/quiz/';
+
+function buildShareText() {
+  const diffLabel = DIFFICULTIES[currentDifficulty].label;
+  const lines = [
+    'ハナハナ最速目押しクイズ',
+    diffLabel + '／' + currentTimeLimit + '秒',
+    'スコア：正解' + correctCount + '　誤答' + wrongCount,
+    '',
+    '#ハナハナ最速目押しクイズ',
+    SHARE_URL,
+  ];
+  return lines.join('\n');
+}
+
+// X Web Intent。/intent/post はモバイルで無限ループになる事例があるため
+// 必ず /intent/tweet を使う。
+function shareToX() {
+  const text = buildShareText();
+  const intentUrl = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(text);
+  window.open(intentUrl, '_blank', 'noopener,noreferrer');
+}
+
+// background-size:cover と同じロジックで画像を敷く（はみ出す分は中央基準でクロップ）。
+function drawImageCover(ctx, img, x, y, w, h) {
+  const scale = Math.max(w / img.width, h / img.height);
+  const sw = w / scale;
+  const sh = h / scale;
+  const sx = (img.width - sw) / 2;
+  const sy = (img.height - sh) / 2;
+  ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+}
+
+// 幅を指定してアスペクト比を保ったまま中央揃えで描画し、実際に使った高さを返す。
+function drawImageContainCentered(ctx, img, centerX, topY, targetW) {
+  const targetH = targetW * (img.height / img.width);
+  ctx.drawImage(img, centerX - targetW / 2, topY, targetW, targetH);
+  return targetH;
+}
+
+const RESULT_CANVAS_W = 800;
+const RESULT_CANVAS_H = 1050;
+
+// リザルト画面（quiz.css .result-screen）と同じ構成要素を1枚のcanvasに合成する：
+// 背景(titleBG.png)・ロゴ(title1/title2)・スコア台座(scoredaiza.png)＋スコア数字
+// （台座の傾きに合わせたskewX(-36deg)もCSSと同じ角度で再現）・正解誤答・難易度秒数。
+function buildResultCanvas() {
+  const canvas = document.createElement('canvas');
+  canvas.width = RESULT_CANVAS_W;
+  canvas.height = RESULT_CANVAS_H;
+  const ctx = canvas.getContext('2d');
+  const centerX = canvas.width / 2;
+
+  ctx.fillStyle = '#12131a';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  drawImageCover(ctx, resultImages.titleBG, 0, 0, canvas.width, canvas.height);
+
+  let y = 60;
+  y += drawImageContainCentered(ctx, resultImages.title1, centerX, y, canvas.width * 0.75);
+  y += 16;
+  y += drawImageContainCentered(ctx, resultImages.title2, centerX, y, canvas.width * 0.95);
+  y += 40;
+
+  const daizaW = canvas.width * 0.88;
+  const daizaH = daizaW * (resultImages.scoredaiza.height / resultImages.scoredaiza.width);
+  const daizaX = centerX - daizaW / 2;
+  const daizaY = y;
+  ctx.drawImage(resultImages.scoredaiza, daizaX, daizaY, daizaW, daizaH);
+
+  const score = correctCount - wrongCount;
+  ctx.save();
+  ctx.translate(centerX, daizaY + daizaH / 2);
+  ctx.transform(1, 0, Math.tan(-36 * Math.PI / 180), 1, 0, 0); // CSS skewX(-36deg)と同じ角度
+  ctx.fillStyle = '#fff44d';
+  ctx.font = 'bold ' + Math.round(daizaW * 0.13) + 'px system-ui, "Hiragino Kaku Gothic ProN", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+  ctx.shadowBlur = 8;
+  ctx.shadowOffsetY = 4;
+  ctx.fillText(String(score), 0, 0);
+  ctx.restore();
+
+  y = daizaY + daizaH + 40;
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+  ctx.shadowBlur = 6;
+  ctx.shadowOffsetY = 2;
+  ctx.fillStyle = '#fff';
+  ctx.font = Math.round(canvas.width * 0.038) + 'px system-ui, "Hiragino Kaku Gothic ProN", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillText('正解 ' + correctCount + '　誤答 ' + wrongCount, centerX, y);
+
+  y += 42;
+  ctx.fillStyle = '#ddd';
+  ctx.font = Math.round(canvas.width * 0.032) + 'px system-ui, "Hiragino Kaku Gothic ProN", sans-serif';
+  ctx.fillText(DIFFICULTIES[currentDifficulty].label + '／' + currentTimeLimit + '秒', centerX, y);
+
+  ctx.shadowColor = 'transparent';
+  ctx.shadowBlur = 0;
+
+  return canvas;
+}
+
+function canShareFile(file) {
+  try {
+    return !!(navigator.share && navigator.canShare && navigator.canShare({ files: [file] }));
+  } catch (err) {
+    return false;
+  }
+}
+
+// 画像を保存：iOS Safariは<a download>が確実に効かないため、Web Share API
+// （ファイル共有）が使える場合はまずそちらを使う（共有シートの「画像を保存」で
+// 端末に保存できる）。使えない環境ではBlob URL＋<a download>にフォールバックする。
+async function saveResultImage() {
+  const canvas = buildResultCanvas();
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+  if (!blob) {
+    console.error('リザルト画像の生成に失敗しました');
+    return;
+  }
+  const fileName = 'hanahana-quiz-result.png';
+  const file = new File([blob], fileName, { type: 'image/png' });
+
+  if (canShareFile(file)) {
+    try {
+      await navigator.share({ files: [file], title: 'ハナハナ最速目押しクイズ' });
+      return;
+    } catch (err) {
+      if (err && err.name === 'AbortError') return; // ユーザーがキャンセルした場合はそのまま終了
+      console.error('画像の共有に失敗しました。ダウンロードにフォールバックします', err);
+    }
+  }
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 // 確認用「1問だけ表示」：タイマーなしで出題と判定だけ見る（従来の動作）
 function showPreviewQuestion() {
   stopTimers();
@@ -957,9 +1189,10 @@ function setupUI() {
   document.getElementById('retryBtn').addEventListener('click', startGame);
   document.getElementById('backToTitleBtn').addEventListener('click', backToTitle);
 
-  // リザルト：答え合わせ（振り返り画面へ）／Xシェア（今回は配置のみ・押しても何もしない）
+  // リザルト：答え合わせ（振り返り画面へ）／Xシェア／画像を保存
   document.getElementById('reviewBtn').addEventListener('click', openReview);
-  document.getElementById('shareBtn').addEventListener('click', () => {});
+  document.getElementById('shareBtn').addEventListener('click', shareToX);
+  document.getElementById('saveImageBtn').addEventListener('click', saveResultImage);
 
   // 振り返り画面：前後送り・リザルトへ戻る
   document.getElementById('reviewPrevBtn').addEventListener('click', reviewGoPrev);
