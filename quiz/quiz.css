@@ -2,11 +2,19 @@
   box-sizing: border-box;
 }
 
+/* ダブルタップでのズームだけを無効化する（誤タップでの拡大・操作しづらさ対策）。
+   user-scalable=noはiOS Safariが無視するうえアクセシビリティ上望ましくないため
+   使わない。touch-action:manipulationはピンチズーム（2本指の拡大）は妨げない。
+   htmlの領域にも指定する：bodyはpadding:12pxぶんの箱で終わるため、画面が
+   縦にはみ出す（タイトル・リザルト等）とbodyの下端より下（htmlの領域）が
+   スクロール後に見えることがあり、bodyだけの指定だとそこでダブルタップズームが
+   無効化されない。html, body両方に指定して画面全体をカバーする。 */
 html, body {
   margin: 0;
   padding: 0;
   max-width: 100%;
   overflow-x: hidden;
+  touch-action: manipulation;
 }
 
 body {
@@ -14,10 +22,6 @@ body {
   background: #12131a;
   color: #eee;
   padding: 12px;
-  /* ダブルタップでのズームだけを無効化する（誤タップでの拡大・操作しづらさ対策）。
-     user-scalable=noはiOS Safariが無視するうえアクセシビリティ上望ましくないため
-     使わない。touch-action:manipulationはピンチズーム（2本指の拡大）は妨げない。 */
-  touch-action: manipulation;
 }
 
 /* 選択肢の連打などでテキストが選択状態になるのを防ぐ（操作要素全般）。 */
@@ -149,9 +153,10 @@ main {
    常に正面を向いたまま＝要素自体の回転はしない。数値の詳細はquiz.jsの
    RING_*定数を参照（実測値は報告に記載）。 */
 
+/* margin-top: ロゴ(title-logo1/title-logo2)にリングが重ならないよう下げる。 */
 .title-select-group {
   position: relative;
-  margin-top: 12px;
+  margin-top: 40px;
 }
 
 .ring-row {
@@ -162,9 +167,13 @@ main {
   margin-bottom: 8px;
 }
 
+/* 幅は「◀ボタンにカードが重ならない」ための余白込みで決める：RING_RX=70pxに
+   カード半径(scale込みで最大約27px)を足した約97pxがカード中心からの最大の
+   横方向のはみ出し。track幅200pxならtrack端(100px)からさらに約13pxの
+   余裕を持って◀▶ボタン側に届かない（quiz.jsのRING_RX変更とセットで調整）。 */
 .ring-track {
   position: relative;
-  width: 220px;
+  width: 200px;
   height: 150px;
   touch-action: pan-y; /* 横方向のドラッグはJSで処理、縦スクロールはブラウザに任せる */
   cursor: grab;
@@ -180,9 +189,11 @@ main {
   top: 50%;
   width: 62px;
   height: 62px;
-  margin: -31px 0 0 -31px;
+  /* 中心合わせはJS側のtransform: translate(-50%, -50%) だけで行う。
+     ここでさらに margin: -31px 0 0 -31px を足すと二重に半分ぶんズレる
+     （＝カード中心が◀▶ボタン中心より左上にズレていた原因）ため付けない。 */
   pointer-events: none; /* 操作はスワイプと矢印ボタンのみ（カード直接タップは対象外） */
-  transition: transform .28s ease, filter .28s ease;
+  transition: filter .28s ease; /* 位置(transform)はrAFで毎フレーム直接設定するためtransitionしない */
   will-change: transform;
 }
 

@@ -36,7 +36,7 @@ const RING_TIME_VALUES = [30, 60];
  * 傾き係数（左が下がり・右が上がる）、RING_SCALE_*が手前/奥のスケール範囲。
  * 実際に使った数値は報告に記載。 */
 const RING_STEP_PX = 50; // スワイプでカード1枚ぶん送るのに必要なドラッグ距離(px)
-const RING_RX = 100; // 楕円軌道の横半径(px)
+const RING_RX = 70; // 楕円軌道の横半径(px)。100だとカードが◀▶ボタンに重なるため縮小
 const RING_RY = 26; // 楕円軌道の縦半径(px)
 const RING_TILT_SKEW = 0.35; // 左下がり・右上がりの傾き係数（xの大きさに比例してyをずらす）
 const RING_SCALE_MAX = 1.15; // 手前（選択中）のスケール
@@ -88,6 +88,7 @@ let forcedStops = null; // ?fix=左,中,右 で出目を固定（検証用）
 //            'playing'（タイマー中） | 'ending'（時間切れ後の3秒静止） | 'result'
 let gamePhase = 'idle';
 let currentTimeLimit = 60; // 30 / 60
+let lastManualTimeLimit = 60; // プレイヤーが最後に自分で選んだ時間（初心者を抜けたときに復元する）
 let timerStartMs = 0; // performance.now() 基準の開始時刻
 let timerTotalMs = 0; // 制限時間の総ミリ秒
 let timerPausedTotalMs = 0; // これまでに停止していた合計時間（回答待ちの1秒間ぶん）
@@ -970,7 +971,10 @@ function renderGameResult() {
   document.getElementById('reviewBtn').disabled = records.length === 0;
 
   resetRankEntryUI();
-  checkRankInAndOfferEntry(currentDifficulty, currentTimeLimit, score, correctCount, wrongCount);
+  // score<=0はランキング対象外（判定自体を行わない＝名前入力欄も出さない）
+  if (score > 0) {
+    checkRankInAndOfferEntry(currentDifficulty, currentTimeLimit, score, correctCount, wrongCount);
+  }
 }
 
 function backToSetup() {
@@ -1464,14 +1468,22 @@ function showPreviewQuestion() {
 }
 
 /* ---------- タイトル画面：難易度・時間のリングUI ----------
- * 各リングは { items, selected, cardEls, onChange, dragStartX, dragAccum, dragged }
- * を持つ状態オブジェクト。items[i] = { key, imgSrc, alt, disabled }。
- * カードの位置計算は renderRing() に集約する（3D transformは使わず、
- * translate/scaleのみのposition:absolute配置）。 */
+ * 各リングは { items, selected, displaySelected, rafId, cardEls, onChange,
+ * dragStartX, dragAccum, dragged } を持つ状態オブジェクト。
+ * items[i] = { key, imgSrc, alt, disabled }。
+ * selected：確定している選択（整数、ゲーム状態に反映される）。
+ * displaySelected：表示用の実数。rAFでselectedへ滑らかに近づけ、毎フレーム
+ * この値からθ→x,y,scaleを計算し直す（＝位置のx,y自体を直線補間するのではなく、
+ * 角度を補間してから毎回x,y,scaleを算出する。2枚リングでθ=-90°/+90°の
+ * 間をcosの0同士で結んで直線移動＝縦に往復するだけになる問題を避けられる）。
+ * カード自体は3D回転させない（画像=文字は常に正面向きのまま）。 */
 
-function ringTheta(index, selected, count) {
+const RING_ANIM_EASE = 0.25; // 毎フレーム、残り角度差のこの割合ぶん近づける
+const RING_ANIM_EPS = 0.001; // これ未満になったら到達とみなしてrAFを止める
+
+function ringTheta(index, displaySelected, count) {
   // 度。0 = 正面（選択中）。baseAngle=-90°で正面をy軸上の「手前寄り」に置く。
-  return (index - selected) * (360 / count) - 90;
+  return (index - displaySelected) * (360 / count) - 90;
 }
 
 // 隣接カードへ進める。disabled（60秒など）はスキップし、行き場が無ければ動かない
@@ -1486,10 +1498,19 @@ function ringStepIndex(state, dir) {
   return next;
 }
 
-function renderRing(state) {
+// target-currentの差を、周回を跨ぐ最短経路になるよう[-count/2, count/2]に畳み込む。
+function wrapRingDiff(diff, count) {
+  let d = diff % count;
+  if (d > count / 2) d -= count;
+  if (d < -count / 2) d += count;
+  return d;
+}
+
+// 現在のdisplaySelected（実数）を使って全カードのtransform/filterを反映する。
+function applyRingCardStyles(state) {
   const n = state.items.length;
   state.cardEls.forEach((card, i) => {
-    const rad = ringTheta(i, state.selected, n) * Math.PI / 180;
+    const rad = ringTheta(i, state.displaySelected, n) * Math.PI / 180;
     const rawX = RING_RX * Math.cos(rad);
     const rawY = RING_RY * Math.sin(rad);
     const skewedY = rawY - rawX * RING_TILT_SKEW; // 左下がり・右上がりの傾き
@@ -1510,6 +1531,34 @@ function renderRing(state) {
       ? 'brightness(' + brightness + ') drop-shadow(0 0 6px #fff44d) drop-shadow(0 0 10px #4a6cf7)'
       : 'brightness(' + brightness + ')';
   });
+}
+
+function stepRingAnimation(state) {
+  const n = state.items.length;
+  const diff = wrapRingDiff(state.selected - state.displaySelected, n);
+  if (Math.abs(diff) < RING_ANIM_EPS) {
+    state.displaySelected = state.selected; // 最短経路を辿った結果ズレていても正準値へ寄せる
+    applyRingCardStyles(state);
+    state.rafId = null;
+    return;
+  }
+  state.displaySelected += diff * RING_ANIM_EASE;
+  applyRingCardStyles(state);
+  state.rafId = requestAnimationFrame(() => stepRingAnimation(state));
+}
+
+// selected（目標）へdisplaySelectedをrAFで近づけるアニメーションを（未開始なら）開始する。
+// 既にアニメーション中なら何もしない：ループ側が毎フレーム最新のselectedを見るため、
+// 連続してselectedが変わっても自然に追従する。
+function renderRing(state) {
+  if (state.rafId) return;
+  const n = state.items.length;
+  const diff = wrapRingDiff(state.selected - state.displaySelected, n);
+  if (Math.abs(diff) < RING_ANIM_EPS) {
+    applyRingCardStyles(state);
+    return;
+  }
+  state.rafId = requestAnimationFrame(() => stepRingAnimation(state));
 }
 
 // 矢印ボタン用：1枚ぶん進める。動けなければ何もしない（音も鳴らさない）。
@@ -1570,6 +1619,8 @@ function createRing(trackEl, items, initialIndex, onChange) {
   const state = {
     items,
     selected: initialIndex,
+    displaySelected: initialIndex, // 初期表示はアニメーションなしでそのまま反映
+    rafId: null,
     cardEls: [],
     onChange,
     dragStartX: null,
@@ -1589,21 +1640,33 @@ function createRing(trackEl, items, initialIndex, onChange) {
   });
 
   setupRingDrag(trackEl, state);
-  renderRing(state);
+  applyRingCardStyles(state);
   return state;
 }
 
 // 初心者モードは30秒のみ：時間リングの60秒を選択不可にし、60秒が選ばれていたら
-// 30秒に戻す（見た目はrenderRingのRING_BRIGHTNESS_DISABLEDでさらに暗くなる）。
+// 表示だけ30秒に移す（見た目はapplyRingCardStylesのRING_BRIGHTNESS_DISABLEDで
+// さらに暗くなる）。lastManualTimeLimit（プレイヤーが最後に自分で選んだ値）は
+// ここでは書き換えない：初心者を抜けたときにこの値へ戻すため。
+// 初心者以外に切り替わった際、現在値がlastManualTimeLimitとズレていれば
+// （＝初心者中に30へ強制されていたなら）記憶していた値に戻す。
 function applyTitleTimeConstraint() {
   if (!timeRingState) return;
   const isBeginner = currentDifficulty === 'beginner';
   const sixtyIndex = RING_TIME_VALUES.indexOf(60);
+  const thirtyIndex = RING_TIME_VALUES.indexOf(30);
   timeRingState.items[sixtyIndex].disabled = isBeginner;
-  if (isBeginner && currentTimeLimit === 60) {
-    currentTimeLimit = 30;
-    timeRingState.selected = RING_TIME_VALUES.indexOf(30);
+
+  if (isBeginner) {
+    if (currentTimeLimit === 60) {
+      currentTimeLimit = 30;
+      timeRingState.selected = thirtyIndex;
+    }
+  } else if (currentTimeLimit !== lastManualTimeLimit) {
+    currentTimeLimit = lastManualTimeLimit;
+    timeRingState.selected = RING_TIME_VALUES.indexOf(lastManualTimeLimit);
   }
+
   renderRing(timeRingState);
 }
 
@@ -1639,6 +1702,7 @@ function setupTitleRings() {
     Math.max(0, RING_TIME_VALUES.indexOf(currentTimeLimit)),
     (key) => {
       currentTimeLimit = parseInt(key, 10);
+      lastManualTimeLimit = currentTimeLimit; // プレイヤーが自分で選んだ値として記憶する
     }
   );
 
