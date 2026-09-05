@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>受付開始位置確認</title>
+<link rel="icon" type="image/png" sizes="32x32" href="../icon_32x32.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --accent:  #ff2a6d;
+  --bg:      #080808;
+  --border:  #1e1e1e;
+  --text:    #e0dbd5;
+  --muted:   #5e5e5e;
+  --serif:   'Noto Serif JP', 'YuMincho', '游明朝', serif;
+  --sans:    'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+
+  --cell-h: 33px;
+  --cell-w: 66px;
+  --gap:     2px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+}
+
+/* ─── head ─── */
+.head {
+  max-width: 760px;
+  margin: 40px auto 26px;
+  padding: 0 24px;
+}
+
+.page-title {
+  font-family: var(--serif);
+  font-size: clamp(24px, 5vw, 32px);
+  font-weight: 700;
+  letter-spacing: 4px;
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.intro {
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.9;
+}
+
+/* ─── stage ─── */
+.stage-outer {
+  padding: 0 20px;
+}
+
+.stage {
+  position: relative;
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+.reel-wrapper {
+  position: relative;
+  display: flex;
+  gap: var(--gap);
+  justify-content: center;
+  margin: 0 auto;
+  width: calc(var(--cell-w) * 3 + var(--gap) * 2);
+  height: calc(var(--cell-h) * 21);
+}
+
+.reel {
+  width: var(--cell-w);
+  height: calc(var(--cell-h) * 21);
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+  cursor: grab;
+}
+.reel:active { cursor: grabbing; }
+
+.track { will-change: transform; }
+
+.track img {
+  display: block;
+  width: var(--cell-w);
+  height: var(--cell-h);
+  user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
+
+/* リール窓の枠線 */
+.win-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--text);
+  z-index: 3;
+  pointer-events: none;
+}
+.win-line--top    { top: calc(var(--cell-h) * 17); }
+.win-line--bottom { top: calc(var(--cell-h) * 20); }
+
+/* 受付開始ライン
+   リール幅より左右22pxずつ長くしてある。D=3 のとき窓の上ラインと
+   同じ高さに来るので、はみ出しぶんで見分けられるようにするため。 */
+.accept {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(var(--cell-w) * 3 + var(--gap) * 2 + 44px);
+  max-width: 100%;
+  height: 2px;
+  background: var(--accent);
+  z-index: 4;
+  pointer-events: none;
+}
+
+.accept-label {
+  position: absolute;
+  right: 0;
+  bottom: 100%;
+  margin-bottom: 6px;
+  font-family: var(--serif);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+/* ─── nav ─── */
+.site-nav {
+  border-top: 1px solid var(--border);
+  margin-top: 40px;
+  padding: 30px 24px 34px;
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.site-nav a {
+  display: inline-block;
+  padding: 12px 30px;
+  border: 2px solid var(--accent);
+  color: var(--text);
+  text-decoration: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  transition: background 0.18s, color 0.18s;
+}
+.site-nav a:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* ─── footer ─── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 26px 24px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  font-family: var(--serif);
+}
+
+@media (max-width: 480px) {
+  .head { margin-top: 28px; margin-bottom: 20px; padding: 0 16px; }
+  .stage-outer { padding: 0 14px; }
+}
+</style>
+</head>
+
+<body>
+
+<div class="head">
+  <h1 class="page-title">受付開始位置確認</h1>
+  <p class="intro">
+    ドラッグして出目を合わせると、ストップボタンの受付が始まる位置にラインが引かれます。
+  </p>
+</div>
+
+<div class="stage-outer">
+  <div class="stage">
+
+    <div class="reel-wrapper" id="reelWrapper">
+      <div class="reel" data-reel="left"></div>
+      <div class="reel" data-reel="middle"></div>
+      <div class="reel" data-reel="right"></div>
+      <div class="win-line win-line--top"></div>
+      <div class="win-line win-line--bottom"></div>
+    </div>
+
+    <div class="accept" id="acceptLine">
+      <span class="accept-label">受付開始ライン</span>
+    </div>
+
+  </div>
+</div>
+
+<nav class="site-nav">
+  <a href="../index.html">index</a>
+  <a href="../hanahana.html">ハナハナ関連</a>
+</nav>
+
+<footer>
+  ©PIONEER CO.,LTD.
+</footer>
+
+<script>
+/* ============================================================
+   リール配列（quiz/reels.json と同じ。index0 が1番、
+   番号のプラス方向に回転し21番の次は1番）
+   ============================================================ */
+var REELS = {
+  left: ['hibiscus','cherry','whiteBAR','replay','bell','suika','white7',
+         'suika','replay','bell','hibiscus','cherry','pinkBAR','replay',
+         'bell','suika','replay','bell','pink7','replay','bell'],
+  middle: ['replay','cherry','bell','hana','replay','hana','bell','replay',
+           'suika','white7','cherry','bell','replay','hana','bell','hana',
+           'suika','replay','pink7','bell','suika'],
+  right: ['bell','replay','cherry','suika','bell','replay','cherry','suika',
+          'bell','replay','white7','whiteBAR','bell','replay','cherry',
+          'suika','bell','replay','pink7','cherry','pinkBAR']
+};
+
+var CELLS = 21;
+var IMG_DIR = '../quiz/images/';
+
+/* 画面の行割り当て（上から r = 0〜20）
+     r 0〜16 … 窓の上
+     r 17    … 上段
+     r 18    … 中段（＝出目 S）
+     r 19    … 下段
+     r 20    … 枠下
+   窓の上ライン … r16 と r17 の境界（＝上から17コマ）
+   窓の下ライン … r19 と r20 の境界（＝上から20コマ）              */
+var ROW_MID = 18;
+var LINE_BOTTOM_ROW = 20;
+
+/* ---------- 数値ユーティリティ ---------- */
+
+function mod(n, m) {
+  return ((n % m) + m) % m;
+}
+
+function mod21(n) {
+  return mod(n, 21);
+}
+
+function wrapNum(n) {
+  return mod21(n - 1) + 1;
+}
+
+/* トラックは上から 21,20,…,1 の順。offset を cell 数で表したとき、
+   画面 r 行目のコマ番号は wrapNum(21 − (r + cell))。
+   中段（r=18）は wrapNum(3 − cell)。 */
+function stopNumFromCell(cell) {
+  return wrapNum(21 - ROW_MID - cell);
+}
+
+/* 次の基準点（10番・21番）までのコマ数 */
+function distToAnchor(S) {
+  return Math.min(mod21(10 - S), mod21(21 - S));
+}
+
+/* 始動から受付開始までの進行コマ数。K = 3。3リール共通 */
+function acceptAdvance(sLeft, sMiddle, sRight) {
+  return Math.max(distToAnchor(sLeft), distToAnchor(sMiddle), distToAnchor(sRight)) + 3;
+}
+
+/* ---------- サイズ ---------- */
+
+var GAP = 2;
+var CELL_MAX = 33;
+var CELL_MIN = 18;
+var cellH = CELL_MAX;
+
+function measureCellH() {
+  var head = document.querySelector('.head');
+  var nav = document.querySelector('.site-nav');
+  var foot = document.querySelector('footer');
+  var stage = document.querySelector('.stage');
+
+  var chrome = (head ? head.offsetHeight : 0)
+             + (nav ? nav.offsetHeight : 0)
+             + (foot ? foot.offsetHeight : 0);
+
+  var availH = (window.innerHeight || 768) - chrome - 16;
+  var availW = (stage && stage.clientWidth) ? stage.clientWidth : 360;
+
+  var byH = Math.floor(availH / CELLS);
+  var byW = Math.floor((availW - GAP * 2) / 6);
+
+  var h = Math.min(CELL_MAX, byH, byW);
+  if (!isFinite(h) || h < CELL_MIN) h = CELL_MIN;
+  return h;
+}
+
+function applyCellH(h) {
+  cellH = h;
+  var root = document.documentElement;
+  root.style.setProperty('--cell-h', h + 'px');
+  root.style.setProperty('--cell-w', (h * 2) + 'px');
+}
+
+/* ---------- リール ---------- */
+
+var reels = [];
+
+function buildReel(el) {
+  var name = el.dataset.reel;
+  var arr = REELS[name];
+
+  var track = document.createElement('div');
+  track.className = 'track';
+
+  /* 21コマを2周ぶん積む。上から 21,20,…,1,21,20,…,1 */
+  for (var i = 0; i < CELLS * 2; i++) {
+    var num = wrapNum(21 - i);
+    var img = document.createElement('img');
+    img.src = IMG_DIR + arr[num - 1] + '.png';
+    img.alt = '';
+    img.draggable = false;
+    track.appendChild(img);
+  }
+
+  el.appendChild(track);
+
+  var r = { el: el, track: track, cell: 0, offset: 0, dragging: false, startY: 0, live: 0 };
+
+  function apply(px) {
+    r.offset = px;
+    track.style.transform = 'translateY(' + (-px) + 'px)';
+  }
+  r.apply = apply;
+
+  el.addEventListener('pointerdown', function (e) {
+    r.dragging = true;
+    r.startY = e.clientY;
+    r.live = r.cell * cellH;
+    if (el.setPointerCapture) el.setPointerCapture(e.pointerId);
+  });
+
+  el.addEventListener('pointermove', function (e) {
+    if (!r.dragging) return;
+    var dy = e.clientY - r.startY;
+    var raw = r.cell * cellH + (-dy);
+    r.live = mod(raw, cellH * CELLS);
+    apply(r.live);
+    updateAcceptLine();
+  });
+
+  function endDrag() {
+    if (!r.dragging) return;
+    r.dragging = false;
+    r.cell = mod(Math.round(r.live / cellH), CELLS);
+    apply(r.cell * cellH);
+    updateAcceptLine();
+  }
+
+  el.addEventListener('pointerup', endDrag);
+  el.addEventListener('pointercancel', endDrag);
+
+  apply(0);
+  return r;
+}
+
+/* ---------- 受付開始ライン ---------- */
+
+function currentStops() {
+  return reels.map(function (r) {
+    var c = mod(Math.round(r.offset / cellH), CELLS);
+    return stopNumFromCell(c);
+  });
+}
+
+function updateAcceptLine() {
+  var S = currentStops();
+  var D = acceptAdvance(S[0], S[1], S[2]);
+  var line = document.getElementById('acceptLine');
+  if (line) line.style.top = ((LINE_BOTTOM_ROW - D) * cellH) + 'px';
+}
+
+/* ---------- 初期化 ---------- */
+
+function layout() {
+  applyCellH(measureCellH());
+  reels.forEach(function (r) { r.apply(r.cell * cellH); });
+  updateAcceptLine();
+}
+
+applyCellH(measureCellH());
+
+var els = document.querySelectorAll('.reel');
+for (var i = 0; i < els.length; i++) {
+  reels.push(buildReel(els[i]));
+}
+
+layout();
+
+window.addEventListener('resize', layout);
+window.addEventListener('orientationchange', layout);
+if (document.fonts && document.fonts.ready && document.fonts.ready.then) {
+  document.fonts.ready.then(layout);
+}
+</script>
+
+</body>
+</html>
