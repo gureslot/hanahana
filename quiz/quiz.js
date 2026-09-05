@@ -77,7 +77,7 @@ let reelsData = null;
 let sevens = null;
 let symbolImages = {};
 let resultImages = {}; // リザルト画像合成用（RESULT_IMAGE_NAMES参照）
-let currentDifficulty = 'normal';
+let currentDifficulty = 'easy';
 let currentQuestion = null;
 let debugMode = false;
 let forcedStops = null; // ?fix=左,中,右 で出目を固定（検証用）
@@ -87,8 +87,8 @@ let forcedStops = null; // ?fix=左,中,右 で出目を固定（検証用）
 // gamePhase: 'idle'（未開始） | 'preview'（1問だけ表示＝タイマーなし） |
 //            'playing'（タイマー中） | 'ending'（時間切れ後の3秒静止） | 'result'
 let gamePhase = 'idle';
-let currentTimeLimit = 60; // 30 / 60
-let lastManualTimeLimit = 60; // プレイヤーが最後に自分で選んだ時間（初心者を抜けたときに復元する）
+let currentTimeLimit = 30; // 30 / 60
+let lastManualTimeLimit = 30; // プレイヤーが最後に自分で選んだ時間（初心者を抜けたときに復元する）
 let timerStartMs = 0; // performance.now() 基準の開始時刻
 let timerTotalMs = 0; // 制限時間の総ミリ秒
 let timerPausedTotalMs = 0; // これまでに停止していた合計時間（回答待ちの1秒間ぶん）
@@ -122,8 +122,9 @@ let soundBuffers = { seikai: null, huseikai: null, end: null, tick: null }; // d
 let bgmEl = null;
 let bgmVolume = 0.8;
 let seVolume = 0.8;
-let bgmMuted = false;
-let seMuted = false;
+// 初期状態は必ずミュートON（音声オフ）。localStorageには保存せず、リロードのたびに戻る。
+let bgmMuted = true;
+let seMuted = true;
 
 function parseForcedStops() {
   const raw = new URLSearchParams(location.search).get('fix');
@@ -589,42 +590,168 @@ function buildChoices(judgeResult, diffKey) {
   return choices;
 }
 
+/* ---------- 選択肢生成：易・並（2択）のずらし候補の列挙 ----------
+ * 難易度ごとの「どのリールを・何コマ・どちら向きに」ずらすかの全組み合わせを
+ * 列挙する（ランダムに1つ選ぶmakeRawOffsetsとは別物。候補を高さ条件Rで
+ * 絞り込んでから抽選するために全パターンが要る）。
+ * 易＝1リール±shift（3リール×2方向＝6通り）、並＝2リール±shift
+ * （3通りのリール組×2^2方向＝12通り）。 */
+function combinations(arr, k) {
+  if (k === 0) return [[]];
+  if (arr.length < k) return [];
+  const [first, ...rest] = arr;
+  const withFirst = combinations(rest, k - 1).map((c) => [first, ...c]);
+  const withoutFirst = combinations(rest, k);
+  return withFirst.concat(withoutFirst);
+}
+
+function cartesianSigns(n) {
+  if (n === 0) return [[]];
+  const rest = cartesianSigns(n - 1);
+  const result = [];
+  for (const r of rest) {
+    result.push([1, ...r]);
+    result.push([-1, ...r]);
+  }
+  return result;
+}
+
+function enumerateOffsetCandidates(diffKey) {
+  const diff = DIFFICULTIES[diffKey];
+  const idxCombos = combinations([0, 1, 2], diff.reelCount);
+  const results = [];
+  for (const combo of idxCombos) {
+    for (const signs of cartesianSigns(combo.length)) {
+      const offsets = { left: 0, middle: 0, right: 0 };
+      combo.forEach((idx, j) => {
+        offsets[REEL_NAMES[idx]] = signs[j] * diff.shift;
+      });
+      results.push(offsets);
+    }
+  }
+  return results;
+}
+
+// Aを最下段=0に正規化した相対パターン（絵の形そのものの比較に使う）
+function normalizedPattern(A, min) {
+  return { left: A.left - min, middle: A.middle - min, right: A.right - min };
+}
+
+function patternsEqual(a, b) {
+  return a.left === b.left && a.middle === b.middle && a.right === b.right;
+}
+
+// ベース（常に正解色のA。baseA）に難易度なりのずらし全パターンを適用し、
+// 21コマを超えるもの（クランプしない。候補から外す）と、正規化した絵が
+// 正解と一致してしまうもの（実質「ずれていない」ため）を除いた候補一覧を返す。
+function buildShiftCandidates(baseA, diffKey) {
+  const baseMin = Math.min(baseA.left, baseA.middle, baseA.right);
+  const basePattern = normalizedPattern(baseA, baseMin);
+  const candidates = [];
+  for (const offsets of enumerateOffsetCandidates(diffKey)) {
+    const A = {
+      left: baseA.left + offsets.left,
+      middle: baseA.middle + offsets.middle,
+      right: baseA.right + offsets.right,
+    };
+    const rows = rangeSize(A);
+    if (rows > 21) continue;
+    const minA = Math.min(A.left, A.middle, A.right);
+    const maxA = Math.max(A.left, A.middle, A.right);
+    if (patternsEqual(normalizedPattern(A, minA), basePattern)) continue;
+    candidates.push({ A, offsets, minA, maxA, rows });
+  }
+  return candidates;
+}
+
+// ?debug=1でのみ参照する、直近に生成した易・並の2択目（不正解）の内訳。
+// 正解の高さ・ダミーの高さ・R（高い/低い）・C（同色/異色）・型(a/b)を保持する。
+let lastEasyNormalDebug = null;
+
 /* ---------- 選択肢生成：易・並（2択） ----------
  * 1つ目は必ず正解（速い方の色・正しい形）。
- * 2つ目は不正解で、以下から50:50でランダムに選ぶ：
- *   (a) 遅い方の色・正しい形
- *   (b) ずらし不正解（色はピンク・白からランダム。ずらし方＝リール・コマ数・
- *       21コマ超のクランプは既存のmakeRawOffsets/applyShiftsWithFlipのまま）
+ * 2つ目（ダミー）は以下の手順で作る（同着は除く）：
+ *   1. 目標の高さ関係R（ダミーが正解より高い/低い）を50:50で抽選
+ *   2. ダミーの描画色C（正解と同色25%／異色75%）をRとは独立に抽選
+ *   3. ずらし候補集合を作る：ベースは必ず正解色のA。21コマ超は除外
+ *      （クランプしない）。正規化した絵が正解と一致するものも除外。
+ *      候補は高さがRを満たすものだけに絞る
+ *   4. C=異色かつ「遅い色・正しい形」の高さがRを満たすならそれを採用。
+ *      それ以外は3の候補から一様抽選し、色はCに従って描く
+ *   5. 3の候補が空ならRを反転してやり直す
+ * 高さで正解が読めてしまう問題（縦の短い方が高確率で正解）への対策。
  * 同着（ピンク・白の所要が同値）の場合はサービス問題として扱い、必ず
- * 両方を正しい形にする（どちらを押しても正解。ずらし不正解は抽選しない）。 */
+ * 両方を正しい形にする（どちらを押しても正解。ここは変更なし）。 */
 function buildEasyNormalChoices(judgeResult, diffKey, X) {
   const isTie = judgeResult.correctColors.length === 2;
-  let choices;
 
   if (isTie) {
-    choices = [
+    const choices = [
       { color: 'pink', isCorrectForm: true },
       { color: 'white', isCorrectForm: true },
     ];
+    for (const c of choices) {
+      c.layout = computeChoiceLayout(X, c.color, { left: 0, middle: 0, right: 0 });
+      c.isCorrect = true;
+    }
+    lastEasyNormalDebug = null;
+    shuffleArray(choices);
+    return choices;
+  }
+
+  const correctColor = judgeResult.correctColors[0];
+  const wrongColor = correctColor === 'pink' ? 'white' : 'pink';
+  const correctLayout = computeChoiceLayout(X, correctColor, { left: 0, middle: 0, right: 0 });
+  const wrongLayoutPlain = computeChoiceLayout(X, wrongColor, { left: 0, middle: 0, right: 0 });
+  const hCorrect = correctLayout.rows;
+  const hDummyPlain = wrongLayoutPlain.rows; // 型a（遅い色・正しい形）の高さ
+  const baseA = correctLayout.A; // ずらし候補のベースは常に正解色のA
+
+  const R = Math.random() < 0.5 ? 'higher' : 'lower';
+  const C = Math.random() < 0.25 ? 'same' : 'diff';
+  const typeASatisfiesR = R === 'higher' ? hDummyPlain > hCorrect : hDummyPlain < hCorrect;
+
+  let secondChoice;
+  const debugInfo = { hCorrect, hDummyPlain, R, C };
+
+  if (C === 'diff' && typeASatisfiesR) {
+    secondChoice = { color: wrongColor, isCorrectForm: true, layout: wrongLayoutPlain };
+    debugInfo.type = 'a';
+    debugInfo.hDummy = hDummyPlain;
   } else {
-    const correctColor = judgeResult.correctColors[0];
-    const wrongColor = correctColor === 'pink' ? 'white' : 'pink';
-    const useShiftedWrong = Math.random() < 0.5;
-    const secondChoice = useShiftedWrong
-      ? { color: (Math.random() < 0.5 ? 'pink' : 'white'), isCorrectForm: false, rawOffsets: makeRawOffsets(diffKey) }
-      : { color: wrongColor, isCorrectForm: true };
-    choices = [
-      { color: correctColor, isCorrectForm: true },
-      secondChoice,
-    ];
+    let effectiveR = R;
+    let candidates = buildShiftCandidates(baseA, diffKey).filter((cand) =>
+      effectiveR === 'higher' ? cand.rows > hCorrect : cand.rows < hCorrect
+    );
+    if (candidates.length === 0) {
+      // 手順5：候補が空ならRを反転してやり直す（発生率 約0.9%）
+      effectiveR = effectiveR === 'higher' ? 'lower' : 'higher';
+      candidates = buildShiftCandidates(baseA, diffKey).filter((cand) =>
+        effectiveR === 'higher' ? cand.rows > hCorrect : cand.rows < hCorrect
+      );
+    }
+    // 理論上ここは常に非空（仕様書の保証）。念のための最終フォールバックのみ用意する。
+    if (candidates.length === 0) candidates = buildShiftCandidates(baseA, diffKey);
+
+    const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+    const drawColor = C === 'same' ? correctColor : wrongColor;
+    secondChoice = {
+      color: drawColor,
+      isCorrectForm: false,
+      layout: { A: chosen.A, minA: chosen.minA, maxA: chosen.maxA, rows: chosen.rows, offsets: chosen.offsets },
+    };
+    debugInfo.type = 'b';
+    debugInfo.hDummy = chosen.rows;
+    debugInfo.effectiveR = effectiveR;
+    debugInfo.flippedR = effectiveR !== R;
   }
 
-  for (const c of choices) {
-    const raw = c.isCorrectForm ? { left: 0, middle: 0, right: 0 } : c.rawOffsets;
-    c.layout = computeChoiceLayout(X, c.color, raw);
-    c.isCorrect = c.isCorrectForm && judgeResult.correctColors.includes(c.color);
-  }
+  const choices = [
+    { color: correctColor, isCorrectForm: true, layout: correctLayout, isCorrect: true },
+    { ...secondChoice, isCorrect: false },
+  ];
 
+  lastEasyNormalDebug = debugInfo;
   shuffleArray(choices);
   return choices;
 }
@@ -781,6 +908,7 @@ function newQuestion() {
   }
 
   const diffKey = currentDifficulty;
+  lastEasyNormalDebug = null; // 易・並以外、またtieでは使わない（stale表示防止）
   const S = generateStops(diffKey);
   const judge = judgeQuestion(S);
   const choices = diffKey === 'beginner' ? buildBeginnerChoices(judge) : buildChoices(judge, diffKey);
@@ -1797,6 +1925,7 @@ function setupTitleScreen() {
     startGame();
   });
   setupTitleRings();
+  setupTitleMuteButton();
 }
 
 function setupUI() {
@@ -1836,6 +1965,34 @@ function setupUI() {
   setupSoundUI();
 }
 
+// ミュート状態の表示をまとめて更新する（確認用UIのBGM/SEボタンとタイトル画面の
+// ミュートボタン、両方の見た目をここに集約する＝状態管理を二重にしない）。
+function updateMuteUI() {
+  const bgmMuteBtn = document.getElementById('bgmMuteBtn');
+  const seMuteBtn = document.getElementById('seMuteBtn');
+  if (bgmMuteBtn) {
+    bgmMuteBtn.classList.toggle('active', bgmMuted);
+    bgmMuteBtn.textContent = bgmMuted ? 'ミュート中' : 'ミュート';
+  }
+  if (seMuteBtn) {
+    seMuteBtn.classList.toggle('active', seMuted);
+    seMuteBtn.textContent = seMuted ? 'ミュート中' : 'ミュート';
+  }
+  updateTitleMuteUI();
+}
+
+// タイトル画面のミュートボタンはBGM・SEをまとめて1つの状態として表示する
+// （bgmMutedを代表値として使う。トグルは常に両方を同じ値にするため一致している）。
+function updateTitleMuteUI() {
+  const icon = document.getElementById('titleMuteIcon');
+  const label = document.getElementById('titleMuteLabel');
+  const btn = document.getElementById('titleMuteBtn');
+  if (!icon || !label) return;
+  icon.src = bgmMuted ? 'images/mute_on.png' : 'images/mute_off.png';
+  label.textContent = bgmMuted ? '音声オフ' : '音声オン';
+  if (btn) btn.setAttribute('aria-pressed', String(bgmMuted));
+}
+
 function setupSoundUI() {
   const bgmSlider = document.getElementById('bgmVolumeSlider');
   const seSlider = document.getElementById('seVolumeSlider');
@@ -1855,19 +2012,43 @@ function setupSoundUI() {
   });
   bgmMuteBtn.addEventListener('click', () => {
     bgmMuted = !bgmMuted;
-    bgmMuteBtn.classList.toggle('active', bgmMuted);
-    bgmMuteBtn.textContent = bgmMuted ? 'ミュート中' : 'ミュート';
     applyBgmVolume();
+    updateMuteUI();
   });
   seMuteBtn.addEventListener('click', () => {
     seMuted = !seMuted;
-    seMuteBtn.classList.toggle('active', seMuted);
-    seMuteBtn.textContent = seMuted ? 'ミュート中' : 'ミュート';
     applySeVolume();
+    updateMuteUI();
   });
 
   applyBgmVolume();
   applySeVolume();
+  updateMuteUI();
+}
+
+// タイトル画面左上のミュートボタン：BGM・SEをまとめてトグルする。
+// ミュート解除（ON→OFF）のタップはAudioContextを起こすきっかけにもする
+// （STARTタップより先にここで解除されることがあるため）。
+// 押した感触は:activeの代わりにpointerdown/up（pointercancel）で.pressedを付け外しする。
+function setupTitleMuteButton() {
+  const btn = document.getElementById('titleMuteBtn');
+  if (!btn) return;
+
+  btn.addEventListener('pointerdown', () => btn.classList.add('pressed'));
+  btn.addEventListener('pointerup', () => btn.classList.remove('pressed'));
+  btn.addEventListener('pointercancel', () => btn.classList.remove('pressed'));
+
+  btn.addEventListener('click', () => {
+    const wasMuted = bgmMuted;
+    bgmMuted = !wasMuted;
+    seMuted = bgmMuted;
+    applyBgmVolume();
+    applySeVolume();
+    updateMuteUI();
+    if (wasMuted && audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume().catch((err) => console.error('AudioContextの再開に失敗しました', err));
+    }
+  });
 }
 
 /* ---------- デバッグパネル（?debug=1） ---------- */
@@ -1888,6 +2069,19 @@ function renderDebugPanel(q) {
   lines.push('ピンクの所要: ' + fmt(pinkCalc.Dline) + '  max=' + pinkCalc.required);
   lines.push('白の所要: ' + fmt(whiteCalc.Dline) + '  max=' + whiteCalc.required);
   lines.push('正解色: ' + correctColors.map(colorLabel).join('・'));
+
+  if (lastEasyNormalDebug) {
+    const dbg = lastEasyNormalDebug;
+    lines.push('');
+    lines.push('=== 易・並：2択目（ダミー）の内訳 ===');
+    lines.push('正解の高さ h_correct=' + dbg.hCorrect + '　型aの高さ h_dummyPlain=' + dbg.hDummyPlain);
+    lines.push('R(目標の高さ関係)=' + (dbg.R === 'higher' ? '高い' : '低い') +
+      (dbg.flippedR ? '　→　候補0件のため反転→' + (dbg.effectiveR === 'higher' ? '高い' : '低い') : ''));
+    lines.push('C(ダミーの色)=' + (dbg.C === 'same' ? '正解と同色' : '正解と異色'));
+    lines.push('採用した型=' + (dbg.type === 'a' ? 'a（遅い色・正しい形）' : 'b（ずらし）') +
+      '　ダミーの高さ=' + dbg.hDummy);
+  }
+
   lines.push('');
   lines.push('選択肢:');
   choices.forEach((c, i) => {

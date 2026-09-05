@@ -275,6 +275,48 @@ main {
   cursor: pointer;
 }
 
+/* ミュートボタン（タイトル画面左上のみ）。押下の手応えはpointerdown/upで
+   .pressedを付け外しする方式（:activeはiOSで不安定なため使わない）。
+   アイコン自体が金属×ネオンの背景込みデザインのため、ボタン自体には
+   目立つ背景を敷かず、タップ領域確保のぶんだけpaddingで広げる。 */
+.title-mute-btn {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 4px 10px 4px 4px;
+  border: none;
+  border-radius: 22px;
+  background: rgba(10, 10, 16, .45);
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform .08s ease-out, filter .08s ease-out;
+}
+
+.title-mute-btn.pressed {
+  transform: scale(.88);
+  filter: brightness(1.4);
+}
+
+.title-mute-icon {
+  display: block;
+  width: 32px;
+  height: 32px;
+}
+
+.title-mute-label {
+  font-size: 13px;
+  font-weight: bold;
+  color: #eee;
+  white-space: nowrap;
+}
+
 .title-start-btn {
   display: block;
   width: 60%;
