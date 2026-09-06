@@ -20,9 +20,10 @@
   --serif:   'Noto Serif JP', 'YuMincho', '游明朝', serif;
   --sans:    'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
 
-  --cell-h: 33px;
-  --cell-w: 66px;
-  --gap:     2px;
+  --cell-h:   33px;
+  --cell-w:   66px;
+  --gap:       2px;
+  --label-w: 116px;   /* リールの右に空ける、注記のための余白 */
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -36,7 +37,7 @@ body {
 /* ─── head ─── */
 .head {
   max-width: 760px;
-  margin: 40px auto 26px;
+  margin: 32px auto 22px;
   padding: 0 24px;
 }
 
@@ -56,14 +57,17 @@ body {
   line-height: 1.9;
 }
 
-/* ─── stage ─── */
+/* ─── stage ───
+   リールと右の注記をまとめた幅をステージとし、それを画面の中央に置く。
+   リールの左には何も置かないので、リール自体は中央よりやや左になる。 */
 .stage-outer {
   padding: 0 20px;
 }
 
 .stage {
   position: relative;
-  max-width: 560px;
+  width: calc(var(--cell-w) * 3 + var(--gap) * 2 + var(--label-w));
+  max-width: 100%;
   margin: 0 auto;
 }
 
@@ -72,7 +76,7 @@ body {
   display: flex;
   gap: var(--gap);
   justify-content: center;
-  margin: 0 auto;
+  margin: 0;
   width: calc(var(--cell-w) * 3 + var(--gap) * 2);
   height: calc(var(--cell-h) * 21);
 }
@@ -100,29 +104,61 @@ body {
   pointer-events: none;
 }
 
-/* リール窓の枠線 */
+/* ─── リール窓 ─── */
+
+/* 窓の枠線。図柄は白背景、周囲は黒背景なので、濃い芯を白で縁取って
+   どちらの上でも見えるようにしてある。
+   コマの境界が線の中心に来るよう top を3px上げる。 */
 .win-line {
   position: absolute;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: var(--text);
+  left: -10px;
+  right: -10px;
+  height: 6px;
+  background: #101010;
+  border-top: 1px solid #f2efe9;
+  border-bottom: 1px solid #f2efe9;
   z-index: 3;
   pointer-events: none;
 }
-.win-line--top    { top: calc(var(--cell-h) * 17); }
-.win-line--bottom { top: calc(var(--cell-h) * 20); }
+.win-line--top    { top: calc(var(--cell-h) * 17 - 3px); }
+.win-line--bottom { top: calc(var(--cell-h) * 20 - 3px); }
 
-/* 受付開始ライン
-   リール幅より左右22pxずつ長くしてある。D=3 のとき窓の上ラインと
-   同じ高さに来るので、はみ出しぶんで見分けられるようにするため。 */
+/* 窓の3段ぶんの範囲を示す囲み。リールの右側に置く */
+.win-range {
+  position: absolute;
+  left: 100%;
+  margin-left: 18px;
+  top: calc(var(--cell-h) * 17 - 1px);
+  height: calc(var(--cell-h) * 3 + 2px);
+  width: 9px;
+  border: 2px solid var(--text);
+  border-left: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.win-range-label {
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-left: 8px;
+  font-family: var(--serif);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+/* ─── 受付開始ライン ───
+   左はリールの22px外まで、右はリールの12px外まで伸ばし、その先の
+   余白（--label-w）にラベルを置く。ラベルはリールに被らない。
+   D=3 のとき窓の上ラインと同じ高さに来るが、はみ出しぶんで見分けられる。 */
 .accept {
   position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  width: calc(var(--cell-w) * 3 + var(--gap) * 2 + 44px);
-  max-width: 100%;
-  height: 2px;
+  left: -22px;
+  right: calc(var(--label-w) - 12px);
+  height: 4px;
   background: var(--accent);
   z-index: 4;
   pointer-events: none;
@@ -130,12 +166,13 @@ body {
 
 .accept-label {
   position: absolute;
-  right: 0;
-  bottom: 100%;
-  margin-bottom: 6px;
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-left: 8px;
   font-family: var(--serif);
   font-size: 11px;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   color: var(--accent);
   white-space: nowrap;
 }
@@ -179,7 +216,7 @@ footer {
 }
 
 @media (max-width: 480px) {
-  .head { margin-top: 28px; margin-bottom: 20px; padding: 0 16px; }
+  .head { margin-top: 24px; margin-bottom: 18px; padding: 0 16px; }
   .stage-outer { padding: 0 14px; }
 }
 </style>
@@ -203,6 +240,7 @@ footer {
       <div class="reel" data-reel="right"></div>
       <div class="win-line win-line--top"></div>
       <div class="win-line win-line--bottom"></div>
+      <div class="win-range"><span class="win-range-label">リール窓</span></div>
     </div>
 
     <div class="accept" id="acceptLine">
@@ -286,27 +324,33 @@ function acceptAdvance(sLeft, sMiddle, sRight) {
 /* ---------- サイズ ---------- */
 
 var GAP = 2;
-var CELL_MAX = 33;
-var CELL_MIN = 18;
-var cellH = CELL_MAX;
+var LABEL_W = 116;
+var STAGE_MAX = 560;
+var CELL_MAX = 60;
+var CELL_MIN = 24;
+var cellH = 33;
 
 function measureCellH() {
-  var head = document.querySelector('.head');
-  var nav = document.querySelector('.site-nav');
-  var foot = document.querySelector('footer');
-  var stage = document.querySelector('.stage');
+  var outer = document.querySelector('.stage-outer');
 
-  var chrome = (head ? head.offsetHeight : 0)
-             + (nav ? nav.offsetHeight : 0)
-             + (foot ? foot.offsetHeight : 0);
+  var availW = 360;
+  if (outer) {
+    var cs = window.getComputedStyle(outer);
+    availW = outer.clientWidth
+           - (parseFloat(cs.paddingLeft) || 0)
+           - (parseFloat(cs.paddingRight) || 0);
+  }
+  if (!(availW > 0)) availW = 360;
+  availW = Math.min(availW, STAGE_MAX);
 
-  var availH = (window.innerHeight || 768) - chrome - 16;
-  var availW = (stage && stage.clientWidth) ? stage.clientWidth : 360;
+  /* 縦は「リールのてっぺんから下まで」が画面に収まればよい。
+     見出しや下のボタンは画面外に出てかまわない。 */
+  var availH = (window.innerHeight || 768) - 8;
 
+  var byW = Math.floor((availW - LABEL_W - GAP * 2) / 6);
   var byH = Math.floor(availH / CELLS);
-  var byW = Math.floor((availW - GAP * 2) / 6);
 
-  var h = Math.min(CELL_MAX, byH, byW);
+  var h = Math.min(CELL_MAX, byW, byH);
   if (!isFinite(h) || h < CELL_MIN) h = CELL_MIN;
   return h;
 }
@@ -393,7 +437,8 @@ function updateAcceptLine() {
   var S = currentStops();
   var D = acceptAdvance(S[0], S[1], S[2]);
   var line = document.getElementById('acceptLine');
-  if (line) line.style.top = ((LINE_BOTTOM_ROW - D) * cellH) + 'px';
+  // ラインの太さ4px。コマの境界が線の中心に来るよう2px上げる
+  if (line) line.style.top = ((LINE_BOTTOM_ROW - D) * cellH - 2) + 'px';
 }
 
 /* ---------- 初期化 ---------- */
@@ -404,6 +449,20 @@ function layout() {
   updateAcceptLine();
 }
 
+/* iOS Safari は上下バーの出し入れだけで resize が飛び、そのたびに
+   リールの大きさが変わると鬱陶しい。幅が変わったときと、高さが
+   大きく変わったとき（回転など）だけ組み直す。 */
+var lastW = 0, lastH = 0;
+
+function relayout(force) {
+  var w = window.innerWidth || 0;
+  var h = window.innerHeight || 0;
+  if (!force && w === lastW && Math.abs(h - lastH) < 100) return;
+  lastW = w;
+  lastH = h;
+  layout();
+}
+
 applyCellH(measureCellH());
 
 var els = document.querySelectorAll('.reel');
@@ -411,12 +470,14 @@ for (var i = 0; i < els.length; i++) {
   reels.push(buildReel(els[i]));
 }
 
-layout();
+relayout(true);
 
-window.addEventListener('resize', layout);
-window.addEventListener('orientationchange', layout);
+window.addEventListener('resize', function () { relayout(false); });
+window.addEventListener('orientationchange', function () {
+  setTimeout(function () { relayout(true); }, 200);
+});
 if (document.fonts && document.fonts.ready && document.fonts.ready.then) {
-  document.fonts.ready.then(layout);
+  document.fonts.ready.then(function () { relayout(true); });
 }
 </script>
 
