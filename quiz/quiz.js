@@ -115,8 +115,10 @@ let rankingRequestSeq = 0; // 板を切り替えたときに古いリクエス�
 
 /* ---------- 音（仕様書 第6章：BGM・SE） ---------- */
 
-let judgeSeEl = null; // 正誤SE専用（seikai.wav/huseikai.wav）。鳴らす前にpause+currentTime=0で巻き戻す
+let seikaiSeEl = null; // 正誤SE「正解」専用。srcは固定で差し替えない（差し替えは再ロードを招く）
+let huseikaiSeEl = null; // 正誤SE「不正解」専用。srcは固定で差し替えない
 let endSeEl = null; // end.wav専用。一度鳴らしたら途中で止めない
+let seUnlocked = false; // 初回のユーザー操作でSE要素の再生権を取得済みか（二重に走らせない）
 let tickSeEls = []; // tsu.wav用プール（リング連打で重ねて鳴らせるようラウンドロビン）
 let tickSeIndex = 0;
 const TICK_SE_POOL_SIZE = 4;
@@ -203,9 +205,10 @@ function preloadResultImages() {
  * 全SEはnew Audio()＋load()で起動時に事前ロードする。
  *
  * SEは3チャンネル構成：
- * ・正誤SE（seikai/huseikai）は専用の1要素に固定。新しい方を鳴らす前にpause+
- *   currentTime=0で巻き戻してから鳴らす（正解SEが2.78秒あり、これをしないと
- *   連続回答で重なり続ける）。
+ * ・正誤SE（seikai/huseikai）はそれぞれ専用の1要素に固定し、srcは差し替えない
+ *   （1要素でsrcを差し替える実装だと、鳴らすたびに再ロードが発生し発音が遅れる）。
+ *   新しい方を鳴らす前に両方をpause+currentTime=0で巻き戻してから鳴らす（正解SEが
+ *   2.78秒あり、これをしないと連続回答で重なり続ける＝1チャンネル仕様は維持する）。
  * ・end.wav（時間切れの瞬間の笛）は独立した1要素。一度鳴り始めたら途中で
  *   止めない（時間切れ後の3秒静止のあいだも鳴り終わるまで続く）。
  * ・tsu.wav（リングが回って正面に来た瞬間のSE）も独立チャンネルだが、連続で
@@ -221,7 +224,8 @@ function createSeAudio(src) {
 }
 
 function preloadSounds() {
-  judgeSeEl = createSeAudio('sounds/seikai.wav');
+  seikaiSeEl = createSeAudio('sounds/seikai.wav');
+  huseikaiSeEl = createSeAudio('sounds/huseikai.wav');
   endSeEl = createSeAudio('sounds/end.wav');
   tickSeEls = [];
   for (let i = 0; i < TICK_SE_POOL_SIZE; i++) {
@@ -233,30 +237,53 @@ function preloadSounds() {
 
 // 音量・ミュート反映の対象になる全SE要素
 function allSeEls() {
-  return [judgeSeEl, endSeEl, ...tickSeEls].filter(Boolean);
+  return [seikaiSeEl, huseikaiSeEl, endSeEl, ...tickSeEls].filter(Boolean);
 }
 
 // モバイルの自動再生制限は<audio>にもかかる。programmaticなplay()（end.wavの
 // タイマー発火など、クリックの外から呼ばれるもの）が後で失敗しないよう、最初の
-// ユーザータップ（STARTまたはミュート解除）で全SE要素を無音のままplay→即pauseし、
-// 再生権を先に取得しておく。戻り値のPromiseは全要素のpauseまで完了してから解決する
-// （ミュート解除の確認音をこの後に鳴らす際、pauseが確認音を巻き込んで止めないため）。
+// ユーザー操作で全SE要素の再生権を先に取得しておく。play()の間は一時的にmutedに
+// して実際に音を出さず、完了後はミュート状態（seMuted。volumeは使わない）に戻す。
+// 二重に走らないよう、初回成功後はseUnlockedを立てて以後は即座に解決済みの
+// Promiseを返す（呼び出し側で.then()を使っても安全）。
 function unlockSeElements() {
-  return Promise.all(allSeEls().map((el) => (
-    el.play().then(() => el.pause()).catch(() => { /* 無視：次の操作で再試行される */ })
-  )));
+  if (seUnlocked) return Promise.resolve();
+  seUnlocked = true;
+  return Promise.all(allSeEls().map((el) => {
+    el.muted = true;
+    const restore = () => {
+      try {
+        el.pause();
+        el.currentTime = 0;
+      } catch (err) { /* 無視 */ }
+      el.muted = seMuted;
+    };
+    return el.play().then(restore, restore);
+  }));
 }
 
-// 正誤SE（seikai/huseikai）：専用1要素。新しい方を鳴らす前に巻き戻す。
+// 最初のユーザー操作（STARTやミュートボタンに限らず、タイトル画面のリングを
+// 先に触った場合も含む）でSE要素の再生権を取得する。発火後は自身を解除する。
+function unlockSeElementsOnFirstGesture() {
+  unlockSeElements();
+  window.removeEventListener('pointerdown', unlockSeElementsOnFirstGesture);
+  window.removeEventListener('touchstart', unlockSeElementsOnFirstGesture);
+  window.removeEventListener('keydown', unlockSeElementsOnFirstGesture);
+}
+window.addEventListener('pointerdown', unlockSeElementsOnFirstGesture);
+window.addEventListener('touchstart', unlockSeElementsOnFirstGesture);
+window.addEventListener('keydown', unlockSeElementsOnFirstGesture);
+
+// 正誤SE（seikai/huseikai）：それぞれ専用1要素（srcは固定・差し替えない）。
+// 1チャンネル仕様を維持するため、新しい方を鳴らす前に両方を巻き戻す。
 function playJudgeSe(name) {
-  if (!judgeSeEl) return;
-  const src = name === 'seikai' ? 'sounds/seikai.wav' : 'sounds/huseikai.wav';
-  if (!judgeSeEl.src.endsWith(src)) {
-    judgeSeEl.src = src;
-  }
-  judgeSeEl.pause();
-  judgeSeEl.currentTime = 0;
-  judgeSeEl.play().catch((err) => console.error('SEの再生に失敗しました（無音のまま続行します）', err));
+  if (!seikaiSeEl || !huseikaiSeEl) return;
+  seikaiSeEl.pause();
+  seikaiSeEl.currentTime = 0;
+  huseikaiSeEl.pause();
+  huseikaiSeEl.currentTime = 0;
+  const el = name === 'seikai' ? seikaiSeEl : huseikaiSeEl;
+  el.play().catch((err) => console.error('SEの再生に失敗しました（無音のまま続行します）', err));
 }
 
 // end.wav専用チャンネル：正誤SEとは独立に鳴らし、途中で止めない（最後まで鳴らしきる）。
