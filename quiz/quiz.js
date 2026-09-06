@@ -122,6 +122,11 @@ let seUnlocked = false; // 初回のユーザー操作でSE要素の再生権を
 let tickSeEls = []; // tsu.wav用プール（リング連打で重ねて鳴らせるようラウンドロビン）
 let tickSeIndex = 0;
 const TICK_SE_POOL_SIZE = 4;
+
+// ---- ?debug=1診断用（SEの遅れ調査。挙動には影響しない計測のみ） ----
+let lastSeLatencyMs = null; // 直近のSE再生：play()呼び出しからplaying発火までの経過ms
+let lastSeLatencyLabel = ''; // 上記がどの音か（seikai/huseikai/end/tick）
+let seDebugPanelEl = null; // 診断パネルのDOM要素（?debug=1のときだけ生成）
 let bgmEl = null;
 let bgmVolume = 0.8;
 let seVolume = 0.8;
@@ -140,6 +145,9 @@ function parseForcedStops() {
 async function init() {
   try {
     debugMode = new URLSearchParams(location.search).get('debug') === '1';
+    // SE要素がまだ生成されていない段階（画像プリロード前）から状態を追えるよう、
+    // 他の初期化より先に診断パネルを立てる（タイトル画面でも見えるようにするため）。
+    setupSeDebugPanel();
     forcedStops = parseForcedStops();
     const res = await fetch('reels.json');
     if (!res.ok) throw new Error('reels.json の取得に失敗しました（status ' + res.status + '）');
@@ -274,6 +282,19 @@ window.addEventListener('pointerdown', unlockSeElementsOnFirstGesture);
 window.addEventListener('touchstart', unlockSeElementsOnFirstGesture);
 window.addEventListener('keydown', unlockSeElementsOnFirstGesture);
 
+// ?debug=1診断用：play()呼び出しからplaying発火（実際に鳴り始めた瞬間）までの
+// 経過msを記録するだけで、再生そのものの挙動は変えない。
+function trackSePlayLatency(el, label) {
+  if (!debugMode) return;
+  const t0 = performance.now();
+  const onPlaying = () => {
+    lastSeLatencyMs = performance.now() - t0;
+    lastSeLatencyLabel = label;
+    el.removeEventListener('playing', onPlaying);
+  };
+  el.addEventListener('playing', onPlaying);
+}
+
 // 正誤SE（seikai/huseikai）：それぞれ専用1要素（srcは固定・差し替えない）。
 // 1チャンネル仕様を維持するため、新しい方を鳴らす前に両方を巻き戻す。
 function playJudgeSe(name) {
@@ -283,6 +304,7 @@ function playJudgeSe(name) {
   huseikaiSeEl.pause();
   huseikaiSeEl.currentTime = 0;
   const el = name === 'seikai' ? seikaiSeEl : huseikaiSeEl;
+  trackSePlayLatency(el, name);
   el.play().catch((err) => console.error('SEの再生に失敗しました（無音のまま続行します）', err));
 }
 
@@ -290,6 +312,7 @@ function playJudgeSe(name) {
 function playEndSe() {
   if (!endSeEl) return;
   endSeEl.currentTime = 0;
+  trackSePlayLatency(endSeEl, 'end');
   endSeEl.play().catch((err) => console.error('SEの再生に失敗しました（無音のまま続行します）', err));
 }
 
@@ -300,6 +323,7 @@ function playRingTickSe() {
   const el = tickSeEls[tickSeIndex];
   tickSeIndex = (tickSeIndex + 1) % tickSeEls.length;
   el.currentTime = 0;
+  trackSePlayLatency(el, 'tick');
   el.play().catch(() => { /* 無視：次回以降の操作で再試行される */ });
 }
 
@@ -2076,6 +2100,54 @@ function setupTitleMuteButton() {
     // 音声経路が生きていることを示す。OFFにするときは鳴らさない。
     if (wasMuted) unlockSeElements().then(() => playRingTickSe());
   });
+}
+
+/* ---------- SE診断パネル（?debug=1。SEの遅れ調査用。挙動には影響しない） ---------- */
+
+// 既存の#debugPanel（1問ごとに更新）はタイトル画面では非表示（#appScreen配下でhidden）
+// のため、タイトル画面でのミュート/リング操作も観測できるよう、bodyに直接
+// 独立した常時表示パネルを立てる。
+function setupSeDebugPanel() {
+  if (!debugMode) return;
+  seDebugPanelEl = document.createElement('div');
+  seDebugPanelEl.id = 'seDebugPanel';
+  seDebugPanelEl.style.cssText =
+    'position:fixed;left:0;top:0;z-index:99999;max-width:100vw;' +
+    'background:rgba(0,0,0,0.85);color:#7fff7f;font:11px/1.5 monospace;' +
+    'white-space:pre;padding:6px 10px;pointer-events:none;';
+  document.body.appendChild(seDebugPanelEl);
+  updateSeDebugPanel();
+  setInterval(updateSeDebugPanel, 200);
+}
+
+function readyStateLabel(rs) {
+  const NAMES = ['0 HAVE_NOTHING', '1 HAVE_METADATA', '2 HAVE_CURRENT_DATA', '3 HAVE_FUTURE_DATA', '4 HAVE_ENOUGH_DATA'];
+  return NAMES[rs] !== undefined ? NAMES[rs] : String(rs);
+}
+
+function seElInfo(label, el) {
+  if (!el) return label + ': 未生成';
+  return label + ': readyState=' + readyStateLabel(el.readyState) + ' muted=' + el.muted + ' paused=' + el.paused;
+}
+
+function updateSeDebugPanel() {
+  if (!seDebugPanelEl) return;
+  const lines = [];
+  lines.push('=== SE debug (?debug=1) ===');
+  lines.push('seUnlocked: ' + seUnlocked);
+  lines.push(seElInfo('seikai', seikaiSeEl));
+  lines.push(seElInfo('huseikai', huseikaiSeEl));
+  lines.push(seElInfo('end', endSeEl));
+  if (tickSeEls.length === 0) {
+    lines.push('tick: 未生成');
+  } else {
+    tickSeEls.forEach((el, i) => lines.push(seElInfo('tick[' + i + ']', el)));
+  }
+  lines.push(
+    '直近再生: ' + (lastSeLatencyLabel || '(なし)') +
+    '  play()→playing: ' + (lastSeLatencyMs === null ? '(なし)' : Math.round(lastSeLatencyMs) + 'ms')
+  );
+  seDebugPanelEl.textContent = lines.join('\n');
 }
 
 /* ---------- デバッグパネル（?debug=1） ---------- */
