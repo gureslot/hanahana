@@ -152,6 +152,33 @@ body {
   color: var(--text);
 }
 
+/* ─── update history: collapsed older entries ─── */
+.changelog-more {
+  margin-top: 4px;
+}
+.changelog-more summary {
+  cursor: pointer;
+  list-style: none;
+  font-family: var(--serif);
+  font-size: 13px;
+  color: var(--muted);
+  padding: 14px 0 4px;
+  user-select: none;
+}
+.changelog-more summary::-webkit-details-marker {
+  display: none;
+}
+.changelog-more summary::before {
+  content: '＋ ';
+  color: var(--accent);
+}
+.changelog-more[open] summary::before {
+  content: '－ ';
+}
+.changelog-more summary:hover {
+  color: var(--text);
+}
+
 /* ─── footer ─── */
 footer {
   border-top: 1px solid var(--border);
@@ -236,50 +263,80 @@ footer {
 
     <ul class="changelog">
       <li class="changelog-item">
-        <span class="changelog-date">2026.07.05</span>
-        <span class="changelog-text">AI創作に「画像作品」ページを追加</span>
+        <span class="changelog-date">2026.09.06</span>
+        <span class="changelog-text">自作ゲームに「ハナハナ最速目押しクイズ」を追加（音声まわりの不具合修正含む）、遊び方ガイドページを新規作成</span>
       </li>
       <li class="changelog-item">
-        <span class="changelog-date">2026.07.05</span>
-        <span class="changelog-text">ハナハナ関連に「ハナハナの打ち方」ページを追加</span>
+        <span class="changelog-date">2026.09.06</span>
+        <span class="changelog-text">ハナハナ関連に「受付開始位置確認ツール」を追加</span>
       </li>
       <li class="changelog-item">
-        <span class="changelog-date">2026.07.02</span>
-        <span class="changelog-text">トップページをリニューアル（メニュー再構成・更新履歴セクションを追加）</span>
+        <span class="changelog-date">2026.09.06</span>
+        <span class="changelog-text">サイト内のファビコン未設定ページに共通アイコンを設定</span>
       </li>
       <li class="changelog-item">
-        <span class="changelog-date">2026.07.02</span>
-        <span class="changelog-text">ハナハナ関連に「島図作成ツール」を追加</span>
+        <span class="changelog-date">2026.09.04</span>
+        <span class="changelog-text">AI創作の音楽ページに新曲を4曲追加</span>
       </li>
       <li class="changelog-item">
-        <span class="changelog-date">2026.06.30</span>
-        <span class="changelog-text">チカリアンの遊び方ガイド・アイテム効果一覧を更新</span>
+        <span class="changelog-date">2026.09.04</span>
+        <span class="changelog-text">ツール①（スロットログ）の見出し入力欄にクリアボタンを追加</span>
       </li>
       <li class="changelog-item">
-        <span class="changelog-date">2026.06.29</span>
-        <span class="changelog-text">ハナハナ関連に「ツール①」を追加</span>
-      </li>
-      <li class="changelog-item">
-        <span class="changelog-date">2026.06.25</span>
-        <span class="changelog-text">自作ゲームページを新設。チカリアン・ちかりちゃんは成長するを公開</span>
-      </li>
-      <li class="changelog-item">
-        <span class="changelog-date">2026.04.22</span>
-        <span class="changelog-text">打ち方ページを「ハナハナ関連」としてリニューアル</span>
-      </li>
-      <li class="changelog-item">
-        <span class="changelog-date">2026.02.22</span>
-        <span class="changelog-text">プロフィールページを公開</span>
-      </li>
-      <li class="changelog-item">
-        <span class="changelog-date">2026.02.18</span>
-        <span class="changelog-text">ハナハナの打ち方ページを公開</span>
-      </li>
-      <li class="changelog-item">
-        <span class="changelog-date">2026.02.17</span>
-        <span class="changelog-text">サイトを開設（トップページ・スペアビート創作譜面ページを公開）</span>
+        <span class="changelog-date">2026.07.24</span>
+        <span class="changelog-text">ツール①（スロットログ）に見出しの色分け表示・▲▼ボタンの触覚フィードバックを追加</span>
       </li>
     </ul>
+
+    <details class="changelog-more">
+      <summary>これより前の更新履歴を見る</summary>
+      <ul class="changelog">
+        <li class="changelog-item">
+          <span class="changelog-date">2026.07.05</span>
+          <span class="changelog-text">AI創作に「画像作品」ページを追加</span>
+        </li>
+        <li class="changelog-item">
+          <span class="changelog-date">2026.07.05</span>
+          <span class="changelog-text">ハナハナ関連に「ハナハナの打ち方」ページを追加</span>
+        </li>
+        <li class="changelog-item">
+          <span class="changelog-date">2026.07.02</span>
+          <span class="changelog-text">トップページをリニューアル（メニュー再構成・更新履歴セクションを追加）</span>
+        </li>
+        <li class="changelog-item">
+          <span class="changelog-date">2026.07.02</span>
+          <span class="changelog-text">ハナハナ関連に「島図作成ツール」を追加</span>
+        </li>
+        <li class="changelog-item">
+          <span class="changelog-date">2026.06.30</span>
+          <span class="changelog-text">チカリアンの遊び方ガイド・アイテム効果一覧を更新</span>
+        </li>
+        <li class="changelog-item">
+          <span class="changelog-date">2026.06.29</span>
+          <span class="changelog-text">ハナハナ関連に「ツール①」を追加</span>
+        </li>
+        <li class="changelog-item">
+          <span class="changelog-date">2026.06.25</span>
+          <span class="changelog-text">自作ゲームページを新設。チカリアン・ちかりちゃんは成長するを公開</span>
+        </li>
+        <li class="changelog-item">
+          <span class="changelog-date">2026.04.22</span>
+          <span class="changelog-text">打ち方ページを「ハナハナ関連」としてリニューアル</span>
+        </li>
+        <li class="changelog-item">
+          <span class="changelog-date">2026.02.22</span>
+          <span class="changelog-text">プロフィールページを公開</span>
+        </li>
+        <li class="changelog-item">
+          <span class="changelog-date">2026.02.18</span>
+          <span class="changelog-text">ハナハナの打ち方ページを公開</span>
+        </li>
+        <li class="changelog-item">
+          <span class="changelog-date">2026.02.17</span>
+          <span class="changelog-text">サイトを開設（トップページ・スペアビート創作譜面ページを公開）</span>
+        </li>
+      </ul>
+    </details>
   </div>
 
 </div>
