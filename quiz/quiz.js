@@ -115,10 +115,11 @@ let rankingRequestSeq = 0; // 板を切り替えたときに古いリクエス�
 
 /* ---------- 音（仕様書 第6章：BGM・SE） ---------- */
 
-let audioCtx = null; // ユーザーのタップ（スタートボタン）でresume()する
-let seGainNode = null; // SE用のゲインノード（音量・ミュートをまとめて反映。正誤SE・end.wav共通）
-let currentJudgeSeSource = null; // 再生中の正誤SEソース（新しい方を鳴らす前に止める＝1チャンネル）
-let soundBuffers = { seikai: null, huseikai: null, end: null, tick: null }; // decodeAudioData済みのAudioBuffer
+let judgeSeEl = null; // 正誤SE専用（seikai.wav/huseikai.wav）。鳴らす前にpause+currentTime=0で巻き戻す
+let endSeEl = null; // end.wav専用。一度鳴らしたら途中で止めない
+let tickSeEls = []; // tsu.wav用プール（リング連打で重ねて鳴らせるようラウンドロビン）
+let tickSeIndex = 0;
+const TICK_SE_POOL_SIZE = 4;
 let bgmEl = null;
 let bgmVolume = 0.8;
 let seVolume = 0.8;
@@ -194,100 +195,84 @@ function preloadResultImages() {
 }
 
 /* ---------- 音の読み込み・再生 ----------
- * AudioContextは起動時に生成してdecodeAudioDataまで済ませる（生成・デコード自体は
- * ユーザー操作なしでも可能）。実際の再生をアンロックするresume()はスタートボタンの
- * タップで行う（モバイルの自動再生制限対策）。
- * wavの読み込み・デコードに失敗した場合はbufferがnullのままになり、再生関数が
- * 何もせず無視する＝無音になるだけでゲーム進行（判定・スコア）には影響しない。
+ * SEは<audio>要素で鳴らす（Web Audio API・AudioContextは使わない）。
+ * AudioContextの出力はiOSの画面収録に正しく乗らず、録画した音声がノイズになる
+ * ことが確認できたため撤去した（同一原因の別プロジェクトでHTMLAudio化して解消済み）。
+ * wavのままにしてあるのはmp3の先頭無音パディングによる再生遅延を避けるためで、
+ * <audio>に移してもこの理由は変わらない。
+ * 全SEはnew Audio()＋load()で起動時に事前ロードする。
  *
  * SEは3チャンネル構成：
- * ・正誤SE（seikai/huseikai）は従来どおり1チャンネル（新しい方を鳴らす前に前を止める）。
- * ・end.wav（時間切れの瞬間の笛）は正誤SEとは独立したチャンネルで鳴らし、一度鳴り
- *   始めたら途中で止めない（時間切れ後の3秒静止のあいだも鳴り終わるまで続く）。
- * ・tsu.wav（リングが回って正面に来た瞬間のSE）も独立したチャンネル。連続で
- *   回すと短い間隔で複数回鳴るが、前を止めずに毎回新しいソースを鳴らすだけ。
- * どれも正誤SEを鳴らしても他の再生には影響しない（かき消されない）。
- * すべて同じ seGainNode を通すため、音量・ミュートは共通で反映される。 */
+ * ・正誤SE（seikai/huseikai）は専用の1要素に固定。新しい方を鳴らす前にpause+
+ *   currentTime=0で巻き戻してから鳴らす（正解SEが2.78秒あり、これをしないと
+ *   連続回答で重なり続ける）。
+ * ・end.wav（時間切れの瞬間の笛）は独立した1要素。一度鳴り始めたら途中で
+ *   止めない（時間切れ後の3秒静止のあいだも鳴り終わるまで続く）。
+ * ・tsu.wav（リングが回って正面に来た瞬間のSE）も独立チャンネルだが、連続で
+ *   回すと短い間隔で重なって鳴りうるため、専用のプールをラウンドロビンで回す。
+ * 音量・ミュートは各要素の.volume/.mutedにそれぞれ反映する
+ * （applySeVolume/applySeMute）。 */
 
-async function loadSoundBuffer(url) {
-  try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('status ' + res.status);
-    const arrayBuffer = await res.arrayBuffer();
-    return await audioCtx.decodeAudioData(arrayBuffer);
-  } catch (err) {
-    console.error('効果音の読み込みに失敗しました（無音のまま続行します）: ' + url, err);
-    return null;
-  }
+function createSeAudio(src) {
+  const el = new Audio(src);
+  el.preload = 'auto';
+  el.load();
+  return el;
 }
 
-async function preloadSounds() {
-  try {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  } catch (err) {
-    console.error('AudioContextの生成に失敗しました。効果音・BGMなしで続行します。', err);
-    audioCtx = null;
-    return;
+function preloadSounds() {
+  judgeSeEl = createSeAudio('sounds/seikai.wav');
+  endSeEl = createSeAudio('sounds/end.wav');
+  tickSeEls = [];
+  for (let i = 0; i < TICK_SE_POOL_SIZE; i++) {
+    tickSeEls.push(createSeAudio('sounds/tsu.wav'));
   }
-
-  seGainNode = audioCtx.createGain();
-  seGainNode.connect(audioCtx.destination);
   applySeVolume();
-
-  const [seikai, huseikai, end, tick] = await Promise.all([
-    loadSoundBuffer('sounds/seikai.wav'),
-    loadSoundBuffer('sounds/huseikai.wav'),
-    loadSoundBuffer('sounds/end.wav'),
-    loadSoundBuffer('sounds/tsu.wav'),
-  ]);
-  soundBuffers.seikai = seikai;
-  soundBuffers.huseikai = huseikai;
-  soundBuffers.end = end;
-  soundBuffers.tick = tick;
+  applySeMute();
 }
 
-// 正誤SE（seikai/huseikai）：1チャンネル。新しい方を鳴らす前に再生中のものを止める。
+// 音量・ミュート反映の対象になる全SE要素
+function allSeEls() {
+  return [judgeSeEl, endSeEl, ...tickSeEls].filter(Boolean);
+}
+
+// モバイルの自動再生制限は<audio>にもかかる。programmaticなplay()（end.wavの
+// タイマー発火など、クリックの外から呼ばれるもの）が後で失敗しないよう、最初の
+// ユーザータップ（STARTまたはミュート解除）で全SE要素を無音のままplay→即pauseし、
+// 再生権を先に取得しておく。
+function unlockSeElements() {
+  allSeEls().forEach((el) => {
+    el.play().then(() => el.pause()).catch(() => { /* 無視：次の操作で再試行される */ });
+  });
+}
+
+// 正誤SE（seikai/huseikai）：専用1要素。新しい方を鳴らす前に巻き戻す。
 function playJudgeSe(name) {
-  if (!audioCtx || !seGainNode) return;
-  const buffer = soundBuffers[name];
-  if (!buffer) return; // 読み込み失敗時は無音のまま
-  if (currentJudgeSeSource) {
-    try { currentJudgeSeSource.stop(); } catch (err) { /* 既に停止済みなら無視 */ }
-    currentJudgeSeSource = null;
+  if (!judgeSeEl) return;
+  const src = name === 'seikai' ? 'sounds/seikai.wav' : 'sounds/huseikai.wav';
+  if (!judgeSeEl.src.endsWith(src)) {
+    judgeSeEl.src = src;
   }
-  const source = audioCtx.createBufferSource();
-  source.buffer = buffer;
-  source.connect(seGainNode);
-  source.start();
-  currentJudgeSeSource = source;
+  judgeSeEl.pause();
+  judgeSeEl.currentTime = 0;
+  judgeSeEl.play().catch((err) => console.error('SEの再生に失敗しました（無音のまま続行します）', err));
 }
 
 // end.wav専用チャンネル：正誤SEとは独立に鳴らし、途中で止めない（最後まで鳴らしきる）。
 function playEndSe() {
-  if (!audioCtx || !seGainNode) return;
-  const buffer = soundBuffers.end;
-  if (!buffer) return; // 読み込み失敗時は無音のまま
-  const source = audioCtx.createBufferSource();
-  source.buffer = buffer;
-  source.connect(seGainNode);
-  source.start();
+  if (!endSeEl) return;
+  endSeEl.currentTime = 0;
+  endSeEl.play().catch((err) => console.error('SEの再生に失敗しました（無音のまま続行します）', err));
 }
 
-// tsu.wav専用チャンネル：リング（難易度・時間）が回って選択が正面に来た瞬間に鳴らす。
-// 正誤SE・end.wavとは独立で、前を止めずに毎回新しいソースを鳴らすだけ（連続で回すと
-// 短い間隔で重なって鳴る）。タイトル画面はスタートボタンをまだ押していない状態でも
-// リング操作できるため、AudioContextが未resumeならここでも起こす。
+// tsu.wav専用チャンネル：リング（難易度・時間）が回って正面に来た瞬間に鳴らす。
+// 連続で回すと短い間隔で重なって鳴りうるため、プールをラウンドロビンで回す。
 function playRingTickSe() {
-  if (!audioCtx || !seGainNode) return;
-  if (audioCtx.state === 'suspended') {
-    audioCtx.resume().catch(() => { /* 無視：次回以降の操作で再試行される */ });
-  }
-  const buffer = soundBuffers.tick;
-  if (!buffer) return; // 読み込み失敗時は無音のまま
-  const source = audioCtx.createBufferSource();
-  source.buffer = buffer;
-  source.connect(seGainNode);
-  source.start();
+  if (tickSeEls.length === 0) return;
+  const el = tickSeEls[tickSeIndex];
+  tickSeIndex = (tickSeIndex + 1) % tickSeEls.length;
+  el.currentTime = 0;
+  el.play().catch(() => { /* 無視：次回以降の操作で再試行される */ });
 }
 
 function applyBgmVolume() {
@@ -302,15 +287,19 @@ function applyBgmMute() {
 }
 
 function applySeVolume() {
-  if (seGainNode) seGainNode.gain.value = seMuted ? 0 : seVolume;
+  allSeEls().forEach((el) => { el.volume = seVolume; });
 }
 
-// スタートボタンのタップ（ユーザー操作）をきっかけにAudioContextを起こし、BGMを再生する。
+// SEのミュート反映はここに集約する（applyBgmMute()と同じ形＝.mutedを使う）。
+// 状態が変わりうる全箇所（初期化・タイトル/確認用UIのトグル）から呼ぶこと。
+function applySeMute() {
+  allSeEls().forEach((el) => { el.muted = seMuted; });
+}
+
+// スタートボタンのタップ（ユーザー操作）をきっかけにSE要素の再生権を取得し、BGMを再生する。
 // BGMは難易度（DIFFICULTIES[].bgm）で切り替える：ここでスタート時に反映する。
 function unlockAndPlayBgm() {
-  if (audioCtx && audioCtx.state === 'suspended') {
-    audioCtx.resume().catch((err) => console.error('AudioContextの再開に失敗しました', err));
-  }
+  unlockSeElements();
   if (!bgmEl) return;
   const bgmSrc = DIFFICULTIES[currentDifficulty].bgm;
   if (bgmSrc && !bgmEl.src.endsWith(bgmSrc)) {
@@ -1107,7 +1096,7 @@ function startGame() {
   records = [];
   endSePlayed = false;
   updateCountsDisplay();
-  unlockAndPlayBgm(); // ユーザーのタップ（このクリック）でAudioContextを起こす
+  unlockAndPlayBgm(); // ユーザーのタップ（このクリック）でBGM・SEの再生権を取得する
   setPhase('playing');
   timerTotalMs = currentTimeLimit * 1000;
   timerStartMs = performance.now();
@@ -2025,18 +2014,19 @@ function setupSoundUI() {
   });
   seMuteBtn.addEventListener('click', () => {
     seMuted = !seMuted;
-    applySeVolume();
+    applySeMute();
     updateMuteUI();
   });
 
   applyBgmVolume();
   applyBgmMute();
   applySeVolume();
+  applySeMute();
   updateMuteUI();
 }
 
 // タイトル画面左上のミュートボタン：BGM・SEをまとめてトグルする。
-// ミュート解除（ON→OFF）のタップはAudioContextを起こすきっかけにもする
+// ミュート解除（ON→OFF）のタップはSE要素の再生権を取得するきっかけにもする
 // （STARTタップより先にここで解除されることがあるため）。
 // 押した感触は:activeの代わりにpointerdown/up（pointercancel）で.pressedを付け外しする。
 function setupTitleMuteButton() {
@@ -2052,11 +2042,9 @@ function setupTitleMuteButton() {
     bgmMuted = !wasMuted;
     seMuted = bgmMuted;
     applyBgmMute();
-    applySeVolume();
+    applySeMute();
     updateMuteUI();
-    if (wasMuted && audioCtx && audioCtx.state === 'suspended') {
-      audioCtx.resume().catch((err) => console.error('AudioContextの再開に失敗しました', err));
-    }
+    if (wasMuted) unlockSeElements();
   });
 }
 
