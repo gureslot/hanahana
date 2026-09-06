@@ -239,11 +239,12 @@ function allSeEls() {
 // モバイルの自動再生制限は<audio>にもかかる。programmaticなplay()（end.wavの
 // タイマー発火など、クリックの外から呼ばれるもの）が後で失敗しないよう、最初の
 // ユーザータップ（STARTまたはミュート解除）で全SE要素を無音のままplay→即pauseし、
-// 再生権を先に取得しておく。
+// 再生権を先に取得しておく。戻り値のPromiseは全要素のpauseまで完了してから解決する
+// （ミュート解除の確認音をこの後に鳴らす際、pauseが確認音を巻き込んで止めないため）。
 function unlockSeElements() {
-  allSeEls().forEach((el) => {
-    el.play().then(() => el.pause()).catch(() => { /* 無視：次の操作で再試行される */ });
-  });
+  return Promise.all(allSeEls().map((el) => (
+    el.play().then(() => el.pause()).catch(() => { /* 無視：次の操作で再試行される */ })
+  )));
 }
 
 // 正誤SE（seikai/huseikai）：専用1要素。新しい方を鳴らす前に巻き戻す。
@@ -2044,7 +2045,9 @@ function setupTitleMuteButton() {
     applyBgmMute();
     applySeMute();
     updateMuteUI();
-    if (wasMuted) unlockSeElements();
+    // ONにしたとき（wasMuted=true）だけ、再生権を取ってからtsu.wavを1回鳴らして
+    // 音声経路が生きていることを示す。OFFにするときは鳴らさない。
+    if (wasMuted) unlockSeElements().then(() => playRingTickSe());
   });
 }
 
