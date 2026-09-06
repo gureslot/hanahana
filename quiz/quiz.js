@@ -20,7 +20,7 @@ const DIFFICULTIES = {
   beginner: { label: '初心者', special: true, bgm: 'sounds/quizBGM2.mp3' },
   easy: { label: '易', shift: 2, reelCount: 1, fixLeft: true, bgm: 'sounds/quizBGM2.mp3' },
   normal: { label: '並', shift: 2, reelCount: 2, fixLeft: false, bgm: 'sounds/quizBGM.mp3' },
-  hard: { label: '極', shift: 1, reelCount: 1, fixLeft: false, bgm: 'sounds/quizBGM.mp3' },
+  hard: { label: '極', shift: 1, reelCount: 2, fixLeft: false, bgm: 'sounds/quizBGM.mp3' },
 };
 
 // 初心者モードの出目条件（仕様：左中段4or14・正解色のAがmax-min<=4）。
