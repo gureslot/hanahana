@@ -291,7 +291,14 @@ function playRingTickSe() {
 }
 
 function applyBgmVolume() {
-  if (bgmEl) bgmEl.volume = bgmMuted ? 0 : bgmVolume;
+  if (bgmEl) bgmEl.volume = bgmVolume;
+}
+
+// BGMのミュート反映はここに集約する（.volumeではなく.mutedを使う＝音量設定を
+// 壊さず、src差し替え時の読み込み状態に左右されず確実に無音にできる）。
+// 状態が変わりうる全箇所（初期化・タイトル/確認用UIのトグル・play()直前）から呼ぶこと。
+function applyBgmMute() {
+  if (bgmEl) bgmEl.muted = bgmMuted;
 }
 
 function applySeVolume() {
@@ -311,6 +318,7 @@ function unlockAndPlayBgm() {
   }
   bgmEl.currentTime = 0;
   applyBgmVolume();
+  applyBgmMute();
   bgmEl.play().catch((err) => console.error('BGMの再生に失敗しました（無音のまま続行します）', err));
 }
 
@@ -2012,7 +2020,7 @@ function setupSoundUI() {
   });
   bgmMuteBtn.addEventListener('click', () => {
     bgmMuted = !bgmMuted;
-    applyBgmVolume();
+    applyBgmMute();
     updateMuteUI();
   });
   seMuteBtn.addEventListener('click', () => {
@@ -2022,6 +2030,7 @@ function setupSoundUI() {
   });
 
   applyBgmVolume();
+  applyBgmMute();
   applySeVolume();
   updateMuteUI();
 }
@@ -2042,7 +2051,7 @@ function setupTitleMuteButton() {
     const wasMuted = bgmMuted;
     bgmMuted = !wasMuted;
     seMuted = bgmMuted;
-    applyBgmVolume();
+    applyBgmMute();
     applySeVolume();
     updateMuteUI();
     if (wasMuted && audioCtx && audioCtx.state === 'suspended') {
