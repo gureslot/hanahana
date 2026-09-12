@@ -620,12 +620,43 @@ function renderStage(container, S) {
   container.appendChild(grid);
 }
 
-/* ---------- 描画：回答画像（仕様書 第3章）----------
+/* ---------- 描画：回答画像（仕様書 第3章 + 7前後のグラデーション表示）----------
  * 下端（0行目）＝受付ライン固定。高さは常に21行（max(A)に関係なく縮めない）。
- * 各列にその色の7がちょうど1つだけ入り、7以外の図柄は描かない。 */
+ * 各列にその色の7がちょうど1つだけ入る。7から離れるほど薄く実際の図柄
+ * （本来そのマスにある図柄）を透過表示し、±6コマ以降は空白にする。
+ * ずらし（offsetsが非0）の場合も、列全体を同じ量だけ回したとみなして
+ * 物理的に矛盾のない周辺図柄を出す（X[reel] + a - offsets[reel]が該当リールの
+ * 実際のコマ番号。symbolAtは内部でmod21するのでずらし・一周のどちらでも成立）。 */
 
-function renderOxStrip(container, A, color) {
-  const sevenSymbol = COLOR_KEY[color];
+const OX_NEIGHBOR_OPACITY = [1, 1, 0.8, 0.6, 0.4, 0.2]; // index = 7からの距離（0〜5）。6以降は空白
+
+function oxCellInfo(reel, a, A, X, offsets) {
+  const distance = Math.abs(a - A[reel]);
+  if (distance >= OX_NEIGHBOR_OPACITY.length) return null;
+  const symbolIndex = X[reel] + a - offsets[reel];
+  return { symbolName: symbolAt(reel, symbolIndex), opacity: OX_NEIGHBOR_OPACITY[distance] };
+}
+
+function buildOxRow(a, A, X, offsets, slotClass, symbolClass) {
+  const rowCells = [];
+  for (const reel of REEL_NAMES) {
+    const slot = document.createElement('div');
+    slot.className = slotClass;
+    const info = oxCellInfo(reel, a, A, X, offsets);
+    if (info) {
+      const img = document.createElement('img');
+      img.className = symbolClass;
+      img.src = symbolImages[info.symbolName].src;
+      img.alt = info.symbolName;
+      img.style.opacity = String(info.opacity);
+      slot.appendChild(img);
+    }
+    rowCells.push(slot);
+  }
+  return rowCells;
+}
+
+function renderOxStrip(container, A, X, offsets) {
   const rows = 21;
 
   const grid = document.createElement('div');
@@ -633,18 +664,7 @@ function renderOxStrip(container, A, color) {
 
   for (let j = 0; j < rows; j++) {
     const a = (rows - 1) - j; // 上端20〜下端0（受付ライン）
-    for (const reel of REEL_NAMES) {
-      const slot = document.createElement('div');
-      slot.className = 'ox-slot';
-      if (A[reel] === a) {
-        const img = document.createElement('img');
-        img.className = 'ox-symbol';
-        img.src = symbolImages[sevenSymbol].src;
-        img.alt = sevenSymbol;
-        slot.appendChild(img);
-      }
-      grid.appendChild(slot);
-    }
+    buildOxRow(a, A, X, offsets, 'ox-slot', 'ox-symbol').forEach((cell) => grid.appendChild(cell));
   }
 
   container.innerHTML = '';
@@ -652,11 +672,11 @@ function renderOxStrip(container, A, color) {
 }
 
 /* ---------- 描画：振り返り画面「出題された画像」（○×版）----------
- * renderOxStripと見た目は同じ21行だが、choice-strip/choice-slotのクラスを使い、
- * .choice-cell（枠）の中に収めて選択肢版の振り返り画面と同じ見た目に揃える。 */
+ * renderOxStripと見た目は同じ21行（7前後のグラデーション込み）だが、
+ * choice-strip/choice-slotのクラスを使い、.choice-cell（枠）の中に収めて
+ * 選択肢版の振り返り画面と同じ見た目に揃える。 */
 
-function renderReviewPresented(container, A, color) {
-  const sevenSymbol = COLOR_KEY[color];
+function renderReviewPresented(container, A, X, offsets) {
   const rows = 21;
 
   const grid = document.createElement('div');
@@ -665,18 +685,7 @@ function renderReviewPresented(container, A, color) {
 
   for (let j = 0; j < rows; j++) {
     const a = (rows - 1) - j;
-    for (const reel of REEL_NAMES) {
-      const slot = document.createElement('div');
-      slot.className = 'choice-slot';
-      if (A[reel] === a) {
-        const img = document.createElement('img');
-        img.className = 'choice-symbol';
-        img.src = symbolImages[sevenSymbol].src;
-        img.alt = sevenSymbol;
-        slot.appendChild(img);
-      }
-      grid.appendChild(slot);
-    }
+    buildOxRow(a, A, X, offsets, 'choice-slot', 'choice-symbol').forEach((cell) => grid.appendChild(cell));
   }
 
   container.innerHTML = '';
@@ -739,7 +748,7 @@ function newQuestion() {
   };
 
   renderStage(document.getElementById('stage'), S);
-  renderOxStrip(document.getElementById('oxGrid'), decision.A, decision.color);
+  renderOxStrip(document.getElementById('oxGrid'), decision.A, judge.timing.X, decision.offsets);
   resetOxButtons();
   clearResult();
 
@@ -785,7 +794,7 @@ function onOxAnswer(pickedAns) {
     pauseTimer();
     records.push({
       S: { ...currentQuestion.S },
-      presented: { color: decision.color, kind: decision.kind, A: { ...decision.A } },
+      presented: { color: decision.color, kind: decision.kind, A: { ...decision.A }, offsets: { ...decision.offsets } },
       ans: decision.ans,
       isTie: currentQuestion.correctColors.length === 2,
       pickedAns,
@@ -989,17 +998,18 @@ function renderReviewQuestion() {
 
   renderStage(document.getElementById('reviewStage'), rec.S);
 
+  const X = computeTiming(rec.S).X; // 表示専用の再計算（判定ロジックには使わない）
+
   const pickedCellEl = document.getElementById('reviewPickedCell');
   pickedCellEl.classList.remove('correct', 'wrong');
   pickedCellEl.classList.add(rec.wasCorrect ? 'correct' : 'wrong');
-  renderReviewPresented(pickedCellEl, rec.presented.A, rec.presented.color);
+  renderReviewPresented(pickedCellEl, rec.presented.A, X, rec.presented.offsets);
   document.getElementById('reviewPickedLabel').textContent =
     '出題／あなたの回答：' + (rec.pickedAns === 'o' ? '○' : '×');
 
   const correctCellEl = document.getElementById('reviewCorrectCell');
   correctCellEl.classList.remove('correct', 'wrong');
   correctCellEl.classList.add('correct');
-  const X = computeTiming(rec.S).X; // 表示専用の再計算（判定ロジックには使わない）
   renderFullReelStrip(correctCellEl, X);
   let correctLabel = '正解：' + (rec.ans === 'o' ? '○' : '×');
   if (rec.isTie) correctLabel += '（同着：どちらの色でも正解）';
