@@ -754,6 +754,7 @@ function resetOxButtons() {
     btn.disabled = false;
     btn.classList.remove('correct', 'wrong');
   });
+  document.getElementById('oxGrid').classList.remove('correct', 'wrong');
 }
 
 function onOxAnswer(pickedAns) {
@@ -771,6 +772,9 @@ function onOxAnswer(pickedAns) {
   const pickedBtn = pickedAns === 'o' ? btnO : btnX;
   correctBtn.classList.add('correct');
   if (!isCorrect) pickedBtn.classList.add('wrong');
+
+  // 回答画像の枠も選択肢版と同じ色で正誤を示す（緑＝正解／赤＝不正解）
+  document.getElementById('oxGrid').classList.add(isCorrect ? 'correct' : 'wrong');
 
   showResult(isCorrect);
   playJudgeSe(isCorrect ? 'seikai' : 'huseikai');

@@ -475,6 +475,15 @@ main {
   justify-content: center;
 }
 
+/* 正誤表示（選択肢版の.choice-cell.correct/.wrongと同じ色）。 */
+.ox-grid-wrap.correct {
+  border-color: #3ddc84;
+}
+
+.ox-grid-wrap.wrong {
+  border-color: #ff5a5a;
+}
+
 /* 格子：3列×21行固定（max(A)に関係なく常に21行。1コマ32×16px、格子全体96×336px）。
    縦に収まらない場合のみ、比率を保ったまま28×14px（294px）へ縮小する
    （下のメディアクエリ。閾値は実機・実ブラウザでの確認結果に合わせて調整）。 */
