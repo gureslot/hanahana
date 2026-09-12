@@ -569,6 +569,21 @@ function decideAnswer(diffKey, judge, X) {
   }
 
   if (kind === 'slow') {
+    if (diffKey === 'beginner') {
+      // 初心者の不正解：色の見分けだけを問う。正解の7の位置はそのまま、
+      // 色だけもう一方の色に変える。周辺の図柄は「もう一方の色」の実際の
+      // 並びに合わせる（もう一方の色の7が本当にそこにあるかのように描く）。
+      // index = X[reel] + a - offsets[reel] という描画側の式に対し、
+      // a = A[reel] のときちょうど「もう一方の色の7の実番号」を指すよう
+      // offsetsを逆算する（offsets = X + A − もう一方の色の7の実番号）。
+      const correctColor = judge.correctColors[0];
+      const wrongColor = oppositeColor(correctColor);
+      const A = computeBaseA(X, correctColor); // 正解の7の位置のまま
+      const wrongP = sevens[COLOR_KEY[wrongColor]];
+      const offsets = {};
+      for (const r of REEL_NAMES) offsets[r] = X[r] + A[r] - wrongP[r];
+      return { ans, kind, color: wrongColor, offsets, A };
+    }
     const color = isTie
       ? (Math.random() < 0.5 ? 'pink' : 'white') // 同着でのslow強制指定（?kind用）はどちらかをランダムに
       : oppositeColor(judge.correctColors[0]);
@@ -796,7 +811,6 @@ function onOxAnswer(pickedAns) {
       S: { ...currentQuestion.S },
       presented: { color: decision.color, kind: decision.kind, A: { ...decision.A }, offsets: { ...decision.offsets } },
       ans: decision.ans,
-      isTie: currentQuestion.correctColors.length === 2,
       pickedAns,
       wasCorrect: isCorrect,
     });
@@ -1011,9 +1025,7 @@ function renderReviewQuestion() {
   correctCellEl.classList.remove('correct', 'wrong');
   correctCellEl.classList.add('correct');
   renderFullReelStrip(correctCellEl, X);
-  let correctLabel = '正解：' + (rec.ans === 'o' ? '○' : '×');
-  if (rec.isTie) correctLabel += '（同着：どちらの色でも正解）';
-  document.getElementById('reviewCorrectLabel').textContent = correctLabel;
+  document.getElementById('reviewCorrectLabel').textContent = '正解：' + (rec.ans === 'o' ? '○' : '×');
 
   const judgeEl = document.getElementById('reviewJudge');
   judgeEl.textContent = rec.wasCorrect ? '正解' : '不正解';
