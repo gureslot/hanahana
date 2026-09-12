@@ -1,0 +1,1125 @@
+* {
+  box-sizing: border-box;
+}
+
+/* ダブルタップでのズームだけを無効化する（誤タップでの拡大・操作しづらさ対策）。
+   user-scalable=noはiOS Safariが無視するうえアクセシビリティ上望ましくないため
+   使わない。touch-action:manipulationはピンチズーム（2本指の拡大）は妨げない。
+   htmlの領域にも指定する（選択肢版と同じ理由。quiz/quiz.css参照）。 */
+html, body {
+  margin: 0;
+  padding: 0;
+  max-width: 100%;
+  overflow-x: hidden;
+  touch-action: manipulation;
+}
+
+body {
+  font-family: system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+  background: #12131a;
+  color: #eee;
+  padding: 12px;
+}
+
+button {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+main {
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.title-screen,
+.stage-wrap,
+.ox-answer-wrap,
+.result-screen,
+.review-screen,
+.ranking-screen {
+  width: 100%;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+/* タイマー表示（選択肢版と同じ。quiz/quiz.css参照） */
+
+.timer-display {
+  text-align: center;
+  color: #eee;
+  margin-bottom: 10px;
+}
+
+.timer-clock {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  font-variant-numeric: tabular-nums;
+}
+
+.timer-spacer,
+.timer-cc-wrap {
+  flex: 1 1 0;
+  font-size: 16px;
+  font-weight: bold;
+  color: #99a;
+}
+
+.timer-cc-wrap {
+  text-align: left;
+}
+
+.timer-ss {
+  flex: 0 0 auto;
+  font-size: 34px;
+  font-weight: bold;
+  padding: 0 3px;
+}
+
+.timer-prompt {
+  text-align: center;
+  font-size: 14px;
+  font-weight: bold;
+  color: #ddd;
+  margin: 4px 0 2px;
+}
+
+.timer-counts {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  margin-top: 2px;
+  font-size: 13px;
+}
+
+.count-correct {
+  color: #3ddc84;
+}
+
+.count-wrong {
+  color: #ff5a5a;
+}
+
+/* タイトル画面（選択肢版と同じ構成。背景・ロゴ・リングUIの実装はquiz/quiz.css参照） */
+
+.title-screen {
+  position: relative;
+  text-align: center;
+  padding: 32px 16px 20px;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 16px;
+  min-height: 560px;
+  min-height: calc(100vh - 24px);
+  min-height: calc(100dvh - 24px);
+  background: #12131a bottom/cover no-repeat;
+  background-image: url('../quiz/images/titleBG.png');
+}
+
+.title-logo-wrap {
+  position: relative;
+  display: block;
+  margin: 0 auto;
+}
+
+.title-logo1-wrap {
+  width: 75%;
+}
+
+.title-logo2-wrap {
+  width: 95%;
+  margin-top: 12px;
+}
+
+.title-logo1,
+.title-logo2 {
+  display: block;
+  width: 100%;
+}
+
+.title-logo1-shine,
+.title-logo2-shine {
+  position: absolute;
+  inset: 0;
+  mix-blend-mode: screen;
+  pointer-events: none;
+  background: linear-gradient(108deg, transparent 42%, rgba(255, 248, 214, .9) 50%, transparent 58%);
+  background-size: 260% 100%;
+  background-repeat: no-repeat;
+  animation: title-logo-shine 5s ease-in-out infinite;
+}
+
+.title-logo1-shine {
+  -webkit-mask: url('../quiz/images/title1.png') center/contain no-repeat;
+  mask: url('../quiz/images/title1.png') center/contain no-repeat;
+}
+
+.title-logo2-shine {
+  -webkit-mask: url('../quiz/images/title2.png') center/contain no-repeat;
+  mask: url('../quiz/images/title2.png') center/contain no-repeat;
+  animation-delay: 1.5s;
+}
+
+@keyframes title-logo-shine {
+  0% {
+    background-position: 170% 0;
+  }
+  55%,
+  100% {
+    background-position: -70% 0;
+  }
+}
+
+/* 「○×版」バッジ：画像を追加せずCSSだけで描く。title2.pngの右下に小さく添える。 */
+.ox-badge {
+  position: absolute;
+  right: 2%;
+  bottom: -6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid #ff3b52;
+  background: rgba(10, 10, 16, .75);
+  color: #ff3b52;
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: .02em;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.title-select-group {
+  position: relative;
+  margin-top: 24px;
+}
+
+.ring-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-bottom: 6px;
+}
+
+.ring-track {
+  position: relative;
+  width: 200px;
+  height: 130px;
+  touch-action: pan-y;
+  cursor: grab;
+}
+
+.ring-track:active {
+  cursor: grabbing;
+}
+
+.ring-card {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 62px;
+  height: 62px;
+  pointer-events: none;
+  transition: filter .28s ease;
+  will-change: transform;
+}
+
+.ring-card img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.ring-arrow {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid #555;
+  background: #22232e;
+  color: #ccd;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.title-mute-btn {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 4px 10px 4px 4px;
+  border: none;
+  border-radius: 22px;
+  background: rgba(10, 10, 16, .45);
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform .08s ease-out, filter .08s ease-out;
+}
+
+.title-mute-btn.pressed {
+  transform: scale(.88);
+  filter: brightness(1.4);
+}
+
+.title-mute-icon {
+  display: block;
+  width: 32px;
+  height: 32px;
+}
+
+.title-mute-label {
+  font-size: 13px;
+  font-weight: bold;
+  color: #eee;
+  white-space: nowrap;
+}
+
+.title-start-btn {
+  display: block;
+  width: 60%;
+  max-width: 220px;
+  margin: 16px auto 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.title-start-btn img {
+  display: block;
+  width: 100%;
+}
+
+/* 出題画面全体の背景（選択肢版と同じ。quiz/quiz.css参照） */
+#appScreen {
+  background: #12131a bottom/cover no-repeat;
+  background-image: url('../quiz/images/quizBG.png');
+  border-radius: 12px;
+}
+
+/* 出題（3x3 + 枠上枠下）。選択肢版と全く同じ実装（quiz/quiz.css参照）。 */
+
+.stage-wrap {
+  background: transparent;
+  border-radius: 12px;
+  padding: 8px;
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: center;
+}
+
+.stage-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, 96px) auto;
+  column-gap: 2px;
+  row-gap: 0;
+  align-items: stretch;
+}
+
+.stage-cell {
+  background: #000;
+  overflow: hidden;
+  position: relative;
+}
+
+.stage-cell--full {
+  aspect-ratio: 2 / 1;
+}
+
+.stage-cell--full img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.stage-cell--peekTop,
+.stage-cell--peekBottom {
+  aspect-ratio: 4 / 1;
+}
+
+.stage-cell--peekTop img,
+.stage-cell--peekBottom img {
+  width: 100%;
+  aspect-ratio: 2 / 1;
+  display: block;
+}
+
+.stage-cell--peekBottom img {
+  transform: translateY(-50%);
+}
+
+.stage-cell--peekTop img {
+  transform: translateY(0);
+}
+
+.stage-grid::before,
+.stage-grid::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  width: 292px;
+  height: 2px;
+  background: #ccd;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.stage-grid::before {
+  top: 24px;
+  transform: translateY(-50%);
+}
+
+.stage-grid::after {
+  top: 168px;
+  transform: translateY(-50%);
+}
+
+.stage-number-cell {
+  width: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.number-badge {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid #ccd;
+  color: #ccd;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  line-height: 1;
+  background: #000;
+}
+
+/* 回答（○×版の核）。画像は1枚だけ、常に21行、下端＝受付ライン。
+   左右にO×ボタンを置く（下に置くと390×844に収まらないため）。 */
+
+.ox-answer-wrap {
+  margin-bottom: 8px;
+}
+
+.game-controls {
+  margin-bottom: 8px;
+}
+
+.ox-answer-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+
+.ox-btn {
+  flex: 0 0 auto;
+  width: 88px;
+  height: 88px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.ox-btn svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  filter: drop-shadow(0 0 6px currentColor);
+}
+
+.ox-o {
+  color: #27e07a;
+}
+
+.ox-x {
+  color: #ff3b52;
+}
+
+.ox-btn:disabled {
+  opacity: .35;
+  filter: none;
+  cursor: default;
+}
+
+.ox-btn.correct {
+  filter: brightness(1.3);
+}
+
+.ox-btn.wrong {
+  filter: brightness(.6);
+}
+
+/* 回答画像（格子）を囲む枠。.choice-cellと同じ役割（透明背景・枠線・
+   縦横中央寄せ）だが、クリック対象ではなく常に1枚だけ表示する。 */
+.ox-grid-wrap {
+  background: transparent;
+  border: 2px solid #333;
+  border-radius: 8px;
+  padding: 6px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 格子：3列×21行固定（max(A)に関係なく常に21行。1コマ32×16px、格子全体96×336px）。
+   縦に収まらない場合のみ、比率を保ったまま28×14px（294px）へ縮小する
+   （下のメディアクエリ。閾値は実機・実ブラウザでの確認結果に合わせて調整）。 */
+.ox-grid {
+  width: 96px;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(21, auto);
+  gap: 0;
+}
+
+@media (max-height: 700px) {
+  .ox-grid {
+    width: 84px;
+  }
+}
+
+.ox-slot {
+  background: #1c1d27;
+  border: 1px solid #4a4a58;
+  box-sizing: border-box;
+  aspect-ratio: 2 / 1;
+  min-width: 0;
+}
+
+.ox-symbol {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+}
+
+/* 結果・操作 */
+
+.result-message {
+  text-align: center;
+  min-height: 22px;
+  font-size: 16px;
+  font-weight: bold;
+  margin: 8px 0;
+}
+
+.result-message.correct {
+  color: #3ddc84;
+}
+
+.result-message.wrong {
+  color: #ff5a5a;
+}
+
+/* リザルト画面（選択肢版と同じ。quiz/quiz.css参照） */
+
+.result-screen {
+  position: relative;
+  text-align: center;
+  padding: 20px 16px 20px;
+  border-radius: 12px;
+  overflow: hidden;
+  min-height: 560px;
+  min-height: calc(100vh - 24px);
+  min-height: calc(100dvh - 24px);
+  background: #12131a bottom/cover no-repeat;
+  background-image: url('../quiz/images/titleBG.png');
+}
+
+.result-titles {
+  margin-bottom: 8px;
+}
+
+.result-title1,
+.result-title2 {
+  display: block;
+  margin: 0 auto;
+}
+
+.result-title1 {
+  width: 75%;
+  max-width: 260px;
+}
+
+.result-title2 {
+  width: 95%;
+  margin-top: 4px;
+}
+
+.result-score-wrap {
+  position: relative;
+  width: 88%;
+  max-width: 340px;
+  margin: 6px auto 10px;
+}
+
+.result-score-daiza {
+  display: block;
+  width: 100%;
+}
+
+.result-score-value {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) skewX(-36deg);
+  font-size: 44px;
+  font-weight: bold;
+  color: #fff44d;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+}
+
+.result-stats-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 10px;
+}
+
+.result-stats {
+  flex: 1;
+  min-width: 0;
+}
+
+.result-side-btn {
+  flex: 0 0 auto;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #666;
+  background: rgba(20, 20, 28, 0.6);
+  color: #eee;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.review-entry-btn {
+  border-color: #4a6cf7;
+  color: #9db2ff;
+}
+
+.result-side-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.save-image-btn {
+  display: block;
+  width: 100%;
+  max-width: 260px;
+  margin: 0 auto 10px;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #555;
+  background: #22232e;
+  color: #eee;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.result-detail {
+  font-size: 15px;
+  color: #fff;
+  margin: 0 0 2px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+
+.result-meta {
+  font-size: 13px;
+  color: #ddd;
+  margin: 0;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+
+.result-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.retry-btn,
+.back-title-btn {
+  display: block;
+  width: 100%;
+  max-width: 130px;
+  margin: 0 auto;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.retry-btn img,
+.back-title-btn img {
+  display: block;
+  width: 100%;
+}
+
+/* 振り返り画面（選択肢版と同じ構成。左：出題された画像＋あなたの回答、
+   右：正解の形。choice-strip/choice-slotのスタイルを流用する）。 */
+
+.review-position {
+  text-align: center;
+  font-size: 13px;
+  color: #ccd;
+  margin: 0 0 8px;
+}
+
+.review-stage-wrap {
+  background: transparent;
+  border-radius: 12px;
+  padding: 8px;
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: center;
+}
+
+.review-stage-wrap .stage-grid {
+  grid-template-columns: repeat(3, 72px) auto;
+}
+
+.review-stage-wrap .stage-grid::before,
+.review-stage-wrap .stage-grid::after {
+  width: 220px;
+}
+
+.review-stage-wrap .stage-grid::before {
+  top: 18px;
+}
+
+.review-stage-wrap .stage-grid::after {
+  top: 126px;
+}
+
+.review-judge {
+  text-align: center;
+  font-size: 16px;
+  font-weight: bold;
+  margin: 0 0 10px;
+}
+
+.review-judge.correct {
+  color: #3ddc84;
+}
+
+.review-judge.wrong {
+  color: #ff5a5a;
+}
+
+.review-choices {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.review-choice-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+}
+
+.review-choice-label {
+  text-align: center;
+  font-size: 12px;
+  color: #ccd;
+  margin: 0 0 6px;
+}
+
+/* choice-cell を流用（透明背景・枠線・中央寄せ）。左右とも21行なので
+   高さは自動的に揃う（.review-panelの高さは選択肢版から変更なし）。 */
+.choice-cell {
+  background: transparent;
+  border: 2px solid #333;
+  border-radius: 8px;
+  padding: 6px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+
+.choice-cell.correct {
+  border-color: #3ddc84;
+}
+
+.choice-cell.wrong {
+  border-color: #ff5a5a;
+}
+
+.choice-strip {
+  width: min(100%, 96px);
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+}
+
+.choice-slot {
+  background: #1c1d27;
+  border: 1px solid #4a4a58;
+  box-sizing: border-box;
+  aspect-ratio: 2 / 1;
+  min-width: 0;
+}
+
+.choice-symbol {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+}
+
+.review-panel {
+  cursor: default;
+  width: 100%;
+  height: 400px;
+}
+
+.review-nav {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.review-nav-btn {
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #555;
+  background: #22232e;
+  color: #eee;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.review-nav-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.review-back-btn {
+  display: block;
+  width: 100%;
+  max-width: 260px;
+  margin: 0 auto;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #555;
+  background: #22232e;
+  color: #eee;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+/* ランキング（選択肢版と同じ。quiz/quiz.css参照） */
+
+.rank-check-note {
+  text-align: center;
+  font-size: 12px;
+  color: #ff9a5a;
+  margin: 0 0 8px;
+}
+
+.rank-entry {
+  background: rgba(20, 20, 28, 0.7);
+  border: 1px solid #4a6cf7;
+  border-radius: 8px;
+  padding: 10px;
+  margin: 0 0 10px;
+}
+
+.rank-entry-label {
+  text-align: center;
+  font-size: 13px;
+  font-weight: bold;
+  color: #fff44d;
+  margin: 0 0 8px;
+}
+
+.rank-entry-row {
+  display: flex;
+  gap: 8px;
+}
+
+.rank-name-input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #666;
+  background: #12131a;
+  color: #eee;
+  font-size: 14px;
+}
+
+.rank-name-input:disabled {
+  opacity: 0.6;
+}
+
+.rank-submit-btn {
+  flex: 0 0 auto;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid #4a6cf7;
+  background: #4a6cf7;
+  color: #fff;
+  font-weight: bold;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.rank-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.rank-entry-status {
+  text-align: center;
+  font-size: 12px;
+  color: #ccd;
+  margin: 8px 0 0;
+  min-height: 14px;
+}
+
+.rank-entry-status.success {
+  color: #3ddc84;
+}
+
+.rank-entry-status.error {
+  color: #ff5a5a;
+}
+
+.view-ranking-btn {
+  display: block;
+  width: 100%;
+  max-width: 260px;
+  margin: 0 auto 10px;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #555;
+  background: #22232e;
+  color: #eee;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.ranking-title {
+  text-align: center;
+  font-size: 18px;
+  font-weight: bold;
+  color: #eee;
+  margin: 0 0 12px;
+}
+
+.ranking-board-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.ranking-board-btn {
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid #555;
+  background: #22232e;
+  color: #ccd;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.ranking-board-btn.active {
+  border-color: #4a6cf7;
+  background: #4a6cf7;
+  color: #fff;
+  font-weight: bold;
+}
+
+.ranking-body {
+  min-height: 120px;
+  margin-bottom: 16px;
+}
+
+.ranking-status {
+  text-align: center;
+  font-size: 13px;
+  color: #ccd;
+  padding: 24px 0;
+}
+
+.ranking-status.ranking-error {
+  color: #ff5a5a;
+}
+
+.ranking-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.ranking-table th,
+.ranking-table td {
+  padding: 6px 4px;
+  text-align: center;
+  border-bottom: 1px solid #333;
+}
+
+.ranking-table th:nth-child(2),
+.ranking-table td:nth-child(2) {
+  text-align: left;
+}
+
+.ranking-table th {
+  color: #99a;
+  font-weight: normal;
+  font-size: 11px;
+}
+
+.ranking-table td {
+  color: #eee;
+}
+
+.ranking-row-self td {
+  background: rgba(74, 108, 247, 0.25);
+  font-weight: bold;
+  color: #fff44d;
+}
+
+.ranking-back-btn {
+  display: block;
+  width: 100%;
+  max-width: 260px;
+  margin: 0 auto;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #555;
+  background: #22232e;
+  color: #eee;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+/* 確認用UI（本番では出ない。選択肢版と同じ。quiz/quiz.css参照） */
+
+.dev-controls {
+  margin-top: 24px;
+  padding-top: 12px;
+  border-top: 1px dashed #444;
+  text-align: center;
+}
+
+.dev-controls-label {
+  font-size: 11px;
+  color: #778;
+  margin: 0 0 8px;
+}
+
+.dev-action-buttons {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.start-btn,
+.preview-btn {
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #555;
+  font-size: 14px;
+}
+
+.start-btn {
+  background: #4a6cf7;
+  border-color: #4a6cf7;
+  color: #fff;
+  font-weight: bold;
+}
+
+.preview-btn {
+  background: #22232e;
+  color: #eee;
+}
+
+.abort-btn {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #555;
+  background: #22232e;
+  color: #eee;
+  font-size: 15px;
+}
+
+.sound-controls {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed #444;
+}
+
+.sound-control-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.sound-control-label {
+  width: 40px;
+  font-size: 13px;
+  color: #ccd;
+  text-align: left;
+}
+
+.volume-slider {
+  flex: 1;
+}
+
+.mute-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid #555;
+  background: #22232e;
+  color: #eee;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.mute-btn.active {
+  background: #ff5a5a;
+  border-color: #ff5a5a;
+  color: #fff;
+}
+
+.debug-panel {
+  background: #0d0e13;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 12px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-x: auto;
+  font-family: ui-monospace, Consolas, monospace;
+}

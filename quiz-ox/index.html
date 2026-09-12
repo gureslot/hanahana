@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ハナハナ最速目押しクイズ ○×版</title>
+<link rel="icon" type="image/png" sizes="32x32" href="../icon_32x32.png">
+<meta property="og:title" content="ハナハナ最速目押しクイズ ○×版">
+<meta property="og:description" content="停止した出目と7の配置から、それが最速かどうかを○×で答えるクイズ">
+<meta property="og:image" content="https://gureslot.github.io/hanahana/quiz/images/OGP.png">
+<meta property="og:url" content="https://gureslot.github.io/hanahana/quiz-ox/">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="quiz-ox.css">
+</head>
+<body>
+<main>
+  <section id="titleScreen" class="title-screen">
+    <button type="button" id="titleMuteBtn" class="title-mute-btn" aria-pressed="true">
+      <img id="titleMuteIcon" src="../quiz/images/mute_on.png" alt="" class="title-mute-icon">
+      <span id="titleMuteLabel" class="title-mute-label">音声オフ</span>
+    </button>
+    <div class="title-logos">
+      <div class="title-logo-wrap title-logo1-wrap">
+        <img src="../quiz/images/title1.png" alt="ハナハナ" class="title-logo1">
+        <div class="title-logo1-shine"></div>
+      </div>
+      <div class="title-logo-wrap title-logo2-wrap">
+        <img src="../quiz/images/title2.png" alt="最速目押しクイズ" class="title-logo2">
+        <div class="title-logo2-shine"></div>
+        <span class="ox-badge">○×版</span>
+      </div>
+    </div>
+
+    <div class="title-select-group">
+      <div class="ring-row" id="diffRingRow">
+        <button type="button" class="ring-arrow ring-arrow-left" id="diffRingLeft" aria-label="前の難易度">◀</button>
+        <div class="ring-track" id="diffRingTrack"></div>
+        <button type="button" class="ring-arrow ring-arrow-right" id="diffRingRight" aria-label="次の難易度">▶</button>
+      </div>
+      <div class="ring-row" id="timeRingRow">
+        <button type="button" class="ring-arrow ring-arrow-left" id="timeRingLeft" aria-label="前の制限時間">◀</button>
+        <div class="ring-track" id="timeRingTrack"></div>
+        <button type="button" class="ring-arrow ring-arrow-right" id="timeRingRight" aria-label="次の制限時間">▶</button>
+      </div>
+    </div>
+
+    <button type="button" id="titleStartBtn" class="title-start-btn"><img src="../quiz/images/start.png" alt="スタート"></button>
+  </section>
+
+  <div id="appScreen" hidden>
+  <div id="timerDisplay" class="timer-display" hidden>
+    <div class="timer-clock">
+      <span class="timer-spacer" aria-hidden="true"></span><span id="timerSec" class="timer-ss">00</span><span class="timer-cc-wrap">:<span id="timerCenti">00</span></span>
+    </div>
+    <p class="timer-prompt">この出目から最速で揃えられる7の形は、これ？</p>
+    <div class="timer-counts">
+      <span class="count-correct">正解 <span id="correctCountValue">0</span></span>
+      <span class="count-wrong">誤答 <span id="wrongCountValue">0</span></span>
+    </div>
+  </div>
+
+  <audio id="bgmAudio" src="../quiz/sounds/quizBGM.mp3" preload="auto"></audio>
+
+  <section class="stage-wrap">
+    <div id="stage"></div>
+  </section>
+
+  <section class="ox-answer-wrap">
+    <div class="ox-answer-row">
+      <button type="button" id="oxBtnO" class="ox-btn ox-o" aria-label="まる">
+        <svg viewBox="0 0 100 100" aria-hidden="true">
+          <circle cx="50" cy="50" r="34" fill="none" stroke="currentColor" stroke-width="12"/>
+        </svg>
+      </button>
+      <div id="oxGrid" class="ox-grid-wrap"></div>
+      <button type="button" id="oxBtnX" class="ox-btn ox-x" aria-label="ばつ">
+        <svg viewBox="0 0 100 100" aria-hidden="true">
+          <line x1="26" y1="26" x2="74" y2="74" stroke="currentColor" stroke-width="12" stroke-linecap="round"/>
+          <line x1="74" y1="26" x2="26" y2="74" stroke="currentColor" stroke-width="12" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+  </section>
+
+  <p id="resultMessage" class="result-message" aria-live="polite"></p>
+
+  <div id="gameControls" class="game-controls" hidden>
+    <button type="button" id="abortBtn" class="abort-btn">中断</button>
+  </div>
+
+  <section id="resultScreen" class="result-screen" hidden>
+    <div class="result-titles">
+      <img src="../quiz/images/title1.png" alt="ハナハナ" class="result-title1">
+      <img src="../quiz/images/title2.png" alt="最速目押しクイズ" class="result-title2">
+    </div>
+    <div class="result-score-wrap">
+      <img src="../quiz/images/scoredaiza.png" alt="" class="result-score-daiza">
+      <span id="resultScore" class="result-score-value">0</span>
+    </div>
+    <div class="result-stats-row">
+      <button type="button" id="reviewBtn" class="result-side-btn review-entry-btn">答え合わせ</button>
+      <div class="result-stats">
+        <p class="result-detail">正解 <span id="resultCorrect">0</span>　誤答 <span id="resultWrong">0</span></p>
+        <p class="result-meta"><span id="resultDiffLabel">-</span>／<span id="resultTimeLabel">-</span>秒</p>
+      </div>
+      <button type="button" id="shareBtn" class="result-side-btn share-btn">Xでシェア</button>
+    </div>
+    <button type="button" id="saveImageBtn" class="save-image-btn">画像を保存</button>
+
+    <p id="rankCheckNote" class="rank-check-note" hidden></p>
+    <div id="rankEntry" class="rank-entry" hidden>
+      <p class="rank-entry-label">ランクイン！ランキングに登録できます</p>
+      <div class="rank-entry-row">
+        <input type="text" id="rankNameInput" class="rank-name-input" maxlength="12" placeholder="名前（1〜12文字）">
+        <button type="button" id="rankSubmitBtn" class="rank-submit-btn">登録</button>
+      </div>
+      <p id="rankEntryStatus" class="rank-entry-status"></p>
+    </div>
+    <button type="button" id="viewRankingBtn" class="view-ranking-btn">ランキングを見る</button>
+
+    <div class="result-buttons">
+      <button type="button" id="retryBtn" class="retry-btn"><img src="../quiz/images/retry.png" alt="もう一度"></button>
+      <button type="button" id="backToTitleBtn" class="back-title-btn"><img src="../quiz/images/title.png" alt="タイトルへ戻る"></button>
+    </div>
+  </section>
+
+  <section id="reviewScreen" class="review-screen" hidden>
+    <p class="review-position"><span id="reviewIndexLabel">1</span>問目 / 全<span id="reviewTotalLabel">0</span>問</p>
+    <div class="review-stage-wrap">
+      <div id="reviewStage"></div>
+    </div>
+    <p id="reviewJudge" class="review-judge"></p>
+    <div class="review-choices">
+      <div class="review-choice-col">
+        <p id="reviewPickedLabel" class="review-choice-label">出題された画像・あなたの回答</p>
+        <div id="reviewPickedCell" class="choice-cell review-panel"></div>
+      </div>
+      <div class="review-choice-col">
+        <p id="reviewCorrectLabel" class="review-choice-label">正解の形</p>
+        <div id="reviewCorrectCell" class="choice-cell review-panel"></div>
+      </div>
+    </div>
+    <div class="review-nav">
+      <button type="button" id="reviewPrevBtn" class="review-nav-btn">◀ 前へ</button>
+      <button type="button" id="reviewNextBtn" class="review-nav-btn">次へ ▶</button>
+    </div>
+    <button type="button" id="reviewBackBtn" class="review-back-btn">リザルトへ戻る</button>
+  </section>
+
+  <section id="rankingScreen" class="ranking-screen" hidden>
+    <p class="ranking-title">ランキング</p>
+    <div class="ranking-board-buttons" id="rankingBoardButtons"></div>
+    <div id="rankingBody" class="ranking-body"></div>
+    <button type="button" id="rankingBackBtn" class="ranking-back-btn">リザルトへ戻る</button>
+  </section>
+
+  <section id="debugPanel" class="debug-panel" hidden></section>
+
+  <section class="dev-controls" id="devControls" hidden>
+    <p class="dev-controls-label">確認用UI（本番では出ません）</p>
+    <div class="dev-action-buttons">
+      <button type="button" id="startBtn" class="start-btn">スタート</button>
+      <button type="button" id="previewBtn" class="preview-btn">1問だけ表示</button>
+    </div>
+
+    <div class="sound-controls">
+      <div class="sound-control-row">
+        <span class="sound-control-label">BGM</span>
+        <input type="range" id="bgmVolumeSlider" class="volume-slider" min="0" max="100" value="80">
+        <button type="button" id="bgmMuteBtn" class="mute-btn">ミュート</button>
+      </div>
+      <div class="sound-control-row">
+        <span class="sound-control-label">SE</span>
+        <input type="range" id="seVolumeSlider" class="volume-slider" min="0" max="100" value="80">
+        <button type="button" id="seMuteBtn" class="mute-btn">ミュート</button>
+      </div>
+    </div>
+  </section>
+  </div>
+</main>
+
+<script src="quiz-ox.js" defer></script>
+</body>
+</html>
