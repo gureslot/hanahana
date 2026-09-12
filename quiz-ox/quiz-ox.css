@@ -440,12 +440,9 @@ main {
   filter: drop-shadow(0 0 6px currentColor);
 }
 
-.ox-o {
-  color: #27e07a;
-}
-
+.ox-o,
 .ox-x {
-  color: #ff3b52;
+  color: #fff;
 }
 
 .ox-btn:disabled {
@@ -454,12 +451,13 @@ main {
   cursor: default;
 }
 
+/* 正誤表示は枠（.ox-grid-wrap.correct/.wrong）と同じ色に揃える */
 .ox-btn.correct {
-  filter: brightness(1.3);
+  color: #3ddc84;
 }
 
 .ox-btn.wrong {
-  filter: brightness(.6);
+  color: #ff5a5a;
 }
 
 /* 回答画像（格子）を囲む枠。.choice-cellと同じ役割（透明背景・枠線・
