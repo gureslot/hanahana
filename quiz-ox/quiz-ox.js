@@ -4,7 +4,8 @@
  * 相対参照する（二重管理を避けるため）。出目の生成・正解判定ロジック・音・
  * リングUIは選択肢版と同一（hanahana_quiz_ox_spec.md 第1章の対応表を参照）。
  * 回答方式（○×1枚）、ずらしの作り方（mod21で一周させる方式）、終わり方
- * （制限時間ではなく出題数10問／20問。ランキングなし）が選択肢版と異なる。 */
+ * （制限時間ではなく出題数10問／20問）、ランキングの並び順（同点は経過時間の
+ * 短い方が上位）が選択肢版と異なる。 */
 
 const REEL_NAMES = ['left', 'middle', 'right'];
 const SYMBOL_NAMES = [
@@ -53,6 +54,25 @@ const RING_BRIGHTNESS_SELECTED = 1;
 const RING_BRIGHTNESS_UNSELECTED = 0.55;
 const RING_BRIGHTNESS_DISABLED = 0.25;
 
+/* ---------- ランキング（Supabase REST API） ----------
+ * 選択肢版と同じSupabaseプロジェクト・同じanon key。テーブルはscores_ox
+ * （カラム構成が選択肢版のscoresと異なる：time_limitではなくquestions、
+ * elapsed_msを追加。仕様書 第8章）。 */
+const SUPABASE_URL = 'https://pyzgeadtvpjjgoqvihuw.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5emdlYWR0dnBqamdvcXZpaHV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg1MjA3MDksImV4cCI6MjEwNDA5NjcwOX0.O8tBN6MtQy5_liMFJnGesJZLtzCB6CdkPBFMR1LmJOk';
+const SCORES_URL = SUPABASE_URL + '/rest/v1/scores_ox';
+const RANKING_TOP_N = 20;
+
+const RANKING_BOARDS = [
+  { diff: 'beginner', questions: 10, label: '初心者' },
+  { diff: 'easy', questions: 10, label: '易 10問' },
+  { diff: 'easy', questions: 20, label: '易 20問' },
+  { diff: 'normal', questions: 10, label: '並 10問' },
+  { diff: 'normal', questions: 20, label: '並 20問' },
+  { diff: 'hard', questions: 10, label: '極 10問' },
+  { diff: 'hard', questions: 20, label: '極 20問' },
+];
+
 const ROW_DEFS = [
   { offset: 2, mode: 'peekBottom' },
   { offset: 1, mode: 'full' },
@@ -76,11 +96,13 @@ let forcedKind = null;  // ?kind=slow / ?kind=shift
 
 let gamePhase = 'idle';
 let currentQuestionCount = 10;
+let lastManualQuestionCount = 10;
 let timerStartMs = 0;
 let timerPausedTotalMs = 0;
 let timerPauseStartedAt = null;
 let endingTimeoutId = null;
 let finalElapsedMs = 0;
+let gameCompletedNormally = false; // 中断ではなく出題数を出し切って終わったか（ランキング登録の可否）
 let correctCount = 0;
 let wrongCount = 0;
 let records = [];
@@ -91,6 +113,12 @@ let hardCandidates = [];
 let reviewIndex = 0;
 let diffRingState = null;
 let countRingState = null;
+
+let pendingRankEntry = null;
+let rankSubmitted = false;
+let lastSubmittedEntry = null;
+let currentRankingBoard = null;
+let rankingRequestSeq = 0;
 
 /* ---------- 音 ---------- */
 
@@ -811,13 +839,15 @@ function setPhase(newPhase) {
   gamePhase = newPhase;
   const isResult = newPhase === 'result';
   const isReview = newPhase === 'review';
-  const isOverlayScreen = isResult || isReview;
+  const isRanking = newPhase === 'ranking';
+  const isOverlayScreen = isResult || isReview || isRanking;
 
   document.querySelector('.stage-wrap').style.display = isOverlayScreen ? 'none' : '';
   document.querySelector('.ox-answer-wrap').style.display = isOverlayScreen ? 'none' : '';
   document.getElementById('resultMessage').hidden = isOverlayScreen;
   document.getElementById('resultScreen').hidden = !isResult;
   document.getElementById('reviewScreen').hidden = !isReview;
+  document.getElementById('rankingScreen').hidden = !isRanking;
   const showGameChrome = newPhase === 'playing' || newPhase === 'ending';
   document.getElementById('progressDisplay').hidden = !showGameChrome;
   document.getElementById('gameControls').hidden = !showGameChrome;
@@ -836,11 +866,14 @@ function timerElapsedMs(now) {
   return elapsed;
 }
 
+// m:ss.SS 形式（仕様書 第6章）。内部はミリ秒で持つ。
 function formatElapsed(ms) {
-  const totalSec = Math.max(0, Math.round(ms / 1000));
+  const totalCenti = Math.floor(Math.max(0, ms) / 10);
+  const cc = totalCenti % 100;
+  const totalSec = Math.floor(totalCenti / 100);
   const m = Math.floor(totalSec / 60);
   const s = totalSec % 60;
-  return m + ':' + String(s).padStart(2, '0');
+  return m + ':' + String(s).padStart(2, '0') + '.' + String(cc).padStart(2, '0');
 }
 
 function pauseTimer() {
@@ -873,6 +906,7 @@ function startGame() {
   correctCount = 0;
   wrongCount = 0;
   records = [];
+  gameCompletedNormally = false;
   updateCountsDisplay();
   unlockAndPlayBgm();
   setPhase('playing');
@@ -884,6 +918,7 @@ function startGame() {
 
 function endGame() {
   finalElapsedMs = timerElapsedMs(performance.now());
+  gameCompletedNormally = true;
   setPhase('ending');
   document.getElementById('oxBtnO').disabled = true;
   document.getElementById('oxBtnX').disabled = true;
@@ -911,6 +946,12 @@ function renderGameResult() {
   document.getElementById('resultCountLabel').textContent = String(currentQuestionCount);
   document.getElementById('resultElapsedLabel').textContent = formatElapsed(finalElapsedMs);
   document.getElementById('reviewBtn').disabled = records.length === 0;
+
+  resetRankEntryUI();
+  // ランキング登録は出題数を出し切って終わった回のみ（中断・0点以下は対象外。仕様書 第8章）
+  if (gameCompletedNormally && score > 0) {
+    checkRankInAndOfferEntry(currentDifficulty, currentQuestionCount, score, correctCount, wrongCount, finalElapsedMs);
+  }
 }
 
 function backToSetup() {
@@ -981,6 +1022,250 @@ function backToResultFromReview() {
   setPhase('result');
 }
 
+/* ---------- ランキング：Supabase REST通信（選択肢版と同一実装。テーブルは
+ * scores_ox、並び順はscore.desc,elapsed_ms.asc,created_at.asc。仕様書 第8章） ---------- */
+
+function supabaseHeaders(isWrite) {
+  const headers = {
+    apikey: SUPABASE_ANON_KEY,
+    Authorization: 'Bearer ' + SUPABASE_ANON_KEY,
+  };
+  if (isWrite) {
+    headers['Content-Type'] = 'application/json';
+    headers['Prefer'] = 'return=minimal';
+  }
+  return headers;
+}
+
+async function fetchTopScores(difficulty, questions, selectFields) {
+  const params = new URLSearchParams({
+    select: selectFields,
+    difficulty: 'eq.' + difficulty,
+    questions: 'eq.' + questions,
+    order: 'score.desc,elapsed_ms.asc,created_at.asc',
+    limit: String(RANKING_TOP_N),
+  });
+  const res = await fetch(SCORES_URL + '?' + params.toString(), {
+    headers: supabaseHeaders(false),
+  });
+  if (!res.ok) throw new Error('ランキングの取得に失敗しました（status ' + res.status + '）');
+  return res.json();
+}
+
+// 20件未満なら常にランクイン。20件埋まっていればscoreが上回るか、
+// 同スコアでelapsed_msが短い場合のみ（両方同じなら既存が上位のため対象外）。
+async function checkRankIn(difficulty, questions, score, elapsedMs) {
+  const rows = await fetchTopScores(difficulty, questions, 'score,elapsed_ms');
+  if (rows.length < RANKING_TOP_N) return true;
+  const last = rows[rows.length - 1];
+  if (score > last.score) return true;
+  if (score === last.score && elapsedMs < last.elapsed_ms) return true;
+  return false;
+}
+
+async function submitScore(entry) {
+  const res = await fetch(SCORES_URL, {
+    method: 'POST',
+    headers: supabaseHeaders(true),
+    body: JSON.stringify(entry),
+  });
+  if (!res.ok) throw new Error('登録に失敗しました（status ' + res.status + '）');
+}
+
+function resetRankEntryUI() {
+  pendingRankEntry = null;
+  rankSubmitted = false;
+
+  const note = document.getElementById('rankCheckNote');
+  note.hidden = true;
+  note.textContent = '';
+
+  document.getElementById('rankEntry').hidden = true;
+
+  const nameInput = document.getElementById('rankNameInput');
+  nameInput.value = '';
+  nameInput.disabled = false;
+
+  const submitBtn = document.getElementById('rankSubmitBtn');
+  submitBtn.disabled = false;
+  submitBtn.textContent = '登録';
+
+  const statusEl = document.getElementById('rankEntryStatus');
+  statusEl.textContent = '';
+  statusEl.className = 'rank-entry-status';
+}
+
+async function checkRankInAndOfferEntry(difficulty, questions, score, correct, wrong, elapsedMs) {
+  try {
+    const eligible = await checkRankIn(difficulty, questions, score, elapsedMs);
+    if (gamePhase !== 'result') return;
+    if (eligible) {
+      pendingRankEntry = { difficulty, questions, score, correct, wrong, elapsed_ms: elapsedMs };
+      document.getElementById('rankEntry').hidden = false;
+    }
+  } catch (err) {
+    console.error('ランクイン判定に失敗しました（ランキング機能のみに影響）', err);
+    if (gamePhase !== 'result') return;
+    const note = document.getElementById('rankCheckNote');
+    note.textContent = 'ランキングの確認に失敗しました（通信環境をご確認ください）';
+    note.hidden = false;
+  }
+}
+
+function normalizeRankName(raw) {
+  const trimmed = raw.trim();
+  if (trimmed.length === 0 || trimmed.length > 12) return null;
+  return trimmed;
+}
+
+async function submitRankEntry() {
+  if (rankSubmitted || !pendingRankEntry) return;
+
+  const nameInput = document.getElementById('rankNameInput');
+  const statusEl = document.getElementById('rankEntryStatus');
+  const name = normalizeRankName(nameInput.value);
+  if (!name) {
+    statusEl.textContent = '名前を入力してください（1〜12文字）';
+    statusEl.className = 'rank-entry-status error';
+    return;
+  }
+
+  const submitBtn = document.getElementById('rankSubmitBtn');
+  submitBtn.disabled = true;
+  nameInput.disabled = true;
+  statusEl.textContent = '送信中…';
+  statusEl.className = 'rank-entry-status';
+
+  const entry = { ...pendingRankEntry, name };
+  try {
+    await submitScore(entry);
+    rankSubmitted = true;
+    lastSubmittedEntry = entry;
+    statusEl.textContent = '登録しました';
+    statusEl.className = 'rank-entry-status success';
+    submitBtn.textContent = '登録済み';
+  } catch (err) {
+    console.error('スコアの登録に失敗しました（ランキング機能のみに影響）', err);
+    statusEl.textContent = '登録に失敗しました。通信環境をご確認のうえもう一度お試しください';
+    statusEl.className = 'rank-entry-status error';
+    submitBtn.disabled = false;
+    nameInput.disabled = false;
+  }
+}
+
+function findRankingBoard(diff, questions) {
+  return RANKING_BOARDS.find((b) => b.diff === diff && b.questions === questions) || RANKING_BOARDS[0];
+}
+
+function setupRankingBoardButtons() {
+  const container = document.getElementById('rankingBoardButtons');
+  RANKING_BOARDS.forEach((board) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'ranking-board-btn';
+    btn.textContent = board.label;
+    btn.dataset.diff = board.diff;
+    btn.dataset.questions = String(board.questions);
+    btn.addEventListener('click', () => loadRankingBoard(board.diff, board.questions));
+    container.appendChild(btn);
+  });
+}
+
+function updateRankingBoardButtonsActive() {
+  document.querySelectorAll('.ranking-board-btn').forEach((btn) => {
+    const isActive = !!currentRankingBoard &&
+      btn.dataset.diff === currentRankingBoard.diff &&
+      Number(btn.dataset.questions) === currentRankingBoard.questions;
+    btn.classList.toggle('active', isActive);
+  });
+}
+
+function openRankingScreen() {
+  setPhase('ranking');
+  const board = findRankingBoard(currentDifficulty, currentQuestionCount);
+  loadRankingBoard(board.diff, board.questions);
+}
+
+function backToResultFromRanking() {
+  setPhase('result');
+}
+
+async function loadRankingBoard(diff, questions) {
+  currentRankingBoard = { diff, questions };
+  updateRankingBoardButtonsActive();
+
+  const bodyEl = document.getElementById('rankingBody');
+  bodyEl.innerHTML = '';
+  const loading = document.createElement('p');
+  loading.className = 'ranking-status';
+  loading.textContent = '読み込み中…';
+  bodyEl.appendChild(loading);
+
+  const seq = ++rankingRequestSeq;
+  try {
+    const rows = await fetchTopScores(diff, questions, 'name,score,correct,wrong,elapsed_ms,created_at');
+    if (seq !== rankingRequestSeq) return;
+    renderRankingRows(bodyEl, rows, diff, questions);
+  } catch (err) {
+    if (seq !== rankingRequestSeq) return;
+    console.error('ランキングの取得に失敗しました', err);
+    bodyEl.innerHTML = '';
+    const errorEl = document.createElement('p');
+    errorEl.className = 'ranking-status ranking-error';
+    errorEl.textContent = 'ランキングの取得に失敗しました。通信環境をご確認のうえもう一度お試しください。';
+    bodyEl.appendChild(errorEl);
+  }
+}
+
+function renderRankingRows(container, rows, diff, questions) {
+  container.innerHTML = '';
+  if (rows.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'ranking-status';
+    empty.textContent = 'まだ記録がありません';
+    container.appendChild(empty);
+    return;
+  }
+
+  const table = document.createElement('table');
+  table.className = 'ranking-table';
+
+  const thead = document.createElement('thead');
+  const headRow = document.createElement('tr');
+  ['順位', '名前', 'スコア', '正解', '誤答', '経過時間'].forEach((text) => {
+    const th = document.createElement('th');
+    th.textContent = text;
+    headRow.appendChild(th);
+  });
+  thead.appendChild(headRow);
+  table.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+  const isSelfBoard = !!lastSubmittedEntry &&
+    lastSubmittedEntry.difficulty === diff &&
+    lastSubmittedEntry.questions === questions;
+
+  rows.forEach((row, i) => {
+    const tr = document.createElement('tr');
+    const isSelf = isSelfBoard &&
+      row.name === lastSubmittedEntry.name &&
+      row.score === lastSubmittedEntry.score &&
+      row.correct === lastSubmittedEntry.correct &&
+      row.wrong === lastSubmittedEntry.wrong &&
+      row.elapsed_ms === lastSubmittedEntry.elapsed_ms;
+    if (isSelf) tr.classList.add('ranking-row-self');
+
+    [String(i + 1), row.name, String(row.score), String(row.correct), String(row.wrong), formatElapsed(row.elapsed_ms)].forEach((text) => {
+      const td = document.createElement('td');
+      td.textContent = text;
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  container.appendChild(table);
+}
+
 /* ---------- リザルト：Xシェア・画像保存 ---------- */
 
 const SHARE_URL = 'https://gureslot.github.io/hanahana/quiz-ox/';
@@ -991,6 +1276,7 @@ function buildShareText() {
     'ハナハナ最速目押しクイズ ○×版',
     diffLabel + '／' + currentQuestionCount + '問',
     'スコア：正解' + correctCount + '　誤答' + wrongCount,
+    '経過時間：' + formatElapsed(finalElapsedMs),
     '',
     '#ハナハナ最速目押しクイズ',
     SHARE_URL,
@@ -1152,6 +1438,14 @@ function ringStepIndex(state, dir) {
   return next;
 }
 
+function ringNearestAccumulatorFor(state, canonicalTarget) {
+  const n = state.items.length;
+  const currentCanonical = ringCanonicalIndex(state.selected, n);
+  let delta = ((canonicalTarget - currentCanonical) % n + n) % n;
+  if (delta > n / 2) delta -= n;
+  return state.selected + delta;
+}
+
 function applyRingCardStyles(state) {
   const n = state.items.length;
   const selectedCanonical = ringCanonicalIndex(state.selected, n);
@@ -1286,6 +1580,30 @@ function createRing(trackEl, items, initialIndex, onChange) {
   return state;
 }
 
+// 初心者を選ぶと20問を無効化し、10問に固定する。プレイヤーが最後に自分で
+// 選んだ値を覚えておき、初心者から他の難易度に戻ったときその値に復帰する
+// （選択肢版の30/60秒と同じ挙動。仕様書 第6章）。
+function applyTitleQuestionConstraint() {
+  if (!countRingState) return;
+  const isBeginner = currentDifficulty === 'beginner';
+  const twentyIndex = RING_QUESTION_VALUES.indexOf(20);
+  const tenIndex = RING_QUESTION_VALUES.indexOf(10);
+  countRingState.items[twentyIndex].disabled = isBeginner;
+
+  if (isBeginner) {
+    if (currentQuestionCount === 20) {
+      currentQuestionCount = 10;
+      countRingState.selected = ringNearestAccumulatorFor(countRingState, tenIndex);
+    }
+  } else if (currentQuestionCount !== lastManualQuestionCount) {
+    currentQuestionCount = lastManualQuestionCount;
+    const targetIndex = RING_QUESTION_VALUES.indexOf(lastManualQuestionCount);
+    countRingState.selected = ringNearestAccumulatorFor(countRingState, targetIndex);
+  }
+
+  renderRing(countRingState);
+}
+
 function setupTitleRings() {
   const diffKeys = Object.keys(DIFFICULTIES);
   const diffItems = diffKeys.map((key) => ({
@@ -1294,8 +1612,6 @@ function setupTitleRings() {
     alt: DIFFICULTIES[key].label,
     disabled: false,
   }));
-  // 出題数リング（10問／20問）。制限時間を廃止したため、難易度による制約はない
-  // （初心者も10問・20問の両方を選べる。仕様書 第6章）。
   const countItems = RING_QUESTION_VALUES.map((n) => ({
     key: String(n),
     imgSrc: ASSET_BASE + 'images/' + n + '.png',
@@ -1309,6 +1625,7 @@ function setupTitleRings() {
     Math.max(0, diffKeys.indexOf(currentDifficulty)),
     (key) => {
       currentDifficulty = key;
+      applyTitleQuestionConstraint();
     }
   );
 
@@ -1318,6 +1635,7 @@ function setupTitleRings() {
     Math.max(0, RING_QUESTION_VALUES.indexOf(currentQuestionCount)),
     (key) => {
       currentQuestionCount = parseInt(key, 10);
+      lastManualQuestionCount = currentQuestionCount;
     }
   );
 
@@ -1325,6 +1643,8 @@ function setupTitleRings() {
   document.getElementById('diffRingRight').addEventListener('click', () => advanceRing(diffRingState, 1));
   document.getElementById('countRingLeft').addEventListener('click', () => advanceRing(countRingState, -1));
   document.getElementById('countRingRight').addEventListener('click', () => advanceRing(countRingState, 1));
+
+  applyTitleQuestionConstraint();
 }
 
 function showAppScreen() {
@@ -1360,6 +1680,15 @@ function setupUI() {
   document.getElementById('reviewPrevBtn').addEventListener('click', reviewGoPrev);
   document.getElementById('reviewNextBtn').addEventListener('click', reviewGoNext);
   document.getElementById('reviewBackBtn').addEventListener('click', backToResultFromReview);
+
+  document.getElementById('rankSubmitBtn').addEventListener('click', submitRankEntry);
+  document.getElementById('rankNameInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') submitRankEntry();
+  });
+  document.getElementById('viewRankingBtn').addEventListener('click', openRankingScreen);
+
+  setupRankingBoardButtons();
+  document.getElementById('rankingBackBtn').addEventListener('click', backToResultFromRanking);
 
   document.getElementById('abortBtn').addEventListener('click', abortGame);
 
