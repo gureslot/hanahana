@@ -28,15 +28,15 @@ const DIFFICULTIES = {
   },
   easy: {
     label: '易', bgm: ASSET_BASE + 'sounds/quizBGM2.mp3',
-    fixLeft: true, minDiff: 5, shiftReelCount: 1, shiftAmount: 3, slowProb: 1 / 3,
+    fixLeft: true, minDiff: 5, shiftReelCount: 1, shiftAmount: 3, slowProb: 0.15,
   },
   normal: {
     label: '並', bgm: ASSET_BASE + 'sounds/quizBGM.mp3',
-    fixLeft: false, minDiff: 3, shiftReelCount: 3, shiftAmount: 3, slowProb: 1 / 3,
+    fixLeft: false, minDiff: 3, shiftReelCount: 3, shiftAmount: 3, slowProb: 0.15,
   },
   hard: {
     label: '極', bgm: ASSET_BASE + 'sounds/quizBGM.mp3',
-    fixLeft: false, minDiff: 0, shiftReelCount: 2, shiftAmount: 2, slowProb: 1 / 3,
+    fixLeft: false, minDiff: 0, shiftReelCount: 2, shiftAmount: 2, slowProb: 0.15,
   },
 };
 
@@ -564,10 +564,14 @@ function decideAnswer(diffKey, judge, X) {
     return { ans, kind, color, offsets: { left: 0, middle: 0, right: 0 }, A: computeBaseA(X, color) };
   }
 
-  // shift：色はピンク・白からランダム（正解/不正解とは無関係）。
+  // shift：色は必ず速い方に固定する（同着のときだけ2色からランダム）。
+  // 遅い色は定義上7が格子の上の方に出るため、ランダムに選ぶと「上にあれば×」
+  // が一目で通ってしまう。速い方に固定すると○と同じくらいの高さに出る。
   // A_i = (本来のA_i + o_i) mod 21（21で一周。出目も受付ラインも動かさない、
   // 描く行だけを動かす）。
-  const color = Math.random() < 0.5 ? 'pink' : 'white';
+  const color = isTie
+    ? (Math.random() < 0.5 ? 'pink' : 'white')
+    : judge.correctColors[0];
   const baseA = computeBaseA(X, color);
   const offsets = buildShiftOffsets(diffKey);
   const A = {};
