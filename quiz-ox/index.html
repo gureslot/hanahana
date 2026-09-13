@@ -38,10 +38,10 @@
         <div class="ring-track" id="diffRingTrack"></div>
         <button type="button" class="ring-arrow ring-arrow-right" id="diffRingRight" aria-label="次の難易度">▶</button>
       </div>
-      <div class="ring-row" id="timeRingRow">
-        <button type="button" class="ring-arrow ring-arrow-left" id="timeRingLeft" aria-label="前の制限時間">◀</button>
-        <div class="ring-track" id="timeRingTrack"></div>
-        <button type="button" class="ring-arrow ring-arrow-right" id="timeRingRight" aria-label="次の制限時間">▶</button>
+      <div class="ring-row" id="countRingRow">
+        <button type="button" class="ring-arrow ring-arrow-left" id="countRingLeft" aria-label="前の出題数">◀</button>
+        <div class="ring-track" id="countRingTrack"></div>
+        <button type="button" class="ring-arrow ring-arrow-right" id="countRingRight" aria-label="次の出題数">▶</button>
       </div>
     </div>
 
@@ -49,12 +49,10 @@
   </section>
 
   <div id="appScreen" hidden>
-  <div id="timerDisplay" class="timer-display" hidden>
-    <div class="timer-clock">
-      <span class="timer-spacer" aria-hidden="true"></span><span id="timerSec" class="timer-ss">00</span><span class="timer-cc-wrap">:<span id="timerCenti">00</span></span>
-    </div>
-    <p class="timer-prompt">この出目から最速で揃えられる7の形は、これ？</p>
-    <div class="timer-counts">
+  <div id="progressDisplay" class="progress-display" hidden>
+    <p class="progress-prompt">この出目から最速で揃えられる7の形は、これ？</p>
+    <p class="question-progress"><span id="questionIndexValue">1</span>問目 / 全<span id="questionTotalValue">10</span>問</p>
+    <div class="progress-counts">
       <span class="count-correct">正解 <span id="correctCountValue">0</span></span>
       <span class="count-wrong">誤答 <span id="wrongCountValue">0</span></span>
     </div>
@@ -102,22 +100,12 @@
       <button type="button" id="reviewBtn" class="result-side-btn review-entry-btn">答え合わせ</button>
       <div class="result-stats">
         <p class="result-detail">正解 <span id="resultCorrect">0</span>　誤答 <span id="resultWrong">0</span></p>
-        <p class="result-meta"><span id="resultDiffLabel">-</span>／<span id="resultTimeLabel">-</span>秒</p>
+        <p class="result-meta"><span id="resultDiffLabel">-</span>／<span id="resultCountLabel">-</span>問</p>
+        <p class="result-elapsed">経過時間 <span id="resultElapsedLabel">0:00</span></p>
       </div>
       <button type="button" id="shareBtn" class="result-side-btn share-btn">Xでシェア</button>
     </div>
     <button type="button" id="saveImageBtn" class="save-image-btn">画像を保存</button>
-
-    <p id="rankCheckNote" class="rank-check-note" hidden></p>
-    <div id="rankEntry" class="rank-entry" hidden>
-      <p class="rank-entry-label">ランクイン！ランキングに登録できます</p>
-      <div class="rank-entry-row">
-        <input type="text" id="rankNameInput" class="rank-name-input" maxlength="12" placeholder="名前（1〜12文字）">
-        <button type="button" id="rankSubmitBtn" class="rank-submit-btn">登録</button>
-      </div>
-      <p id="rankEntryStatus" class="rank-entry-status"></p>
-    </div>
-    <button type="button" id="viewRankingBtn" class="view-ranking-btn">ランキングを見る</button>
 
     <div class="result-buttons">
       <button type="button" id="retryBtn" class="retry-btn"><img src="../quiz/images/retry.png" alt="もう一度"></button>
@@ -148,13 +136,6 @@
     <button type="button" id="reviewBackBtn" class="review-back-btn">リザルトへ戻る</button>
   </section>
 
-  <section id="rankingScreen" class="ranking-screen" hidden>
-    <p class="ranking-title">ランキング</p>
-    <div class="ranking-board-buttons" id="rankingBoardButtons"></div>
-    <div id="rankingBody" class="ranking-body"></div>
-    <button type="button" id="rankingBackBtn" class="ranking-back-btn">リザルトへ戻る</button>
-  </section>
-
   <section id="debugPanel" class="debug-panel" hidden></section>
 
   <section class="dev-controls" id="devControls" hidden>
@@ -180,6 +161,6 @@
   </div>
 </main>
 
-<script src="quiz-ox.js?v=1e62a3d" defer></script>
+<script src="quiz-ox.js?v=08f28da" defer></script>
 </body>
 </html>

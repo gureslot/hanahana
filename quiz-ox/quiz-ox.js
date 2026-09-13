@@ -1,10 +1,10 @@
 'use strict';
 
 /* 選択肢版（quiz/quiz.js）から派生。画像・音・reels.jsonは複製せず../quiz/を
- * 相対参照する（二重管理を避けるため）。出目の生成・正解判定ロジック・タイマー・
- * 音・リングUI・ランキングの通信方式は選択肢版と同一（hanahana_quiz_ox_spec.md
- * 第1章の対応表を参照）。回答方式（○×1枚）とずらしの作り方（mod21で一周させる方式）
- * だけが選択肢版と異なる。 */
+ * 相対参照する（二重管理を避けるため）。出目の生成・正解判定ロジック・音・
+ * リングUIは選択肢版と同一（hanahana_quiz_ox_spec.md 第1章の対応表を参照）。
+ * 回答方式（○×1枚）、ずらしの作り方（mod21で一周させる方式）、終わり方
+ * （制限時間ではなく出題数10問／20問。ランキングなし）が選択肢版と異なる。 */
 
 const REEL_NAMES = ['left', 'middle', 'right'];
 const SYMBOL_NAMES = [
@@ -41,7 +41,7 @@ const DIFFICULTIES = {
 };
 
 const DIFFICULTY_ICON = { beginner: 'syo', easy: 'yasa', normal: 'nami', hard: 'kiwami' };
-const RING_TIME_VALUES = [30, 60];
+const RING_QUESTION_VALUES = [10, 20];
 
 const RING_STEP_PX = 50;
 const RING_RX = 70;
@@ -52,24 +52,6 @@ const RING_SCALE_MIN = 0.62;
 const RING_BRIGHTNESS_SELECTED = 1;
 const RING_BRIGHTNESS_UNSELECTED = 0.55;
 const RING_BRIGHTNESS_DISABLED = 0.25;
-
-/* ---------- ランキング（Supabase REST API） ----------
- * 選択肢版と同じSupabaseプロジェクト・同じanon key。テーブルだけscores_oxに
- * 分ける（仕様書 第8章：選択肢版のscoresには手を入れない）。 */
-const SUPABASE_URL = 'https://pyzgeadtvpjjgoqvihuw.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5emdlYWR0dnBqamdvcXZpaHV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg1MjA3MDksImV4cCI6MjEwNDA5NjcwOX0.O8tBN6MtQy5_liMFJnGesJZLtzCB6CdkPBFMR1LmJOk';
-const SCORES_URL = SUPABASE_URL + '/rest/v1/scores_ox';
-const RANKING_TOP_N = 20;
-
-const RANKING_BOARDS = [
-  { diff: 'beginner', time: 30, label: '初心者' },
-  { diff: 'easy', time: 30, label: '易 30秒' },
-  { diff: 'easy', time: 60, label: '易 60秒' },
-  { diff: 'normal', time: 30, label: '並 30秒' },
-  { diff: 'normal', time: 60, label: '並 60秒' },
-  { diff: 'hard', time: 30, label: '極 30秒' },
-  { diff: 'hard', time: 60, label: '極 60秒' },
-];
 
 const ROW_DEFS = [
   { offset: 2, mode: 'peekBottom' },
@@ -93,15 +75,12 @@ let forcedKind = null;  // ?kind=slow / ?kind=shift
 /* ---------- ゲーム進行 ---------- */
 
 let gamePhase = 'idle';
-let currentTimeLimit = 30;
-let lastManualTimeLimit = 30;
+let currentQuestionCount = 10;
 let timerStartMs = 0;
-let timerTotalMs = 0;
 let timerPausedTotalMs = 0;
 let timerPauseStartedAt = null;
-let timerRafId = null;
 let endingTimeoutId = null;
-let endSePlayed = false;
+let finalElapsedMs = 0;
 let correctCount = 0;
 let wrongCount = 0;
 let records = [];
@@ -111,13 +90,7 @@ let normalCandidates = [];
 let hardCandidates = [];
 let reviewIndex = 0;
 let diffRingState = null;
-let timeRingState = null;
-
-let pendingRankEntry = null;
-let rankSubmitted = false;
-let lastSubmittedEntry = null;
-let currentRankingBoard = null;
-let rankingRequestSeq = 0;
+let countRingState = null;
 
 /* ---------- 音 ---------- */
 
@@ -744,8 +717,16 @@ function newQuestion() {
   renderOxStrip(document.getElementById('oxGrid'), decision.A, judge.timing.X, decision.offsets);
   resetOxButtons();
   clearResult();
+  updateProgressDisplay();
 
   if (debugMode) renderDebugPanel(currentQuestion);
+}
+
+// 表示中の問題番号は「これまでの回答数＋1」（出題数固定・制限時間なし。仕様書 第6章）
+function updateProgressDisplay() {
+  const index = Math.min(correctCount + wrongCount + 1, currentQuestionCount);
+  document.getElementById('questionIndexValue').textContent = String(index);
+  document.getElementById('questionTotalValue').textContent = String(currentQuestionCount);
 }
 
 function resetOxButtons() {
@@ -796,8 +777,14 @@ function onOxAnswer(pickedAns) {
 
   advanceTimer = setTimeout(() => {
     advanceTimer = null;
-    resumeTimer();
-    if (gamePhase === 'playing' || gamePhase === 'preview') {
+    if (gamePhase === 'playing') {
+      resumeTimer();
+      if (correctCount + wrongCount >= currentQuestionCount) {
+        endGame();
+      } else {
+        newQuestion();
+      }
+    } else if (gamePhase === 'preview') {
       newQuestion();
     }
   }, 1000);
@@ -815,32 +802,25 @@ function clearResult() {
   el.className = 'result-message';
 }
 
-/* ---------- 画面フェーズ・タイマー制御 ---------- */
+/* ---------- 画面フェーズ・経過時間計測 ----------
+ * 制限時間は廃止し、出題数（10問／20問）を出し切ったら終わる（仕様書 第6章）。
+ * 経過時間はリザルトにだけ表示する記録用の値で、回答後の1秒静止のぶんは
+ * 選択肢版の制限時間タイマーと同じ仕組み（pause/resume）で差し引く。 */
 
 function setPhase(newPhase) {
   gamePhase = newPhase;
   const isResult = newPhase === 'result';
   const isReview = newPhase === 'review';
-  const isRanking = newPhase === 'ranking';
-  const isOverlayScreen = isResult || isReview || isRanking;
+  const isOverlayScreen = isResult || isReview;
 
   document.querySelector('.stage-wrap').style.display = isOverlayScreen ? 'none' : '';
   document.querySelector('.ox-answer-wrap').style.display = isOverlayScreen ? 'none' : '';
   document.getElementById('resultMessage').hidden = isOverlayScreen;
   document.getElementById('resultScreen').hidden = !isResult;
   document.getElementById('reviewScreen').hidden = !isReview;
-  document.getElementById('rankingScreen').hidden = !isRanking;
   const showGameChrome = newPhase === 'playing' || newPhase === 'ending';
-  document.getElementById('timerDisplay').hidden = !showGameChrome;
+  document.getElementById('progressDisplay').hidden = !showGameChrome;
   document.getElementById('gameControls').hidden = !showGameChrome;
-}
-
-function updateTimerDisplay(remainingMs) {
-  const totalCenti = Math.floor(remainingMs / 10);
-  const cc = totalCenti % 100;
-  const ss = Math.floor(totalCenti / 100);
-  document.getElementById('timerSec').textContent = String(ss).padStart(2, '0');
-  document.getElementById('timerCenti').textContent = String(cc).padStart(2, '0');
 }
 
 function updateCountsDisplay() {
@@ -856,8 +836,11 @@ function timerElapsedMs(now) {
   return elapsed;
 }
 
-function timerRemainingMs(now) {
-  return timerTotalMs - timerElapsedMs(now);
+function formatElapsed(ms) {
+  const totalSec = Math.max(0, Math.round(ms / 1000));
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return m + ':' + String(s).padStart(2, '0');
 }
 
 function pauseTimer() {
@@ -873,29 +856,7 @@ function resumeTimer() {
   }
 }
 
-function timerTick(now) {
-  const remainingMs = timerRemainingMs(now);
-
-  if (!endSePlayed && remainingMs <= 0) {
-    endSePlayed = true;
-    playEndSe();
-  }
-
-  if (remainingMs <= 0) {
-    updateTimerDisplay(0);
-    timerRafId = null;
-    endGame();
-    return;
-  }
-  updateTimerDisplay(remainingMs);
-  timerRafId = requestAnimationFrame(timerTick);
-}
-
 function stopTimers() {
-  if (timerRafId) {
-    cancelAnimationFrame(timerRafId);
-    timerRafId = null;
-  }
   if (advanceTimer) {
     clearTimeout(advanceTimer);
     advanceTimer = null;
@@ -912,27 +873,21 @@ function startGame() {
   correctCount = 0;
   wrongCount = 0;
   records = [];
-  endSePlayed = false;
   updateCountsDisplay();
   unlockAndPlayBgm();
   setPhase('playing');
-  timerTotalMs = currentTimeLimit * 1000;
   timerStartMs = performance.now();
   timerPausedTotalMs = 0;
   timerPauseStartedAt = null;
-  updateTimerDisplay(timerTotalMs);
-  timerRafId = requestAnimationFrame(timerTick);
   newQuestion();
 }
 
 function endGame() {
+  finalElapsedMs = timerElapsedMs(performance.now());
   setPhase('ending');
-  if (advanceTimer) {
-    clearTimeout(advanceTimer);
-    advanceTimer = null;
-  }
   document.getElementById('oxBtnO').disabled = true;
   document.getElementById('oxBtnX').disabled = true;
+  playEndSe();
   endingTimeoutId = setTimeout(() => {
     endingTimeoutId = null;
     renderGameResult();
@@ -940,6 +895,7 @@ function endGame() {
 }
 
 function abortGame() {
+  finalElapsedMs = timerElapsedMs(performance.now());
   stopTimers();
   renderGameResult();
 }
@@ -952,13 +908,9 @@ function renderGameResult() {
   document.getElementById('resultCorrect').textContent = String(correctCount);
   document.getElementById('resultWrong').textContent = String(wrongCount);
   document.getElementById('resultDiffLabel').textContent = DIFFICULTIES[currentDifficulty].label;
-  document.getElementById('resultTimeLabel').textContent = String(currentTimeLimit);
+  document.getElementById('resultCountLabel').textContent = String(currentQuestionCount);
+  document.getElementById('resultElapsedLabel').textContent = formatElapsed(finalElapsedMs);
   document.getElementById('reviewBtn').disabled = records.length === 0;
-
-  resetRankEntryUI();
-  if (score > 0) {
-    checkRankInAndOfferEntry(currentDifficulty, currentTimeLimit, score, correctCount, wrongCount);
-  }
 }
 
 function backToSetup() {
@@ -1029,244 +981,6 @@ function backToResultFromReview() {
   setPhase('result');
 }
 
-/* ---------- ランキング：Supabase REST通信（選択肢版と同一実装、テーブルのみscores_ox） ---------- */
-
-function supabaseHeaders(isWrite) {
-  const headers = {
-    apikey: SUPABASE_ANON_KEY,
-    Authorization: 'Bearer ' + SUPABASE_ANON_KEY,
-  };
-  if (isWrite) {
-    headers['Content-Type'] = 'application/json';
-    headers['Prefer'] = 'return=minimal';
-  }
-  return headers;
-}
-
-async function fetchTopScores(difficulty, timeLimit, selectFields) {
-  const params = new URLSearchParams({
-    select: selectFields,
-    difficulty: 'eq.' + difficulty,
-    time_limit: 'eq.' + timeLimit,
-    order: 'score.desc,created_at.asc',
-    limit: String(RANKING_TOP_N),
-  });
-  const res = await fetch(SCORES_URL + '?' + params.toString(), {
-    headers: supabaseHeaders(false),
-  });
-  if (!res.ok) throw new Error('ランキングの取得に失敗しました（status ' + res.status + '）');
-  return res.json();
-}
-
-async function checkRankIn(difficulty, timeLimit, score) {
-  const rows = await fetchTopScores(difficulty, timeLimit, 'score');
-  if (rows.length < RANKING_TOP_N) return true;
-  const lowestScore = rows[rows.length - 1].score;
-  return score > lowestScore;
-}
-
-async function submitScore(entry) {
-  const res = await fetch(SCORES_URL, {
-    method: 'POST',
-    headers: supabaseHeaders(true),
-    body: JSON.stringify(entry),
-  });
-  if (!res.ok) throw new Error('登録に失敗しました（status ' + res.status + '）');
-}
-
-function resetRankEntryUI() {
-  pendingRankEntry = null;
-  rankSubmitted = false;
-
-  const note = document.getElementById('rankCheckNote');
-  note.hidden = true;
-  note.textContent = '';
-
-  document.getElementById('rankEntry').hidden = true;
-
-  const nameInput = document.getElementById('rankNameInput');
-  nameInput.value = '';
-  nameInput.disabled = false;
-
-  const submitBtn = document.getElementById('rankSubmitBtn');
-  submitBtn.disabled = false;
-  submitBtn.textContent = '登録';
-
-  const statusEl = document.getElementById('rankEntryStatus');
-  statusEl.textContent = '';
-  statusEl.className = 'rank-entry-status';
-}
-
-async function checkRankInAndOfferEntry(difficulty, timeLimit, score, correct, wrong) {
-  try {
-    const eligible = await checkRankIn(difficulty, timeLimit, score);
-    if (gamePhase !== 'result') return;
-    if (eligible) {
-      pendingRankEntry = { difficulty, time_limit: timeLimit, score, correct, wrong };
-      document.getElementById('rankEntry').hidden = false;
-    }
-  } catch (err) {
-    console.error('ランクイン判定に失敗しました（ランキング機能のみに影響）', err);
-    if (gamePhase !== 'result') return;
-    const note = document.getElementById('rankCheckNote');
-    note.textContent = 'ランキングの確認に失敗しました（通信環境をご確認ください）';
-    note.hidden = false;
-  }
-}
-
-function normalizeRankName(raw) {
-  const trimmed = raw.trim();
-  if (trimmed.length === 0 || trimmed.length > 12) return null;
-  return trimmed;
-}
-
-async function submitRankEntry() {
-  if (rankSubmitted || !pendingRankEntry) return;
-
-  const nameInput = document.getElementById('rankNameInput');
-  const statusEl = document.getElementById('rankEntryStatus');
-  const name = normalizeRankName(nameInput.value);
-  if (!name) {
-    statusEl.textContent = '名前を入力してください（1〜12文字）';
-    statusEl.className = 'rank-entry-status error';
-    return;
-  }
-
-  const submitBtn = document.getElementById('rankSubmitBtn');
-  submitBtn.disabled = true;
-  nameInput.disabled = true;
-  statusEl.textContent = '送信中…';
-  statusEl.className = 'rank-entry-status';
-
-  const entry = { ...pendingRankEntry, name };
-  try {
-    await submitScore(entry);
-    rankSubmitted = true;
-    lastSubmittedEntry = entry;
-    statusEl.textContent = '登録しました';
-    statusEl.className = 'rank-entry-status success';
-    submitBtn.textContent = '登録済み';
-  } catch (err) {
-    console.error('スコアの登録に失敗しました（ランキング機能のみに影響）', err);
-    statusEl.textContent = '登録に失敗しました。通信環境をご確認のうえもう一度お試しください';
-    statusEl.className = 'rank-entry-status error';
-    submitBtn.disabled = false;
-    nameInput.disabled = false;
-  }
-}
-
-function findRankingBoard(diff, time) {
-  return RANKING_BOARDS.find((b) => b.diff === diff && b.time === time) || RANKING_BOARDS[0];
-}
-
-function setupRankingBoardButtons() {
-  const container = document.getElementById('rankingBoardButtons');
-  RANKING_BOARDS.forEach((board) => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'ranking-board-btn';
-    btn.textContent = board.label;
-    btn.dataset.diff = board.diff;
-    btn.dataset.time = String(board.time);
-    btn.addEventListener('click', () => loadRankingBoard(board.diff, board.time));
-    container.appendChild(btn);
-  });
-}
-
-function updateRankingBoardButtonsActive() {
-  document.querySelectorAll('.ranking-board-btn').forEach((btn) => {
-    const isActive = !!currentRankingBoard &&
-      btn.dataset.diff === currentRankingBoard.diff &&
-      Number(btn.dataset.time) === currentRankingBoard.time;
-    btn.classList.toggle('active', isActive);
-  });
-}
-
-function openRankingScreen() {
-  setPhase('ranking');
-  const board = findRankingBoard(currentDifficulty, currentTimeLimit);
-  loadRankingBoard(board.diff, board.time);
-}
-
-function backToResultFromRanking() {
-  setPhase('result');
-}
-
-async function loadRankingBoard(diff, time) {
-  currentRankingBoard = { diff, time };
-  updateRankingBoardButtonsActive();
-
-  const bodyEl = document.getElementById('rankingBody');
-  bodyEl.innerHTML = '';
-  const loading = document.createElement('p');
-  loading.className = 'ranking-status';
-  loading.textContent = '読み込み中…';
-  bodyEl.appendChild(loading);
-
-  const seq = ++rankingRequestSeq;
-  try {
-    const rows = await fetchTopScores(diff, time, 'name,score,correct,wrong,created_at');
-    if (seq !== rankingRequestSeq) return;
-    renderRankingRows(bodyEl, rows, diff, time);
-  } catch (err) {
-    if (seq !== rankingRequestSeq) return;
-    console.error('ランキングの取得に失敗しました', err);
-    bodyEl.innerHTML = '';
-    const errorEl = document.createElement('p');
-    errorEl.className = 'ranking-status ranking-error';
-    errorEl.textContent = 'ランキングの取得に失敗しました。通信環境をご確認のうえもう一度お試しください。';
-    bodyEl.appendChild(errorEl);
-  }
-}
-
-function renderRankingRows(container, rows, diff, time) {
-  container.innerHTML = '';
-  if (rows.length === 0) {
-    const empty = document.createElement('p');
-    empty.className = 'ranking-status';
-    empty.textContent = 'まだ記録がありません';
-    container.appendChild(empty);
-    return;
-  }
-
-  const table = document.createElement('table');
-  table.className = 'ranking-table';
-
-  const thead = document.createElement('thead');
-  const headRow = document.createElement('tr');
-  ['順位', '名前', 'スコア', '正解', '誤答'].forEach((text) => {
-    const th = document.createElement('th');
-    th.textContent = text;
-    headRow.appendChild(th);
-  });
-  thead.appendChild(headRow);
-  table.appendChild(thead);
-
-  const tbody = document.createElement('tbody');
-  const isSelfBoard = !!lastSubmittedEntry &&
-    lastSubmittedEntry.difficulty === diff &&
-    lastSubmittedEntry.time_limit === time;
-
-  rows.forEach((row, i) => {
-    const tr = document.createElement('tr');
-    const isSelf = isSelfBoard &&
-      row.name === lastSubmittedEntry.name &&
-      row.score === lastSubmittedEntry.score &&
-      row.correct === lastSubmittedEntry.correct &&
-      row.wrong === lastSubmittedEntry.wrong;
-    if (isSelf) tr.classList.add('ranking-row-self');
-
-    [String(i + 1), row.name, String(row.score), String(row.correct), String(row.wrong)].forEach((text) => {
-      const td = document.createElement('td');
-      td.textContent = text;
-      tr.appendChild(td);
-    });
-    tbody.appendChild(tr);
-  });
-  table.appendChild(tbody);
-  container.appendChild(table);
-}
-
 /* ---------- リザルト：Xシェア・画像保存 ---------- */
 
 const SHARE_URL = 'https://gureslot.github.io/hanahana/quiz-ox/';
@@ -1275,7 +989,7 @@ function buildShareText() {
   const diffLabel = DIFFICULTIES[currentDifficulty].label;
   const lines = [
     'ハナハナ最速目押しクイズ ○×版',
-    diffLabel + '／' + currentTimeLimit + '秒',
+    diffLabel + '／' + currentQuestionCount + '問',
     'スコア：正解' + correctCount + '　誤答' + wrongCount,
     '',
     '#ハナハナ最速目押しクイズ',
@@ -1358,7 +1072,12 @@ function buildResultCanvas() {
   y += 42;
   ctx.fillStyle = '#ddd';
   ctx.font = Math.round(canvas.width * 0.032) + 'px system-ui, "Hiragino Kaku Gothic ProN", sans-serif';
-  ctx.fillText(DIFFICULTIES[currentDifficulty].label + '／' + currentTimeLimit + '秒', centerX, y);
+  ctx.fillText(DIFFICULTIES[currentDifficulty].label + '／' + currentQuestionCount + '問', centerX, y);
+
+  y += 30;
+  ctx.font = Math.round(canvas.width * 0.026) + 'px system-ui, "Hiragino Kaku Gothic ProN", sans-serif';
+  ctx.fillStyle = '#aab';
+  ctx.fillText('経過時間 ' + formatElapsed(finalElapsedMs), centerX, y);
 
   ctx.shadowColor = 'transparent';
   ctx.shadowBlur = 0;
@@ -1431,14 +1150,6 @@ function ringStepIndex(state, dir) {
     if (!state.items[ringCanonicalIndex(next, n)].disabled) break;
   }
   return next;
-}
-
-function ringNearestAccumulatorFor(state, canonicalTarget) {
-  const n = state.items.length;
-  const currentCanonical = ringCanonicalIndex(state.selected, n);
-  let delta = ((canonicalTarget - currentCanonical) % n + n) % n;
-  if (delta > n / 2) delta -= n;
-  return state.selected + delta;
 }
 
 function applyRingCardStyles(state) {
@@ -1575,27 +1286,6 @@ function createRing(trackEl, items, initialIndex, onChange) {
   return state;
 }
 
-function applyTitleTimeConstraint() {
-  if (!timeRingState) return;
-  const isBeginner = currentDifficulty === 'beginner';
-  const sixtyIndex = RING_TIME_VALUES.indexOf(60);
-  const thirtyIndex = RING_TIME_VALUES.indexOf(30);
-  timeRingState.items[sixtyIndex].disabled = isBeginner;
-
-  if (isBeginner) {
-    if (currentTimeLimit === 60) {
-      currentTimeLimit = 30;
-      timeRingState.selected = ringNearestAccumulatorFor(timeRingState, thirtyIndex);
-    }
-  } else if (currentTimeLimit !== lastManualTimeLimit) {
-    currentTimeLimit = lastManualTimeLimit;
-    const targetIndex = RING_TIME_VALUES.indexOf(lastManualTimeLimit);
-    timeRingState.selected = ringNearestAccumulatorFor(timeRingState, targetIndex);
-  }
-
-  renderRing(timeRingState);
-}
-
 function setupTitleRings() {
   const diffKeys = Object.keys(DIFFICULTIES);
   const diffItems = diffKeys.map((key) => ({
@@ -1604,10 +1294,12 @@ function setupTitleRings() {
     alt: DIFFICULTIES[key].label,
     disabled: false,
   }));
-  const timeItems = RING_TIME_VALUES.map((t) => ({
-    key: String(t),
-    imgSrc: ASSET_BASE + 'images/' + t + '.png',
-    alt: t + '秒',
+  // 出題数リング（10問／20問）。制限時間を廃止したため、難易度による制約はない
+  // （初心者も10問・20問の両方を選べる。仕様書 第6章）。
+  const countItems = RING_QUESTION_VALUES.map((n) => ({
+    key: String(n),
+    imgSrc: ASSET_BASE + 'images/' + n + '.png',
+    alt: n + '問',
     disabled: false,
   }));
 
@@ -1617,26 +1309,22 @@ function setupTitleRings() {
     Math.max(0, diffKeys.indexOf(currentDifficulty)),
     (key) => {
       currentDifficulty = key;
-      applyTitleTimeConstraint();
     }
   );
 
-  timeRingState = createRing(
-    document.getElementById('timeRingTrack'),
-    timeItems,
-    Math.max(0, RING_TIME_VALUES.indexOf(currentTimeLimit)),
+  countRingState = createRing(
+    document.getElementById('countRingTrack'),
+    countItems,
+    Math.max(0, RING_QUESTION_VALUES.indexOf(currentQuestionCount)),
     (key) => {
-      currentTimeLimit = parseInt(key, 10);
-      lastManualTimeLimit = currentTimeLimit;
+      currentQuestionCount = parseInt(key, 10);
     }
   );
 
   document.getElementById('diffRingLeft').addEventListener('click', () => advanceRing(diffRingState, -1));
   document.getElementById('diffRingRight').addEventListener('click', () => advanceRing(diffRingState, 1));
-  document.getElementById('timeRingLeft').addEventListener('click', () => advanceRing(timeRingState, -1));
-  document.getElementById('timeRingRight').addEventListener('click', () => advanceRing(timeRingState, 1));
-
-  applyTitleTimeConstraint();
+  document.getElementById('countRingLeft').addEventListener('click', () => advanceRing(countRingState, -1));
+  document.getElementById('countRingRight').addEventListener('click', () => advanceRing(countRingState, 1));
 }
 
 function showAppScreen() {
@@ -1672,15 +1360,6 @@ function setupUI() {
   document.getElementById('reviewPrevBtn').addEventListener('click', reviewGoPrev);
   document.getElementById('reviewNextBtn').addEventListener('click', reviewGoNext);
   document.getElementById('reviewBackBtn').addEventListener('click', backToResultFromReview);
-
-  document.getElementById('rankSubmitBtn').addEventListener('click', submitRankEntry);
-  document.getElementById('rankNameInput').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') submitRankEntry();
-  });
-  document.getElementById('viewRankingBtn').addEventListener('click', openRankingScreen);
-
-  setupRankingBoardButtons();
-  document.getElementById('rankingBackBtn').addEventListener('click', backToResultFromRanking);
 
   document.getElementById('abortBtn').addEventListener('click', abortGame);
 

@@ -35,48 +35,21 @@ main {
 .stage-wrap,
 .ox-answer-wrap,
 .result-screen,
-.review-screen,
-.ranking-screen {
+.review-screen {
   width: 100%;
   margin-left: 0;
   margin-right: 0;
 }
 
-/* タイマー表示（選択肢版と同じ。quiz/quiz.css参照） */
+/* 出題進捗表示（制限時間なし。出題数とN問目/全M問を表示する。仕様書 第6章） */
 
-.timer-display {
+.progress-display {
   text-align: center;
   color: #eee;
   margin-bottom: 10px;
 }
 
-.timer-clock {
-  display: flex;
-  justify-content: center;
-  align-items: baseline;
-  font-variant-numeric: tabular-nums;
-}
-
-.timer-spacer,
-.timer-cc-wrap {
-  flex: 1 1 0;
-  font-size: 16px;
-  font-weight: bold;
-  color: #99a;
-}
-
-.timer-cc-wrap {
-  text-align: left;
-}
-
-.timer-ss {
-  flex: 0 0 auto;
-  font-size: 34px;
-  font-weight: bold;
-  padding: 0 3px;
-}
-
-.timer-prompt {
+.progress-prompt {
   text-align: center;
   font-size: 14px;
   font-weight: bold;
@@ -84,7 +57,16 @@ main {
   margin: 4px 0 2px;
 }
 
-.timer-counts {
+.question-progress {
+  text-align: center;
+  font-size: 20px;
+  font-weight: bold;
+  font-variant-numeric: tabular-nums;
+  color: #eee;
+  margin: 2px 0;
+}
+
+.progress-counts {
   display: flex;
   justify-content: center;
   gap: 18px;
@@ -654,6 +636,13 @@ main {
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
 }
 
+.result-elapsed {
+  font-size: 12px;
+  color: #aab;
+  margin: 4px 0 0;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+
 .result-buttons {
   display: flex;
   flex-direction: column;
@@ -824,195 +813,6 @@ main {
 }
 
 .review-back-btn {
-  display: block;
-  width: 100%;
-  max-width: 260px;
-  margin: 0 auto;
-  padding: 10px;
-  border-radius: 8px;
-  border: 1px solid #555;
-  background: #22232e;
-  color: #eee;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-/* ランキング（選択肢版と同じ。quiz/quiz.css参照） */
-
-.rank-check-note {
-  text-align: center;
-  font-size: 12px;
-  color: #ff9a5a;
-  margin: 0 0 8px;
-}
-
-.rank-entry {
-  background: rgba(20, 20, 28, 0.7);
-  border: 1px solid #4a6cf7;
-  border-radius: 8px;
-  padding: 10px;
-  margin: 0 0 10px;
-}
-
-.rank-entry-label {
-  text-align: center;
-  font-size: 13px;
-  font-weight: bold;
-  color: #fff44d;
-  margin: 0 0 8px;
-}
-
-.rank-entry-row {
-  display: flex;
-  gap: 8px;
-}
-
-.rank-name-input {
-  flex: 1;
-  min-width: 0;
-  padding: 8px 10px;
-  border-radius: 8px;
-  border: 1px solid #666;
-  background: #12131a;
-  color: #eee;
-  font-size: 14px;
-}
-
-.rank-name-input:disabled {
-  opacity: 0.6;
-}
-
-.rank-submit-btn {
-  flex: 0 0 auto;
-  padding: 8px 14px;
-  border-radius: 8px;
-  border: 1px solid #4a6cf7;
-  background: #4a6cf7;
-  color: #fff;
-  font-weight: bold;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.rank-submit-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.rank-entry-status {
-  text-align: center;
-  font-size: 12px;
-  color: #ccd;
-  margin: 8px 0 0;
-  min-height: 14px;
-}
-
-.rank-entry-status.success {
-  color: #3ddc84;
-}
-
-.rank-entry-status.error {
-  color: #ff5a5a;
-}
-
-.view-ranking-btn {
-  display: block;
-  width: 100%;
-  max-width: 260px;
-  margin: 0 auto 10px;
-  padding: 10px;
-  border-radius: 8px;
-  border: 1px solid #555;
-  background: #22232e;
-  color: #eee;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.ranking-title {
-  text-align: center;
-  font-size: 18px;
-  font-weight: bold;
-  color: #eee;
-  margin: 0 0 12px;
-}
-
-.ranking-board-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 6px;
-  margin-bottom: 14px;
-}
-
-.ranking-board-btn {
-  padding: 6px 10px;
-  border-radius: 999px;
-  border: 1px solid #555;
-  background: #22232e;
-  color: #ccd;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.ranking-board-btn.active {
-  border-color: #4a6cf7;
-  background: #4a6cf7;
-  color: #fff;
-  font-weight: bold;
-}
-
-.ranking-body {
-  min-height: 120px;
-  margin-bottom: 16px;
-}
-
-.ranking-status {
-  text-align: center;
-  font-size: 13px;
-  color: #ccd;
-  padding: 24px 0;
-}
-
-.ranking-status.ranking-error {
-  color: #ff5a5a;
-}
-
-.ranking-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-
-.ranking-table th,
-.ranking-table td {
-  padding: 6px 4px;
-  text-align: center;
-  border-bottom: 1px solid #333;
-}
-
-.ranking-table th:nth-child(2),
-.ranking-table td:nth-child(2) {
-  text-align: left;
-}
-
-.ranking-table th {
-  color: #99a;
-  font-weight: normal;
-  font-size: 11px;
-}
-
-.ranking-table td {
-  color: #eee;
-}
-
-.ranking-row-self td {
-  background: rgba(74, 108, 247, 0.25);
-  font-weight: bold;
-  color: #fff44d;
-}
-
-.ranking-back-btn {
   display: block;
   width: 100%;
   max-width: 260px;
