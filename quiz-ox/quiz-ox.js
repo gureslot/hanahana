@@ -18,25 +18,27 @@ const ASSET_BASE = '../quiz/';
 const RESULT_IMAGE_NAMES = ['title1', 'title2', 'titleBG', 'scoredaiza'];
 
 // 難易度定義。label/special/bgmは選択肢版と同じ。fixLeftは出目候補の生成条件
-// （易は左中段4/14固定・並極は自由。選択肢版と同一）。shiftReelCount/shiftAmount/
-// slowProbは○×版固有のずらしルール（仕様書 第3章）。
+// （初心者・易は左中段4/14固定・並極は自由。選択肢版と同一）。minDiffは2色の
+// 所要コマ数の差の下限（仕様書 第2章）。shiftReelCount/shiftAmount/slowProbは
+// ○×版固有のずらしルール（仕様書 第3章）。
 const DIFFICULTIES = {
-  beginner: { label: '初心者', special: true, bgm: ASSET_BASE + 'sounds/quizBGM2.mp3' },
+  beginner: {
+    label: '初心者', special: true, bgm: ASSET_BASE + 'sounds/quizBGM2.mp3',
+    fixLeft: true, minDiff: 10,
+  },
   easy: {
     label: '易', bgm: ASSET_BASE + 'sounds/quizBGM2.mp3',
-    fixLeft: true, shiftReelCount: 1, shiftAmount: 3, slowProb: 0.5,
+    fixLeft: true, minDiff: 5, shiftReelCount: 1, shiftAmount: 3, slowProb: 1 / 3,
   },
   normal: {
     label: '並', bgm: ASSET_BASE + 'sounds/quizBGM.mp3',
-    fixLeft: false, shiftReelCount: 3, shiftAmount: 3, slowProb: 0.5,
+    fixLeft: false, minDiff: 3, shiftReelCount: 3, shiftAmount: 3, slowProb: 1 / 3,
   },
   hard: {
     label: '極', bgm: ASSET_BASE + 'sounds/quizBGM.mp3',
-    fixLeft: false, shiftReelCount: 2, shiftAmount: 2, slowProb: 1 / 3,
+    fixLeft: false, minDiff: 0, shiftReelCount: 2, shiftAmount: 2, slowProb: 1 / 3,
   },
 };
-
-const BEGINNER_SPREAD_MAX = 4;
 
 const DIFFICULTY_ICON = { beginner: 'syo', easy: 'yasa', normal: 'nami', hard: 'kiwami' };
 const RING_TIME_VALUES = [30, 60];
@@ -105,7 +107,8 @@ let wrongCount = 0;
 let records = [];
 let beginnerCandidates = [];
 let easyCandidates = [];
-let normalHardCandidates = [];
+let normalCandidates = [];
+let hardCandidates = [];
 let reviewIndex = 0;
 let diffRingState = null;
 let timeRingState = null;
@@ -168,9 +171,10 @@ async function init() {
     bgmEl = document.getElementById('bgmAudio');
     await preloadImages();
     await preloadResultImages();
-    beginnerCandidates = buildBeginnerCandidates();
-    easyCandidates = buildStopCandidates(true).candidates;
-    normalHardCandidates = buildStopCandidates(false).candidates;
+    beginnerCandidates = buildStopCandidates('beginner').candidates;
+    easyCandidates = buildStopCandidates('easy').candidates;
+    normalCandidates = buildStopCandidates('normal').candidates;
+    hardCandidates = buildStopCandidates('hard').candidates;
     await preloadSounds();
     setupUI();
     setupTitleScreen();
@@ -369,7 +373,8 @@ function generateStops(diffKey) {
   if (forcedStops) return forcedStops;
   const pool = diffKey === 'beginner' ? beginnerCandidates
     : diffKey === 'easy' ? easyCandidates
-    : normalHardCandidates;
+    : diffKey === 'normal' ? normalCandidates
+    : hardCandidates;
   const idx = Math.floor(Math.random() * pool.length);
   return pool[idx];
 }
@@ -421,52 +426,20 @@ function passesStopConstraint(judge) {
   return true;
 }
 
-function buildBeginnerCandidates() {
-  const candidates = [];
-  let pinkCount = 0;
-  let whiteCount = 0;
-  let tieCount = 0;
-  let stopConstraintExcluded = 0;
-
-  for (const left of [4, 14]) {
-    for (let middle = 1; middle <= 21; middle++) {
-      for (let right = 1; right <= 21; right++) {
-        const S = { left, middle, right };
-        const judge = judgeQuestion(S);
-        if (judge.correctColors.length !== 1) {
-          tieCount++;
-          continue;
-        }
-        const color = judge.correctColors[0];
-        const Dline = color === 'pink' ? judge.pinkCalc.Dline : judge.whiteCalc.Dline;
-        const vals = [Dline.left, Dline.middle, Dline.right];
-        const spread = Math.max(...vals) - Math.min(...vals);
-        if (spread <= BEGINNER_SPREAD_MAX) {
-          if (!passesStopConstraint(judge)) {
-            stopConstraintExcluded++;
-            continue;
-          }
-          candidates.push(S);
-          if (color === 'pink') pinkCount++; else whiteCount++;
-        }
-      }
-    }
-  }
-
-  console.log(
-    '[初心者モード] 候補' + candidates.length + '件' +
-    '（ピンク' + pinkCount + '・白' + whiteCount + '）、同着除外' + tieCount + '件' +
-    '、出目の制限で除外' + stopConstraintExcluded + '件'
-  );
-  return candidates;
+// 難易度は「2色の所要コマ数の差」で決める（仕様書 第2章）。差が大きいほど
+// どちらが速いか明らか＝易しい。同時押しの除外（passesStopConstraint）は
+// 全難易度に適用し、その後で差の下限（minDiff）を満たすものだけ候補にする。
+function colorDiff(judge) {
+  return Math.abs(judge.pinkCalc.required - judge.whiteCalc.required);
 }
 
-function buildStopCandidates(fixLeft) {
+function buildStopCandidates(diffKey) {
+  const diff = DIFFICULTIES[diffKey];
   const candidates = [];
   let pinkCount = 0;
   let whiteCount = 0;
   let tieCount = 0;
-  const leftValues = fixLeft ? [4, 14] : Array.from({ length: 21 }, (_, i) => i + 1);
+  const leftValues = diff.fixLeft ? [4, 14] : Array.from({ length: 21 }, (_, i) => i + 1);
 
   for (const left of leftValues) {
     for (let middle = 1; middle <= 21; middle++) {
@@ -474,6 +447,7 @@ function buildStopCandidates(fixLeft) {
         const S = { left, middle, right };
         const judge = judgeQuestion(S);
         if (!passesStopConstraint(judge)) continue;
+        if (colorDiff(judge) < diff.minDiff) continue;
         candidates.push(S);
         if (judge.correctColors.length === 2) tieCount++;
         else if (judge.correctColors[0] === 'pink') pinkCount++;
@@ -484,7 +458,7 @@ function buildStopCandidates(fixLeft) {
 
   const total = leftValues.length * 21 * 21;
   console.log(
-    '[' + (fixLeft ? '易' : '並・極') + 'モード] 候補' + candidates.length + '件（全' + total + '通り中）' +
+    '[' + diff.label + 'モード] 候補' + candidates.length + '件（全' + total + '通り中）' +
     '（ピンク' + pinkCount + '・白' + whiteCount + '・同着' + tieCount + '）'
   );
   return { candidates, pinkCount, whiteCount, tieCount };
