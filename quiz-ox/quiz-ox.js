@@ -858,12 +858,14 @@ function updateCountsDisplay() {
   document.getElementById('wrongCountValue').textContent = String(wrongCount);
 }
 
+// performance.now()はミリ秒未満まで返すため、DBのelapsed_ms（int列）に
+// そのまま送ると型エラーになる。ここで整数化して以降すべての用途で統一する。
 function timerElapsedMs(now) {
   let elapsed = (now - timerStartMs) - timerPausedTotalMs;
   if (timerPauseStartedAt !== null) {
     elapsed -= (now - timerPauseStartedAt);
   }
-  return elapsed;
+  return Math.round(elapsed);
 }
 
 // m:ss.SS 形式（仕様書 第6章）。内部はミリ秒で持つ。
