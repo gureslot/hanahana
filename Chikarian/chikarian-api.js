@@ -64,6 +64,12 @@
     const { data, error } = await client().from('card_skills').select('*').eq('card_id', cardId);
     if (error) throw error; return data;
   };
+  const getCardSkillsMany = async (cardIds) => {                               // 複数カード分をまとめて1クエリ（デッキ編成の要点表示用・SELECTのみ）
+    const ids = (cardIds || []).filter(Boolean);
+    if (!ids.length) return [];
+    const { data, error } = await client().from('card_skills').select('*').in('card_id', ids);
+    if (error) throw error; return data;
+  };
   const getDecks         = ()        => selectOwn('decks');
   const getRenkiden      = async ()  => (await selectOwn('renkiden'))[0] || null;
   const getKajiyaOrders  = ()        => selectOwn('kajiya_orders');
@@ -133,7 +139,7 @@
   global.ChikarianAPI = {
     init, client, rpc, auth,
     // reads
-    getProfile, getCards, getCardSkills, getDecks, getRenkiden, getKajiyaOrders,
+    getProfile, getCards, getCardSkills, getCardSkillsMany, getDecks, getRenkiden, getKajiyaOrders,
     getTansaku, getZukan, getSpStates, getMissions, getMissionMaster, getExchangeRates, getSkillMaster, getBossMaster, getBattleLogs,
     // writes (existing)
     claimSaishu, doGacha, updateDeck, doBossBattle,

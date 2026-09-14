@@ -827,8 +827,8 @@ function Home({ profile, go, flash, onRefresh }) {
         {/* 出撃中（ボス）／探索中の部隊 */}
         {(fleetBoss > 0 || fleetTansaku > 0) && (
           <div style={{ position: 'absolute', top: 76, left: 8, zIndex: 4, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8 }}>
-            {fleetBoss > 0 && <button style={HS.fleetPill} onClick={() => setFleetSheet('boss')}><span style={{ fontSize: 13 }}>⚔</span><span style={{ fontSize: 11, color: GOLD_HI }}>出撃 ×{fleetBoss}</span></button>}
-            {fleetTansaku > 0 && <button style={HS.fleetPill} onClick={() => setFleetSheet('tansaku')}><span style={{ fontSize: 13 }}>🧭</span><span style={{ fontSize: 11, color: GOLD_HI }}>探索 ×{fleetTansaku}</span></button>}
+            {fleetBoss > 0 && <button style={HS.fleetPill} onClick={() => setFleetSheet('boss')}><span style={{ fontSize: 11, color: GOLD_HI }}>出撃 ×{fleetBoss}</span></button>}
+            {fleetTansaku > 0 && <button style={HS.fleetPill} onClick={() => setFleetSheet('tansaku')}><span style={{ fontSize: 11, color: GOLD_HI }}>探索 ×{fleetTansaku}</span></button>}
           </div>
         )}
 
@@ -1878,6 +1878,14 @@ const deckS = {
   slots: { display: 'flex', gap: 10, padding: '16px 4px 8px', justifyContent: 'center' },
   slot: { flex: 1, maxWidth: 128, aspectRatio: '2/3', borderRadius: 12, border: '1.5px dashed rgba(232,194,90,.5)', background: 'rgba(0,0,0,.3)', position: 'relative', cursor: 'pointer', overflow: 'hidden' },
   slotFilled: { borderStyle: 'solid' },
+  statRow: { display: 'flex', gap: 10, padding: '2px 4px 0', justifyContent: 'center' },
+  statCell: { flex: 1, maxWidth: 128, minHeight: 74, display: 'flex', flexDirection: 'column', gap: 1, textAlign: 'center' },
+  statTop: { fontSize: 12, fontWeight: 800, color: '#ffe39a', letterSpacing: .5 },
+  statStar: { marginLeft: 4, color: '#ffd86a' },
+  statCost: { fontSize: 11, color: '#cdb488' },
+  statSkill: { fontSize: 10, color: '#e8d8b8', lineHeight: 1.35, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+  statSkLv: { marginLeft: 3, color: '#cdb488' },
+  statMuted: { fontSize: 10, color: '#8a7c60' },
   empty: { position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', fontSize: 30, color: '#6a5a3a' },
   emptySmall: { display: 'block', fontSize: 10, color: '#6a5a3a', letterSpacing: 1, marginTop: 4 },
   slotImg: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' },
@@ -2304,6 +2312,8 @@ function DeckScreen({ profile, cards, refreshAll, back, flash, initialDeckNo, ba
   const [pool, setPool] = useState(null);           // renkiden 武気プール
   const [kajiyaLv, setKajiyaLv] = useState(1);       // 装備の質アンロック上限
   const [pickSel, setPickSel] = useState(null);      // ④ カード選択パネルで選択中の card_id
+  const [skillMap, setSkillMap] = useState({});      // skill_key -> skill_master 行（表示名用）
+  const [deckSkills, setDeckSkills] = useState({});  // card_id -> {slot: card_skills行}（枠下の要点表示用）
 
   const cardById = {}; (cards || []).forEach(c => { cardById[c.id] = c; });
 
@@ -2317,6 +2327,7 @@ function DeckScreen({ profile, cards, refreshAll, back, flash, initialDeckNo, ba
   }, []);
   useEffect(() => { setPicking(null); setMoveConfirm(null); setRecallConfirm(null); }, [deckNo]);   // デッキ切替で編集状態をリセット
   useEffect(() => { setPickSel(null); }, [picking]);   // ④ 枠を開き直したら選択をクリア
+  useEffect(() => { (async () => { try { const sm = await ChikarianAPI.getSkillMaster(); const m = {}; (sm || []).forEach(x => { m[x.skill_key] = x; }); setSkillMap(m); } catch (e) {} })(); }, []);
   useEffect(() => {
     (async () => {
       try { const r = normalizeRk(await ChikarianAPI.getRenkiden()); setPool(r ? r.buki : 0); } catch (e) { setPool(0); }
@@ -2327,6 +2338,21 @@ function DeckScreen({ profile, cards, refreshAll, back, flash, initialDeckNo, ba
   // 現在の編成は decks（サーバ値）から導く curSlots を唯一のソースに（draft 廃止）。
   const curSlots = (() => { if (!decks) return [null, null, null]; const row = decks.find(x => x.deck_no === deckNo); return row ? [row.slot1_card_id || null, row.slot2_card_id || null, row.slot3_card_id || null] : [null, null, null]; })();
   const withSlot = (slot, id) => { const n = curSlots.slice(); n[slot] = id; return n; };
+  // 枠下の要点表示に使う card_skills（編成中の最大3枚だけを1クエリで取得）
+  useEffect(() => {
+    const ids = curSlots.filter(Boolean);
+    if (!ids.length) { setDeckSkills({}); return; }
+    let live = true;
+    (async () => {
+      try {
+        const rows = await ChikarianAPI.getCardSkillsMany(ids) || [];
+        const m = {}; ids.forEach(id => { m[id] = {}; });
+        rows.forEach(r => { if (m[r.card_id]) m[r.card_id][r.slot] = r; });
+        if (live) setDeckSkills(m);
+      } catch (e) { if (live) { const m = {}; ids.forEach(id => { m[id] = {}; }); setDeckSkills(m); } }
+    })();
+    return () => { live = false; };
+  }, [curSlots.join(',')]);
 
   let costTotal = 0;
   curSlots.forEach(id => { const c = cardById[id]; if (!c) return; costTotal += COST_BY_RAR[parseCardKey(c.card_key).rarity] || 0; });  // SP=4 を算入
@@ -2392,11 +2418,16 @@ function DeckScreen({ profile, cards, refreshAll, back, flash, initialDeckNo, ba
       const otherDeck = deckNoOf(c.id);
       return { sameDeckOther, sp, sortieLocked, otherDeck };
     };
+    // 編集中の枠を除いた確定コスト → この枠に使える残り。サーバ update_deck も 11 で拒否する（0005/0067）。
+    const otherCost = curSlots.reduce((sum, id, i) => { if (i === picking || !id) return sum; const oc = cardById[id]; return oc ? sum + (COST_BY_RAR[parseCardKey(oc.card_key).rarity] || 0) : sum; }, 0);
+    const slotBudget = 11 - otherCost;
     const getStatus = (c) => {
       const st = stateOf(c);
-      const dim = st.sameDeckOther || st.sp || st.sortieLocked;
-      const tag = st.sp ? '離脱中' : st.sortieLocked ? (c.tansaku_deck_no != null ? '探索中' : '出撃中') : st.sameDeckOther ? '編成中' : st.otherDeck ? ('デッキ' + st.otherDeck) : null;
-      const reason = st.sp ? 'SP離脱中（本日）は編成できません' : st.sortieLocked ? (c.tansaku_deck_no != null ? '探索に出撃中です' : 'ボスに出撃中です') : st.sameDeckOther ? 'このデッキの別の枠で編成中です' : '選べません';
+      const cCost = COST_BY_RAR[parseCardKey(c.card_key).rarity] || 0;
+      const costOver = cCost > slotBudget;
+      const dim = st.sameDeckOther || st.sp || st.sortieLocked || costOver;
+      const tag = st.sp ? '離脱中' : st.sortieLocked ? (c.tansaku_deck_no != null ? '探索中' : '出撃中') : st.sameDeckOther ? '編成中' : costOver ? ('コスト' + cCost) : st.otherDeck ? ('デッキ' + st.otherDeck) : null;
+      const reason = st.sp ? 'SP離脱中（本日）は編成できません' : st.sortieLocked ? (c.tansaku_deck_no != null ? '探索に出撃中です' : 'ボスに出撃中です') : st.sameDeckOther ? 'このデッキの別の枠で編成中です' : costOver ? ('この枠に使えるコストは残り ' + slotBudget + ' です（このカードはコスト' + cCost + '）') : '選べません';
       return { disabled: dim, dim, tag, reason };
     };
     const chooseLabel = (c) => { const ot = deckNoOf(c.id); return ot ? ('これを選ぶ（デッキ' + ot + 'から移動）') : 'これを選ぶ'; };
@@ -2506,6 +2537,25 @@ function DeckScreen({ profile, cards, refreshAll, back, flash, initialDeckNo, ba
             );
           })}
         </div>}
+
+        {/* 枠下の要点（Lv★／コスト／スキル）＝枠と同じ3列。出撃中デッキでも表示する */}
+        <div style={deckS.statRow}>
+          {[0, 1, 2].map(slot => {
+            const id = curSlots[slot]; const c = id ? cardById[id] : null;
+            if (!c) return <div key={slot} style={deckS.statCell} />;
+            const sInfo = parseCardKey(c.card_key);
+            const sk = deckSkills[c.id];
+            return (
+              <div key={slot} style={deckS.statCell}>
+                <div style={deckS.statTop}>Lv {c.lv || 1}<span style={deckS.statStar}>★{c.star || 0}</span></div>
+                <div style={deckS.statCost}>コスト {COST_BY_RAR[sInfo.rarity] || 0}</div>
+                {sk === undefined
+                  ? <div style={deckS.statMuted}>…</div>
+                  : [0, 1, 2].map(k => { const r = sk[k]; if (!r) return null; const m = skillMap[r.skill_key]; return <div key={k} style={deckS.statSkill}>{m ? m.display_name : r.skill_key}<span style={deckS.statSkLv}>Lv{r.skill_lv}</span></div>; })}
+              </div>
+            );
+          })}
+        </div>
 
         {/* コスト目安（mockup .summary：中央寄せ・本番の文言を維持） */}
         <div style={deckS.summary}>
