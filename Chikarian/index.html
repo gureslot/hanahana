@@ -683,6 +683,7 @@ const HS = {
   resPanelGlow: { backdropFilter: 'blur(2px)', boxShadow: 'inset 0 0 12px rgba(255,200,90,.12)' },
   sideIconCircle: { position: 'relative', width: 40, height: 40, borderRadius: '50%', display: 'grid', placeItems: 'center', overflow: 'hidden' },
   sideBadge: { position: 'absolute', top: 0, right: 0, width: 10, height: 10, borderRadius: '50%', background: '#ffcf6a', boxShadow: '0 0 8px rgba(255,200,90,.9)', border: '1.5px solid #1a0e14' },
+  notifyBadge: { position: 'absolute', top: 0, right: 0, width: 17, height: 17, borderRadius: '50%', background: 'linear-gradient(180deg,#ff7a6a,#d31f22)', border: '1.5px solid #1a0e14', color: '#fff', fontSize: 11, fontWeight: 800, lineHeight: 1, display: 'grid', placeItems: 'center', boxShadow: '0 0 8px rgba(255,70,70,.85)', pointerEvents: 'none', zIndex: 5 },
   fill: { width: '100%', height: '100%', objectFit: 'contain' },
   cardArtImg: { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' },
   houchiImg: { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' },
@@ -718,15 +719,28 @@ function Home({ profile, go, flash, onRefresh }) {
   const [countdown, setCountdown] = useState(msUntilMidnight());
   useEffect(() => { const t = setInterval(() => setCountdown(msUntilMidnight()), 1000); return () => clearInterval(t); }, []);
 
-  // 報告書の未読バッジ（localStorage 自己完結：ck_reports vs ck_reports_read）
+  // 通知バッジ（報告書＝未読／建物＝練気殿の強化完了か鍛冶依頼の完成／ミッション＝受取可あり）
+  // 既読時刻 ck_reports_read は端末ローカル。報告書リストを開いた時点で更新される（BattleLogView）。
   const [hasUnread, setHasUnread] = useState(false);
-  useEffect(() => {
+  const [tatemonoNotif, setTatemonoNotif] = useState(false);
+  const [missionNotif, setMissionNotif] = useState(false);
+  async function refetchNotif() {
+    const t = Date.now();
+    let rkDone = false, kjDone = false;
+    try { const r = normalizeRk(await ChikarianAPI.getRenkiden()); rkDone = !!(r && r.upLv != null && r.upAt && new Date(r.upAt).getTime() <= t); } catch (e) {}
+    try { const os = await ChikarianAPI.getKajiyaOrders() || []; kjDone = os.some(o => !o.claimed && o.done_at && new Date(o.done_at).getTime() <= t); } catch (e) {}
+    setTatemonoNotif(rkDone || kjDone);
     try {
-      const log = JSON.parse(localStorage.getItem('ck_reports') || '[]');
-      const read = +(localStorage.getItem('ck_reports_read') || 0);
-      setHasUnread(log.length > 0 && log[0].t > read);
+      const mp = await ChikarianAPI.getMissionProgress() || {};
+      setMissionNotif(Object.keys(mp).some(k => { const v = mp[k]; return v && !v.claimed && v.progress != null && Number(v.progress) >= Number(v.threshold); }));
     } catch (e) {}
-  }, []);
+    try {
+      const lg = await ChikarianAPI.getBattleLogs(1) || [];
+      const read = +(localStorage.getItem('ck_reports_read') || 0);
+      setHasUnread(lg.length > 0 && new Date(lg[0].fought_at).getTime() > read);
+    } catch (e) {}
+  }
+  useEffect(() => { refetchNotif(); const t = setInterval(refetchNotif, 60000); return () => clearInterval(t); }, []);
 
   // 出撃中（ボス）／探索中（探索）の部隊。Home 自身が getBossSorties / getTansaku を保持し、
   // ボス戦ページと同じ毎秒判定で帰還時間に自動回収＝デッキ解放（マップを開かなくても解放／報告書記録）。
@@ -834,7 +848,7 @@ function Home({ profile, go, flash, onRefresh }) {
 
         {/* 右側 小アイコン */}
         <div style={S.sideIcons}>
-          <SideIcon src={ASSETS.ic.mission} fb="📜" label="ミッション" onClick={() => go('mission')} />
+          <SideIcon src={ASSETS.ic.mission} fb="📜" label="ミッション" badge={missionNotif} onClick={() => go('mission')} />
           <SideIcon src={ASSETS.ic.report} fb="🗎" label="報告書" badge={hasUnread} glow={!!(profile && profile.interlude_pending)} onClick={() => go('report')} />
           <SideIcon src={ASSETS.ic.zukan} fb="❖" label="図鑑" onClick={() => go('zukan')} />
           <SideIcon src={ASSETS.ic.settings} fb="⚙" label="設定" onClick={() => go('settings')} />
@@ -860,7 +874,7 @@ function Home({ profile, go, flash, onRefresh }) {
           <CardBtn label="ボス戦" color="#9b3bd6" src={ASSETS.buttons.boss} fb="⚔" onClick={() => go('boss')} />
           <CardBtn label="デッキ編成" color="#3b6fd6" src={ASSETS.buttons.deck} fb="🃏" onClick={() => go('deck')} />
           <CardBtn label="チカリアンガチャ" color="#d6433b" src={ASSETS.buttons.gacha} fb="🎁" onClick={() => go('gacha')} />
-          <CardBtn label="建物" color="#b07b32" src={ASSETS.buttons.tatemono} fb="🏛" onClick={() => go('tatemono')} />
+          <CardBtn label="建物" color="#b07b32" src={ASSETS.buttons.tatemono} fb="🏛" badge={tatemonoNotif} onClick={() => go('tatemono')} />
           <CardBtn label="強化合成" color="#c8632e" src={ASSETS.buttons.kyoka} fb="⚒" onClick={() => go('kyoka')} />
         </nav>
 
@@ -939,21 +953,25 @@ function HouchiArt() {
   return <span style={{ fontSize: 34 }}>🧰</span>;
 }
 
+// 未処理あり通知（赤丸に！）。円の外に出すので親側に position:relative が必要。
+function NotifyBadge({ style }) { return <span style={{ ...HS.notifyBadge, ...(style || {}) }}>！</span>; }
 function SideIcon({ src, fb, label, badge, glow, onClick }) {
   const [err, setErr] = useState(false);
   return (
     <button style={S.sideIcon} onClick={onClick}>
-      <div style={HS.sideIconCircle} className={glow ? 'report-loopglow' : undefined}>
-        {src && !err
-          ? <img alt="" src={src} style={HS.fill} onError={() => setErr(true)} />
-          : <span style={{ fontSize: 20, color: '#f0dcb0' }}>{fb}</span>}
-        {badge ? <span style={HS.sideBadge} /> : null}
+      <div style={{ position: 'relative' }}>
+        <div style={HS.sideIconCircle} className={glow ? 'report-loopglow' : undefined}>
+          {src && !err
+            ? <img alt="" src={src} style={HS.fill} onError={() => setErr(true)} />
+            : <span style={{ fontSize: 20, color: '#f0dcb0' }}>{fb}</span>}
+        </div>
+        {badge ? <NotifyBadge style={{ top: -2, right: -2 }} /> : null}
       </div>
       <span style={S.sideIconLabel}>{label}</span>
     </button>
   );
 }
-function CardBtn({ label, color, src, fb, onClick }) {
+function CardBtn({ label, color, src, fb, badge, onClick }) {
   const [err, setErr] = useState(false);
   const useImg = src && !err;
   return (
@@ -963,6 +981,7 @@ function CardBtn({ label, color, src, fb, onClick }) {
           ? <img alt="" src={src} style={HS.cardArtImg} onError={() => setErr(true)} />
           : <span style={{ fontSize: 34 }}>{fb}</span>}
         <div style={S.cardLabel}>{label}</div>
+        {badge ? <NotifyBadge style={{ top: 5, right: 5 }} /> : null}
       </div>
     </button>
   );
@@ -5033,7 +5052,6 @@ function MissionScreen({ profile, cards, refreshAll, back, flash }) {
   function estProgress(mm, row) {
     switch (mm.condition_type) {
       case 'saishu_today': return (profile && profile.saishu_date === jstToday()) ? (profile.saishu_today || 0) : 0;
-      case 'boss_attempt_today': return (profile && profile.boss_date === jstToday()) ? (profile.boss_count_today || 0) : 0;
       case 'gacha_today': return (cards || []).filter(c => c.obtained_at && new Date(c.obtained_at).getTime() >= dayStartMs).length;
       case 'tansaku_collect_today': return tansaku ? tansaku.filter(t => t.last_collect_at && new Date(t.last_collect_at).getTime() >= dayStartMs).length : null;
       case 'cleared_stage': return profile ? (profile.cleared_stage || 0) : 0;
@@ -5196,9 +5214,12 @@ function BattleLogView({ cards, profile, onInterlude, back, flash }) {
   const [readClear, setReadClear] = useState(() => { try { return localStorage.getItem(loopReadKey) === '1'; } catch (e) { return false; } });
   useEffect(() => {
     (async () => {
-      try { setLogs(await ChikarianAPI.getBattleLogs(30) || []); }
+      let rows = [];
+      try { rows = await ChikarianAPI.getBattleLogs(30) || []; setLogs(rows); }
       catch (e) { setErr((e && e.message) || String(e)); setLogs([]); }
       try { const sm = await ChikarianAPI.getSkillMaster(); const m = {}; (sm || []).forEach(s => { m[s.skill_key] = s; }); setSkillMap(m); } catch (e) {}
+      // 一覧を開いた時点で既読化（個別を開かなくてもホームの「！」が消える）
+      try { const newest = rows.length ? new Date(rows[0].fought_at).getTime() : Date.now(); const prev = +(localStorage.getItem('ck_reports_read') || 0); localStorage.setItem('ck_reports_read', String(Math.max(prev, newest))); } catch (e) {}
     })();
   }, []);
   // 0080: その周の「8面 面ボス勝利」報告書＝幕間トリガ。interlude_pending の間だけ最上段固定＋発光。
