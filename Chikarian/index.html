@@ -105,7 +105,7 @@
 <div id="root"></div>
 
 <script type="text/babel" data-presets="react">
-const { useState, useEffect, useRef, useCallback } = React;
+const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 // ===== Supabase 設定（anon は公開可・dev/console.html と同じ）=====
 const SUPABASE_URL = "https://ufqnxpljakrzvivfgenk.supabase.co";
@@ -2315,6 +2315,236 @@ function BukiEditModal({ cardId, cardById, pool, kajiyaLv, bukiBusy, onApply, on
     </div>
   );
 }
+/* =================================================================== 自動編成（クライアント計算・確定は update_deck） */
+// 面4ゲート（_chikarian_card_body）と同式の本体＝★非依存・Lvは上限クランプ。画面表示の「本体戦闘力」は★込みなので別物。
+// 探索EXPはカードごとに同額（collect_tansaku の exp_gain_per_card）・必要EXPは全レア共通（Lv L 到達に 10×L×(L-1)）。
+// よって育成価値＝1レベルあたりの本体上昇量。コスト11以内でその合計が最大になる3枚が最良（SSR+SR+SR＞SSR+SSR+N）。
+const AB_GOALS = [
+  { k: 'train', label: '育成', desc: 'まだ育つカードで3枠を埋める（通常面向け）' },
+  { k: 'area4', label: '鋼殻要塞界', desc: '本体合計のゲートを満たす最小構成＋残り枠は育成', depths: [[1, '4-1  3,000'], [2, '4-2  6,000'], [3, '4-3  9,000']] },
+  { k: 'attr7', label: '同属性', desc: '3枚とも同じ属性（面7）', depths: [[1, '7-1  芯'], [2, '7-2  葉'], [3, '7-3  花']] },
+  { k: 'star8', label: '★2以上', desc: '3枚とも★2以上（面8）' },
+  { k: 'power', label: '最強', desc: '属性・武器で絞って総合戦力が最大の3枚' },
+];
+const AB_AREA4_T = { 1: 3000, 2: 6000, 3: 9000 };
+const AB_AREA7_ATTR = { 1: 'shin', 2: 'ha', 3: 'hana' };   // 7-1=芯 / 7-2=葉 / 7-3=花（start_tansaku と同一）
+const abRawRar = k => k.endsWith('_sp') ? 'sp' : k.split('_').pop();
+const abRawAttr = k => k.endsWith('_sp') ? 'sp' : k.split('_')[2];
+const abRawWeap = k => k.endsWith('_sp') ? '' : k.split('_')[3];
+const abRawSpec = k => k.endsWith('_sp') ? 'sp' : k.split('_')[1];
+// カード1枚を数値ビューへ（探索ループ中に再計算しない）
+function abView(c, kajiyaLv) {
+  const key = c.card_key, rar = abRawRar(key), sp = rar === 'sp';
+  const b = sp ? { base: SP_BASE[key] || 3200, cap: 50 } : (CARD_BASE[rar] || CARD_BASE.n);
+  const lv = Math.min(c.lv || 1, b.cap), star = c.star || 0;
+  const body = b.base * (1 + (lv - 1) * 2.0 / (b.cap - 1));
+  let sougou;
+  if (sp) sougou = Math.round(body * (1 + 0.225 * star));
+  else {
+    const q = ['holy', 'enchanted', 'refined', 'crude'].find(x => (Q_LV[x] || 1) <= kajiyaLv) || 'crude';
+    sougou = Math.round((body + bukiCapacity(c) * (QATK[q] || 0)) * (1 + 0.15 * star));   // 満充填想定
+  }
+  return {
+    c, id: c.id, rar, sp, cost: COST_BY_RAR[rar] || 0, body, growth: b.base * 2.0 / (b.cap - 1),
+    sougou, train: star * b.cap + lv, maxed: (c.lv || 1) >= b.cap,   // 育成度＝★1がレベルMAX1個分
+    attr: abRawAttr(key), weap: abRawWeap(key), spec: abRawSpec(key), match: true,
+  };
+}
+function abMatch(v, f) {
+  if (f.attr !== 'all' && v.attr !== f.attr) return false;
+  if (f.weap !== 'all' && v.weap !== f.weap) return false;
+  if (f.spec !== 'all' && v.spec !== f.spec) return false;
+  return true;
+}
+function abCmp(a, b) { const n = Math.max(a.length, b.length); for (let i = 0; i < n; i++) { const x = a[i] || 0, y = b[i] || 0; if (x !== y) return x - y; } return 0; }
+// レアごとに「本体降順」「満充填総合降順」「育成度昇順」の上位K件の和集合に絞る（最適解はこの中に必ず入る）
+function abReduce(vs, K) {
+  const by = {}; vs.forEach(v => { (by[v.rar] = by[v.rar] || []).push(v); });
+  const out = [], seen = {};
+  const push = a => a.forEach(v => { if (!seen[v.id]) { seen[v.id] = 1; out.push(v); } });
+  Object.keys(by).forEach(r => {
+    const a = by[r];
+    push(a.slice().sort((x, y) => y.body - x.body).slice(0, K));
+    push(a.slice().sort((x, y) => y.sougou - x.sougou).slice(0, K));
+    push(a.slice().sort((x, y) => x.train - y.train).slice(0, K));
+  });
+  return out;
+}
+function abSearch(cand, size, score) {
+  let best = null; const n = cand.length, pick = [];
+  const rec = (start, depth, cost) => {
+    if (depth === size) { const sc = score(pick); if (sc && (!best || abCmp(sc, best.sc) < 0)) best = { trio: pick.slice(), sc }; return; }
+    for (let i = start; i < n; i++) { const c2 = cost + cand[i].cost; if (c2 > 11) continue; pick.push(cand[i]); rec(i + 1, depth + 1, c2); pick.pop(); }
+  };
+  rec(0, 0, 0); return best;
+}
+function abBest(cand, score, minSize) { for (let s = 3; s >= (minSize || 1); s--) { const b = abSearch(cand, s, score); if (b) return b; } return null; }
+// 1デッキ分を解く。pool はカード配列。戻り値 {trio:[view], sc} または null。
+function abSolveDeck(goal, depth, filt, pool, kajiyaLv) {
+  const K = 7;
+  const vs = pool.map(c => abView(c, kajiyaLv));
+  vs.forEach(v => { v.match = abMatch(v, filt); });
+  const sumT = t => { let x = 0; for (const v of t) x += v.train; return x; };
+  if (goal === 'train') {
+    let c0 = vs.filter(v => !v.maxed && v.match);
+    if (filt.attr !== 'sp' && filt.spec !== 'sp') c0 = c0.filter(v => !v.sp);   // SPはボス用に温存（属性/種族でSPを選んだときだけ候補に入れる）
+    return abBest(abReduce(c0, K), t => { let g = 0; for (const v of t) g += v.growth; return [-g, sumT(t)]; });
+  }
+  if (goal === 'area4') {
+    const T = AB_AREA4_T[depth];
+    return abBest(abReduce(vs, K), t => {
+      let body = 0, spN = 0, mt = 0;
+      for (const v of t) { body += v.body; if (v.sp) spN++; if (v.match) mt++; }
+      if (body < T) return null;
+      return [spN, -mt, sumT(t), body - T];   // 条件成立 → SP少ない → 絞り込み一致多い → 育成度低い → 超過小さい
+    });
+  }
+  if (goal === 'attr7') {
+    const req = AB_AREA7_ATTR[depth];
+    return abBest(abReduce(vs.filter(v => v.attr === req), K),
+      t => { if (t.length < 3) return null; let mt = 0; for (const v of t) if (v.match) mt++; return [-mt, sumT(t)]; }, 3);
+  }
+  if (goal === 'star8') {
+    return abBest(abReduce(vs.filter(v => (v.c.star || 0) >= 2 && v.match), K), t => t.length < 3 ? null : [sumT(t)], 3);
+  }
+  return abBest(abReduce(vs.filter(v => v.match), K), t => { let x = 0; for (const v of t) x += v.sougou; return [-x]; });
+}
+function abName(c) {
+  const i = parseCardKey(c.card_key);
+  const head = i.rarity === 'sp' ? ('SP' + i.name) : ((RAR_LABEL[i.rarity] || '') + (i.name === 'めしべだけマン' ? 'めしべ' : '') + (i.attr || '') + (i.weap || ''));
+  return head + ' Lv' + (c.lv || 1) + '★' + (c.star || 0);
+}
+const abS = {
+  openBtn: { fontFamily: 'inherit', fontSize: 12, fontWeight: 800, color: '#bfe3ff', background: 'rgba(40,60,80,.6)', border: '1px solid rgba(120,200,255,.45)', borderRadius: 10, padding: '7px 14px', cursor: 'pointer' },
+  box: { maxWidth: 400, width: '100%', maxHeight: '86dvh', overflowY: 'auto', background: '#160a13', border: '1.5px solid rgba(232,194,90,.55)', borderRadius: 14, padding: '16px 14px 14px', boxShadow: '0 12px 40px rgba(0,0,0,.7)' },
+  h: { fontSize: 15, fontWeight: 800, letterSpacing: 2, color: GOLD_HI, textAlign: 'center', marginBottom: 10 },
+  sec: { fontSize: 11, fontWeight: 800, color: '#cdb488', letterSpacing: 1, margin: '12px 0 5px' },
+  row: { display: 'flex', flexWrap: 'wrap', gap: 5 },
+  rowLab: { fontSize: 11, color: '#8a7c60', width: 30, flex: 'none', alignSelf: 'center' },
+  chip: { fontFamily: 'inherit', fontSize: 11, color: GOLD_HI, background: 'rgba(255,235,180,.05)', border: '1.5px solid rgba(232,194,90,.35)', borderRadius: 12, padding: '5px 10px', cursor: 'pointer' },
+  chipOn: { background: 'linear-gradient(180deg,rgba(255,228,154,.28),rgba(232,181,77,.18))', border: '1.5px solid #e8c25a', color: '#fff3c8', fontWeight: 800 },
+  desc: { fontSize: 10, color: '#8a7c60', marginTop: 5, lineHeight: 1.5 },
+  pv: { marginTop: 6, padding: '8px 10px', background: 'rgba(0,0,0,.3)', border: '1px solid rgba(232,194,90,.25)', borderRadius: 10 },
+  pvRow: { padding: '5px 0', borderBottom: '1px solid rgba(232,194,90,.14)' },
+  pvHead: { fontSize: 11, fontWeight: 800, color: '#ffe39a' },
+  pvCard: { fontSize: 10.5, color: '#e8d8b8', lineHeight: 1.5 },
+  pvNum: { fontSize: 10, color: '#cdb488', marginTop: 2 },
+  pvNg: { fontSize: 10.5, color: '#ff9a8a' },
+  warn: { fontSize: 10.5, color: '#ffbf8a', marginTop: 8, lineHeight: 1.6 },
+  btns: { display: 'flex', gap: 10, marginTop: 14 },
+  cancel: { flex: 1, fontFamily: 'inherit', fontSize: 13, fontWeight: 700, color: GOLD_HI, background: 'rgba(20,10,16,.9)', border: '1.5px solid rgba(232,194,90,.55)', borderRadius: 20, padding: '10px 0', cursor: 'pointer' },
+  go: { flex: 1.4, fontFamily: 'inherit', fontSize: 13, fontWeight: 800, color: '#2a160a', background: 'linear-gradient(180deg,#ffe49a,#e8b54d 60%,#b9842f)', border: 'none', borderRadius: 20, padding: '10px 0', cursor: 'pointer' },
+  off: { opacity: .45, cursor: 'default' },
+};
+function AutoDeckModal({ cards, decks, cardById, spSet, maxDecks, deckNo, kajiyaLv, busy, onApply, onClose }) {
+  const [goal, setGoal] = useState('train');
+  const [depth, setDepth] = useState(3);
+  const [attr, setAttr] = useState('all');
+  const [weap, setWeap] = useState('all');
+  const [spec, setSpec] = useState('all');
+  const [scope, setScope] = useState('this');
+  const gdef = AB_GOALS.find(g => g.k === goal) || AB_GOALS[0];
+
+  const deckOf = {}; (decks || []).forEach(d => [d.slot1_card_id, d.slot2_card_id, d.slot3_card_id].forEach(id => { if (id) deckOf[id] = d.deck_no; }));
+  const lockedDeck = {};   // 出撃中/探索中のデッキは編成変更できない（サーバが CARD_IN_TANSAKU で拒否）
+  (decks || []).forEach(d => {
+    [d.slot1_card_id, d.slot2_card_id, d.slot3_card_id].forEach(id => {
+      const c = id && cardById[id];
+      if (c && (Number(c.tansaku_deck_no) === d.deck_no || Number(c.boss_deck_no) === d.deck_no)) lockedDeck[d.deck_no] = true;
+    });
+  });
+  const emptyDeck = n => { const d = (decks || []).find(x => x.deck_no === n); return !d || !(d.slot1_card_id || d.slot2_card_id || d.slot3_card_id); };
+  const nums = Array.from({ length: maxDecks }, (_, i) => i + 1);
+  const targets = scope === 'this' ? [deckNo]
+    : scope === 'empty' ? nums.filter(n => !lockedDeck[n] && emptyDeck(n))
+      : nums.filter(n => !lockedDeck[n]);
+  const usable = (cards || []).filter(c => c.tansaku_deck_no == null && c.boss_deck_no == null && !(spSet && spSet[c.id]));
+  const pool = scope === 'this' ? usable.filter(c => !deckOf[c.id] || deckOf[c.id] === deckNo)
+    : scope === 'empty' ? usable.filter(c => !deckOf[c.id])
+      : usable;
+
+  const filt = { attr: goal === 'attr7' ? 'all' : attr, weap, spec };
+  const plan = useMemo(() => {
+    let rem = pool.slice(); const out = [];
+    for (const dn of targets) {
+      const r = abSolveDeck(goal, depth, filt, rem, kajiyaLv);
+      if (!r) { out.push({ deckNo: dn, views: [], fail: true }); continue; }
+      out.push({ deckNo: dn, views: r.trio });
+      const used = {}; r.trio.forEach(v => { used[v.id] = 1; });
+      rem = rem.filter(c => !used[c.id]);
+    }
+    return out;
+  }, [goal, depth, attr, weap, spec, scope, deckNo, kajiyaLv, (cards || []).length, JSON.stringify(decks || [])]);
+
+  const okPlan = plan.filter(p => !p.fail && p.views.length);
+  const touchesMain = okPlan.some(p => p.deckNo === 1);
+  const mixedAttr = goal === 'power' && okPlan.some(p => new Set(p.views.filter(v => !v.sp).map(v => v.attr)).size > 1);
+
+  return (
+    <div style={deckS.mScrim} onClick={onClose}>
+      <div style={abS.box} onClick={e => e.stopPropagation()}>
+        <div style={abS.h}>自動編成</div>
+
+        <div style={abS.sec}>目的</div>
+        <div style={abS.row}>
+          {AB_GOALS.map(g => <button key={g.k} onClick={() => { setGoal(g.k); if (g.depths) setDepth(g.depths[g.depths.length - 1][0]); }} style={{ ...abS.chip, ...(goal === g.k ? abS.chipOn : {}) }}>{g.label}</button>)}
+        </div>
+        {gdef.depths && <div style={{ ...abS.row, marginTop: 5 }}>
+          {gdef.depths.map(([d, lab]) => <button key={d} onClick={() => setDepth(d)} style={{ ...abS.chip, ...(depth === d ? abS.chipOn : {}) }}>{lab}</button>)}
+        </div>}
+        <div style={abS.desc}>{gdef.desc}</div>
+
+        <div style={abS.sec}>絞り込み</div>
+        {goal !== 'attr7' && <div style={{ ...abS.row, marginBottom: 5 }}>
+          <span style={abS.rowLab}>属性</span>
+          {[['all', '指定なし'], ['hana', '花'], ['ha', '葉'], ['shin', '芯'], ['sp', 'SP']].map(([k, l]) => <button key={k} onClick={() => setAttr(k)} style={{ ...abS.chip, ...(attr === k ? abS.chipOn : {}) }}>{l}</button>)}
+        </div>}
+        <div style={{ ...abS.row, marginBottom: 5 }}>
+          <span style={abS.rowLab}>武器</span>
+          {[['all', '指定なし'], ['ken', '剣'], ['tate', '盾'], ['tsue', '杖']].map(([k, l]) => <button key={k} onClick={() => setWeap(k)} style={{ ...abS.chip, ...(weap === k ? abS.chipOn : {}) }}>{l}</button>)}
+        </div>
+        <div style={abS.row}>
+          <span style={abS.rowLab}>種族</span>
+          {[['all', '指定なし'], ['hibiscus', 'ハイビスカス'], ['meshibe', 'めしべ'], ['sp', 'SP']].map(([k, l]) => <button key={k} onClick={() => setSpec(k)} style={{ ...abS.chip, ...(spec === k ? abS.chipOn : {}) }}>{l}</button>)}
+        </div>
+
+        <div style={abS.sec}>適用先</div>
+        <div style={abS.row}>
+          {[['this', 'このデッキ'], ['empty', '空きデッキだけ'], ['all', '全デッキ総入れ替え']].map(([k, l]) => <button key={k} onClick={() => setScope(k)} style={{ ...abS.chip, ...(scope === k ? abS.chipOn : {}) }}>{l}</button>)}
+        </div>
+
+        <div style={abS.sec}>プレビュー</div>
+        <div style={abS.pv}>
+          {plan.length === 0
+            ? <div style={abS.pvNg}>対象のデッキがありません（出撃中・探索中のデッキは除外されます）</div>
+            : plan.map(p => {
+              if (p.fail) return <div key={p.deckNo} style={abS.pvRow}><div style={abS.pvHead}>デッキ{p.deckNo}</div><div style={abS.pvNg}>条件を満たす組み合わせがありません</div></div>;
+              let cost = 0, body = 0, sou = 0;
+              p.views.forEach(v => { cost += v.cost; body += v.body; sou += v.sougou; });
+              return (
+                <div key={p.deckNo} style={abS.pvRow}>
+                  <div style={abS.pvHead}>デッキ{p.deckNo}{p.deckNo === 1 ? '（メイン）' : ''}</div>
+                  {p.views.map(v => <div key={v.id} style={abS.pvCard}>・{abName(v.c)}</div>)}
+                  <div style={abS.pvNum}>コスト {cost}/11 ・ 本体合計 {Math.round(body).toLocaleString()}（★抜き）・ 総合 {sou.toLocaleString()}（満充填想定）</div>
+                </div>
+              );
+            })}
+        </div>
+
+        {touchesMain && <div style={abS.warn}>デッキ1の中身が変わると、載っている武気はプールに戻ります。ボス出撃前に充填し直してください。</div>}
+        {mixedAttr && <div style={abS.warn}>属性が混ざっています。同属性で揃えたほうがグループ系スキルは有利です。属性を指定してください。</div>}
+
+        <div style={abS.btns}>
+          <button style={abS.cancel} onClick={onClose} disabled={busy}>やめる</button>
+          <button style={{ ...abS.go, ...((busy || !okPlan.length) ? abS.off : {}) }} disabled={busy || !okPlan.length}
+            onClick={() => onApply(okPlan.map(p => ({ deckNo: p.deckNo, ids: p.views.map(v => v.id) })))}>
+            {busy ? '編成中…' : (okPlan.length > 1 ? okPlan.length + '本をこの編成にする' : 'この編成にする')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 function DeckScreen({ profile, cards, refreshAll, back, flash, initialDeckNo, backLabel = 'ホームへ戻る' }) {
   const maxDecks = Math.min(2 + Math.floor(((profile && profile.cleared_stage) || 0) / 2), 6); // balance §10
   const [decks, setDecks] = useState(null);
@@ -2333,6 +2563,7 @@ function DeckScreen({ profile, cards, refreshAll, back, flash, initialDeckNo, ba
   const [pickSel, setPickSel] = useState(null);      // ④ カード選択パネルで選択中の card_id
   const [skillMap, setSkillMap] = useState({});      // skill_key -> skill_master 行（表示名用）
   const [deckSkills, setDeckSkills] = useState({});  // card_id -> {slot: card_skills行}（枠下の要点表示用）
+  const [autoOpen, setAutoOpen] = useState(false);   // 自動編成モーダル
 
   const cardById = {}; (cards || []).forEach(c => { cardById[c.id] = c; });
 
@@ -2410,6 +2641,19 @@ function DeckScreen({ profile, cards, refreshAll, back, flash, initialDeckNo, ba
     finally { setSwapBusy(false); }
   }
 
+  // 自動編成の適用：プラン順に update_deck。他デッキからの移動はサーバが自動で外す（0043）。
+  async function applyAutoPlan(plan) {
+    if (busy) return; setBusy(true);
+    let ok = 0; const ng = [];
+    try {
+      for (const p of plan) {
+        try { await ChikarianAPI.updateDeck(p.deckNo, p.ids[0] || null, p.ids[1] || null, p.ids[2] || null); ok++; }
+        catch (e) { ng.push('デッキ' + p.deckNo); }
+      }
+      await loadDecks(); await refreshAll();
+      flash(ng.length ? (ok + '本を編成（' + ng.join('・') + 'は失敗）') : (ok > 1 ? (ok + '本のデッキを編成しました') : '編成しました'));
+    } finally { setBusy(false); setAutoOpen(false); }
+  }
   async function loadPool() { try { const r = normalizeRk(await ChikarianAPI.getRenkiden()); setPool(r ? r.buki : 0); } catch (e) {} }
   // 武気の付け外し（amount: 0=空 / 100000=最大 / loaded±1=微調整）。質変更は loaded 維持で再込め（サーバが返却→引直し）。
   async function applyBuki(c, quality, amount) {
@@ -2491,6 +2735,10 @@ function DeckScreen({ profile, cards, refreshAll, back, flash, initialDeckNo, ba
             );
           })}
         </div>
+
+        {!deckSortie && <div style={{ textAlign: 'center', margin: '2px 0 0' }}>
+          <button style={{ ...abS.openBtn, ...(busy ? abS.off : {}) }} disabled={busy} onClick={() => setAutoOpen(true)}>自動編成</button>
+        </div>}
 
         {/* メインデッキ（デッキ1）表示／入れ替え（canon-06 §4-1・0067） */}
         {!deckSortie && (deckNo === 1
@@ -2586,6 +2834,8 @@ function DeckScreen({ profile, cards, refreshAll, back, flash, initialDeckNo, ba
 
         <button onClick={back} style={{ ...S.lineBtn, marginTop: 16, alignSelf: 'center' }}>{backLabel}</button>
       </div>
+
+        {autoOpen && <AutoDeckModal cards={cards} decks={decks} cardById={cardById} spSet={spSet} maxDecks={maxDecks} deckNo={deckNo} kajiyaLv={kajiyaLv} busy={busy} onApply={applyAutoPlan} onClose={() => { if (!busy) setAutoOpen(false); }} />}
 
         {/* 武気充填モーダル（共通コンポーネント） */}
         {bukiEdit && <BukiEditModal cardId={bukiEdit} cardById={cardById} pool={pool} kajiyaLv={kajiyaLv} bukiBusy={bukiBusy} onApply={applyBuki} onClose={() => setBukiEdit(null)} />}
