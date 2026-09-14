@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ハナハナ最速目押しクイズ ○×版 遊び方ガイド | グレイト・プレ・善太</title>
+<meta name="description" content="ハナハナ最速目押しクイズ ○×版の遊び方ガイド。出目の見方、回答画像の見方、○×の決まり方、難易度・出題数・ランキングまでを説明します。">
+
+<link rel="icon" type="image/png" sizes="32x32" href="../icon_32x32.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --accent:  #ff2a6d;
+  --bg:      #0d0d0d;
+  --surface: #141414;
+  --border:  #252525;
+  --text:    #e0dbd5;
+  --muted:   #6f6a65;
+  --serif:   'Noto Serif JP','YuMincho','游明朝',serif;
+  --sans:    'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif;
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--sans);
+  line-height:1.9;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ─── header ─── */
+.hdr{padding:64px 20px 34px;text-align:center;}
+.hdr-eye{font-size:10px;letter-spacing:5px;color:var(--accent);margin-bottom:16px;}
+.hdr-title{font-family:var(--serif);font-size:clamp(26px,5.6vw,44px);font-weight:400;letter-spacing:7px;line-height:1.3;}
+.hdr-sub{font-size:13px;color:var(--muted);letter-spacing:2px;margin-top:14px;}
+
+.hdr-play{
+  display:inline-block;margin-top:26px;padding:13px 40px;
+  border:2px solid var(--accent);background:var(--accent);
+  color:#fff;text-decoration:none;border-radius:8px;
+  font-size:15px;font-weight:700;letter-spacing:2px;
+  transition:background .15s,color .15s;
+}
+.hdr-play:hover{background:transparent;color:var(--accent);}
+
+/* ─── 目次 ─── */
+.toc{
+  display:flex;flex-wrap:wrap;justify-content:center;
+  gap:10px 30px;padding:0 20px 36px;
+  border-bottom:1px solid var(--border);
+}
+.toc a{
+  font-size:13.5px;font-weight:700;letter-spacing:1px;
+  color:#8a8580;text-decoration:none;padding:2px 0;
+  transition:color .15s;
+}
+.toc a:hover{color:var(--accent);}
+
+/* ─── section ─── */
+.sec{max-width:700px;margin:0 auto;padding:52px 20px 10px;}
+.sec-num{font-family:monospace;font-size:11px;letter-spacing:3px;color:var(--accent);margin-bottom:8px;}
+.sec-title{font-family:var(--serif);font-size:21px;font-weight:700;letter-spacing:2px;line-height:1.5;margin-bottom:22px;}
+.sec h3{
+  font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:1px;
+  color:#fff;border-left:2px solid var(--accent);padding-left:11px;
+  margin:30px 0 12px;
+}
+.sec p{font-size:14.5px;margin-bottom:14px;}
+.sec p:last-child{margin-bottom:0;}
+.sec ul{list-style:none;margin:0 0 14px;}
+.sec ul li{font-size:14.5px;padding-left:18px;position:relative;margin-bottom:7px;}
+.sec ul li::before{content:'';position:absolute;left:2px;top:.85em;width:5px;height:1px;background:var(--accent);}
+.sec strong{color:#fff;font-weight:700;}
+.sec a{color:var(--accent);}
+
+.note{
+  border:1px solid var(--border);border-left:3px solid var(--accent);
+  background:var(--surface);border-radius:0 6px 6px 0;
+  padding:14px 18px;margin:18px 0;
+  font-size:13.5px;color:#b8b3ae;line-height:1.85;
+}
+
+.totop{
+  display:block;text-align:right;
+  font-size:12px;letter-spacing:1px;color:var(--muted);
+  text-decoration:none;margin-top:30px;
+  padding-bottom:18px;border-bottom:1px solid var(--border);
+}
+.totop:hover{color:var(--accent);}
+
+/* ─── 流れ ─── */
+.flow{margin:6px 0 4px;}
+.flow-step{
+  border:1px solid var(--border);background:var(--surface);
+  border-radius:6px;padding:11px 16px;font-size:14px;
+}
+.flow-arrow{text-align:center;color:var(--accent);font-size:12px;line-height:1;padding:7px 0;}
+
+/* ─── 表 ─── */
+.tbl-wrap{overflow-x:auto;margin:6px 0 14px;}
+table{border-collapse:collapse;width:100%;min-width:440px;font-size:13.5px;}
+th,td{border:1px solid var(--border);padding:9px 12px;text-align:left;vertical-align:top;line-height:1.75;}
+th{background:var(--surface);color:#fff;font-weight:700;white-space:nowrap;}
+td.c{text-align:center;white-space:nowrap;}
+
+/* ─── 7の位置 ─── */
+.pos{display:flex;gap:14px;flex-wrap:wrap;margin:6px 0 14px;}
+.pos-card{
+  flex:1 1 200px;min-width:0;
+  border:1px solid var(--border);background:var(--surface);
+  border-radius:8px;padding:16px 18px;
+}
+.pos-card h4{font-size:13px;letter-spacing:2px;margin-bottom:10px;font-weight:700;}
+.pos-pink h4{color:var(--accent);}
+.pos-white h4{color:#fff;}
+.pos-nums{display:flex;gap:16px;font-family:monospace;font-size:13px;color:#b8b3ae;}
+.pos-nums b{display:block;font-size:19px;color:#fff;font-weight:400;line-height:1.4;}
+
+/* ─── 回答画像の図解 ─── */
+.ox-diagram{
+  display:flex;justify-content:center;
+  padding:26px 10px;margin:6px 0 10px;
+  border:1px solid var(--border);border-radius:8px;background:var(--surface);
+}
+.ox-d{display:flex;flex-direction:column;align-items:center;}
+.ox-d-cap{font-size:11px;letter-spacing:2px;color:var(--muted);margin-bottom:10px;}
+.ox-d-row{display:flex;}
+.ox-d-cell{
+  width:32px;height:16px;
+  border:1px solid #3a3a3a;
+  margin:-1px 0 0 -1px;
+  background:rgba(255,255,255,.03);
+  overflow:hidden;
+  display:flex;align-items:center;justify-content:center;
+}
+.ox-d-cell img{display:block;width:100%;height:100%;}
+.ox-d-cell.ellipsis{color:var(--muted);font-size:10px;background:none;border-color:transparent;}
+.ox-d-note{font-size:12px;color:var(--muted);text-align:center;letter-spacing:1px;margin-bottom:16px;}
+
+/* ─── 計算式 ─── */
+details{
+  border:1px solid var(--border);border-radius:6px;
+  background:var(--surface);margin:18px 0;
+}
+summary{
+  cursor:pointer;padding:12px 16px;font-size:13.5px;
+  font-weight:700;letter-spacing:1px;color:#b8b3ae;
+  list-style:none;
+}
+summary::-webkit-details-marker{display:none;}
+summary::before{content:'＋ ';color:var(--accent);}
+details[open] summary::before{content:'− ';}
+details[open] summary{border-bottom:1px solid var(--border);}
+.details-body{padding:16px;}
+pre{
+  font-family:monospace;font-size:12.5px;line-height:1.9;
+  color:#b8b3ae;overflow-x:auto;
+  background:#0d0d0d;border:1px solid var(--border);border-radius:5px;
+  padding:13px 15px;margin:10px 0;
+}
+
+/* ─── bottom nav ─── */
+.site-nav{
+  border-top:1px solid var(--border);
+  margin-top:46px;padding:34px 20px 60px;
+  display:flex;gap:14px;justify-content:center;flex-wrap:wrap;
+}
+.site-nav a{
+  display:inline-block;padding:12px 28px;
+  border:2px solid var(--accent);color:var(--text);
+  text-decoration:none;border-radius:8px;
+  font-size:14px;font-weight:700;letter-spacing:1px;
+  transition:background .15s,color .15s;
+}
+.site-nav a:hover{background:var(--accent);color:#fff;}
+
+@media(max-width:600px){
+  .hdr{padding:48px 16px 28px;}
+  .sec{padding:40px 16px 8px;}
+  .toc{gap:8px 20px;padding-bottom:28px;}
+  .ox-diagram{padding:20px 8px;}
+}
+@media(prefers-reduced-motion:reduce){
+  .hdr-play,.site-nav a,.toc a{transition:none;}
+}
+</style>
+</head>
+
+<body>
+
+<header class="hdr">
+  <p class="hdr-eye">HANAHANA SAISOKU MEOSHI QUIZ OX</p>
+  <h1 class="hdr-title">遊び方ガイド</h1>
+  <p class="hdr-sub">ハナハナ最速目押しクイズ ○×版</p>
+  <a class="hdr-play" href="./">プレイする</a>
+</header>
+
+<nav class="toc" id="toc" aria-label="目次">
+  <a href="#s1">1 このクイズについて</a>
+  <a href="#s2">2 リールと7の位置</a>
+  <a href="#s3">3 出題の見方</a>
+  <a href="#s4">4 回答画像の見方</a>
+  <a href="#s5">5 速さの決まり方</a>
+  <a href="#s6">6 難易度</a>
+  <a href="#s7">7 出題数とスコア</a>
+  <a href="#s8">8 リザルトと答え合わせ</a>
+  <a href="#s9">9 ランキング</a>
+  <a href="#s10">10 音と操作</a>
+  <a href="#s11">11 上達のコツ</a>
+</nav>
+
+<main>
+
+<!-- 1 -->
+<section class="sec" id="s1">
+  <p class="sec-num">01</p>
+  <h2 class="sec-title">このクイズについて</h2>
+
+  <p>パチスロ「ハナハナ」シリーズのノーマルタイプを題材にしたクイズの○×版です。選択肢から選ぶ版と違い、提示されるのは<strong>回答画像1枚だけ</strong>。停止した出目と、そこから作られた7の並びを見て、それが<strong>そのとき最速で揃う形かどうか</strong>を○か×で答えます。</p>
+  <p>見比べる相手がいないぶん、選択肢から選ぶ版より判断が難しくなっています。出題は毎問その場でランダムに作られるので、同じ問題が繰り返されることはありません。</p>
+
+  <h3>遊びの流れ</h3>
+  <div class="flow">
+    <div class="flow-step">タイトルで難易度と出題数を選び、STARTを押す</div>
+    <div class="flow-arrow">▼</div>
+    <div class="flow-step">出目と回答画像が表示される。○か×をタップして答える</div>
+    <div class="flow-arrow">▼</div>
+    <div class="flow-step">正誤が表示され、1秒後に自動で次の問題へ</div>
+    <div class="flow-arrow">▼</div>
+    <div class="flow-step">出題数を出し切るとリザルトへ。答え合わせとランキングが見られる</div>
+  </div>
+
+  <p>途中でやめたいときは、画面下の中断ボタンでリザルトへ進めます。</p>
+
+  <a class="totop" href="#toc">↑ 目次へもどる</a>
+</section>
+
+<!-- 2 -->
+<section class="sec" id="s2">
+  <p class="sec-num">02</p>
+  <h2 class="sec-title">リールと7の位置</h2>
+
+  <p>リールは21コマ、左・中・右の3つ。番号が増える方向に回り、21番の次は1番に戻ります。最近のハナハナシリーズのノーマルタイプは、どの機種もこの配列で共通です。</p>
+  <p>このクイズで使うのは、そのうち<strong>ピンク7と白7の位置だけ</strong>です。</p>
+
+  <div class="pos">
+    <div class="pos-card pos-pink">
+      <h4>ピンク7</h4>
+      <div class="pos-nums">
+        <span>左<b>19</b></span>
+        <span>中<b>19</b></span>
+        <span>右<b>19</b></span>
+      </div>
+    </div>
+    <div class="pos-card pos-white">
+      <h4>白7</h4>
+      <div class="pos-nums">
+        <span>左<b>7</b></span>
+        <span>中<b>10</b></span>
+        <span>右<b>11</b></span>
+      </div>
+    </div>
+  </div>
+
+  <p>ピンク7は3リールとも19番に揃っているのに対して、白7は7・10・11とばらけています。この差がそのまま「どちらが速いか」を分ける材料になります。</p>
+
+  <div class="note">配列の全体は<a href="../hanahana/reel.html">リール配列確認</a>のページで見られます。</div>
+
+  <a class="totop" href="#toc">↑ 目次へもどる</a>
+</section>
+
+<!-- 3 -->
+<section class="sec" id="s3">
+  <p class="sec-num">03</p>
+  <h2 class="sec-title">出題の見方</h2>
+
+  <p>画面の上に、停止した出目が3×3（上段・中段・下段 × 左・中・右）で表示されます。</p>
+
+  <h3>枠上・枠下</h3>
+  <p>3段の上下に、もう1コマぶんが半分だけ覗いています。上が枠上、下が枠下です。上段と枠上のあいだ、下段と枠下のあいだに引かれた横線が、実機のリール窓の枠にあたります。線の内側が3段の範囲です。</p>
+
+  <h3>右リールの番号</h3>
+  <p>右リールだけ、右横に丸囲みの番号が3つ（上段・中段・下段）表示されます。右リールは <strong>チェリー → スイカ → ベル → リプレイ</strong> の並びが3箇所で繰り返されるため、枠上枠下まで見ても位置を1つに絞れない組み合わせが残るからです。左リールと中リールには番号は付きません。</p>
+
+  <h3>出題されない出目</h3>
+  <p>ハナハナは3つのストップボタンを同時に押せません。狙い始めた時点で7が2つ以上重なってしまう出目や、3リールを止めるコマ数が足りない出目は、そもそも実行できないので出題されません。</p>
+
+  <a class="totop" href="#toc">↑ 目次へもどる</a>
+</section>
+
+<!-- 4 -->
+<section class="sec" id="s4">
+  <p class="sec-num">04</p>
+  <h2 class="sec-title">回答画像の見方</h2>
+
+  <p>出題の下に、選択肢版と同じ罫線つきの縦長の図が<strong>1枚だけ</strong>表示されます。左・中・右の3列で、<strong>下端が受付ライン（0コマ目）</strong>、上端が20コマ目。選択肢版と違い、正解不正解にかかわらず<strong>常に21コマぶんの高さ</strong>で表示されます。</p>
+
+  <div class="ox-diagram">
+    <div class="ox-d">
+      <p class="ox-d-cap">回答画像のイメージ（模式図）</p>
+      <div class="ox-d-row"><div class="ox-d-cell ellipsis">20</div><div class="ox-d-cell"></div><div class="ox-d-cell"></div></div>
+      <div class="ox-d-row"><div class="ox-d-cell ellipsis">…</div><div class="ox-d-cell"></div><div class="ox-d-cell"></div></div>
+      <div class="ox-d-row"><div class="ox-d-cell"></div><div class="ox-d-cell ellipsis">…</div><div class="ox-d-cell"></div></div>
+      <div class="ox-d-row"><div class="ox-d-cell"><img src="../quiz/images/pink7.png" alt="7" style="opacity:.4"></div><div class="ox-d-cell"></div><div class="ox-d-cell"></div></div>
+      <div class="ox-d-row"><div class="ox-d-cell"><img src="../quiz/images/pink7.png" alt="7" style="opacity:.6"></div><div class="ox-d-cell ellipsis">…</div><div class="ox-d-cell"></div></div>
+      <div class="ox-d-row"><div class="ox-d-cell"><img src="../quiz/images/pink7.png" alt="7"></div><div class="ox-d-cell"></div><div class="ox-d-cell"><img src="../quiz/images/pink7.png" alt="7" style="opacity:.6"></div></div>
+      <div class="ox-d-row"><div class="ox-d-cell"><img src="../quiz/images/pink7.png" alt="7" style="opacity:.6"></div><div class="ox-d-cell"><img src="../quiz/images/pink7.png" alt="7" style="opacity:.4"></div><div class="ox-d-cell"><img src="../quiz/images/pink7.png" alt="7"></div></div>
+      <div class="ox-d-row"><div class="ox-d-cell"><img src="../quiz/images/pink7.png" alt="7" style="opacity:.4"></div><div class="ox-d-cell"><img src="../quiz/images/pink7.png" alt="7"></div><div class="ox-d-cell"><img src="../quiz/images/pink7.png" alt="7" style="opacity:.4"></div></div>
+      <div class="ox-d-row"><div class="ox-d-cell"></div><div class="ox-d-cell"><img src="../quiz/images/pink7.png" alt="7" style="opacity:.6"></div><div class="ox-d-cell"></div></div>
+      <div class="ox-d-row"><div class="ox-d-cell"></div><div class="ox-d-cell"><img src="../quiz/images/pink7.png" alt="7" style="opacity:.4"></div><div class="ox-d-cell"></div></div>
+      <div class="ox-d-row"><div class="ox-d-cell ellipsis">…</div><div class="ox-d-cell ellipsis">…</div><div class="ox-d-cell ellipsis">…</div></div>
+      <div class="ox-d-row"><div class="ox-d-cell ellipsis">0</div><div class="ox-d-cell ellipsis">受付ライン</div><div class="ox-d-cell ellipsis"></div></div>
+    </div>
+  </div>
+  <p class="ox-d-note">各列にその色の7がちょうど1つだけ入り、そこから離れるほど周辺の実際の図柄が薄く透けて見える（模式図のため列ごとの高さの差は正確ではありません）</p>
+
+  <p>7から離れるほど、そのマスに本来ある図柄（ベルやリプレイなど）が薄く透過表示され、<strong>6コマ以上離れると空白</strong>になります。これは選択肢版と同じ描き方です。</p>
+
+  <h3>○と×の作り方</h3>
+  <p>正解（○）は、<strong>そのとき最も速く止められる色の、実際の並びそのもの</strong>を映した画像です。不正解（×）は次の2通りのどちらかで作られます。</p>
+  <ul>
+    <li><strong>遅い方の色の正しい形</strong> ─ 本物の並びではあるものの、選ぶと負ける方の色</li>
+    <li><strong>ずれた形</strong> ─ 速い方の色を使ってはいるものの、7の位置をわざとずらした、実際にはありえない形</li>
+  </ul>
+  <p>初心者だけは「遅い方の色の正しい形」しか使いません（ずれは出ません）。また、ピンク7と白7の所要コマ数が同じ<strong>同着</strong>の出目では「遅い方」が存在しないため、×は必ず「ずれ」になります。</p>
+
+  <div class="note">高さだけでは○×は判断できません。表示は常に21コマぶんあるため、自分で7の位置を数えて、実際の並びと一致しているかを確かめる必要があります。</div>
+
+  <a class="totop" href="#toc">↑ 目次へもどる</a>
+</section>
+
+<!-- 5 -->
+<section class="sec" id="s5">
+  <p class="sec-num">05</p>
+  <h2 class="sec-title">速さの決まり方</h2>
+
+  <p>狙いは、レバーを叩いた直後から効くわけではありません。各リールの<strong>10番と21番が基準点</strong>で、3リールすべてが基準点を通過した<strong>3コマ後</strong>から受け付けが始まります。</p>
+
+  <p>そこを起点に、各リールの7まで何コマあるかを数えます。3つのうち<strong>いちばん遠いリールのコマ数</strong>が、その色の所要コマ数です。そのリールが第三停止になります。</p>
+
+  <p>ピンク7と白7で所要コマ数を比べ、<strong>小さいほうが正解</strong>です。同じなら同着で、どちらの色が表示されても○になり得ます。</p>
+
+  <details>
+    <summary>計算式（読まなくても遊べます）</summary>
+    <div class="details-body">
+<pre>S_i = 停止出目の中段番号（i = 左, 中, 右）
+
+d_i = min((10 − S_i) mod 21, (21 − S_i) mod 21)
+D   = max(d_左, d_中, d_右) + 3
+X_i = ((S_i − 1 + D) mod 21) + 1
+
+D_i    = (P_i − X_i) mod 21     P_i は7の番号
+色の所要 = max(D_左, D_中, D_右)</pre>
+      <p>左中右すべて中段4で止まった場合。</p>
+<pre>d = (6, 6, 6) → max = 6
+D = 6 + 3 = 9
+X = (13, 13, 13)
+
+ピンク7  D = 6, 6, 6        → 6コマ
+白7      D = 15, 18, 19     → 19コマ</pre>
+      <p>ピンク7が速いので、この出目の正解はピンク7です。表示された画像がピンク7の実際の並びそのものなら○、それ以外なら×になります。</p>
+    </div>
+  </details>
+
+  <a class="totop" href="#toc">↑ 目次へもどる</a>
+</section>
+
+<!-- 6 -->
+<section class="sec" id="s6">
+  <p class="sec-num">06</p>
+  <h2 class="sec-title">難易度</h2>
+
+  <p>初心者・易・並・極の4段階です。○×の判定基準はどの難易度でも同じで、変わるのは<strong>出題される出目の範囲</strong>と<strong>×の作り方</strong>だけです。</p>
+
+  <div class="tbl-wrap">
+  <table>
+    <tr><th>難易度</th><th>出目の範囲</th><th>×の作り方</th></tr>
+    <tr>
+      <td>初心者</td>
+      <td>左リール中段が4か14、かつ2色の所要差が大きい出目だけ</td>
+      <td>正しい形のまま色だけ逆にしたものだけ（ずれは出ません）</td>
+    </tr>
+    <tr>
+      <td>易</td>
+      <td>左リール中段が4か14</td>
+      <td>15%は遅い方の色の正しい形、85%は中・右どちらか1リールを3コマずらした形</td>
+    </tr>
+    <tr>
+      <td>並</td>
+      <td>出目はランダム</td>
+      <td>15%は遅い方の色の正しい形、85%は3リールとも3コマずらした形</td>
+    </tr>
+    <tr>
+      <td>極</td>
+      <td>出目はランダム（易しさの下限なし）</td>
+      <td>15%は遅い方の色の正しい形、85%は3リールのうちランダムな2つを2コマずらした形</td>
+    </tr>
+  </table>
+  </div>
+
+  <h3>同着のとき</h3>
+  <p>ピンク7と白7の所要コマ数が同じになる出目では、どちらの色で○が出てもおかしくありません。「遅い方」が存在しないため、×は必ず「ずれ」になります。初心者にはこの出目は出ません。</p>
+
+  <a class="totop" href="#toc">↑ 目次へもどる</a>
+</section>
+
+<!-- 7 -->
+<section class="sec" id="s7">
+  <p class="sec-num">07</p>
+  <h2 class="sec-title">出題数とスコア</h2>
+
+  <p>出題数は<strong>10問</strong>と<strong>20問</strong>から選べます。初心者だけは10問固定で、20問は選べません。他の難易度から初心者に切り替えると自動的に10問になり、初心者から他の難易度に戻すと、直前に自分で選んでいた出題数に戻ります。</p>
+
+  <h3>経過時間</h3>
+  <p>制限時間はありません。出題数ぶん答え終えるまでの経過時間を、秒と1/100秒で参考記録として計測します。<strong>回答してから次の問題に移るまでの1秒間は、計測が止まります。</strong>読む時間や迷う時間は含まれますが、正誤を確認している時間は含まれません。</p>
+
+  <h3>スコア</h3>
+  <p>スコア＝<strong>正解数 − 誤答数</strong>。当てずっぽうで押すと減ります。</p>
+
+  <a class="totop" href="#toc">↑ 目次へもどる</a>
+</section>
+
+<!-- 8 -->
+<section class="sec" id="s8">
+  <p class="sec-num">08</p>
+  <h2 class="sec-title">リザルトと答え合わせ</h2>
+
+  <p>出題数を出し切ると、スコア・正解数・誤答数・遊んだ難易度と出題数・経過時間が表示されます。</p>
+
+  <h3>答え合わせ</h3>
+  <p>その回に出た問題を、1問ずつ見返せます。上に出題、その下に左右2つが並びます。</p>
+  <ul>
+    <li>左 ─ <strong>出題された画像・あなたの回答</strong>（クイズ中に見たものと同じ、1枚だけの回答画像）</li>
+    <li>右 ─ <strong>正解の形</strong>。受付ラインから21コマぶん、7以外の図柄も含めて実際のリール配列がそのまま描かれます（色を問わず本物の並び）</li>
+  </ul>
+  <p>間違えた問題で「どこがずれていたか」「どちらの色が正しかったか」を確かめるための画面です。</p>
+
+  <h3>そのほか</h3>
+  <ul>
+    <li><strong>Xでシェア</strong> ─ 難易度・出題数・スコア・経過時間を入れた文面が用意されます</li>
+    <li><strong>画像を保存</strong> ─ リザルトの画像を作って保存できます。Xには画像を直接添付できないので、必要なら手動で付けてください</li>
+    <li><strong>RETRY</strong> ─ 同じ設定でもう一度</li>
+    <li><strong>TITLE</strong> ─ タイトルへ戻る</li>
+  </ul>
+
+  <a class="totop" href="#toc">↑ 目次へもどる</a>
+</section>
+
+<!-- 9 -->
+<section class="sec" id="s9">
+  <p class="sec-num">09</p>
+  <h2 class="sec-title">ランキング</h2>
+
+  <p><strong>ログインは要りません。</strong>アカウント登録もメールアドレスも不要です。</p>
+
+  <ul>
+    <li>難易度と出題数の組み合わせごとに分かれていて、全部で7本あります（初心者は10問のみ）</li>
+    <li>上位20位まで。スコアの高い順、同点なら経過時間の短いほうが上位、それも同じなら先に記録したほうが上です</li>
+    <li>スコアが0以下のとき、または中断して終えたときは登録できません</li>
+    <li>20位以内に入ったときだけ名前の入力欄が出ます。名前は1〜12文字</li>
+    <li>名前を入れずに進めた場合は、ランキングには載りません</li>
+  </ul>
+
+  <div class="note">ランキングの読み書きに失敗しても、クイズそのものは普通に遊べます。</div>
+
+  <a class="totop" href="#toc">↑ 目次へもどる</a>
+</section>
+
+<!-- 10 -->
+<section class="sec" id="s10">
+  <p class="sec-num">10</p>
+  <h2 class="sec-title">音と操作</h2>
+
+  <ul>
+    <li>BGMと効果音は、それぞれ別に音量調整とミュートができます</li>
+    <li>スマートフォンは自動再生が禁止されているため、音が鳴り始めるのは最初にタップしたときからです</li>
+    <li>ダブルタップでの拡大は無効にしてあります。連打で画面が拡大してしまうのを防ぐためです</li>
+    <li>2本指でのピンチ操作による拡大は使えます</li>
+  </ul>
+
+  <a class="totop" href="#toc">↑ 目次へもどる</a>
+</section>
+
+<!-- 11 -->
+<section class="sec" id="s11">
+  <p class="sec-num">11</p>
+  <h2 class="sec-title">上達のコツ</h2>
+
+  <ul>
+    <li>まず右リールの丸囲みの番号を見て、位置を確定させる。ここが決まらないと数えられません</li>
+    <li>ピンク7は3リールとも19番。だから3つの7の間隔は、出目の間隔がそのまま出ます</li>
+    <li>白7は7・10・11。狙い始める位置によって、遠いリールが入れ替わります</li>
+    <li>速さを決めるのは<strong>いちばん遠い1リール</strong>だけ。3つ全部を丁寧に比べる必要はありません</li>
+    <li>色が合っていても、位置が少しでもずれていれば×。位置が合っていても遅い方の色なら×。「色」と「位置」は別々に確かめる</li>
+    <li>同着の出目では×は必ず「ずれ」。色だけを見て判断しないこと</li>
+    <li>初心者は色を逆にしただけの×しか出ないので、まず「どちらの色が正しいか」を判断する練習に向いています</li>
+  </ul>
+
+  <a class="totop" href="#toc">↑ 目次へもどる</a>
+</section>
+
+</main>
+
+<nav class="site-nav">
+  <a href="./">プレイする</a>
+  <a href="../games.html">自作ゲーム</a>
+  <a href="../index.html">index</a>
+</nav>
+
+</body>
+</html>
