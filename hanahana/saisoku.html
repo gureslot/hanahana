@@ -6,704 +6,684 @@
 <title>最速コレクション</title>
 <link rel="icon" type="image/png" sizes="32x32" href="../icon_32x32.png">
 
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&display=swap" rel="stylesheet">
+
 <style>
-body{
-  margin:0;
-  background:#000;
-  color:#fff;
-  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif;
+:root {
+  --accent:    #ff2a6d;
+  --bg:        #080808;
+  --surface:   #111111;
+  --surface-2: #171717;
+  --border:    #1e1e1e;
+  --text:      #e0dbd5;
+  --muted:     #5e5e5e;
+  --serif:     'Noto Serif JP', 'YuMincho', '游明朝', serif;
+  --sans:      'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+
+  --dm-w: 72px;   /* 出目1コマの幅 */
+  --dm-h: 36px;   /* 出目1コマの高さ（図柄は 160x80 の 2:1） */
 }
 
-/* テーブル */
-.wrapper{
-  padding:20px 12px;
-  overflow-x:auto;
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
 }
 
-table{
-  border-collapse:collapse;
-  margin:0 auto;
-  background:#0a0a0a;
+/* ─── head ─── */
+.head {
+  max-width: 760px;
+  margin: 32px auto 22px;
+  padding: 0 24px;
 }
 
-td{
-  width:1%;
-  padding:0;
-  border:1px solid #4a4a4a;
-  text-align:center;
-  vertical-align:middle;
-  background:#111;
-  white-space:nowrap;
-  font-size:12px;
+.page-title {
+  font-family: var(--serif);
+  font-size: clamp(24px, 5vw, 32px);
+  font-weight: 700;
+  letter-spacing: 4px;
+  text-align: center;
+  margin-bottom: 12px;
 }
 
-td.gray{
-  background:#808080;
+.intro {
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.9;
 }
 
-/* 実リンクが入っているセルだけ赤 */
-td.active{
-  background:#ff0000;
+/* ─── 凡例 ─── */
+.legend {
+  display: flex;
+  gap: 18px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 18px auto 14px;
+  padding: 0 24px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+.legend i {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  border: 1px solid #2a2a2a;
+}
+.legend .sw-plain { background: var(--surface); }
+.legend .sw-video { background: var(--accent); border-color: var(--accent); }
+.legend .sw-none  { background: #808080; border-color: #808080; }
+
+/* ─── 表 ─── */
+.grid-outer {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 12px 10px;
 }
 
-a{
-  display:block;
-  padding:2px 6px;
-  color:#fff;
-  text-decoration:none;
+table {
+  border-collapse: collapse;
+  margin: 0 auto;
+  background: var(--surface);
 }
 
-a:hover{
-  background:#1f1f1f;
+td {
+  border: 1px solid #2a2a2a;
+  padding: 6px 5px;
+  text-align: center;
+  vertical-align: middle;
+  white-space: nowrap;
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  background: var(--surface);
+  color: var(--text);
+  -webkit-user-select: none;
+  user-select: none;
 }
 
-td.active a:hover{
-  background:transparent;
+/* 出現しない出目・リーチ目（対象外） */
+td.none {
+  background: #808080;
+  color: #0c0c0c;
 }
 
-/* モーダル（全体） */
-#modal{
-  display:none;
-  position:fixed;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
-  background:rgba(0,0,0,0.9);
-  z-index:9999;
+/* 通常出目 */
+td.cell { cursor: pointer; }
+td.cell:hover { background: var(--surface-2); }
+
+/* 動画あり */
+td.video { background: var(--accent); color: #fff; font-weight: 700; }
+td.video a { color: inherit; text-decoration: none; display: block; }
+td.video:hover { background: #ff5187; }
+
+/* いま出目を表示しているマス */
+td.on { outline: 2px solid var(--text); outline-offset: -2px; }
+
+/* ─── 出目（3×3） ─── */
+.deme {
+  display: grid;
+  grid-template-columns: repeat(3, var(--dm-w));
+  grid-auto-rows: var(--dm-h);
+  gap: 0;
+  background: #000;
+  padding: 3px;
+  border: 1px solid #333;
+}
+.deme img {
+  display: block;
+  width: var(--dm-w);
+  height: var(--dm-h);
+  -webkit-user-drag: none;
+  user-select: none;
+  pointer-events: none;
 }
 
-/* プレイヤー枠（縦動画用） */
-#modalContent{
-  position:absolute;
-  top:50%;
-  left:50%;
-  transform:translate(-50%,-50%);
-  width:min(90vw, 400px);
-  aspect-ratio:9 / 16;
-  background:#000;
+/* ─── カーソル追従プレビュー（PC） ─── */
+#preview {
+  position: fixed;
+  display: none;
+  pointer-events: none;
+  z-index: 10000;
 }
 
-/* iframe */
-#modal iframe{
-  width:100%;
-  height:100%;
-  border:none;
+/* ─── 画面下の固定枠（スマホ） ─── */
+#sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: none;
+  z-index: 10000;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
+}
+#sheet.open { display: block; }
+body.sheet-open { padding-bottom: 170px; }
+
+.sheet-inner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 560px;
+  margin: 0 auto;
 }
 
-/* 閉じるボタン */
-#close{
-  position:absolute;
-  top:8px;
-  right:8px;
-  width:36px;
-  height:36px;
-  line-height:36px;
-  text-align:center;
-  font-size:28px;
-  color:#fff;
-  background:rgba(0,0,0,0.5);
-  border-radius:50%;
-  cursor:pointer;
-  z-index:10000;
-}
-  #preview{
-  position:fixed;
-  display:none;
-  pointer-events:none;
-  z-index:10000;
-  background:#000;
-  padding:4px;
-  border:1px solid #444;
+.sheet-deme { flex: none; }
+
+.sheet-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
 }
 
-#preview img{
-  display:block;
-  width:160px;
-  height:auto;
+.sheet-label {
+  font-family: var(--serif);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.sheet-play {
+  display: none;
+  padding: 9px 16px;
+  border: 2px solid var(--accent);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.sheet-play.show { display: inline-block; }
+
+.sheet-close {
+  margin-left: auto;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* ─── 動画モーダル ─── */
+#modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.92);
+  z-index: 10010;
+}
+#modal.open { display: block; }
+
+#modalContent {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%,-50%);
+  width: min(90vw, 400px);
+  aspect-ratio: 9 / 16;
+  max-height: 88vh;
+  background: #000;
+}
+
+#modal iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+#close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 36px;
+  height: 36px;
+  line-height: 34px;
+  text-align: center;
+  font-size: 26px;
+  color: #fff;
+  background: rgba(0,0,0,0.5);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 10011;
+}
+
+/* ─── nav ─── */
+.site-nav {
+  border-top: 1px solid var(--border);
+  margin-top: 30px;
+  padding: 30px 24px 34px;
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.site-nav a {
+  display: inline-block;
+  padding: 12px 30px;
+  border: 2px solid var(--accent);
+  color: var(--text);
+  text-decoration: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  transition: background 0.18s, color 0.18s;
+}
+.site-nav a:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* ─── footer ─── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 26px 24px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  font-family: var(--serif);
+}
+
+@media (max-width: 480px) {
+  :root { --dm-w: 62px; --dm-h: 31px; }
+  .head { margin-top: 24px; margin-bottom: 16px; padding: 0 16px; }
+  .legend { gap: 12px; font-size: 11px; }
+  td { font-size: 10px; padding: 6px 4px; }
 }
 </style>
-
 </head>
+
 <body>
-<div class="wrapper">
-<table>
-<tr>
-<td><a href="#">4-1-1</a></td>
-<td><a href="#">4-2-1</a></td>
-<td><a href="#">4-3-1</a></td>
-<td><a href="#">4-4-1</a></td>
-<td class="gray"><a href="#">4-5-1</a></td>
-<td><a href="#">4-6-1</a></td>
-<td class="gray"><a href="#">4-7-1</a></td>
-<td><a href="https://www.youtube.com/embed/-SiGaF-priM" data-img="../images/4-8-1.png">4-8-1</a></td>
-<td><a href="#">4-9-1</a></td>
-<td><a href="#">4-10-1</a></td>
-<td class="gray"><a href="#">4-11-1</a></td>
-<td class="gray"><a href="#">4-12-1</a></td>
-<td><a href="#">4-13-1</a></td>
-<td><a href="#">4-14-1</a></td>
-<td class="gray"><a href="#">4-15-1</a></td>
-<td><a href="#">4-16-1</a></td>
-<td class="gray"><a href="#">4-17-1</a></td>
-<td><a href="#">4-18-1</a></td>
-<td><a href="https://www.youtube.com/embed/icdwsCOF-CU" data-img="../images/4-19-1.png">4-19-1</a></td>
-<td class="gray"><a href="#">4-20-1</a></td>
-<td class="gray"><a href="#">4-21-1</a></td>
-</tr>
-<tr>
-<td><a href="https://www.youtube.com/embed/2t0NFa2ihog" data-img="../images/4-1-2.png">4-1-2</a></td>
-<td class="gray">4-2-2</a></td>
-<td><a href="https://www.youtube.com/embed/f4qE2GGx41I" data-img="../images/4-3-2.png">4-3-2</a></td>
-<td class="gray">4-4-2</a></td>
-<td><a href="#">4-5-2</a></td>
-<td class="gray">4-6-2</a></td>
-<td><a href="#">4-7-2</a></td>
-<td><a href="https://www.youtube.com/embed/DnussgilkS0" data-img="../images/4-8-2.png">4-8-2</a></td>
-<td><a href="#">4-9-2</a></td>
-<td class="gray">4-10-2</a></td>
-<td class="gray">4-11-2</a></td>
-<td><a href="#">4-12-2</a></td>
-<td><a href="#">4-13-2</a></td>
-<td class="gray">4-14-2</a></td>
-<td><a href="https://www.youtube.com/embed/q4qQT0Ir2bY" data-img="../images/4-15-2.png">4-15-2</a></td>
-<td class="gray">4-16-2</a></td>
-<td><a href="#">4-17-2</a></td>
-<td><a href="https://www.youtube.com/embed/WNUo9DuRfUQ" data-img="../images/4-18-2.png">4-18-2</a></td>
-<td class="gray">4-19-2</a></td>
-<td><a href="#">4-20-2</a></td>
-<td class="gray">4-21-2</a></td>
-</tr>
-<tr>
-<td class="gray">4-1-3</a></td>
-<td><a href="#">4-2-3</a></td>
-<td><a href="#">4-3-3</a></td>
-<td><a href="#">4-4-3</a></td>
-<td class="gray">4-5-3</a></td>
-<td><a href="#">4-6-3</a></td>
-<td><a href="#">4-7-3</a></td>
-<td><a href="#">4-8-3</a></td>
-<td class="gray">4-9-3</a></td>
-<td><a href="#">4-10-3</a></td>
-<td><a href="#">4-11-3</a></td>
-<td><a href="#">4-12-3</a></td>
-<td class="gray">4-13-3</a></td>
-<td><a href="#">4-14-3</a></td>
-<td class="gray">4-15-3</a></td>
-<td><a href="#">4-16-3</a></td>
-<td><a href="#">4-17-3</a></td>
-<td class="gray">4-18-3</a></td>
-<td><a href="#">4-19-3</a></td>
-<td><a href="#">4-20-3</a></td>
-<td class="gray">4-21-3</a></td>
-</tr>
-<tr>
-<td><a href="#">4-1-4</a></td>
-<td><a href="#">4-2-4</a></td>
-<td class="gray">4-3-4</a></td>
-<td><a href="#">4-4-4</a></td>
-<td class="gray">4-5-4</a></td>
-<td><a href="#">4-6-4</a></td>
-<td class="gray">4-7-4</a></td>
-<td><a href="#">4-8-4</a></td>
-<td><a href="#">4-9-4</a></td>
-<td><a href="#">4-10-4</a></td>
-<td><a href="#">4-11-4</a></td>
-<td class="gray">4-12-4</a></td>
-<td><a href="#">4-13-4</a></td>
-<td><a href="#">4-14-4</a></td>
-<td class="gray">4-15-4</a></td>
-<td><a href="https://www.youtube.com/embed/IRM7OVMuoHM" data-img="../images/4-16-4.png">4-16-4</a></td>
-<td class="gray">4-17-4</a></td>
-<td><a href="#">4-18-4</a></td>
-<td><a href="#">4-19-4</a></td>
-<td class="gray">4-20-4</a></td>
-<td class="gray">4-21-4</a></td>
-</tr>
-<tr>
-<td><a href="https://www.youtube.com/embed/mdFMghNZsKY" data-img="../images/4-1-5.png">4-1-5</a></td>
-<td><a href="#">4-2-5</a></td>
-<td><a href="#">4-3-5</a></td>
-<td><a href="#">4-4-5</a></td>
-<td class="gray">4-5-5</a></td>
-<td><a href="https://www.youtube.com/embed/78E_56KAXsw" data-img="../images/4-6-5.png">4-6-5</a></td>
-<td><a href="#">4-7-5</a></td>
-<td><a href="#">4-8-5</a></td>
-<td><a href="#">4-9-5</a></td>
-<td><a href="#">4-10-5</a></td>
-<td><a href="#">4-11-5</a></td>
-<td><a href="#">4-12-5</a></td>
-<td><a href="#">4-13-5</a></td>
-<td><a href="#">4-14-5</a></td>
-<td class="gray">4-15-5</a></td>
-<td><a href="#">4-16-5</a></td>
-<td><a href="#">4-17-5</a></td>
-<td><a href="#">4-18-5</a></td>
-<td><a href="#">4-19-5</a></td>
-<td><a href="#">4-20-5</a></td>
-<td class="gray">4-21-5</a></td>
-</tr>
-<tr>
-<td><a href="https://www.youtube.com/embed/tqywHoEaVh4" data-img="../images/4-1-6.png">4-1-6</a></td>
-<td class="gray">4-2-6</a></td>
-<td><a href="https://www.youtube.com/embed/30D97q2hsjc" data-img="../images/4-3-6.png">4-3-6</a></td>
-<td class="gray">4-4-6</a></td>
-<td><a href="#">4-5-6</a></td>
-<td class="gray">4-6-6</a></td>
-<td><a href="#">4-7-6</a></td>
-<td><a href="#">4-8-6</a></td>
-<td><a href="#">4-9-6</a></td>
-<td class="gray">4-10-6</a></td>
-<td class="gray">4-11-6</a></td>
-<td><a href="#">4-12-6</a></td>
-<td><a href="#">4-13-6</a></td>
-<td class="gray">4-14-6</a></td>
-<td><a href="#">4-15-6</a></td>
-<td class="gray">4-16-6</a></td>
-<td><a href="#">4-17-6</a></td>
-<td><a href="#">4-18-6</a></td>
-<td class="gray">4-19-6</a></td>
-<td><a href="#">4-20-6</a></td>
-<td class="gray">4-21-6</a></td>
-</tr>
-<tr>
-<td class="gray">4-1-7</a></td>
-<td><a href="#">4-2-7</a></td>
-<td><a href="#">4-3-7</a></td>
-<td><a href="#">4-4-7</a></td>
-<td class="gray">4-5-7</a></td>
-<td><a href="#">4-6-7</a></td>
-<td><a href="#">4-7-7</a></td>
-<td><a href="#">4-8-7</a></td>
-<td class="gray">4-9-7</a></td>
-<td><a href="https://www.youtube.com/embed/N9hzO1nSnMA" data-img="../images/4-10-7.png">4-10-7</a></td>
-<td><a href="#">4-11-7</a></td>
-<td><a href="#">4-12-7</a></td>
-<td class="gray">4-13-7</a></td>
-<td><a href="#">4-14-7</a></td>
-<td class="gray">4-15-7</a></td>
-<td><a href="#">4-16-7</a></td>
-<td><a href="#">4-17-7</a></td>
-<td class="gray">4-18-7</a></td>
-<td><a href="#">4-19-7</a></td>
-<td><a href="#">4-20-7</a></td>
-<td class="gray">4-21-7</a></td>
-</tr>
-<tr>
-<td><a href="#">4-1-8</a></td>
-<td><a href="#">4-2-8</a></td>
-<td class="gray">4-3-8</a></td>
-<td><a href="#">4-4-8</a></td>
-<td class="gray">4-5-8</a></td>
-<td><a href="#">4-6-8</a></td>
-<td class="gray">4-7-8</a></td>
-<td><a href="#">4-8-8</a></td>
-<td><a href="#">4-9-8</a></td>
-<td><a href="#">4-10-8</a></td>
-<td><a href="#">4-11-8</a></td>
-<td class="gray">4-12-8</a></td>
-<td><a href="https://www.youtube.com/embed/krFKT36h-iY" data-img="../images/4-13-8.png">4-13-8</a></td>
-<td><a href="#">4-14-8</a></td>
-<td class="gray">4-15-8</a></td>
-<td><a href="#">4-16-8</a></td>
-<td class="gray">4-17-8</a></td>
-<td><a href="#">4-18-8</a></td>
-<td><a href="#">4-19-8</a></td>
-<td class="gray">4-20-8</a></td>
-<td class="gray">4-21-8</a></td>
-</tr>
-<tr>
-<td><a href="#">4-1-9</a></td>
-<td><a href="#">4-2-9</a></td>
-<td><a href="#">4-3-9</a></td>
-<td><a href="#">4-4-9</a></td>
-<td class="gray">4-5-9</a></td>
-<td><a href="#">4-6-9</a></td>
-<td><a href="https://www.youtube.com/embed/vpDnmf3oljg" data-img="../images/4-7-9.png">4-7-9</a></td>
-<td><a href="#">4-8-9</a></td>
-<td><a href="#">4-9-9</a></td>
-<td><a href="#">4-10-9</a></td>
-<td><a href="#">4-11-9</a></td>
-<td><a href="https://www.youtube.com/embed/7dHZ8erxii8" data-img="../images/4-12-9.png">4-12-9</a></td>
-<td><a href="#">4-13-9</a></td>
-<td><a href="https://www.youtube.com/embed/uBBc3dJKGzA" data-img="../images/4-14-9.png">4-14-9</a></td>
-<td class="gray">4-15-9</a></td>
-<td><a href="https://www.youtube.com/embed/FrVPbyIEeOA" data-img="../images/4-16-9.png">4-16-9</a></td>
-<td><a href="#">4-17-9</a></td>
-<td><a href="#">4-18-9</a></td>
-<td><a href="#">4-19-9</a></td>
-<td><a href="#">4-20-9</a></td>
-<td class="gray">4-21-9</a></td>
-</tr>
-<tr>
-<td><a href="#">4-1-10</a></td>
-<td class="gray">4-2-10</a></td>
-<td><a href="#">4-3-10</a></td>
-<td class="gray">4-4-10</a></td>
-<td><a href="#">4-5-10</a></td>
-<td class="gray">4-6-10</a></td>
-<td><a href="#">4-7-10</a></td>
-<td><a href="#">4-8-10</a></td>
-<td><a href="#">4-9-10</a></td>
-<td class="gray">4-10-10</a></td>
-<td class="gray">4-11-10</a></td>
-<td><a href="#">4-12-10</a></td>
-<td><a href="https://www.youtube.com/embed/4J5tUDrdm2U" data-img="../images/4-13-10.png">4-13-10</a></td>
-<td class="gray">4-14-10</a></td>
-<td><a href="#">4-15-10</a></td>
-<td class="gray">4-16-10</a></td>
-<td><a href="#">4-17-10</a></td>
-<td><a href="https://www.youtube.com/embed/GDNa49OHysE" data-img="../images/4-18-10.png">4-18-10</a></td>
-<td class="gray">4-19-10</a></td>
-<td><a href="https://www.youtube.com/embed/JzeVWcc5o9c" data-img="../images/4-20-10.png">4-20-10</a></td>
-<td class="gray">4-21-10</a></td>
-</tr>
-<tr>
-<td><a href="#">4-1-11</a></td>
-<td class="gray">4-2-11</a></td>
-<td><a href="#">4-3-11</a></td>
-<td class="gray">4-4-11</a></td>
-<td class="gray">4-5-11</a></td>
-<td class="gray">4-6-11</a></td>
-<td><a href="#">4-7-11</a></td>
-<td><a href="#">4-8-11</a></td>
-<td><a href="#">4-9-11</a></td>
-<td class="gray">4-10-11</a></td>
-<td class="gray">4-11-11</a></td>
-<td><a href="#">4-12-11</a></td>
-<td><a href="#">4-13-11</a></td>
-<td class="gray">4-14-11</a></td>
-<td class="gray">4-15-11</a></td>
-<td class="gray">4-16-11</a></td>
-<td><a href="#">4-17-11</a></td>
-<td><a href="#">4-18-11</a></td>
-<td class="gray">4-19-11</a></td>
-<td><a href="#">4-20-11</a></td>
-<td class="gray">4-21-11</a></td>
-</tr>
-<tr>
-<td class="gray">4-1-12</a></td>
-<td><a href="https://www.youtube.com/embed/jbT6oif7ySQ" data-img="../images/4-2-12.png">4-2-12</a></td>
-<td class="gray">4-3-12</a></td>
-<td><a href="#">4-4-12</a></td>
-<td class="gray">4-5-12</a></td>
-<td><a href="#">4-6-12</a></td>
-<td class="gray">4-7-12</a></td>
-<td class="gray">4-8-12</a></td>
-<td class="gray">4-9-12</a></td>
-<td class="gray">4-10-12</a></td>
-<td><a href="#">4-11-12</a></td>
-<td class="gray">4-12-12</a></td>
-<td class="gray">4-13-12</a></td>
-<td><a href="#">4-14-12</a></td>
-<td class="gray">4-15-12</a></td>
-<td><a href="#">4-16-12</a></td>
-<td class="gray">4-17-12</a></td>
-<td class="gray">4-18-12</a></td>
-<td><a href="#">4-19-12</a></td>
-<td class="gray">4-20-12</a></td>
-<td class="gray">4-21-12</a></td>
-</tr>
-<tr>
-<td><a href="#">4-1-13</a></td>
-<td><a href="#">4-2-13</a></td>
-<td class="gray">4-3-13</a></td>
-<td><a href="#">4-4-13</a></td>
-<td class="gray">4-5-13</a></td>
-<td><a href="#">4-6-13</a></td>
-<td class="gray">4-7-13</a></td>
-<td><a href="#">4-8-13</a></td>
-<td><a href="https://www.youtube.com/embed/NsRdePAnRZ8" data-img="../images/4-9-13.png">4-9-13</a></td>
-<td><a href="#">4-10-13</a></td>
-<td class="gray">4-11-13</a></td>
-<td><a href="#">4-12-13</a></td>
-<td><a href="https://www.youtube.com/embed/MIlZGCxrcTY" data-img="../images/4-13-13.png">4-13-13</a></td>
-<td><a href="#">4-14-13</a></td>
-<td class="gray">4-15-13</a></td>
-<td><a href="#">4-16-13</a></td>
-<td class="gray">4-17-13</a></td>
-<td><a href="#">4-18-13</a></td>
-<td><a href="#">4-19-13</a></td>
-<td class="gray">4-20-13</a></td>
-<td class="gray">4-21-13</a></td>
-</tr>
-<tr>
-<td><a href="#">4-1-14</a></td>
-<td class="gray">4-2-14</a></td>
-<td><a href="#">4-3-14</a></td>
-<td class="gray">4-4-14</a></td>
-<td><a href="https://www.youtube.com/embed/p-iFwWL5u5A" data-img="../images/4-5-14.png">4-5-14</a></td>
-<td class="gray">4-6-14</a></td>
-<td><a href="#">4-7-14</a></td>
-<td><a href="#">4-8-14</a></td>
-<td><a href="#">4-9-14</a></td>
-<td class="gray">4-10-14</a></td>
-<td class="gray">4-11-14</a></td>
-<td><a href="https://www.youtube.com/embed/u48BT76nLGA" data-img="../images/4-12-14.png">4-12-14</a></td>
-<td><a href="#">4-13-14</a></td>
-<td class="gray">4-14-14</a></td>
-<td><a href="#">4-15-14</a></td>
-<td class="gray">4-16-14</a></td>
-<td><a href="#">4-17-14</a></td>
-<td><a href="https://www.youtube.com/embed/-MltwOzrCtU" data-img="../images/4-18-14.png">4-18-14</a></td>
-<td class="gray">4-19-14</a></td>
-<td><a href="#">4-20-14</a></td>
-<td class="gray">4-21-14</a></td>
-</tr>
-<tr>
-<td class="gray">4-1-15</a></td>
-<td><a href="#">4-2-15</a></td>
-<td><a href="#">4-3-15</a></td>
-<td><a href="#">4-4-15</a></td>
-<td class="gray">4-5-15</a></td>
-<td><a href="#">4-6-15</a></td>
-<td><a href="https://www.youtube.com/embed/0HrO_CjMf4E" data-img="../images/4-7-15.png">4-7-15</a></td>
-<td><a href="#">4-8-15</a></td>
-<td class="gray">4-9-15</a></td>
-<td><a href="#">4-10-15</a></td>
-<td><a href="#">4-11-15</a></td>
-<td><a href="#">4-12-15</a></td>
-<td class="gray">4-13-15</a></td>
-<td><a href="#">4-14-15</a></td>
-<td class="gray">4-15-15</a></td>
-<td><a href="#">4-16-15</a></td>
-<td><a href="https://www.youtube.com/embed/UhYf5tW0RxY" data-img="../images/4-17-15.png">4-17-15</a></td>
-<td class="gray">4-18-15</a></td>
-<td><a href="#">4-19-15</a></td>
-<td><a href="#">4-20-15</a></td>
-<td class="gray">4-21-15</a></td>
-</tr>
-<tr>
-<td><a href="#">4-1-16</a></td>
-<td><a href="#">4-2-16</a></td>
-<td class="gray">4-3-16</a></td>
-<td><a href="#">4-4-16</a></td>
-<td class="gray">4-5-16</a></td>
-<td><a href="#">4-6-16</a></td>
-<td class="gray">4-7-16</a></td>
-<td><a href="#">4-8-16</a></td>
-<td><a href="#">4-9-16</a></td>
-<td><a href="#">4-10-16</a></td>
-<td><a href="#">4-11-16</a></td>
-<td class="gray">4-12-16</a></td>
-<td><a href="#">4-13-16</a></td>
-<td><a href="#">4-14-16</a></td>
-<td class="gray">4-15-16</a></td>
-<td><a href="#">4-16-16</a></td>
-<td class="gray">4-17-16</a></td>
-<td><a href="#">4-18-16</a></td>
-<td><a href="#">4-19-16</a></td>
-<td class="gray">4-20-16</a></td>
-<td class="gray">4-21-16</a></td>
-</tr>
-<tr>
-<td><a href="#">4-1-17</a></td>
-<td><a href="https://www.youtube.com/embed/sJqYwJtcEJU" data-img="../images/4-2-17.png">4-2-17</a></td>
-<td><a href="#">4-3-17</a></td>
-<td><a href="#">4-4-17</a></td>
-<td class="gray">4-5-17</a></td>
-<td><a href="#">4-6-17</a></td>
-<td><a href="#">4-7-17</a></td>
-<td><a href="#">4-8-17</a></td>
-<td><a href="#">4-9-17</a></td>
-<td><a href="#">4-10-17</a></td>
-<td><a href="#">4-11-17</a></td>
-<td><a href="#">4-12-17</a></td>
-<td><a href="#">4-13-17</a></td>
-<td><a href="#">4-14-17</a></td>
-<td class="gray">4-15-17</a></td>
-<td><a href="#">4-16-17</a></td>
-<td><a href="#">4-17-17</a></td>
-<td><a href="#">4-18-17</a></td>
-<td><a href="#">4-19-17</a></td>
-<td><a href="https://www.youtube.com/embed/f6mXE0jeVyY" data-img="../images/4-20-17.png">4-20-17</a></td>
-<td class="gray">4-21-17</a></td>
-</tr>
-<tr>
-<td><a href="#">4-1-18</a></td>
-<td class="gray">4-2-18</a></td>
-<td><a href="#">4-3-18</a></td>
-<td class="gray">4-4-18</a></td>
-<td><a href="#">4-5-18</a></td>
-<td class="gray">4-6-18</a></td>
-<td><a href="#">4-7-18</a></td>
-<td><a href="#">4-8-18</a></td>
-<td><a href="#">4-9-18</a></td>
-<td class="gray">4-10-18</a></td>
-<td class="gray">4-11-18</a></td>
-<td><a href="#">4-12-18</a></td>
-<td><a href="#">4-13-18</a></td>
-<td class="gray">4-14-18</a></td>
-<td><a href="https://www.youtube.com/embed/61IWv9QOSZ8" data-img="../images/4-15-18.png">4-15-18</a></td>
-<td class="gray">4-16-18</a></td>
-<td><a href="#">4-17-18</a></td>
-<td><a href="#">4-18-18</a></td>
-<td class="gray">4-19-18</a></td>
-<td><a href="#">4-20-18</a></td>
-<td class="gray">4-21-18</a></td>
-</tr>
-<tr>
-<td><a href="#">4-1-19</a></td>
-<td><a href="#">4-2-19</a></td>
-<td><a href="#">4-3-19</a></td>
-<td><a href="#">4-4-19</a></td>
-<td class="gray">4-5-19</a></td>
-<td><a href="https://www.youtube.com/embed/RyPZFn4qcgE" data-img="../images/4-6-19.png">4-6-19</a></td>
-<td><a href="#">4-7-19</a></td>
-<td><a href="https://www.youtube.com/embed/m0EsqI-wIL4" data-img="../images/4-8-19.png">4-8-19</a></td>
-<td><a href="https://www.youtube.com/embed/EhHKPTdnMwQ" data-img="../images/4-9-19.png">4-9-19</a></td>
-<td><a href="#">4-10-19</a></td>
-<td><a href="#">4-11-19</a></td>
-<td><a href="#">4-12-19</a></td>
-<td><a href="#">4-13-19</a></td>
-<td><a href="#">4-14-19</a></td>
-<td class="gray">4-15-19</a></td>
-<td><a href="#">4-16-19</a></td>
-<td><a href="https://www.youtube.com/embed/LBDf1uurpKU" data-img="../images/4-17-19.png">4-17-19</a></td>
-<td><a href="#">4-18-19</a></td>
-<td><a href="#">4-19-19</a></td>
-<td><a href="https://www.youtube.com/embed/LvdZAH2fEFA" data-img="../images/4-20-19.png">4-20-19</a></td>
-<td class="gray">4-21-19</a></td>
-</tr>
-<tr>
-<td class="gray">4-1-20</a></td>
-<td class="gray">4-2-20</a></td>
-<td class="gray">4-3-20</a></td>
-<td class="gray">4-4-20</a></td>
-<td class="gray">4-5-20</a></td>
-<td class="gray">4-6-20</a></td>
-<td class="gray">4-7-20</a></td>
-<td class="gray">4-8-20</a></td>
-<td class="gray">4-9-20</a></td>
-<td class="gray">4-10-20</a></td>
-<td class="gray">4-11-20</a></td>
-<td class="gray">4-12-20</a></td>
-<td class="gray">4-13-20</a></td>
-<td class="gray">4-14-20</a></td>
-<td class="gray">4-15-20</a></td>
-<td class="gray">4-16-20</a></td>
-<td class="gray">4-17-20</a></td>
-<td class="gray">4-18-20</a></td>
-<td class="gray">4-19-20</a></td>
-<td class="gray">4-20-20</a></td>
-<td class="gray">4-21-20</a></td>
-</tr>
-<tr>
-<td><a href="#">4-1-21</a></td>
-<td><a href="https://www.youtube.com/embed/JXZn5WN5bnk" data-img="../images/4-2-21.png">4-2-21</a></td>
-<td><a href="https://www.youtube.com/embed/hHU2Ta0MV54" data-img="../images/4-3-21.png">4-3-21</a></td>
-<td><a href="https://www.youtube.com/embed/a0WHYjlJ4z0" data-img="../images/4-4-21.png">4-4-21</a></td>
-<td class="gray">4-5-21</a></td>
-<td><a href="#">4-6-21</a></td>
-<td><a href="#">4-7-21</a></td>
-<td><a href="#">4-8-21</a></td>
-<td><a href="https://www.youtube.com/embed/ybDmsSP5U_M" data-img="../images/4-9-21.png">4-9-21</a></td>
-<td><a href="#">4-10-21</a></td>
-<td><a href="#">4-11-21</a></td>
-<td><a href="#">4-12-21</a></td>
-<td><a href="#">4-13-21</a></td>
-<td><a href="#">4-14-21</a></td>
-<td class="gray">4-15-21</a></td>
-<td><a href="#">4-16-21</a></td>
-<td><a href="#">4-17-21</a></td>
-<td><a href="#">4-18-21</a></td>
-<td><a href="#">4-19-21</a></td>
-<td><a href="#">4-20-21</a></td>
-<td class="gray">4-21-21</a></td>
-</tr>
-</table>
+
+<div class="head">
+  <h1 class="page-title">最速コレクション</h1>
+  <p class="intro">
+    左リール白BAR下段（4番）からの最速目押し。<br>
+    横が中リール、縦が右リールの停止番号です。<br>
+    マスに触れるとその出目が出ます。
+  </p>
 </div>
-  <!-- ここに追加 -->
+
+<div class="legend">
+  <span><i class="sw-plain"></i>通常出目</span>
+  <span><i class="sw-video"></i>動画あり</span>
+  <span><i class="sw-none"></i>対象外</span>
+</div>
+
+<div class="grid-outer">
+  <table id="grid"><tbody id="gridBody"></tbody></table>
+</div>
+
+<nav class="site-nav">
+  <a href="../index.html">index</a>
+  <a href="../hanahana.html">ハナハナ関連</a>
+</nav>
+
+<footer>
+  ©PIONEER CO.,LTD.
+</footer>
+
+<div id="preview"></div>
+
+<div id="sheet">
+  <div class="sheet-inner">
+    <div class="sheet-deme"></div>
+    <div class="sheet-meta">
+      <div class="sheet-label" id="sheetLabel"></div>
+      <button type="button" class="sheet-play" id="sheetPlay">動画を見る</button>
+    </div>
+    <button type="button" class="sheet-close" id="sheetClose" aria-label="閉じる">×</button>
+  </div>
+</div>
+
 <div id="modal">
   <div id="modalContent">
-    <span id="close">×</span>
+    <button type="button" id="close" aria-label="閉じる">×</button>
     <iframe id="player" allow="autoplay; encrypted-media" allowfullscreen></iframe>
   </div>
 </div>
 
-<div id="preview">
-  <img id="previewImg" src="">
-</div>
-
 <script>
-const modal = document.getElementById("modal");
-const player = document.getElementById("player");
-const close = document.getElementById("close");
+/* ============================================================
+   リール配列（hanahana/uketsuke.html・quiz/reels.json と同じ。
+   index0 が1番、番号のプラス方向に回転し21番の次は1番）
+   ============================================================ */
+var REELS = {
+  left: ['hibiscus','cherry','whiteBAR','replay','bell','suika','white7',
+         'suika','replay','bell','hibiscus','cherry','pinkBAR','replay',
+         'bell','suika','replay','bell','pink7','replay','bell'],
+  middle: ['replay','cherry','bell','hana','replay','hana','bell','replay',
+           'suika','white7','cherry','bell','replay','hana','bell','hana',
+           'suika','replay','pink7','bell','suika'],
+  right: ['bell','replay','cherry','suika','bell','replay','cherry','suika',
+          'bell','replay','white7','whiteBAR','bell','replay','cherry',
+          'suika','bell','replay','pink7','cherry','pinkBAR']
+};
 
-const preview = document.getElementById("preview");
-const previewImg = document.getElementById("previewImg");
+var CELLS    = 21;
+var IMG_DIR  = '../quiz/images/';
+var LEFT_NUM = 4;          /* 左リールの停止番号（白BARが下段に来る位置） */
 
-document.querySelectorAll("td a").forEach(link=>{
-  const url = link.getAttribute("href");
-  const img = link.getAttribute("data-img");
+/* 対象外のマス（リーチ目・出現しない出目）。
+   キーが中リールの番号、値がその列で対象外になる右リールの番号 */
+var NONE = {
+  1: [3,7,12,15,20],
+  2: [2,6,10,11,14,18,20],
+  3: [4,8,12,13,16,20],
+  4: [2,6,10,11,14,18,20],
+  5: [1,3,4,5,7,8,9,11,12,13,15,16,17,19,20,21],
+  6: [2,6,10,11,14,18,20],
+  7: [1,4,8,12,13,16,20],
+  8: [12,20],
+  9: [3,7,12,15,20],
+  10: [2,6,10,11,12,14,18,20],
+  11: [1,2,6,10,11,13,14,18,20],
+  12: [1,4,8,12,16,20],
+  13: [3,7,12,15,20],
+  14: [2,6,10,11,14,18,20],
+  15: [1,3,4,5,7,8,9,11,12,13,15,16,17,19,20,21],
+  16: [2,6,10,11,14,18,20],
+  17: [1,4,8,12,13,16,20],
+  18: [3,7,12,15,20],
+  19: [2,6,10,11,14,18,20],
+  20: [1,4,8,12,13,16,20],
+  21: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21]
+};
 
-  if(url && url !== "#"){
-    link.parentElement.classList.add("active");
-  }
+/* 動画。キーは「左-中-右」、値は YouTube の動画ID */
+var VIDEOS = {
+  '4-1-2': '2t0NFa2ihog',
+  '4-1-5': 'mdFMghNZsKY',
+  '4-1-6': 'tqywHoEaVh4',
+  '4-2-12': 'jbT6oif7ySQ',
+  '4-2-17': 'sJqYwJtcEJU',
+  '4-2-21': 'JXZn5WN5bnk',
+  '4-3-2': 'f4qE2GGx41I',
+  '4-3-6': '30D97q2hsjc',
+  '4-3-21': 'hHU2Ta0MV54',
+  '4-4-21': 'a0WHYjlJ4z0',
+  '4-5-14': 'p-iFwWL5u5A',
+  '4-6-5': '78E_56KAXsw',
+  '4-6-19': 'RyPZFn4qcgE',
+  '4-7-9': 'vpDnmf3oljg',
+  '4-7-15': '0HrO_CjMf4E',
+  '4-8-1': '-SiGaF-priM',
+  '4-8-2': 'DnussgilkS0',
+  '4-8-19': 'm0EsqI-wIL4',
+  '4-9-13': 'NsRdePAnRZ8',
+  '4-9-19': 'EhHKPTdnMwQ',
+  '4-9-21': 'ybDmsSP5U_M',
+  '4-10-7': 'N9hzO1nSnMA',
+  '4-12-9': '7dHZ8erxii8',
+  '4-12-14': 'u48BT76nLGA',
+  '4-13-8': 'krFKT36h-iY',
+  '4-13-10': '4J5tUDrdm2U',
+  '4-13-13': 'MIlZGCxrcTY',
+  '4-14-9': 'uBBc3dJKGzA',
+  '4-15-2': 'q4qQT0Ir2bY',
+  '4-15-18': '61IWv9QOSZ8',
+  '4-16-4': 'IRM7OVMuoHM',
+  '4-16-9': 'FrVPbyIEeOA',
+  '4-17-15': 'UhYf5tW0RxY',
+  '4-17-19': 'LBDf1uurpKU',
+  '4-18-2': 'WNUo9DuRfUQ',
+  '4-18-10': 'GDNa49OHysE',
+  '4-18-14': '-MltwOzrCtU',
+  '4-19-1': 'icdwsCOF-CU',
+  '4-20-10': 'JzeVWcc5o9c',
+  '4-20-17': 'f6mXE0jeVyY',
+  '4-20-19': 'LvdZAH2fEFA'
+};
 
-  link.addEventListener("click",function(e){
-    if(!url || url === "#") return;
+/* ---------- 出目の取り出し ---------- */
 
-    e.preventDefault();
-    player.src = url;
-    modal.style.display = "block";
-  });
-
-  if(img){
-    link.addEventListener("mouseenter",function(){
-      previewImg.src = img;
-      preview.style.display = "block";
-    });
-
-    link.addEventListener("mousemove",function(e){
-      const offset = 15;
-      const previewWidth = preview.offsetWidth;
-      const previewHeight = preview.offsetHeight;
-      const windowWidth = window.innerWidth;
-      const windowHeight = window.innerHeight;
-
-      let left = e.clientX + offset;
-      let top = e.clientY + offset;
-
-      if(left + previewWidth > windowWidth){
-        left = e.clientX - previewWidth - offset;
-      }
-
-      if(top + previewHeight > windowHeight){
-        top = e.clientY - previewHeight - offset;
-      }
-
-      if(left < 0){
-        left = 0;
-      }
-
-      if(top < 0){
-        top = 0;
-      }
-
-      preview.style.left = left + "px";
-      preview.style.top = top + "px";
-    });
-
-    link.addEventListener("mouseleave",function(){
-      preview.style.display = "none";
-      previewImg.src = "";
-    });
-  }
-});
-
-function closeModal(){
-  modal.style.display = "none";
-  player.src = "";
+function wrapNum(n) {
+  return ((n - 1) % CELLS + CELLS) % CELLS + 1;
 }
 
-close.onclick = closeModal;
+/* 停止番号 S のときの窓の中身。上段・中段・下段の順。
+   中段が S、上段が S+1、下段が S-1 */
+function windowOf(reel, S) {
+  var a = REELS[reel];
+  return [a[wrapNum(S + 1) - 1], a[wrapNum(S) - 1], a[wrapNum(S - 1) - 1]];
+}
 
-modal.addEventListener("click",function(e){
-  if(e.target === modal){
-    closeModal();
+function isNone(m, r) {
+  var col = NONE[m];
+  return !!col && col.indexOf(r) >= 0;
+}
+
+/* ---------- 出目の組み立て ---------- */
+
+function makeDeme(host) {
+  var box = document.createElement('div');
+  box.className = 'deme';
+  var imgs = [];
+  for (var i = 0; i < 9; i++) {
+    var im = document.createElement('img');
+    im.alt = '';
+    im.draggable = false;
+    box.appendChild(im);
+    imgs.push(im);
+  }
+  host.appendChild(box);
+  return imgs;
+}
+
+function drawDeme(imgs, m, r) {
+  var cols = [windowOf('left', LEFT_NUM), windowOf('middle', m), windowOf('right', r)];
+  for (var row = 0; row < 3; row++) {
+    for (var col = 0; col < 3; col++) {
+      imgs[row * 3 + col].src = IMG_DIR + cols[col][row] + '.png';
+    }
+  }
+}
+
+/* 図柄は10種類しかないので、先に読み込んでおく */
+(function preload() {
+  var seen = {};
+  ['left','middle','right'].forEach(function (k) {
+    REELS[k].forEach(function (n) {
+      if (seen[n]) return;
+      seen[n] = 1;
+      var i = new Image();
+      i.src = IMG_DIR + n + '.png';
+    });
+  });
+})();
+
+/* ---------- 表の組み立て ---------- */
+
+var body = document.getElementById('gridBody');
+
+for (var r = 1; r <= CELLS; r++) {
+  var tr = document.createElement('tr');
+  for (var m = 1; m <= CELLS; m++) {
+    var label = LEFT_NUM + '-' + m + '-' + r;
+    var td = document.createElement('td');
+
+    if (isNone(m, r)) {
+      td.className = 'none';
+      td.textContent = label;
+    } else {
+      var vid = VIDEOS[label];
+      td.className = vid ? 'cell video' : 'cell';
+      td.dataset.m = m;
+      td.dataset.r = r;
+      td.dataset.label = label;
+      if (vid) {
+        td.dataset.vid = vid;
+        var a = document.createElement('a');
+        a.href = 'https://www.youtube.com/watch?v=' + vid;
+        a.textContent = label;
+        td.appendChild(a);
+      } else {
+        td.textContent = label;
+      }
+    }
+    tr.appendChild(td);
+  }
+  body.appendChild(tr);
+}
+
+/* ---------- カーソル追従プレビュー（PC） ---------- */
+
+var preview     = document.getElementById('preview');
+var previewImgs = makeDeme(preview);
+var hoverCell   = null;
+
+function showPreview(td) {
+  if (hoverCell === td) return;
+  hoverCell = td;
+  drawDeme(previewImgs, +td.dataset.m, +td.dataset.r);
+  preview.style.display = 'block';
+}
+
+function hidePreview() {
+  hoverCell = null;
+  preview.style.display = 'none';
+}
+
+function movePreview(e) {
+  var offset = 16;
+  var w = preview.offsetWidth;
+  var h = preview.offsetHeight;
+  var left = e.clientX + offset;
+  var top  = e.clientY + offset;
+
+  if (left + w > window.innerWidth)  left = e.clientX - w - offset;
+  if (top  + h > window.innerHeight) top  = e.clientY - h - offset;
+  if (left < 0) left = 0;
+  if (top  < 0) top  = 0;
+
+  preview.style.left = left + 'px';
+  preview.style.top  = top + 'px';
+}
+
+/* ---------- 画面下の固定枠（スマホ） ---------- */
+
+var sheet      = document.getElementById('sheet');
+var sheetImgs  = makeDeme(sheet.querySelector('.sheet-deme'));
+var sheetLabel = document.getElementById('sheetLabel');
+var sheetPlay  = document.getElementById('sheetPlay');
+var sheetCell  = null;
+
+function showSheet(td) {
+  sheetCell = td;
+  drawDeme(sheetImgs, +td.dataset.m, +td.dataset.r);
+  sheetLabel.textContent = td.dataset.label;
+  sheetPlay.className = td.dataset.vid ? 'sheet-play show' : 'sheet-play';
+  sheet.classList.add('open');
+  document.body.classList.add('sheet-open');
+  markOn(td);
+}
+
+function hideSheet() {
+  sheet.classList.remove('open');
+  document.body.classList.remove('sheet-open');
+  sheetCell = null;
+  markOn(null);
+}
+
+var onCell = null;
+function markOn(td) {
+  if (onCell) onCell.classList.remove('on');
+  onCell = td;
+  if (td) td.classList.add('on');
+}
+
+/* ---------- 動画モーダル ---------- */
+
+var modal  = document.getElementById('modal');
+var player = document.getElementById('player');
+
+function openModal(vid) {
+  player.src = 'https://www.youtube.com/embed/' + vid;
+  modal.classList.add('open');
+}
+
+function closeModal() {
+  modal.classList.remove('open');
+  player.src = '';
+}
+
+document.getElementById('close').addEventListener('click', closeModal);
+modal.addEventListener('click', function (e) {
+  if (e.target === modal) closeModal();
+});
+document.addEventListener('keydown', function (e) {
+  if (e.key !== 'Escape') return;
+  if (modal.classList.contains('open')) closeModal();
+  else if (sheet.classList.contains('open')) hideSheet();
+});
+
+/* ---------- 操作の振り分け ---------- */
+
+/* マウスなら追従プレビュー、指なら画面下の固定枠 */
+var lastPointer = 'mouse';
+document.addEventListener('pointerdown', function (e) {
+  lastPointer = e.pointerType || 'mouse';
+}, true);
+
+var table = document.getElementById('grid');
+
+table.addEventListener('pointerover', function (e) {
+  if (e.pointerType && e.pointerType !== 'mouse') return;
+  var td = e.target.closest('td.cell');
+  if (td) showPreview(td); else hidePreview();
+});
+
+table.addEventListener('pointermove', function (e) {
+  if (e.pointerType && e.pointerType !== 'mouse') return;
+  if (hoverCell) movePreview(e);
+});
+
+table.addEventListener('pointerleave', hidePreview);
+window.addEventListener('scroll', hidePreview, true);
+
+table.addEventListener('click', function (e) {
+  var td = e.target.closest('td.cell');
+  if (!td) return;
+  if (e.metaKey || e.ctrlKey || e.shiftKey) return;   /* 別タブで開くのは妨げない */
+  e.preventDefault();
+
+  if (lastPointer === 'mouse') {
+    if (td.dataset.vid) openModal(td.dataset.vid);
+  } else {
+    hidePreview();
+    showSheet(td);
   }
 });
+
+sheetPlay.addEventListener('click', function () {
+  if (sheetCell && sheetCell.dataset.vid) openModal(sheetCell.dataset.vid);
+});
+document.getElementById('sheetClose').addEventListener('click', hideSheet);
 </script>
+
 </body>
 </html>
