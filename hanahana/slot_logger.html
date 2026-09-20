@@ -425,6 +425,15 @@ function stamp(){
   var d = new Date();
   return '' + d.getFullYear() + pad2(d.getMonth()+1) + pad2(d.getDate()) + '_' + pad2(d.getHours()) + pad2(d.getMinutes());
 }
+/* ファイル名に使えない文字を除いた店名（画像の見出し） */
+function fnameSafe(s){
+  return String(s == null ? '' : s).replace(/[\\\/:*?"<>|\x00-\x1f]/g, '').replace(/^[.\s]+|[.\s]+$/g, '');
+}
+/* 店名が入力されていれば、ファイル名の頭に付ける */
+function withStore(base){
+  var t = fnameSafe(state.title);
+  return t ? (t + '_' + base) : base;
+}
 
 /* ---- row factory / normalise ---- */
 function fix5(a){
@@ -1099,7 +1108,7 @@ function downloadBlob(blob, name){
 
 function exportJSON(){
   var blob = new Blob([JSON.stringify(state, null, 1)], { type:'application/json' });
-  downloadBlob(blob, 'slot_data_' + stamp() + '.json');
+  downloadBlob(blob, withStore('slot_data_' + stamp() + '.json'));
   flashSaved();
 }
 
@@ -1243,7 +1252,7 @@ function exportImage(){
     ctx.beginPath(); ctx.moveTo(padX, Math.round(hy)+0.5); ctx.lineTo(padX+tableW, Math.round(hy)+0.5); ctx.stroke();
   }
 
-  var fname = 'slot_' + (state.active==='front'?'omote':'ura') + '_' + stamp() + '.png';
+  var fname = withStore('slot_' + (state.active==='front'?'omote':'ura') + '_' + stamp() + '.png');
 
   // Prefer the native share sheet (iOS: tap "画像を保存" -> saves to Photos / フォト).
   // Build the file synchronously so the tap's user-activation is still valid when share() is called.
