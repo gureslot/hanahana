@@ -32,21 +32,10 @@ body {
   font-family: var(--sans);
 }
 
-/* ─── header image ─── */
-.site-header { padding: 24px 24px 0; }
-.site-header img {
-  width: 100%;
-  max-width: 1200px;
-  height: auto;
-  display: block;
-  margin: 0 auto;
-  border-radius: 14px;
-}
-
 /* ─── page title ─── */
 .page-head {
   max-width: 1200px;
-  margin: 48px auto 0;
+  margin: 56px auto 0;
   padding: 0 24px;
 }
 .page-eyebrow {
@@ -103,6 +92,31 @@ body {
   border: 1px solid var(--border);
   background: var(--surface);
 }
+
+/* 拡大できる画像（メニューなど、字を読む必要があるもの）。
+   別タブで元画像を開くので、端末側のピンチ拡大・スクロールがそのまま使える */
+.shot-zoom {
+  display: block;
+  position: relative;
+  cursor: zoom-in;
+}
+.shot-zoom::after {
+  content: '拡大';
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  font-family: var(--serif);
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--text);
+  background: rgba(8, 8, 8, .74);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 5px 13px;
+  opacity: .9;
+  transition: background 0.18s, opacity 0.18s;
+}
+.shot-zoom:hover::after { background: var(--accent); opacity: 1; }
 
 /* 動画: 押されるまでYouTubeを読み込まない */
 .video-frame {
@@ -361,13 +375,10 @@ footer {
   .video-frame.is-short { max-width: 100%; }
 }
 @media (max-width: 768px) {
-  .site-header { padding: 18px 18px 0; }
-  .page-head { margin-top: 36px; }
+  .page-head { margin-top: 40px; }
   .page-title { font-size: 25px; }
 }
 @media (max-width: 480px) {
-  .site-header { padding: 12px 12px 0; }
-  .site-header img { border-radius: 10px; }
   .page-head, .container { padding: 0 14px; }
   .container { gap: 24px; }
   .media { gap: 20px; }
@@ -377,10 +388,6 @@ footer {
 </head>
 
 <body>
-
-<header class="site-header">
-  <img src="../header.jpg" alt="グレイト・プレ・善太のハナハナサイト">
-</header>
 
 <div class="page-head">
   <p class="page-eyebrow">FUKUOKA SARA-UDON MAP</p>
@@ -461,6 +468,8 @@ footer {
 
    画像は saraudon/images/ に置く。
    ファイルがまだ無いパスを書いても、その枠が消えるだけで崩れない。
+   メニューの画像には「拡大」が付き、押すと別タブで元画像が開く。
+   対象を増やすときは、下の ZOOMABLE に項目名を足す。
    このファイルをコピーして店舗ごとのHTMLを作る。
    ファイル名は index.html の SHOPS に書いた id と揃える。
    ================================================================== */
@@ -507,6 +516,8 @@ const SHOP = {
   const SITE  = '福岡やわ麺皿うどんMAP';
   const LABEL = { gaikan: '外観', menu: 'メニュー', ryori: '料理' };
   const ORDER = ['gaikan', 'menu', 'ryori'];
+  /* 別タブで元画像を開けるようにするもの。外観や料理も対象にしたければここに足す */
+  const ZOOMABLE = ['menu'];
 
   /* --- 見出しとタイトル --- */
   const name = (SHOP.name || '').trim();
@@ -538,7 +549,20 @@ const SHOP = {
     });
 
     box.appendChild(cap);
-    box.appendChild(img);
+
+    if (ZOOMABLE.indexOf(key) >= 0) {
+      const zoom = document.createElement('a');
+      zoom.className = 'shot-zoom';
+      zoom.href = src;
+      zoom.target = '_blank';
+      zoom.rel = 'noopener';
+      zoom.setAttribute('aria-label', LABEL[key] + 'を拡大表示');
+      zoom.appendChild(img);
+      box.appendChild(zoom);
+    } else {
+      box.appendChild(img);
+    }
+
     media.appendChild(box);
   });
 
