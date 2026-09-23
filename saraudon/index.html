@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>福岡やわ麺皿うどんMAP | グレイト・プレ・善太</title>
+<meta name="description" content="福岡県内のやわ麺皿うどんが食べられる店を、地図と一覧でまとめています。">
+
+<link rel="icon" type="image/png" sizes="32x32" href="../icon_32x32.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --accent:    #ff2a6d;
+  --bg:        #080808;
+  --surface:   #111111;
+  --surface-2: #171717;
+  --border:    #1e1e1e;
+  --text:      #e0dbd5;
+  --muted:     #5e5e5e;
+  --serif:     'Noto Serif JP', 'YuMincho', '游明朝', serif;
+  --sans:      'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+
+  --land:      #141414;
+  --land-line: #242424;
+  --coast:     #3a3a3a;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+}
+
+/* ─── header image ─── */
+.site-header { padding: 24px 24px 0; }
+.site-header img {
+  width: 100%;
+  max-width: 1200px;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+  border-radius: 14px;
+}
+
+/* ─── page title ─── */
+.page-head {
+  max-width: 1200px;
+  margin: 48px auto 0;
+  padding: 0 24px;
+}
+.page-eyebrow {
+  font-family: var(--serif);
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+.page-title {
+  font-family: var(--serif);
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  line-height: 1.3;
+}
+
+/* ─── 2-column layout ─── */
+.container {
+  display: flex;
+  max-width: 1200px;
+  margin: 32px auto 80px;
+  padding: 0 24px;
+  gap: 32px;
+  align-items: flex-start;
+}
+.left  { width: 58%; flex-shrink: 0; position: sticky; top: 24px; }
+.right { width: 42%; }
+
+.section-label {
+  font-family: var(--serif);
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin: 0 0 18px 0;
+}
+
+/* ─── map (left) ─── */
+.map-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+}
+#map {
+  width: 100%;
+  height: auto;
+  display: block;
+  max-height: calc(100vh - 150px);
+}
+
+.mp-city {
+  fill: var(--land);
+  stroke: var(--land-line);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.mp-outline {
+  fill: none;
+  stroke: var(--coast);
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+.mp-hit { fill: transparent; cursor: pointer; }
+.mp-dot {
+  fill: var(--accent);
+  stroke: var(--bg);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+.pt.is-active .mp-ring { opacity: 1; }
+.mp-ring {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.4;
+  vector-effect: non-scaling-stroke;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.14s ease;
+}
+
+.map-empty {
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+  padding: 14px 0 2px;
+}
+
+/* ─── list (right) ─── */
+.list-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 26px 26px 20px;
+}
+
+.sortbar {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  align-items: baseline;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+.sortbar-label {
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--muted);
+  font-family: var(--serif);
+}
+.sort-opt {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--serif);
+  font-size: 14px;
+  color: var(--muted);
+  cursor: pointer;
+  letter-spacing: 1px;
+  border-bottom: 1px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+}
+.sort-opt:hover { color: var(--text); }
+.sort-opt[aria-pressed="true"] {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.shop-list { list-style: none; }
+.shop-row {
+  display: grid;
+  grid-template-columns: 1fr auto 2.4em;
+  gap: 14px;
+  align-items: baseline;
+  padding: 14px 8px 14px 10px;
+  border-bottom: 1px solid var(--border);
+  border-left: 2px solid transparent;
+  text-decoration: none;
+  color: var(--text);
+  transition: background 0.15s, border-left-color 0.15s;
+}
+.shop-row:hover,
+.shop-row.is-active {
+  background: var(--surface-2);
+  border-left-color: var(--accent);
+}
+.shop-list li:last-child .shop-row { border-bottom: none; }
+
+.row-name {
+  font-family: var(--serif);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+.row-city { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.row-fav {
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  color: var(--accent);
+  text-align: right;
+}
+
+.list-empty {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.9;
+  padding: 24px 2px;
+}
+
+/* ─── hover thumbnail ─── */
+.thumb {
+  position: fixed;
+  z-index: 60;
+  width: 220px;
+  background: var(--surface);
+  border: 1px solid #2c2c2c;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, .6);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.thumb.is-open { opacity: 1; }
+.thumb.is-touch { pointer-events: auto; }
+.thumb img {
+  width: 100%;
+  height: 132px;
+  object-fit: cover;
+  display: block;
+  background: var(--surface-2);
+}
+.thumb-body { padding: 12px 14px 13px; }
+.thumb-name {
+  font-family: var(--serif);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.45;
+  color: var(--text);
+}
+.thumb-meta {
+  margin-top: 5px;
+  font-size: 11px;
+  color: var(--muted);
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+.thumb-fav { font-family: 'Courier New', monospace; color: var(--accent); }
+
+/* ─── footer ─── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 28px 24px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  font-family: var(--serif);
+  line-height: 2;
+}
+footer a { color: var(--muted); }
+.credit { font-size: 11px; letter-spacing: 0.04em; }
+
+.site-nav {
+  padding: 4px 24px 0;
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.site-nav a {
+  display: inline-block;
+  padding: 12px 30px;
+  border: 2px solid var(--accent);
+  color: var(--text);
+  text-decoration: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  transition: background 0.15s;
+}
+.site-nav a:hover { background: var(--accent); }
+
+/* ─── responsive ─── */
+@media (max-width: 900px) {
+  .container { flex-direction: column; margin-top: 24px; }
+  .left, .right { width: 100%; }
+  .left { max-width: 560px; margin: 0 auto; position: static; }
+  #map { max-height: none; }
+}
+@media (max-width: 768px) {
+  .site-header { padding: 18px 18px 0; }
+  .page-head { margin-top: 36px; }
+  .page-title { font-size: 25px; }
+}
+@media (max-width: 480px) {
+  .site-header { padding: 12px 12px 0; }
+  .site-header img { border-radius: 10px; }
+  .page-head, .container { padding: 0 14px; }
+  .container { gap: 24px; }
+  .map-panel { padding: 12px; }
+  .list-panel { padding: 20px 18px 16px; }
+  .row-name { font-size: 15px; }
+}
+</style>
+</head>
+
+<body>
+
+<header class="site-header">
+  <img src="../header.jpg" alt="グレイト・プレ・善太のハナハナサイト">
+</header>
+
+<div class="page-head">
+  <p class="page-eyebrow">FUKUOKA SARA-UDON MAP</p>
+  <h1 class="page-title">福岡やわ麺皿うどんMAP</h1>
+</div>
+
+<div class="container">
+
+  <!-- LEFT: 地図 -->
+  <div class="left">
+    <p class="section-label">地図</p>
+    <div class="map-panel">
+      <svg id="map" role="img" aria-label="福岡県の地図。掲載店舗の位置を示しています。">
+        <g id="mp-cities"></g>
+        <path id="mp-outline" class="mp-outline"></path>
+        <g id="mp-points"></g>
+      </svg>
+      <p class="map-empty" id="map-empty" hidden>掲載店舗はまだありません。</p>
+    </div>
+  </div>
+
+  <!-- RIGHT: 一覧 -->
+  <div class="right">
+    <p class="section-label">店舗一覧</p>
+    <div class="list-panel">
+      <div class="sortbar">
+        <span class="sortbar-label">並び替え</span>
+        <button class="sort-opt" type="button" data-sort="fav"  aria-pressed="true">好み度</button>
+        <button class="sort-opt" type="button" data-sort="name" aria-pressed="false">店舗名</button>
+        <button class="sort-opt" type="button" data-sort="city" aria-pressed="false">市町村</button>
+      </div>
+      <ul class="shop-list" id="shop-list"></ul>
+      <p class="list-empty" id="list-empty" hidden>
+        掲載店舗はまだありません。
+      </p>
+    </div>
+  </div>
+
+</div>
+
+<!-- カーソル追従サムネイル -->
+<div class="thumb" id="thumb" aria-hidden="true">
+  <img id="thumb-img" alt="">
+  <div class="thumb-body">
+    <p class="thumb-name" id="thumb-name"></p>
+    <p class="thumb-meta">
+      <span id="thumb-city"></span>
+      <span class="thumb-fav" id="thumb-fav"></span>
+    </p>
+  </div>
+</div>
+
+<nav class="site-nav">
+  <a href="../index.html">index</a>
+</nav>
+
+<footer>
+  <p class="credit">この地図は「国土数値情報（行政区域データ）」（国土交通省）を加工して作成</p>
+  <p>© グレイト・プレ・善太</p>
+</footer>
+
+<script src="map_fukuoka.js"></script>
+<script>
+/* ==================================================================
+   店舗データ
+
+   id    : 個別ページのファイル名（拡張子なし）。半角英数字とハイフン
+   name  : 店舗名
+   kana  : 読み（ひらがな）。店舗名の50音順ソートに使う
+   city  : 市区町村名。地図データのlabelと同じ表記にする
+           例) 福岡市博多区 / 久留米市 / 糟屋郡粕屋町
+   lat   : 緯度（Googleマップで右クリック→座標をコピー）
+   lng   : 経度
+   fav   : 個人的好み度。1〜5の整数
+   thumb : 地図ホバー時に出すサムネイル画像のパス。店舗外観の写真を使う
+
+   例)
+   { id:'aaa-shokudo', name:'○○食堂', kana:'まるまるしょくどう',
+     city:'福岡市博多区', lat:33.5902, lng:130.4017, fav:4,
+     thumb:'images/aaa-shokudo-gaikan.jpg' },
+
+   個別ページは index.html と同じ階層に置くため、id に index および
+   map_fukuoka は使わない（ファイル名が衝突する）。
+   ================================================================== */
+const SHOPS = [
+  { id:'yamakasa', name:'居酒屋山笠', kana:'いざかややまかさ', city:'福岡市博多区',
+    lat:33.562706, lng:130.460297, fav:5, thumb:'images/yamakasa-thumb.jpg' },
+];
+
+/* 個別ページの置き場所（index.html から見た相対パス）。
+   同じ階層に置くので空文字。 */
+const SHOP_DIR = '';
+
+/* ================================================================== */
+(function () {
+  'use strict';
+
+  const NS   = 'http://www.w3.org/2000/svg';
+  const M    = FUKUOKA_MAP;
+  const P    = M.proj;
+  const svg  = document.getElementById('map');
+  const elCities  = document.getElementById('mp-cities');
+  const elOutline = document.getElementById('mp-outline');
+  const elPoints  = document.getElementById('mp-points');
+  const elList    = document.getElementById('shop-list');
+  const thumb     = document.getElementById('thumb');
+
+  const canHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+  /* --- 緯度経度 -> SVG座標（Webメルカトル） --- */
+  function project(lat, lng) {
+    const x = lng * Math.PI / 180;
+    const y = Math.log(Math.tan(Math.PI / 4 + lat * Math.PI / 360));
+    return [(x - P.minX) * P.scale + P.pad, (P.maxY - y) * P.scale + P.pad];
+  }
+
+  /* --- 地図の下地を描く --- */
+  svg.setAttribute('viewBox', M.viewBox);
+  const frag = document.createDocumentFragment();
+  M.cities.forEach(function (c) {
+    const p = document.createElementNS(NS, 'path');
+    p.setAttribute('class', 'mp-city');
+    p.setAttribute('d', c.d);
+    frag.appendChild(p);
+  });
+  elCities.appendChild(frag);
+  elOutline.setAttribute('d', M.outline);
+
+  /* --- 店舗が無いときは一覧・地図に空状態を出して終わり --- */
+  if (!SHOPS.length) {
+    document.getElementById('list-empty').hidden = false;
+    document.getElementById('map-empty').hidden = false;
+    document.querySelector('.sortbar').hidden = true;
+    return;
+  }
+
+  const hrefOf = function (s) { return SHOP_DIR + s.id + '.html'; };
+
+  /* --- ポイントを置く --- */
+  /* 点の拡大はCSSの r ではなく属性で行う（iOS Safariの対応が不確実なため） */
+  const DOT_R = 9, DOT_R_ON = 13;
+  let current = null;   // 選択中の店舗id
+
+  const nodes = {};   // id -> { pt, hit, dot, row, gap, baseR }
+  const xyOf = {};
+  SHOPS.forEach(function (s) {
+    const xy = project(s.lat, s.lng);
+    xyOf[s.id] = xy;
+
+    const a = document.createElementNS(NS, 'a');
+    a.setAttributeNS('http://www.w3.org/1999/xlink', 'href', hrefOf(s));
+    a.setAttribute('href', hrefOf(s));
+    a.setAttribute('class', 'pt');
+    a.dataset.id = s.id;
+
+    const ring = document.createElementNS(NS, 'circle');
+    ring.setAttribute('class', 'mp-ring');
+    ring.setAttribute('cx', xy[0]); ring.setAttribute('cy', xy[1]);
+    ring.setAttribute('r', 20);
+
+    const dot = document.createElementNS(NS, 'circle');
+    dot.setAttribute('class', 'mp-dot');
+    dot.setAttribute('cx', xy[0]); dot.setAttribute('cy', xy[1]);
+    dot.setAttribute('r', DOT_R);
+
+    const hit = document.createElementNS(NS, 'circle');
+    hit.setAttribute('class', 'mp-hit');
+    hit.setAttribute('cx', xy[0]); hit.setAttribute('cy', xy[1]);
+    hit.setAttribute('r', 24);
+
+    const title = document.createElementNS(NS, 'title');
+    title.textContent = s.name + '（' + s.city + '）';
+
+    a.appendChild(title); a.appendChild(ring); a.appendChild(dot); a.appendChild(hit);
+    elPoints.appendChild(a);
+    nodes[s.id] = { pt: a, hit: hit, dot: dot, row: null };
+  });
+
+  /* --- 最寄りの点との距離を測っておく ---
+     タップ領域を実寸で確保しようとすると、画面が小さいほど地図上では
+     広い範囲を覆う。隣の店に重なると手前の点がリンクを奪ってしまうため、
+     最寄りの点との中間を上限にする。 */
+  SHOPS.forEach(function (s) {
+    let gap = Infinity;
+    SHOPS.forEach(function (o) {
+      if (o.id === s.id) return;
+      const dx = xyOf[s.id][0] - xyOf[o.id][0];
+      const dy = xyOf[s.id][1] - xyOf[o.id][1];
+      gap = Math.min(gap, Math.sqrt(dx * dx + dy * dy));
+    });
+    nodes[s.id].gap = gap;
+  });
+
+  /* --- 点の大きさと当たり判定を決める ---
+     当たり判定は実寸22px相当を狙うが、上限は最寄りの点との中間まで。
+     点の見た目も同じ上限に従うので、密集した場所では点が小さくなり、
+     見えている大きさと押せる範囲が食い違わない。 */
+  function sizeHits() {
+    const rect = svg.getBoundingClientRect();
+    if (!rect.width) return;
+    const want = 22 * (M.width / rect.width);
+    SHOPS.forEach(function (s) {
+      const n   = nodes[s.id];
+      const lim = n.gap / 2;
+      n.baseR = Math.max(4, Math.min(DOT_R, lim));
+      n.hit.setAttribute('r', Math.max(4, Math.min(want, lim)));
+      if (current !== s.id) n.dot.setAttribute('r', n.baseR);
+    });
+  }
+  sizeHits();
+  window.addEventListener('resize', sizeHits);
+
+  /* --- 一覧の描画とソート --- */
+  const collator = new Intl.Collator('ja');
+  const sorters = {
+    fav:  function (a, b) { return (b.fav - a.fav) || collator.compare(a.kana, b.kana); },
+    name: function (a, b) { return collator.compare(a.kana, b.kana); },
+    city: function (a, b) {
+      return collator.compare(cityKana(a.city), cityKana(b.city))
+          || collator.compare(a.kana, b.kana);
+    }
+  };
+
+  const kanaByCity = {};
+  M.cities.forEach(function (c) { kanaByCity[c.label] = c.kana; });
+  function cityKana(label) { return kanaByCity[label] || label; }
+
+  /* 好み度は1〜5。未設定の0を「0点」と読ませないため印に置き換える */
+  function favText(n) { return n > 0 ? String(n) : '—'; }
+
+  function render(mode) {
+    const rows = SHOPS.slice().sort(sorters[mode]);
+    elList.textContent = '';
+    const f = document.createDocumentFragment();
+    rows.forEach(function (s) {
+      const li = document.createElement('li');
+      const a  = document.createElement('a');
+      a.className = 'shop-row';
+      a.href = hrefOf(s);
+      a.dataset.id = s.id;
+
+      const n = document.createElement('span');
+      n.className = 'row-name'; n.textContent = s.name;
+      const c = document.createElement('span');
+      c.className = 'row-city'; c.textContent = s.city;
+      const v = document.createElement('span');
+      v.className = 'row-fav';  v.textContent = favText(s.fav);
+
+      a.appendChild(n); a.appendChild(c); a.appendChild(v);
+      li.appendChild(a); f.appendChild(li);
+      nodes[s.id].row = a;
+    });
+    elList.appendChild(f);
+  }
+
+  document.querySelectorAll('.sort-opt').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.sort-opt').forEach(function (b) {
+        b.setAttribute('aria-pressed', String(b === btn));
+      });
+      render(btn.dataset.sort);
+    });
+  });
+  render('fav');
+
+  /* --- サムネイルの先読み（地図に触れた時点で開始） --- */
+  let preloaded = false;
+  function preload() {
+    if (preloaded) return;
+    preloaded = true;
+    SHOPS.forEach(function (s) { if (s.thumb) { new Image().src = s.thumb; } });
+  }
+  svg.addEventListener('pointerenter', preload);
+
+  /* --- 選択状態 --- */
+  const byId = {};
+  SHOPS.forEach(function (s) { byId[s.id] = s; });
+
+  function setActive(id) {
+    if (current === id) return;
+    if (current && nodes[current]) {
+      nodes[current].pt.classList.remove('is-active');
+      nodes[current].dot.setAttribute('r', nodes[current].baseR);
+      if (nodes[current].row) nodes[current].row.classList.remove('is-active');
+    }
+    current = id;
+    if (id && nodes[id]) {
+      elPoints.appendChild(nodes[id].pt);   // 密集していても選択中の点が隠れないよう前面へ
+      nodes[id].pt.classList.add('is-active');
+      nodes[id].dot.setAttribute('r', DOT_R_ON);
+      if (nodes[id].row) nodes[id].row.classList.add('is-active');
+    }
+  }
+
+  const tImg  = document.getElementById('thumb-img');
+  const tName = document.getElementById('thumb-name');
+  const tCity = document.getElementById('thumb-city');
+  const tFav  = document.getElementById('thumb-fav');
+
+  /* ファイルがまだ無いときは壊れた画像を出さず、文字だけのパネルにする */
+  tImg.addEventListener('error', function () { tImg.hidden = true; });
+
+  function fillThumb(s) {
+    if (s.thumb) { tImg.hidden = false; tImg.src = s.thumb; tImg.alt = s.name; }
+    else { tImg.removeAttribute('src'); tImg.hidden = true; }
+    tName.textContent = s.name;
+    tCity.textContent = s.city;
+    tFav.textContent  = favText(s.fav);
+  }
+
+  function placeThumb(cx, cy) {
+    const w = thumb.offsetWidth, h = thumb.offsetHeight;
+    const gap = 16;
+    let x = cx + gap, y = cy + gap;
+    if (x + w > window.innerWidth  - 8) x = cx - gap - w;
+    if (y + h > window.innerHeight - 8) y = cy - gap - h;
+    thumb.style.left = Math.max(8, x) + 'px';
+    thumb.style.top  = Math.max(8, y) + 'px';
+  }
+
+  function openThumb(s, cx, cy) {
+    fillThumb(s);
+    thumb.classList.add('is-open');
+    thumb.setAttribute('aria-hidden', 'false');
+    placeThumb(cx, cy);
+  }
+  function closeThumb() {
+    thumb.classList.remove('is-open');
+    thumb.setAttribute('aria-hidden', 'true');
+  }
+
+  if (canHover) {
+    /* マウス環境: カーソル追従 */
+    elPoints.addEventListener('mouseover', function (e) {
+      const pt = e.target.closest('.pt');
+      if (!pt) return;
+      setActive(pt.dataset.id);
+      openThumb(byId[pt.dataset.id], e.clientX, e.clientY);
+    });
+    elPoints.addEventListener('mousemove', function (e) {
+      if (thumb.classList.contains('is-open')) placeThumb(e.clientX, e.clientY);
+    });
+    elPoints.addEventListener('mouseout', function (e) {
+      const pt = e.target.closest('.pt');
+      if (!pt || pt.contains(e.relatedTarget)) return;
+      setActive(null);
+      closeThumb();
+    });
+
+    /* 一覧側にホバーしたら地図のポイントを光らせる */
+    elList.addEventListener('mouseover', function (e) {
+      const row = e.target.closest('.shop-row');
+      if (row) setActive(row.dataset.id);
+    });
+    elList.addEventListener('mouseout', function (e) {
+      const row = e.target.closest('.shop-row');
+      if (row && !row.contains(e.relatedTarget)) setActive(null);
+    });
+    /* スクロールしてもカーソルは動かないため、パネルは触らなくてよい。
+       地図がカーソルの下から外れれば mouseout が発火して閉じる。 */
+
+  } else {
+    /* タッチ環境: 1回目のタップで選択、サムネから遷移 */
+    thumb.classList.add('is-touch');
+    elPoints.addEventListener('click', function (e) {
+      const pt = e.target.closest('.pt');
+      if (!pt) return;
+      e.preventDefault();
+      const s = byId[pt.dataset.id];
+      setActive(s.id);
+      const b = pt.getBoundingClientRect();
+      openThumb(s, b.left + b.width / 2, b.top + b.height / 2);
+    });
+    thumb.addEventListener('click', function () {
+      if (current) location.href = hrefOf(byId[current]);
+    });
+    document.addEventListener('click', function (e) {
+      if (e.target.closest('.pt') || e.target.closest('#thumb')) return;
+      setActive(null);
+      closeThumb();
+    });
+
+    /* パネルは点の位置に置いているので、スクロールしたら付け直す。
+       点が画面から出たときだけ閉じる。 */
+    window.addEventListener('scroll', function () {
+      if (!current || !thumb.classList.contains('is-open')) return;
+      const b = nodes[current].pt.getBoundingClientRect();
+      if (b.bottom < 0 || b.top > window.innerHeight) {
+        setActive(null);
+        closeThumb();
+        return;
+      }
+      placeThumb(b.left + b.width / 2, b.top + b.height / 2);
+    }, { passive: true });
+  }
+})();
+</script>
+
+</body>
+</html>
