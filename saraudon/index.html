@@ -24,9 +24,12 @@
   --serif:     'Noto Serif JP', 'YuMincho', '游明朝', serif;
   --sans:      'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
 
-  --land:      #141414;
-  --land-line: #242424;
-  --coast:     #3a3a3a;
+  --sea:       #080808;
+  --land:      #202020;   /* 福岡県 */
+  --land-line: #333333;   /* 福岡県の市町村境 */
+  --coast:     #6e6e6e;   /* 福岡県の外周 */
+  --ctx-land:  #121212;   /* 九州の他県 */
+  --ctx-line:  #2a2a2a;   /* 他県の外周 */
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -39,7 +42,7 @@ body {
 
 /* ─── page title ─── */
 .page-head {
-  max-width: 1200px;
+  max-width: 1760px;
   margin: 56px auto 0;
   padding: 0 24px;
 }
@@ -61,14 +64,14 @@ body {
 /* ─── 2-column layout ─── */
 .container {
   display: flex;
-  max-width: 1200px;
+  max-width: 1760px;
   margin: 32px auto 80px;
   padding: 0 24px;
   gap: 32px;
   align-items: flex-start;
 }
-.left  { width: 58%; flex-shrink: 0; position: sticky; top: 24px; }
-.right { width: 42%; }
+.left  { width: 64%; flex-shrink: 0; }
+.right { width: 36%; }
 
 .section-label {
   font-family: var(--serif);
@@ -81,18 +84,24 @@ body {
 
 /* ─── map (left) ─── */
 .map-panel {
-  background: var(--surface);
+  background: var(--sea);
   border: 1px solid var(--border);
   border-radius: 14px;
-  padding: 18px;
+  overflow: hidden;
 }
 #map {
   width: 100%;
   height: auto;
   display: block;
-  max-height: calc(100vh - 150px);
 }
 
+.mp-context {
+  fill: var(--ctx-land);
+  stroke: var(--ctx-line);
+  stroke-width: 1;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
 .mp-city {
   fill: var(--land);
   stroke: var(--land-line);
@@ -293,7 +302,7 @@ footer a { color: var(--muted); }
 @media (max-width: 900px) {
   .container { flex-direction: column; margin-top: 24px; }
   .left, .right { width: 100%; }
-  .left { max-width: 560px; margin: 0 auto; position: static; }
+  .left { position: static; }
   #map { max-height: none; }
 }
 @media (max-width: 768px) {
@@ -303,7 +312,6 @@ footer a { color: var(--muted); }
 @media (max-width: 480px) {
   .page-head, .container { padding: 0 14px; }
   .container { gap: 24px; }
-  .map-panel { padding: 12px; }
   .list-panel { padding: 20px 18px 16px; }
   .row-name { font-size: 15px; }
 }
@@ -324,6 +332,7 @@ footer a { color: var(--muted); }
     <p class="section-label">地図</p>
     <div class="map-panel">
       <svg id="map" role="img" aria-label="福岡県の地図。掲載店舗の位置を示しています。">
+        <g id="mp-context"></g>
         <g id="mp-cities"></g>
         <path id="mp-outline" class="mp-outline"></path>
         <g id="mp-points"></g>
@@ -412,6 +421,7 @@ const SHOP_DIR = '';
   const M    = FUKUOKA_MAP;
   const P    = M.proj;
   const svg  = document.getElementById('map');
+  const elContext = document.getElementById('mp-context');
   const elCities  = document.getElementById('mp-cities');
   const elOutline = document.getElementById('mp-outline');
   const elPoints  = document.getElementById('mp-points');
@@ -429,6 +439,12 @@ const SHOP_DIR = '';
 
   /* --- 地図の下地を描く --- */
   svg.setAttribute('viewBox', M.viewBox);
+  (M.context || []).forEach(function (c) {       /* 九州の他県: 外周だけ */
+    const p = document.createElementNS(NS, 'path');
+    p.setAttribute('class', 'mp-context');
+    p.setAttribute('d', c.d);
+    elContext.appendChild(p);
+  });
   const frag = document.createDocumentFragment();
   M.cities.forEach(function (c) {
     const p = document.createElementNS(NS, 'path');
