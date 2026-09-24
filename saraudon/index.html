@@ -412,6 +412,10 @@ footer a { color: var(--muted); }
    lng   : 経度
    fav   : 個人的好み度。1〜5の整数。特別な店だけ5を超えて書いてよい
    thumb : 地図ホバー時に出すサムネイル画像のパス。店舗外観の写真を使う
+   branches : 店舗が複数あるときだけ書く。書くと lat/lng の代わりに、
+              ここに並べた場所すべてに点を打つ（どの点も同じページへ飛ぶ）。
+              一覧には1行だけ出し、市町村は city を使う
+              [{ label:'○○店', city:'市町村名', lat:…, lng:… }, …]
 
    例)
    { id:'aaa-shokudo', name:'○○食堂', kana:'まるまるしょくどう',
@@ -428,6 +432,12 @@ const SHOPS = [
     lat:33.377018, lng:130.556778, fav:5, thumb:'images/koshunkaku-thumb.jpg' },
   { id:'taishuen', name:'中華料理 泰洲園', kana:'ちゅうかりょうりたいしゅうえん', city:'福岡市早良区',
     lat:33.550297, lng:130.348373, fav:5, thumb:'images/taishuen-thumb.jpg' },
+  { id:'senju', name:'麺屋千寿', kana:'めんやせんじゅ', city:'飯塚市',
+    fav:5, thumb:'images/senju-thumb.jpg',
+    branches:[
+      { label:'飯塚店', city:'飯塚市',       lat:33.635551, lng:130.673279 },
+      { label:'桂川店', city:'嘉穂郡桂川町', lat:33.580696, lng:130.666946 },
+    ] },
 ];
 
 /* 個別ページの置き場所（index.html から見た相対パス）。
@@ -490,18 +500,29 @@ const SHOP_DIR = '';
   /* 点の拡大はCSSの r ではなく属性で行う（iOS Safariの対応が不確実なため） */
   const DOT_R = 9, DOT_R_ON = 13;
   let current = null;   // 選択中の店舗id
+  let currentPt = null; // パネルを出している点（タッチ時の位置合わせ用）
+  const nodes = {};     // 店舗id -> { pts:[点の要素], row }
 
-  const nodes = {};   // id -> { pt, hit, dot, row, gap, baseR }
-  const xyOf = {};
+  /* 点の一覧。branches があれば店舗ごとに複数、なければ1つ */
+  const POINTS = [];
   SHOPS.forEach(function (s) {
-    const xy = project(s.lat, s.lng);
-    xyOf[s.id] = xy;
+    const list = (s.branches && s.branches.length) ? s.branches
+               : [{ label: '', city: s.city, lat: s.lat, lng: s.lng }];
+    list.forEach(function (b) {
+      POINTS.push({ shop: s, label: b.label || '', city: b.city || s.city,
+                    xy: project(b.lat, b.lng) });
+    });
+    nodes[s.id] = { pts: [], row: null };
+  });
 
+  POINTS.forEach(function (p) {
+    const s = p.shop, xy = p.xy;
     const a = document.createElementNS(NS, 'a');
     a.setAttributeNS('http://www.w3.org/1999/xlink', 'href', hrefOf(s));
     a.setAttribute('href', hrefOf(s));
     a.setAttribute('class', 'pt');
     a.dataset.id = s.id;
+    a.dataset.idx = POINTS.indexOf(p);
 
     const ring = document.createElementNS(NS, 'circle');
     ring.setAttribute('class', 'mp-ring');
@@ -519,26 +540,27 @@ const SHOP_DIR = '';
     hit.setAttribute('r', 24);
 
     const title = document.createElementNS(NS, 'title');
-    title.textContent = s.name + '（' + s.city + '）';
+    title.textContent = s.name + (p.label ? ' ' + p.label : '') + '（' + p.city + '）';
 
     a.appendChild(title); a.appendChild(ring); a.appendChild(dot); a.appendChild(hit);
     elPoints.appendChild(a);
-    nodes[s.id] = { pt: a, hit: hit, dot: dot, row: null };
+    p.pt = a; p.hit = hit; p.dot = dot;
+    nodes[s.id].pts.push(p);
   });
 
   /* --- 最寄りの点との距離を測っておく ---
      タップ領域を実寸で確保しようとすると、画面が小さいほど地図上では
      広い範囲を覆う。隣の店に重なると手前の点がリンクを奪ってしまうため、
      最寄りの点との中間を上限にする。 */
-  SHOPS.forEach(function (s) {
+  POINTS.forEach(function (p) {
     let gap = Infinity;
-    SHOPS.forEach(function (o) {
-      if (o.id === s.id) return;
-      const dx = xyOf[s.id][0] - xyOf[o.id][0];
-      const dy = xyOf[s.id][1] - xyOf[o.id][1];
+    POINTS.forEach(function (o) {
+      if (o === p) return;
+      const dx = p.xy[0] - o.xy[0];
+      const dy = p.xy[1] - o.xy[1];
       gap = Math.min(gap, Math.sqrt(dx * dx + dy * dy));
     });
-    nodes[s.id].gap = gap;
+    p.gap = gap;
   });
 
   /* --- 点の大きさと当たり判定を決める ---
@@ -549,12 +571,11 @@ const SHOP_DIR = '';
     const rect = svg.getBoundingClientRect();
     if (!rect.width) return;
     const want = 22 * (M.width / rect.width);
-    SHOPS.forEach(function (s) {
-      const n   = nodes[s.id];
-      const lim = n.gap / 2;
-      n.baseR = Math.max(4, Math.min(DOT_R, lim));
-      n.hit.setAttribute('r', Math.max(4, Math.min(want, lim)));
-      if (current !== s.id) n.dot.setAttribute('r', n.baseR);
+    POINTS.forEach(function (p) {
+      const lim = p.gap / 2;
+      p.baseR = Math.max(4, Math.min(DOT_R, lim));
+      p.hit.setAttribute('r', Math.max(4, Math.min(want, lim)));
+      if (current !== p.shop.id) p.dot.setAttribute('r', p.baseR);
     });
   }
   sizeHits();
@@ -629,15 +650,19 @@ const SHOP_DIR = '';
   function setActive(id) {
     if (current === id) return;
     if (current && nodes[current]) {
-      nodes[current].pt.classList.remove('is-active');
-      nodes[current].dot.setAttribute('r', nodes[current].baseR);
+      nodes[current].pts.forEach(function (p) {
+        p.pt.classList.remove('is-active');
+        p.dot.setAttribute('r', p.baseR);
+      });
       if (nodes[current].row) nodes[current].row.classList.remove('is-active');
     }
     current = id;
     if (id && nodes[id]) {
-      elPoints.appendChild(nodes[id].pt);   // 密集していても選択中の点が隠れないよう前面へ
-      nodes[id].pt.classList.add('is-active');
-      nodes[id].dot.setAttribute('r', DOT_R_ON);
+      nodes[id].pts.forEach(function (p) {
+        elPoints.appendChild(p.pt);   // 密集していても選択中の点が隠れないよう前面へ
+        p.pt.classList.add('is-active');
+        p.dot.setAttribute('r', DOT_R_ON);
+      });
       if (nodes[id].row) nodes[id].row.classList.add('is-active');
     }
   }
@@ -650,11 +675,11 @@ const SHOP_DIR = '';
   /* ファイルがまだ無いときは壊れた画像を出さず、文字だけのパネルにする */
   tImg.addEventListener('error', function () { tImg.hidden = true; });
 
-  function fillThumb(s) {
+  function fillThumb(s, p) {
     if (s.thumb) { tImg.hidden = false; tImg.src = s.thumb; tImg.alt = s.name; }
     else { tImg.removeAttribute('src'); tImg.hidden = true; }
     tName.textContent = s.name;
-    tCity.textContent = s.city;
+    tCity.textContent = (p && p.label) ? p.label + '　' + p.city : s.city;
     tFav.textContent  = favText(s.fav);
   }
 
@@ -668,8 +693,8 @@ const SHOP_DIR = '';
     thumb.style.top  = Math.max(8, y) + 'px';
   }
 
-  function openThumb(s, cx, cy) {
-    fillThumb(s);
+  function openThumb(s, cx, cy, p) {
+    fillThumb(s, p);
     thumb.classList.add('is-open');
     thumb.setAttribute('aria-hidden', 'false');
     placeThumb(cx, cy);
@@ -685,7 +710,8 @@ const SHOP_DIR = '';
       const pt = e.target.closest('.pt');
       if (!pt) return;
       setActive(pt.dataset.id);
-      openThumb(byId[pt.dataset.id], e.clientX, e.clientY);
+      currentPt = POINTS[pt.dataset.idx];
+      openThumb(byId[pt.dataset.id], e.clientX, e.clientY, currentPt);
     });
     elPoints.addEventListener('mousemove', function (e) {
       if (thumb.classList.contains('is-open')) placeThumb(e.clientX, e.clientY);
@@ -718,8 +744,9 @@ const SHOP_DIR = '';
       e.preventDefault();
       const s = byId[pt.dataset.id];
       setActive(s.id);
+      currentPt = POINTS[pt.dataset.idx];
       const b = pt.getBoundingClientRect();
-      openThumb(s, b.left + b.width / 2, b.top + b.height / 2);
+      openThumb(s, b.left + b.width / 2, b.top + b.height / 2, currentPt);
     });
     thumb.addEventListener('click', function () {
       if (current) location.href = hrefOf(byId[current]);
@@ -734,7 +761,7 @@ const SHOP_DIR = '';
        点が画面から出たときだけ閉じる。 */
     window.addEventListener('scroll', function () {
       if (!current || !thumb.classList.contains('is-open')) return;
-      const b = nodes[current].pt.getBoundingClientRect();
+      const b = currentPt.pt.getBoundingClientRect();
       if (b.bottom < 0 || b.top > window.innerHeight) {
         setActive(null);
         closeThumb();
