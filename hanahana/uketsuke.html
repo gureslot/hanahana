@@ -20,10 +20,12 @@
   --serif:   'Noto Serif JP', 'YuMincho', '游明朝', serif;
   --sans:    'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
 
-  --cell-h:   33px;
-  --cell-w:   66px;
-  --gap:       2px;
-  --label-w: 116px;   /* リールの右に空ける、注記のための余白 */
+  --cell-h:     33px;
+  --cell-w:     66px;
+  --num-w:       0px;   /* 図柄番号の列。スイッチがOFFのときは 0 */
+  --gap:         2px;
+  --label-w:   116px;   /* リールの右に空ける、注記のための余白 */
+  --label-font: 11px;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -57,16 +59,71 @@ body {
   line-height: 1.9;
 }
 
+/* ─── 図柄番号の表示切り替え（トグルスイッチ） ─── */
+.numsw {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 14px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.numsw-label {
+  font-family: var(--serif);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  color: var(--text);
+}
+
+.numsw-track {
+  position: relative;
+  flex-shrink: 0;
+  width: 46px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid #3a3a3a;
+  border-radius: 13px;
+  background: #242424;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.18s, border-color 0.18s;
+}
+
+.numsw-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #6e6e6e;
+  transition: transform 0.18s, background 0.18s;
+}
+
+.numsw-track[aria-checked="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.numsw-track[aria-checked="true"] .numsw-knob {
+  background: #fff;
+  transform: translateX(20px);
+}
+
 /* ─── stage ───
-   リールと右の注記をまとめた幅をステージとし、それを画面の中央に置く。
-   リールの左には何も置かないので、リール自体は中央よりやや左になる。 */
+   リール（番号列を含む）と右の注記をまとめた幅をステージとし、
+   それを画面の中央に置く。 */
 .stage-outer {
   padding: 0 20px;
 }
 
 .stage {
   position: relative;
-  width: calc(var(--cell-w) * 3 + var(--gap) * 2 + var(--label-w));
+  width: calc((var(--num-w) + var(--cell-w)) * 3 + var(--gap) * 2 + var(--label-w));
   max-width: 100%;
   margin: 0 auto;
 }
@@ -77,21 +134,65 @@ body {
   gap: var(--gap);
   justify-content: center;
   margin: 0;
-  width: calc(var(--cell-w) * 3 + var(--gap) * 2);
+  width: calc((var(--num-w) + var(--cell-w)) * 3 + var(--gap) * 2);
   height: calc(var(--cell-h) * 21);
 }
 
-.reel {
-  width: var(--cell-w);
-  height: calc(var(--cell-h) * 21);
-  overflow: hidden;
+/* 番号列とリールをひとまとめにして、どちらをつかんでも回せるようにする */
+.reel-group {
+  display: flex;
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
   -webkit-user-drag: none;
   cursor: grab;
 }
-.reel:active { cursor: grabbing; }
+.reel-group:active { cursor: grabbing; }
+
+/* ─── 図柄番号の列 ─── */
+.reel-nums {
+  width: var(--num-w);
+  height: calc(var(--cell-h) * 21);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+body.no-nums .reel-nums { display: none; }
+
+.num-track { will-change: transform; }
+
+.num-cell {
+  height: var(--cell-h);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 番号は Unicode の丸囲み文字（①②③）ではなく、CSSで描いた丸を使う。
+   ①〜⑳と㉑が別のUnicodeブロックにあり、端末によって書体や大きさが
+   揃わないため。クイズ側の .number-badge と同じ作り。 */
+.num-badge {
+  width: calc(var(--num-w) - 3px);
+  height: calc(var(--num-w) - 3px);
+  border-radius: 50%;
+  border: 1px solid var(--muted);
+  color: var(--text);
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(var(--num-w) * 0.46);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+/* ─── リール ─── */
+.reel {
+  width: var(--cell-w);
+  height: calc(var(--cell-h) * 21);
+  overflow: hidden;
+  flex-shrink: 0;
+}
 
 .track { will-change: transform; }
 
@@ -144,7 +245,7 @@ body {
   transform: translateY(-50%);
   margin-left: 8px;
   font-family: var(--serif);
-  font-size: 11px;
+  font-size: var(--label-font);
   letter-spacing: 0.06em;
   color: var(--text);
   white-space: nowrap;
@@ -171,7 +272,7 @@ body {
   transform: translateY(-50%);
   margin-left: 8px;
   font-family: var(--serif);
-  font-size: 11px;
+  font-size: var(--label-font);
   letter-spacing: 0.06em;
   color: var(--accent);
   white-space: nowrap;
@@ -222,22 +323,29 @@ footer {
 </style>
 </head>
 
-<body>
+<body class="no-nums">
 
 <div class="head">
   <h1 class="page-title">受付開始位置確認</h1>
   <p class="intro">
     ドラッグして出目を合わせると、ストップボタンの受付が始まる位置にラインが引かれます。
   </p>
+  <div class="numsw" id="numSwitch">
+    <span class="numsw-label" id="numswLabel">番号</span>
+    <button type="button" class="numsw-track" id="numToggle"
+            role="switch" aria-checked="false" aria-labelledby="numswLabel">
+      <span class="numsw-knob"></span>
+    </button>
+  </div>
 </div>
 
 <div class="stage-outer">
   <div class="stage">
 
     <div class="reel-wrapper" id="reelWrapper">
-      <div class="reel" data-reel="left"></div>
-      <div class="reel" data-reel="middle"></div>
-      <div class="reel" data-reel="right"></div>
+      <div class="reel-group" data-reel="left"></div>
+      <div class="reel-group" data-reel="middle"></div>
+      <div class="reel-group" data-reel="right"></div>
       <div class="win-line win-line--top"></div>
       <div class="win-line win-line--bottom"></div>
       <div class="win-range"><span class="win-range-label">リール窓</span></div>
@@ -324,13 +432,38 @@ function acceptAdvance(sLeft, sMiddle, sRight) {
 /* ---------- サイズ ---------- */
 
 var GAP = 2;
-var LABEL_W = 116;
-var STAGE_MAX = 560;
 var CELL_MAX = 60;
-var CELL_MIN = 24;
-var cellH = 33;
+var CELL_MIN = 20;
+var NUM_RATIO = 0.7;
+var NUM_MIN = 18;
+var LABEL_MAX = 116;
+var LABEL_MIN = 96;
 
-function measureCellH() {
+var showNums = false;
+var cellH = 33;
+var numW = 0;
+var labelW = LABEL_MAX;
+
+function numWidthFor(h) {
+  if (!showNums) return 0;
+  return Math.max(NUM_MIN, Math.round(h * NUM_RATIO));
+}
+
+/* その注記余白のとき、幅に収まる最大の1コマ高。収まらなければ 0 */
+function cellFitting(availW, hCap, lw) {
+  for (var h = hCap; h >= CELL_MIN; h--) {
+    if ((numWidthFor(h) + h * 2) * 3 + GAP * 2 + lw <= availW) return h;
+  }
+  return 0;
+}
+
+/* 幅は「番号列＋リール×3 ＋ 右の注記余白」が画面に収まること。
+   縦は「リールのてっぺんから下まで」が画面に収まればよい。
+   見出しや下のボタンは画面外に出てかまわない。
+
+   注記余白はできるだけ 116px を保つ。そのままではリールが小さくなる
+   ときだけ、96px まで削ってリールの大きさを優先する。 */
+function measureSize() {
   var outer = document.querySelector('.stage-outer');
 
   var availW = 360;
@@ -341,34 +474,52 @@ function measureCellH() {
            - (parseFloat(cs.paddingRight) || 0);
   }
   if (!(availW > 0)) availW = 360;
-  availW = Math.min(availW, STAGE_MAX);
+  availW = Math.min(availW, 560);
 
-  /* 縦は「リールのてっぺんから下まで」が画面に収まればよい。
-     見出しや下のボタンは画面外に出てかまわない。 */
   var availH = (window.innerHeight || 768) - 8;
+  var hCap = Math.min(CELL_MAX, Math.floor(availH / CELLS));
+  if (hCap < CELL_MIN) hCap = CELL_MIN;
 
-  var byW = Math.floor((availW - LABEL_W - GAP * 2) / 6);
-  var byH = Math.floor(availH / CELLS);
+  var best = { cell: 0, label: LABEL_MIN };
+  for (var lw = LABEL_MAX; lw >= LABEL_MIN; lw -= 2) {
+    var h = cellFitting(availW, hCap, lw);
+    if (h > best.cell) best = { cell: h, label: lw };
+    if (h === hCap) break;   // これ以上 lw を削っても大きくならない
+  }
+  if (best.cell === 0) best = { cell: CELL_MIN, label: LABEL_MIN };
 
-  var h = Math.min(CELL_MAX, byW, byH);
-  if (!isFinite(h) || h < CELL_MIN) h = CELL_MIN;
-  return h;
+  return { cell: best.cell, num: numWidthFor(best.cell), label: best.label };
 }
 
-function applyCellH(h) {
-  cellH = h;
+function applySize(s) {
+  cellH = s.cell;
+  numW = s.num;
+  labelW = s.label;
   var root = document.documentElement;
-  root.style.setProperty('--cell-h', h + 'px');
-  root.style.setProperty('--cell-w', (h * 2) + 'px');
+  root.style.setProperty('--cell-h', s.cell + 'px');
+  root.style.setProperty('--cell-w', (s.cell * 2) + 'px');
+  root.style.setProperty('--num-w', s.num + 'px');
+  root.style.setProperty('--label-w', s.label + 'px');
+  root.style.setProperty('--label-font', (s.label >= 100 ? 11 : 10) + 'px');
 }
 
 /* ---------- リール ---------- */
 
 var reels = [];
 
-function buildReel(el) {
-  var name = el.dataset.reel;
+function buildReel(group) {
+  var name = group.dataset.reel;
   var arr = REELS[name];
+
+  /* 番号列。リールと同じ 21コマ×2周 を積み、同じ量だけ動かす */
+  var nums = document.createElement('div');
+  nums.className = 'reel-nums';
+
+  var numTrack = document.createElement('div');
+  numTrack.className = 'num-track';
+
+  var reel = document.createElement('div');
+  reel.className = 'reel';
 
   var track = document.createElement('div');
   track.className = 'track';
@@ -376,6 +527,15 @@ function buildReel(el) {
   /* 21コマを2周ぶん積む。上から 21,20,…,1,21,20,…,1 */
   for (var i = 0; i < CELLS * 2; i++) {
     var num = wrapNum(21 - i);
+
+    var cell = document.createElement('div');
+    cell.className = 'num-cell';
+    var badge = document.createElement('span');
+    badge.className = 'num-badge';
+    badge.textContent = String(num);
+    cell.appendChild(badge);
+    numTrack.appendChild(cell);
+
     var img = document.createElement('img');
     img.src = IMG_DIR + arr[num - 1] + '.png';
     img.alt = '';
@@ -383,24 +543,32 @@ function buildReel(el) {
     track.appendChild(img);
   }
 
-  el.appendChild(track);
+  nums.appendChild(numTrack);
+  reel.appendChild(track);
+  group.appendChild(nums);
+  group.appendChild(reel);
 
-  var r = { el: el, track: track, cell: 0, offset: 0, dragging: false, startY: 0, live: 0 };
+  var r = {
+    group: group, track: track, numTrack: numTrack,
+    cell: 0, offset: 0, dragging: false, startY: 0, live: 0
+  };
 
   function apply(px) {
     r.offset = px;
-    track.style.transform = 'translateY(' + (-px) + 'px)';
+    var t = 'translateY(' + (-px) + 'px)';
+    track.style.transform = t;
+    numTrack.style.transform = t;
   }
   r.apply = apply;
 
-  el.addEventListener('pointerdown', function (e) {
+  group.addEventListener('pointerdown', function (e) {
     r.dragging = true;
     r.startY = e.clientY;
     r.live = r.cell * cellH;
-    if (el.setPointerCapture) el.setPointerCapture(e.pointerId);
+    if (group.setPointerCapture) group.setPointerCapture(e.pointerId);
   });
 
-  el.addEventListener('pointermove', function (e) {
+  group.addEventListener('pointermove', function (e) {
     if (!r.dragging) return;
     var dy = e.clientY - r.startY;
     var raw = r.cell * cellH + (-dy);
@@ -417,8 +585,8 @@ function buildReel(el) {
     updateAcceptLine();
   }
 
-  el.addEventListener('pointerup', endDrag);
-  el.addEventListener('pointercancel', endDrag);
+  group.addEventListener('pointerup', endDrag);
+  group.addEventListener('pointercancel', endDrag);
 
   apply(0);
   return r;
@@ -444,7 +612,7 @@ function updateAcceptLine() {
 /* ---------- 初期化 ---------- */
 
 function layout() {
-  applyCellH(measureCellH());
+  applySize(measureSize());
   reels.forEach(function (r) { r.apply(r.cell * cellH); });
   updateAcceptLine();
 }
@@ -463,14 +631,32 @@ function relayout(force) {
   layout();
 }
 
-applyCellH(measureCellH());
+/* 図柄番号の表示切り替え。出目（各リールの位置）はそのまま保つ */
+function setShowNums(on) {
+  showNums = !!on;
+  document.body.classList.toggle('no-nums', !showNums);
+  var sw = document.getElementById('numToggle');
+  if (sw) sw.setAttribute('aria-checked', showNums ? 'true' : 'false');
+  layout();
+}
 
-var els = document.querySelectorAll('.reel');
-for (var i = 0; i < els.length; i++) {
-  reels.push(buildReel(els[i]));
+applySize(measureSize());
+
+var groups = document.querySelectorAll('.reel-group');
+for (var i = 0; i < groups.length; i++) {
+  reels.push(buildReel(groups[i]));
 }
 
 relayout(true);
+
+/* 文字「番号」を押しても切り替わるよう、囲みごとクリックを受ける。
+   中のボタンのクリックもここまで上がってくるので、処理は1回だけ */
+var numSwitch = document.getElementById('numSwitch');
+if (numSwitch) {
+  numSwitch.addEventListener('click', function () {
+    setShowNums(!showNums);
+  });
+}
 
 window.addEventListener('resize', function () { relayout(false); });
 window.addEventListener('orientationchange', function () {
