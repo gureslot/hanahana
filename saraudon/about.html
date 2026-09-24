@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>皿うどんの魅力 | 福岡やわ麺皿うどんMAP</title>
+
+<link rel="icon" type="image/png" sizes="32x32" href="../icon_32x32.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --accent:    #ff2a6d;
+  --bg:        #080808;
+  --surface:   #111111;
+  --surface-2: #171717;
+  --border:    #1e1e1e;
+  --text:      #e0dbd5;
+  --muted:     #5e5e5e;
+  --serif:     'Noto Serif JP', 'YuMincho', '游明朝', serif;
+  --sans:      'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+}
+
+/* ─── page title ─── */
+.page-head {
+  max-width: 760px;
+  margin: 56px auto 0;
+  padding: 0 24px;
+}
+.page-eyebrow {
+  font-family: var(--serif);
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+.page-title {
+  font-family: var(--serif);
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  line-height: 1.3;
+}
+
+/* ─── 本文（読み物1段） ─── */
+.essay {
+  max-width: 760px;
+  margin: 40px auto 80px;
+  padding: 0 24px;
+}
+.essay p {
+  font-size: 16px;
+  line-height: 2.1;
+  letter-spacing: 0.03em;
+  margin: 0 0 1.6em;
+}
+
+/* 写真 */
+.shot { margin: 44px 0; }
+.shot img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.shot.is-narrow img { max-width: 380px; margin: 0 auto; }
+
+/* 拡大できる画像（メニュー）。別タブで元画像を開く */
+.shot-zoom {
+  display: block;
+  position: relative;
+  cursor: zoom-in;
+}
+.shot-zoom::after {
+  content: '拡大';
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  font-family: var(--serif);
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--text);
+  background: rgba(8, 8, 8, .74);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 5px 13px;
+  opacity: .9;
+  transition: background 0.18s, opacity 0.18s;
+}
+.shot-zoom:hover::after { background: var(--accent); opacity: 1; }
+
+/* 出典 */
+.sources {
+  margin-top: 56px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+.section-label {
+  font-family: var(--serif);
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: var(--muted);
+  margin: 0 0 14px 0;
+}
+.sources ol {
+  padding-left: 1.6em;
+  font-size: 13px;
+  line-height: 1.9;
+  color: var(--muted);
+}
+.sources li { margin-bottom: 6px; }
+.sources a {
+  color: var(--text);
+  text-decoration: none;
+  border-bottom: 1px solid var(--accent);
+  word-break: break-all;
+}
+.sources a:hover { color: var(--accent); }
+
+/* ─── nav / footer ─── */
+.site-nav {
+  padding: 4px 24px 0;
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.site-nav a {
+  display: inline-block;
+  padding: 12px 30px;
+  border: 2px solid var(--accent);
+  color: var(--text);
+  text-decoration: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  transition: background 0.15s;
+}
+.site-nav a:hover { background: var(--accent); }
+
+footer {
+  border-top: 1px solid var(--border);
+  margin-top: 40px;
+  padding: 28px 24px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  font-family: var(--serif);
+}
+
+/* ─── responsive ─── */
+@media (max-width: 768px) {
+  .page-head { margin-top: 40px; }
+  .page-title { font-size: 25px; }
+  .essay { margin-top: 28px; }
+  .essay p { font-size: 15px; line-height: 2; }
+  .shot { margin: 32px 0; }
+}
+@media (max-width: 480px) {
+  .page-head, .essay { padding: 0 18px; }
+  .page-title { font-size: 22px; }
+  .shot.is-narrow img { max-width: 78%; }
+}
+</style>
+</head>
+
+<body>
+
+<div class="page-head">
+  <p class="page-eyebrow">FUKUOKA SARA-UDON MAP</p>
+  <h1 class="page-title">皿うどんの魅力</h1>
+</div>
+
+<article class="essay">
+
+  <p>皿うどんという料理は、知るほどに面白い。</p>
+
+  <p>自分が惹かれているのは、太い麺を使った「やわ麺皿うどん」だ。</p>
+
+  <p>同じ名前で注文しているのに、店が変わると、出てくる一皿が大きく変わる。とろりとしたあんを麺に絡めるものもあれば、スープの旨味を麺に吸わせたものもある。もちもちした食感、焼き目の香ばしさ、噛むほどに広がる味。それぞれに、また食べたくなるおいしさがある。</p>
+
+  <p>気に入った店が見つかると、ほかの店の皿うどんも気になってくる。こんな作り方があるなら、まだ知らないおいしさもあるのではないか。</p>
+
+  <p>その繰り返しで、食べ歩く楽しみが増えていく。</p>
+
+  <p>皿うどんの好きなところは、一皿の中でいろいろなものを食べられることにもある。</p>
+
+  <p>麺を食べたい。野菜も食べたい。肉や魚介も食べたい。腹いっぱいになりたい。その欲張りな注文に応えてくれる。麺と具材を一緒に頬張ると、野菜の甘みや肉、魚介の旨味が重なって、麺だけを食べたときとは違うおいしさになる。</p>
+
+  <p>野菜を食べる楽しみまで、麺料理の満足感の中に入っている。そこがいい。</p>
+
+  <figure class="shot">
+    <img src="images/about-ranking.jpg" alt="外食バランス最強ランキング。やわ麺皿うどんは2位" loading="lazy" width="1055" height="1491">
+  </figure>
+
+  <p>四海樓を訪れたときに知った、ちゃんぽんの由来もいい。</p>
+
+  <figure class="shot">
+    <img src="images/about-shikairo-gaikan.jpg" alt="長崎・四海樓の外観。ちゃんぽんと皿うどんの由来を書いた貼り紙がある" loading="lazy" width="1400" height="1050">
+  </figure>
+
+  <p>長崎へ来た中国人留学生や華僑に、うまくて、量があり、栄養価が高く、安く食べられる料理を出そうとしたという。味だけでなく、食べる人の空腹や懐事情まで考えている。その考え方に惹かれる。</p>
+
+  <p>そして、ちゃんぽんのバリエーションとして生まれたのが皿うどんだ。この成り立ちも、皿うどんを好きな理由の一つになっている。</p>
+
+  <figure class="shot is-narrow">
+    <img src="images/about-shikairo-yurai.jpg" alt="四海樓のメニューにある「ちゃんぽんの由来」「皿うどんの由来」" loading="lazy" width="900" height="1837">
+  </figure>
+
+  <p>発祥店の公式説明によると、皿うどんの原点は、ちゃんぽん麺を一度焼き、具材と炒め、少量のスープを麺にしみ込ませる料理だった。その後、調理工程を簡便にするため、細い揚げ麺にあんをかける形も生まれた。「長崎炒麺」とも呼ばれる、パリパリ麺の皿うどんだ。</p>
+
+  <figure class="shot">
+    <a class="shot-zoom" href="images/about-shikairo-menu.jpg" target="_blank" rel="noopener">
+      <img src="images/about-shikairo-menu.jpg" alt="四海樓のメニュー。皿うどん（太麺）と炒麺（細麺の皿うどん）が並ぶ" loading="lazy" width="2048" height="1536">
+    </a>
+  </figure>
+
+  <p>現在のやわ麺皿うどんにも、スープを吸わせるもの、あんを合わせるものがある。その違いを、成り立ちからたどることもできる。</p>
+
+  <p>食べ比べるうえで、まず大きいのが、あんかけか、あんかけではないか。</p>
+
+  <p>あんを麺に絡めて食べるおいしさと、スープの味が入った麺を噛みしめるおいしさ。同じ太麺でも、口に入れたときの印象が変わる。</p>
+
+  <p>あんかけではないものの中にも、汁気を残した仕上がりがあれば、炒め物に近い仕上がりもある。スープを煮詰めたような濃厚さを感じるものもある。</p>
+
+  <p>麺の食感も違う。もちもちした弾力を楽しませるもの。柔らかく、味を含んだもの。焼いた部分の歯触りや香ばしさが残るもの。</p>
+
+  <p>「やわ麺皿うどん」という名前だけでは、この違いまでは分からない。だから、実際に食べてみたくなる。</p>
+
+  <p>店の公式説明や料理人への取材記事を読むと、作り方を選ぶ理由も見えてくる。</p>
+
+  <p>ある店の公式サイトでは、麺を保存するために表面を焼き、硬くなった麺をスープで煮戻して炒めたことが、博多皿うどんの成り立ちとして紹介されている。</p>
+
+  <p>その店は2025年、製麺所と作ってきた専用麺を再び自家製に切り替えたと発表した。0.1ミリの違いや配合を検討し、従来以上の専用麺を目指したという。長く作り続けてきた料理でも、麺そのものを見直している。</p>
+
+  <p>別の料理人の取材記事では、鶏の中骨から取っただしを使い、味付けは醤油だけだと紹介されている。そのうえで、コクや食感を増すために、麺を油に通し、両面を焼き付けるという。</p>
+
+  <p>味付けを聞けば簡単そうでも、そこへ至る工程には工夫がある。何を入れるかだけでなく、麺や具材をどう扱うかで、一皿を作っている。</p>
+
+  <p>太麺の商品を開発する際に、あんの味も調整したという広報担当者の説明もある。太麺の存在感に合わせ、あんにホタテの旨味を加えたという。麺を替えるなら、それに合わせるあんも考える。店ごとの差は、こうした組み合わせにも表れている。</p>
+
+  <p>一方で、変えないことに理由がある店もある。</p>
+
+  <p>帰省した客が、待ち望んでいた皿うどんを食べて喜ぶ。その姿を見ると、この味を変えてはいけないと思う。そう語る料理人の取材記事がある。</p>
+
+  <p>ある老舗食堂の閉店を伝えた報道では、長く仕入れていたモヤシの業者が廃業し、代わりを探しても納得できなかったという店主の話が紹介されていた。モヤシを変えると味が変わり、長年食べてきた客には分かるという。</p>
+
+  <p>具だくさんの一皿でも、食材一つを替えれば、守ってきた味が変わる。作り手のこだわりには、食べ続けてきた客との関係も含まれている。</p>
+
+  <p>麺を見直す店もあれば、馴染みの味を守る店もある。同じ「皿うどん」を作っていても、そこで重ねてきた工夫や判断は違う。</p>
+
+  <p>そう考えると、食べ比べるときに見るところも増えてくる。</p>
+
+  <p>麺のどこに焼き目があるか。あんはどんなふうに絡むか。汁気はどのくらい残っているか。麺と具材を一緒に食べると、どう味が変わるか。</p>
+
+  <p>作り方や使っている材料は、食べただけでは分からないことも多い。それでも、自分が何をおいしいと感じたのかは、できるだけ具体的に残しておきたい。</p>
+
+  <p>有名な店も食べたいし、まだ自分が知らない食堂や町中華の皿うどんも食べたい。評判を聞いて向かう楽しみも、メニューの中に皿うどんを見つけて注文する楽しみもある。</p>
+
+  <p>好きな店が見つかっても、そこで終わらない。次の店には、また違うおいしさがあるかもしれないと思うからだ。</p>
+
+  <p>濃厚な一皿が好きでも、あっさりした一皿のおいしさは消えない。あんかけがうまい店を見つけたら、スープを吸わせる店にも行きたくなる。それぞれの良さを知るほど、食べたい皿うどんが増えていく。</p>
+
+  <p>だから、このMAPにも、店名と点数だけでは収まりきらない違いを残したい。</p>
+
+  <p>あんはあるのか。麺はどんな食感か。焼き目は香ばしいか。汁気はどのくらいあるか。何をおいしいと感じたのか。作り手についての資料があれば、出典とともに紹介したい。</p>
+
+  <p>福岡には、まだ自分が食べていないやわ麺皿うどんがある。</p>
+
+  <p>次は、どんな一皿に出会えるだろう。</p>
+
+  <p>それを楽しみに、食べて、記録して、また探す。このMAPは、そのために作っています。</p>
+
+  <section class="sources">
+    <p class="section-label">出典</p>
+    <ol>
+      <li><a href="https://shikairou.com/champon/" target="_blank" rel="noopener">四海樓「ちゃんぽんの由来」</a></li>
+      <li><a href="https://shikairou.com/saraudon/" target="_blank" rel="noopener">四海樓「皿うどんの由来」</a></li>
+      <li><a href="https://www.zenmenren.or.jp/meisan/shonin/chamen.html" target="_blank" rel="noopener">全国製麺協同組合連合会「長崎炒麺」</a></li>
+      <li><a href="https://fuxinlou.co.jp/menu/41/" target="_blank" rel="noopener">福新樓「福建炒麵」</a></li>
+      <li><a href="https://fuxinlou.co.jp/news/1892/" target="_blank" rel="noopener">福新樓「初心を忘れないため、もう一度自家製麺始めました。」</a>（2025年4月25日）</li>
+      <li><a href="https://saga-nokositaimise.com/wp-content/themes/sagakosei/pickup/pickup24.html" target="_blank" rel="noopener">佐賀の残したい店「中華料理 晋福」</a></li>
+      <li><a href="https://rkb.jp/contents/202311/184045/" target="_blank" rel="noopener">RKB／UMAGA「『皿うどん』って揚げ細麺？ それともちゃんぽん麺？」</a>（2023年11月24日）</li>
+      <li><a href="https://www.ringerhut.jp/menu/saraudon/thick_su/" target="_blank" rel="noopener">リンガーハット「焼き太めん皿うどん」</a></li>
+      <li><a href="https://www.fnn.jp/articles/-/619301?display=full" target="_blank" rel="noopener">サガテレビ／FNN　春駒食堂の閉店を伝える記事</a>（2023年11月25日）</li>
+    </ol>
+  </section>
+
+</article>
+
+<nav class="site-nav">
+  <a href="index.html">MAPへ戻る</a>
+  <a href="../index.html">index</a>
+</nav>
+
+<footer>
+  © グレイト・プレ・善太
+</footer>
+
+</body>
+</html>
