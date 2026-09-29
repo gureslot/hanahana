@@ -441,6 +441,8 @@ footer {
                  特別な店だけ5を超えて書いてよい（そのまま表示される）
    type        : 皿うどんの型。次の2つから選ぶ
                  あんかけ / 非あんかけ
+   shiruke     : 汁気。'有り' か '無し'。空なら行ごと消える
+   oily        : オイリーさ。オイリーなら 'オイリー'。空なら行ごと消える
    prices      : 品名と値段の並び。空なら欄ごと消える
    katasa      : 麺の硬さ。-2 -1 0 1 2 の5段階。右（+）ほど硬く、0がちょうどよい。
                  0 は値なので、未記入は null と書く（null なら行ごと消える）
@@ -468,6 +470,8 @@ const SHOP = {
   fav:     5,
   costSat: 4,
   type: '非あんかけ',
+  shiruke: '無し',
+  oily:    '',
 
   prices: [
     { label: '皿うどん', yen: 850 },
@@ -618,6 +622,8 @@ const SHOP = {
   }
   addFact('所在', (SHOP.address || SHOP.city || '').trim());
   addFact('型',   (SHOP.type || '').trim());
+  addFact('汁気', (SHOP.shiruke || '').trim());
+  addFact('オイリーさ', (SHOP.oily || '').trim());
 
   /* --- 右: 価格 --- */
   const prices = (SHOP.prices || []).filter(function (p) {
