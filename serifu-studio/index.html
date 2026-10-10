@@ -1,0 +1,1147 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#181b22">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="セリフ録音">
+<title>セリフ録音スタジオ</title>
+<style>
+:root{--bg:#0f1115;--panel:#181b22;--panel2:#22262f;--line:#2e3440;--tx:#e8eaf0;--mut:#98a0af;--accent:#38c6f4;--rec:#ff4d5e;--ok:#5bd68a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic UI","Meiryo",system-ui,sans-serif;font-size:14px}
+select,input,button,textarea{font:inherit;color:inherit}
+button{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px 12px;cursor:pointer;white-space:nowrap}
+button:hover{border-color:#566072}
+button:disabled{opacity:.4;cursor:default}
+button.primary{background:var(--accent);color:#04202b;border-color:transparent;font-weight:700}
+button.rec{background:var(--rec);color:#fff;border-color:transparent;font-weight:700}
+input,select,textarea{background:#0b0d11;border:1px solid var(--line);border-radius:6px;padding:5px 8px}
+header{display:flex;gap:8px;align-items:center;padding:10px 16px;background:var(--panel);flex-wrap:wrap}
+header h1{font-size:16px;margin:0 14px 0 0;letter-spacing:.05em}
+header select{min-width:220px}
+nav{display:flex;gap:4px;padding:6px 16px 0;background:var(--panel);border-bottom:1px solid var(--line)}
+nav button{border-radius:8px 8px 0 0;border-bottom:none;background:transparent}
+nav button.on{background:var(--bg);color:var(--accent);border-color:var(--line)}
+main{padding:14px 16px 40px;max-width:1200px;margin:0 auto}
+section[hidden]{display:none}
+h3{font-size:14px;margin:18px 0 8px;color:var(--accent)}
+.mut{color:var(--mut)}
+.small{font-size:12px}
+
+/* 録音タブ */
+#stage{position:relative;height:62vh;min-height:300px;background:radial-gradient(ellipse at 50% 40%,#1b2230,#0b0d12 75%);border-radius:14px;overflow:hidden;border:1px solid var(--line)}
+body.recording #stage{box-shadow:0 0 0 2px var(--rec)}
+#lyrics{position:absolute;left:0;right:0;top:0;padding:0 7%;transition:transform .45s cubic-bezier(.2,.7,.2,1)}
+.ly{text-align:center;font-size:var(--fs,20px);font-weight:500;line-height:1.6;padding:6px 16px 8px;margin:1px 0;transition:background .25s;color:#e8ecf3;cursor:pointer;border-radius:10px}
+.ly.focus{background:rgba(56,198,244,.12);box-shadow:inset 3px 0 0 var(--wipe,var(--accent))}
+.ly .gauge{display:none;height:6px;margin:6px auto 0;max-width:640px;background:rgba(255,255,255,.12);border-radius:3px;overflow:hidden}
+.ly.focus .gauge{display:block}
+.ly .gauge i{display:block;height:100%;width:0;background:var(--wipe,var(--accent))}
+.ly .role{display:inline-block;font-size:13px;font-weight:700;border:1px solid currentColor;border-radius:999px;padding:1px 10px;margin-right:10px;vertical-align:middle;line-height:1.6}
+#countdown{position:absolute;left:0;right:0;top:14%;text-align:center;font-size:24px;letter-spacing:16px;color:var(--accent);pointer-events:none}
+#empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--mut)}
+#empty[hidden],#tapPanel[hidden]{display:none}
+#transport{display:flex;gap:8px;align-items:center;margin:12px 0 8px;flex-wrap:wrap}
+#time{font-variant-numeric:tabular-nums;font-size:18px;min-width:170px}
+#status{color:var(--mut);flex:1;min-width:200px}
+body.recording #status{color:var(--rec);font-weight:700}
+#meter{width:90px;height:8px;background:#0b0d11;border-radius:4px;overflow:hidden;border:1px solid var(--line)}
+#meter i{display:block;height:100%;width:0;background:var(--ok)}
+#tl{width:100%;height:58px;display:block;border-radius:8px;cursor:pointer;background:#0b0d11;border:1px solid var(--line)}
+.legend{display:flex;gap:14px;margin-top:4px}
+#takes{margin-top:14px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+#takes .head{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+#takes .head b{margin-right:auto}
+.take{display:flex;gap:8px;align-items:center;padding:7px 0;border-top:1px solid var(--line);flex-wrap:wrap}
+.take .dot{width:10px;height:10px;border-radius:50%}
+.take .nm{font-weight:700;min-width:64px}
+.take .info{color:var(--mut);margin-right:auto}
+.badge{background:var(--ok);color:#06210f;font-size:11px;font-weight:700;border-radius:999px;padding:1px 8px}
+.keys{margin-top:10px}
+
+/* 台本タブ */
+.box{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:14px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+#imp{width:100%;min-height:110px;margin:8px 0}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;color:var(--mut);font-weight:400;font-size:12px;padding:4px}
+td{padding:3px 4px;vertical-align:top;border-top:1px solid var(--line)}
+td.no{color:var(--mut);width:34px;padding-top:9px;text-align:right}
+td input.ts{width:84px;font-variant-numeric:tabular-nums;text-align:center}
+.tsw{display:inline-flex;align-items:stretch;gap:2px;white-space:nowrap}
+.tsw .ng{padding:2px 7px;min-width:26px;line-height:1}
+td input.rl{width:84px}
+td textarea{width:100%;resize:vertical;min-height:32px;field-sizing:content}
+td.ops{white-space:nowrap;width:1%}
+td.ops button{padding:4px 8px}
+tr.auto input.ts{color:var(--mut);font-style:italic}
+button,#tl,.ly{touch-action:manipulation}
+#tapBtn{touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+tr.sel td{background:#162130}
+tr.playing td.no{color:var(--accent);font-weight:700}
+#tapPanel{background:#10151d;border:2px solid var(--accent);border-radius:14px;padding:16px;margin-top:10px;text-align:center}
+#tapNow{font-size:24px;font-weight:700;margin:6px 0}
+#tapNext{color:var(--mut);margin-bottom:12px}
+#tapBtn{font-size:18px;padding:18px 40px;background:var(--panel2)}
+#tapBtn.down{background:var(--accent);color:#04202b}
+
+/* 設定タブ */
+.set{display:grid;grid-template-columns:220px 1fr;gap:10px 14px;align-items:center}
+.set input[type=number]{width:90px}
+
+/* ---------- スマホ・狭い画面 ---------- */
+@media (max-width: 760px){
+  body{font-size:15px}
+  input,select,textarea{font-size:16px} /* iPhoneで入力時に拡大されないように */
+  button{min-height:40px;padding:6px 12px}
+  header{padding:8px 10px;padding-top:max(8px, env(safe-area-inset-top));gap:6px}
+  header h1{font-size:15px;width:100%;margin:0}
+  header select{min-width:0;flex:1 1 100%}
+  header button{flex:1}
+  nav{padding:6px 10px 0}
+  nav button{flex:1;padding:8px 4px}
+  main{padding:10px 10px calc(30px + env(safe-area-inset-bottom))}
+  .box{padding:12px 10px}
+
+  /* 録音 */
+  #stage{height:58svh;min-height:260px;border-radius:12px}
+  #lyrics{padding:0 6px}
+  .ly{padding:5px 10px 7px;line-height:1.55}
+  .ly .role{font-size:12px;padding:0 8px;margin-right:6px}
+  #transport{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:10px 0 6px}
+  #transport > *{order:1}
+  #transport #btnPlay,#transport #btnRec{order:2;min-height:54px;font-size:17px}
+  #transport #btnPlay{grid-column:span 2}
+  #transport #btnRec{grid-column:span 3}
+  #transport #time{order:3;grid-column:span 3;min-width:0;font-size:16px;align-self:center}
+  #transport #meter{order:3;grid-column:span 2;width:auto;align-self:center}
+  #transport #status{order:4;grid-column:1/-1;min-width:0;font-size:13px}
+  #tl{height:50px}
+  .legend{flex-wrap:wrap;gap:4px 10px}
+  #takes{padding:10px}
+  #takes .head b{width:100%}
+  #takes .head button{flex:1}
+  .take .info{width:100%;order:5;font-size:12px}
+  .take button{flex:1}
+
+  /* 台本・タイミング：表をカード表示に */
+  table,tbody{display:block}
+  thead{display:none}
+  #rows tr{display:flex;flex-wrap:wrap;gap:6px;padding:10px 4px;border-top:1px solid var(--line);align-items:flex-end}
+  td.no{order:1} td.c-rl{order:2;flex:1 1 45%;min-width:0} td.ops{order:3}
+  td.c-st{order:4;flex:1 1 40%;min-width:0} td.c-en{order:5;flex:1 1 40%;min-width:0} td.c-tx{order:6;flex:1 1 100%}
+  td.no,td.c-rl,td.ops{align-self:center}
+  #rows td{display:block;padding:0;border:none;background:none}
+  #rows tr.sel{background:#162130;border-radius:10px}
+  td.no{width:auto;padding:0 4px 0 2px!important;text-align:left;font-weight:700}
+  td.ops{width:auto}
+  td.c-st::before{content:"開始"} td.c-en::before{content:"終了"}
+  td.c-st::before,td.c-en::before{display:block;color:var(--mut);font-size:12px;margin-bottom:2px}
+  .tsw{display:flex;width:100%}
+  .tsw .ng{min-width:40px;font-size:18px;padding:2px 0}
+  td input.ts{width:auto;flex:1;min-width:0;padding:5px 2px}
+  td.ops{white-space:nowrap}
+  td.ops button{min-width:40px;padding:6px 8px}
+  td.c-rl input{width:100%}
+  #tapPanel{padding:14px 10px}
+  #tapNow{font-size:19px}
+  #tapBtn{width:100%;min-height:120px;font-size:17px;padding:16px}
+
+  /* 書き出し・設定 */
+  .set{grid-template-columns:1fr}
+  .set > span:nth-child(odd){color:var(--accent);margin-top:6px}
+}
+@media (pointer: coarse){ .keys{display:none} }
+</style>
+</head>
+<body>
+<header>
+  <h1>セリフ録音スタジオ</h1>
+  <select id="projSel" title="プロジェクト"></select>
+  <button id="projNew">＋ 新規</button>
+  <button id="projRename">名前変更</button>
+  <button id="projDel">削除</button>
+</header>
+<nav>
+  <button data-tab="rec" class="on">録音</button>
+  <button data-tab="edit">台本・タイミング</button>
+  <button data-tab="out">書き出し・設定</button>
+</nav>
+<main>
+<!-- 録音 -->
+<section id="tab-rec">
+  <div id="stage">
+    <div id="countdown"></div>
+    <div id="lyrics"></div>
+    <div id="empty" hidden>台本がありません。「台本・タイミング」タブで読み込んでください。</div>
+  </div>
+  <div id="transport">
+    <button id="btnTop" title="先頭へ（Home）">⏮</button>
+    <button id="btnPrev" title="前のセリフへ（↑）">▲</button>
+    <button id="btnNext" title="次のセリフへ（↓）">▼</button>
+    <button id="btnPlay" class="primary">▶ 再生</button>
+    <button id="btnRec" class="rec">● ここから録音</button>
+    <span id="time">0:00.00</span>
+    <button id="fsDown" title="文字を小さく">A−</button>
+    <button id="fsUp" title="文字を大きく">A＋</button>
+    <div id="meter" title="マイク入力"><i></i></div>
+    <span id="status"></span>
+  </div>
+  <canvas id="tl"></canvas>
+  <div class="legend small mut"><span>上段：セリフ</span><span>下段：採用中の録音（色＝テイク）</span><span>クリックでその位置へ移動</span></div>
+  <div id="takes"></div>
+  <div class="keys small mut">Space：再生／停止　R：録音開始／停止　↑↓：前後のセリフへ　←→：5秒移動　Home：先頭へ　セリフをクリックでそこへ移動</div>
+</section>
+
+<!-- 台本・タイミング -->
+<section id="tab-edit" hidden>
+  <div class="box">
+    <b>台本ファイル（JSON）</b>
+    <div class="small mut" style="margin-top:6px;line-height:1.7">台本・時刻・役名を1つのファイルに保存します。録音と伴奏の曲は含みません（伴奏はファイル名と長さだけを記録し、開いたときに曲を選び直します）。</div>
+    <div class="row" style="margin-top:8px">
+      <button id="jsonSave" class="primary">台本を保存（JSON）</button>
+      <label class="mut">台本を開く：<input type="file" id="jsonOpen" accept=".json,application/json"></label>
+      <span class="small mut">開いた台本は新しいプロジェクトになります（今のプロジェクトが空ならそこに入ります）</span>
+    </div>
+  </div>
+
+  <div class="box">
+    <b>台本の読み込み</b>
+    <div class="small mut" style="margin-top:6px;line-height:1.7">
+      1行＝1セリフで貼り付けてください。時刻は付いていてもいなくても読み込めます。<br>
+      対応する形：文章だけ／<code>[1:23.45]セリフ</code>（LRC）／<code>1:23.4-1:27.0 セリフ</code>／<code>1:23 セリフ</code>／字幕ファイル（SRT・VTT）<br>
+      役名は行頭に <code>【役名】</code> を付けます（例：<code>【A】こんにちは</code>）。時刻のない行は、前後の時刻と文字数から仮の時刻を自動で割り振ります。
+    </div>
+    <textarea id="imp" placeholder="ここに台本・文字起こしを貼り付け"></textarea>
+    <div class="row">
+      <button id="impBtn" class="primary">この内容で台本を置き換える</button>
+      <label class="mut">またはファイル：<input type="file" id="impFile" accept=".txt,.srt,.vtt,.lrc,.json,text/plain"></label>
+      <span class="mut small">自動割り振りの速さ</span><input type="number" id="cps" min="2" max="20" step="0.5" style="width:70px"><span class="mut small">文字/秒</span>
+    </div>
+  </div>
+
+  <div class="box">
+    <b>伴奏・BGM（任意）</b>
+    <div class="row" style="margin-top:8px">
+      <span id="bgmName" class="mut">なし（無音で時間だけ進みます）</span>
+      <label><input type="file" id="bgmFile" accept="audio/*,.mp3,.wav,.m4a,.ogg"></label>
+      <button id="bgmDel">外す</button>
+    </div>
+    <div id="bgmNeed" class="small" style="margin-top:6px;color:#ffd54f" hidden></div>
+    <div class="small mut" style="margin-top:6px">カラオケの伴奏や、声劇の相手役の録音を読み込むと、流しながら録音できます。伴奏が録音に入らないよう、ヘッドホンを使ってください。</div>
+  </div>
+
+  <div class="box">
+    <b>キーを押して時刻を付ける</b>
+    <div class="small mut" style="margin-top:6px;line-height:1.7">
+      表で選んだ行から時間が流れます。セリフを声に出しながら、<b>話している間だけ Space キー（または下のボタン）を押し続けて</b>ください。押した瞬間が開始、離した瞬間が終了になり、次の行へ進みます。Esc で終了します。
+    </div>
+    <div class="row" style="margin-top:8px"><button id="tapStart" class="primary">選択した行から時刻付けを始める</button></div>
+    <div id="tapPanel" hidden>
+      <div class="mut" id="tapInfo"></div>
+      <div id="tapNow"></div>
+      <div id="tapNext"></div>
+      <button id="tapBtn">押している間＝話している区間</button>
+      <div style="margin-top:10px"><button id="tapEnd">終了（Esc）</button></div>
+    </div>
+  </div>
+
+  <div class="box">
+    <div class="row" style="margin-bottom:6px">
+      <b style="margin-right:auto">セリフ一覧</b>
+      <span class="small mut">灰色の斜体の時刻は自動で割り振った仮の時刻です</span>
+      <button id="sortBtn">時刻順に並べ替え</button>
+      <button id="addEnd">＋ 末尾に行を追加</button>
+    </div>
+    <table>
+      <thead><tr><th></th><th>開始</th><th>終了</th><th>役名</th><th>セリフ</th><th></th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 書き出し・設定 -->
+<section id="tab-out" hidden>
+  <div class="box">
+    <b>書き出し</b>
+    <div class="small mut" style="margin:6px 0 10px">各セリフで採用中のテイクをつないだ、通しの録音を書き出します。</div>
+    <div class="row">
+      <button id="expVoice" class="primary">声だけ（WAV）</button>
+      <button id="expMix" class="primary">声＋伴奏（WAV）</button>
+      <button id="expSrt">台本とタイミング（SRT）</button>
+      <span id="expStatus" class="mut"></span>
+    </div>
+    <div class="small mut" style="margin-top:8px">SRTは「台本・タイミング」タブでそのまま読み込み直せるので、タイミングの控えにも使えます。</div>
+  </div>
+  <div class="box">
+    <b>録音の設定</b>
+    <div class="set" style="margin-top:10px">
+      <span>録り直しの助走</span><span><input type="number" id="setPre" min="0" max="15" step="0.5"> 秒前から流して、指定位置で録音開始</span>
+      <span>録音タイミングの補正</span><span><input type="number" id="setOff" min="-500" max="500" step="5"> ミリ秒（プラスで声が前にずれる）</span>
+      <span>ノイズ抑制</span><span><label><input type="checkbox" id="setNs"> マイクの雑音を抑える（講演向け。歌では切るのがおすすめ）</label></span>
+    </div>
+  </div>
+  <div class="box">
+    <b>音量（再生と「声＋伴奏」の書き出しに反映）</b>
+    <div class="set" style="margin-top:10px">
+      <span>声</span><span><input type="range" id="setVv" min="0" max="2" step="0.05"> <span id="vvTx"></span></span>
+      <span>伴奏</span><span><input type="range" id="setBv" min="0" max="2" step="0.05"> <span id="bvTx"></span></span>
+    </div>
+  </div>
+  <div class="small mut">データ（台本・録音・伴奏）はこのブラウザ内に保存され、閉じても続きから再開できます。ブラウザの閲覧データを削除すると消えるため、仕上がった録音は書き出して保存してください。</div>
+</section>
+</main>
+
+<script>
+'use strict';
+const SR = 32000; // 録音の保存サンプルレート
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+const r2 = v => Math.round(v*100)/100;
+const tlen = s => Math.max(1, Array.from(String(s||'').replace(/\s/g,'')).length);
+function fmt(t){ if(t==null || !isFinite(t)) return ''; t=Math.max(0,t); const m=Math.floor(t/60); return m+':'+(t-m*60).toFixed(2).padStart(5,'0'); }
+function parseTime(s){
+  s = String(s ?? '').trim().replace(/：/g,':').replace(',', '.');
+  if(!s) return null;
+  if(!/^\d+(:\d+){0,2}(\.\d+)?$/.test(s)) return NaN;
+  let t=0; for(const p of s.split(':')) t = t*60 + parseFloat(p);
+  return t;
+}
+
+/* ---------- 保存（IndexedDB、使えなければメモリ） ---------- */
+const idb = {
+  db:null, mem:{projects:new Map(), pcm:new Map(), bgm:new Map()},
+  open(){ return new Promise(res=>{
+    try{
+      const r = indexedDB.open('serifu-studio', 1);
+      r.onupgradeneeded = () => { const d=r.result; for(const s of ['projects','pcm','bgm']) if(!d.objectStoreNames.contains(s)) d.createObjectStore(s); };
+      r.onsuccess = () => { this.db = r.result; res(true); };
+      r.onerror = () => res(false);
+    }catch(e){ res(false); }
+  }); },
+  tx(store, mode, fn){ return new Promise((res,rej)=>{
+    const t = this.db.transaction(store, mode); const r = fn(t.objectStore(store));
+    t.oncomplete = () => res(r ? r.result : undefined); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error);
+  }); },
+  get(s,k){ return this.db ? this.tx(s,'readonly',o=>o.get(k)) : Promise.resolve(this.mem[s].get(k)); },
+  put(s,k,v){ return this.db ? this.tx(s,'readwrite',o=>o.put(v,k)) : Promise.resolve(this.mem[s].set(k,v)); },
+  del(s,k){ return this.db ? this.tx(s,'readwrite',o=>o.delete(k)) : Promise.resolve(this.mem[s].delete(k)); },
+  all(s){ return this.db ? this.tx(s,'readonly',o=>o.getAll()) : Promise.resolve([...this.mem[s].values()]); },
+};
+
+/* ---------- 状態 ---------- */
+let P = null;                 // 現在のプロジェクト
+let ctx = null, voiceGain = null, bgmGain = null, bgmBuf = null;
+const pcm = new Map();        // takeId -> Int16Array
+let pos = 0, selIdx = 0, curTab = 'rec';
+const player = {playing:false, t0:0, ctxT0:0, sources:[], timer:null, schedUntil:0, voiceUntil:Infinity, onlyTake:null, endAt:null, noVoice:false};
+let rec = null, capTarget = null, mic = null, workletReady = false, level = 0;
+let tap = null;
+
+function defaultSettings(){ return {preroll:3, offsetMs:0, ns:false, voiceVol:1, bgmVol:0.8, cps:7, fontSize:20}; }
+function newProject(name, lines){
+  return {id:'p'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), name, lines:lines||[], takes:[], layers:[], takeNo:0, settings:defaultSettings(), bgmName:'', created:Date.now()};
+}
+function sampleLines(){
+  return [
+    {start:1.0, end:4.5, role:'', text:'本日はお時間をいただき、ありがとうございます。'},
+    {start:5.0, end:7.5, role:'', text:'これはサンプルのセリフです。'},
+    {start:8.0, end:13.0, role:'', text:'「台本・タイミング」タブで、文字起こしを貼り付けて読み込んでください。'},
+    {start:13.5, end:17.0, role:'', text:'セリフごとに、何秒から何秒かを設定できます。'},
+    {start:18.0, end:22.0, role:'A', text:'役名を付けると、声劇の台本としても使えます。'},
+    {start:22.5, end:26.5, role:'B', text:'伴奏を読み込めば、カラオケにも使えます。'},
+    {start:30.0, end:33.0, role:'', text:'間が空くときは、始まる前にカウントが出ます。'},
+  ];
+}
+
+/* ---------- 音声の基礎 ---------- */
+function ac(){
+  if(!ctx){
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    voiceGain = ctx.createGain(); bgmGain = ctx.createGain();
+    voiceGain.connect(ctx.destination); bgmGain.connect(ctx.destination);
+    applyVol();
+  }
+  return ctx;
+}
+function applyVol(){ if(!ctx || !P) return; voiceGain.gain.value = P.settings.voiceVol; bgmGain.gain.value = P.settings.bgmVol; }
+function outLat(){ return ctx ? (ctx.outputLatency || ctx.baseLatency || 0) : 0; }
+const takeById = id => P.takes.find(t => t.id === id);
+function maxPrio(){ let m=0; for(const l of P.layers) m=Math.max(m,l.prio); return m; }
+function voiceEndS(){ let m=0; for(const l of P.layers){ const tk=takeById(l.takeId); if(tk) m=Math.max(m, Math.min(l.bS, tk.startS+tk.lenS)); } return m; }
+function totalDur(){
+  let m = 10;
+  for(const L of P.lines) if(L.end!=null) m = Math.max(m, L.end + 2);
+  if(bgmBuf) m = Math.max(m, bgmBuf.duration);
+  return Math.max(m, voiceEndS()/SR);
+}
+// 採用状態を重ねた声（サンプル単位）。重なりは優先度の高いものが上書き
+function compositeS(a0, n, onlyId){
+  let out = null;
+  const ls = onlyId ? [{takeId:onlyId, aS:-Infinity, bS:Infinity, prio:0}] : [...P.layers].sort((x,y)=>x.prio-y.prio);
+  for(const ly of ls){
+    const tk = takeById(ly.takeId), d = pcm.get(ly.takeId);
+    if(!tk || !d) continue;
+    const s = Math.max(ly.aS, tk.startS, a0), e = Math.min(ly.bS, tk.startS + d.length, a0 + n);
+    if(e <= s) continue;
+    if(!out) out = new Float32Array(n);
+    for(let i=s;i<e;i++) out[i-a0] = d[i-tk.startS] / 32768;
+  }
+  return out;
+}
+function topLayerAt(t){
+  const s = Math.round(t*SR); let best = null;
+  for(const ly of P.layers){
+    const tk = takeById(ly.takeId); if(!tk) continue;
+    if(s >= Math.max(ly.aS, tk.startS) && s < Math.min(ly.bS, tk.startS+tk.lenS) && (!best || ly.prio > best.prio)) best = ly;
+  }
+  return best;
+}
+function takeColor(tk){ return `hsl(${(tk.no*67+190)%360} 75% 60%)`; }
+const ROLE_COLORS = ['#ff6b8b','#4fc3f7','#ffd54f','#81c784','#ba68c8','#ff8a65','#4db6ac','#9575cd'];
+function roleColor(role){
+  const order = []; for(const L of P.lines) if(L.role && !order.includes(L.role)) order.push(L.role);
+  const i = order.indexOf(role); return ROLE_COLORS[(i<0?0:i) % ROLE_COLORS.length];
+}
+
+/* ---------- 再生 ---------- */
+function curTime(){
+  if(!player.playing) return pos;
+  const t = player.t0 + (ctx.currentTime - player.ctxT0 - outLat());
+  return Math.max(player.t0, t);
+}
+/* 画面が消えないようにする（再生中・録音中・時刻付け中） */
+let wakeLock = null;
+async function keepAwake(on){
+  try{
+    if(on){ if(!wakeLock && navigator.wakeLock){ wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; }); } }
+    else if(wakeLock){ const w = wakeLock; wakeLock = null; await w.release(); }
+  }catch(e){ wakeLock = null; }
+}
+document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible' && player.playing) keepAwake(true); });
+function play(from, o={}){
+  haltPlayback();
+  const c = ac(); c.resume();
+  Object.assign(player, {playing:true, t0:from, ctxT0:c.currentTime+0.12, schedUntil:from, voiceUntil:o.voiceUntil ?? Infinity,
+    onlyTake:o.onlyTake||null, endAt:o.endAt ?? null, noVoice:!!o.noVoice, sources:[]});
+  if(bgmBuf && from < bgmBuf.duration){
+    const s = c.createBufferSource(); s.buffer = bgmBuf; s.connect(bgmGain);
+    s.start(player.ctxT0, Math.max(0, from)); player.sources.push(s);
+  }
+  schedule(); player.timer = setInterval(schedule, 150);
+  keepAwake(true);
+  updateButtons(); requestAnimationFrame(frame);
+}
+function schedule(){
+  if(!player.playing || player.noVoice) return;
+  const c = ctx; const now = player.t0 + (c.currentTime - player.ctxT0); const horizon = now + 2.5;
+  while(player.schedUntil < horizon){
+    const a = player.schedUntil, b = Math.min(a + 4, player.voiceUntil);
+    if(b <= a){ player.schedUntil = Infinity; break; }
+    const a0 = Math.round(a*SR), n = Math.round(b*SR) - a0;
+    if(n > 0){
+      const data = compositeS(a0, n, player.onlyTake);
+      if(data){
+        const buf = c.createBuffer(1, n, SR); buf.copyToChannel(data, 0);
+        const s = c.createBufferSource(); s.buffer = buf; s.connect(voiceGain);
+        const when = player.ctxT0 + (a0/SR - player.t0);
+        if(when < c.currentTime){ const off = c.currentTime - when; if(off < buf.duration) s.start(c.currentTime, off); }
+        else s.start(when);
+        player.sources.push(s);
+      }
+    }
+    player.schedUntil = b;
+  }
+}
+function haltPlayback(){
+  if(player.playing) pos = Math.max(0, curTime());
+  player.playing = false;
+  clearInterval(player.timer); player.timer = null;
+  for(const s of player.sources){ try{ s.stop(); }catch(e){} }
+  player.sources = [];
+}
+function stopAll(){
+  keepAwake(false);
+  if(rec) stopRecording();
+  else if(tap) endTap();
+  else haltPlayback();
+  updateButtons(); updateView(); drawTimeline();
+}
+function togglePlay(){ if(rec || tap){ stopAll(); return; } if(player.playing) stopAll(); else play(pos); }
+function seek(t){
+  if(rec || tap) return;
+  t = clamp(t, 0, totalDur());
+  if(player.playing && !player.endAt && !player.onlyTake) play(t);
+  else { haltPlayback(); pos = t; updateButtons(); }
+  updateView(); drawTimeline();
+}
+function seekLine(i){ if(!P.lines.length) return; i = clamp(i, 0, P.lines.length-1); seek(P.lines[i].start ?? 0); }
+function frame(){
+  if(!player.playing){ if(!rec && !tap) keepAwake(false); return; }
+  const t = curTime();
+  if(player.endAt != null && t >= player.endAt){ const e = player.endAt; stopAll(); pos = e; updateView(); return; }
+  if(!rec && !tap && t > totalDur() + 0.3){ stopAll(); return; }
+  if(rec){
+    setStatus(t < rec.fromT ? `助走中… ${fmt(rec.fromT)} から録音します` : '● 録音中（止めた時点までが上書きされます）');
+    $('#meter i').style.width = Math.min(100, level*140) + '%'; level *= 0.92;
+  }
+  updateView(); drawTimeline();
+  requestAnimationFrame(frame);
+}
+
+/* ---------- 録音 ---------- */
+const WORKLET = `class Cap extends AudioWorkletProcessor{constructor(){super();this.on=false;this.buf=new Float32Array(2048);this.n=0;this.t0=0;this.port.onmessage=e=>{this.on=e.data;this.n=0;};}
+process(inputs){const ch=inputs[0]&&inputs[0][0];if(this.on&&ch){if(this.n===0)this.t0=currentTime;this.buf.set(ch,this.n);this.n+=ch.length;if(this.n>=1920){this.port.postMessage({t:this.t0,d:this.buf.slice(0,this.n)});this.n=0;}}return true;}}
+registerProcessor('cap',Cap);`;
+async function ensureMic(){
+  const c = ac();
+  if(mic && mic.ns === !!P.settings.ns) return;
+  if(mic){ mic.stream.getTracks().forEach(t=>t.stop()); mic.node.disconnect(); mic = null; }
+  const stream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false, noiseSuppression:!!P.settings.ns, autoGainControl:false, channelCount:1}});
+  if(!workletReady){
+    // ファイルを直接開いた場合は blob: が使えないため data: で読み込む
+    try{ await c.audioWorklet.addModule('data:application/javascript,' + encodeURIComponent(WORKLET)); }
+    catch(e){ await c.audioWorklet.addModule(URL.createObjectURL(new Blob([WORKLET], {type:'application/javascript'}))); }
+    workletReady = true;
+  }
+  const src = c.createMediaStreamSource(stream);
+  const node = new AudioWorkletNode(c, 'cap', {numberOfInputs:1, numberOfOutputs:1, channelCount:1, channelCountMode:'explicit'});
+  src.connect(node); const z = c.createGain(); z.gain.value = 0; node.connect(z).connect(c.destination);
+  node.port.onmessage = e => {
+    if(capTarget) capTarget.blocks.push(e.data);
+    let m = 0; const d = e.data.d; for(let i=0;i<d.length;i+=4){ const v = Math.abs(d[i]); if(v>m) m=v; }
+    if(m > level) level = m;
+  };
+  mic = {stream, src, node, ns:!!P.settings.ns};
+}
+async function startRecording(){
+  if(rec || capTarget || tap) return;
+  if(!P.lines.length && !confirm('台本がありませんが、録音しますか？')) return;
+  try{ ac().resume(); }catch(e){}
+  let from = Math.max(0, player.playing ? curTime() : pos);
+  haltPlayback(); updateButtons();
+  setStatus('マイクを準備しています…');
+  try{ await ensureMic(); }
+  catch(e){ setStatus(''); alert('マイクを使えませんでした。ブラウザのマイクの許可を確認してください。\n(' + e.message + ')'); return; }
+  const c = ac(); await c.resume();
+  const pre = from > 0 ? Math.min(P.settings.preroll || 0, from) : 0;
+  play(from - pre, {voiceUntil:from});
+  const comp = outLat() + 0.01 + (P.settings.offsetMs || 0) / 1000;
+  rec = {fromT:from, C0:player.ctxT0 + pre + comp, comp, blocks:[]};
+  capTarget = rec; mic.node.port.postMessage(true);
+  document.body.classList.add('recording'); updateButtons();
+}
+function stopRecording(){
+  const r = rec; if(!r) return;
+  const tStop = curTime(); rec = null;
+  haltPlayback(); document.body.classList.remove('recording');
+  $('#meter i').style.width = '0';
+  const D = tStop - r.fromT;
+  if(D < 0.2){ capTarget = null; mic.node.port.postMessage(false); pos = r.fromT; setStatus('録音が始まる前に止めたため、何も保存していません'); updateButtons(); return; }
+  setStatus('録音を保存しています…');
+  setTimeout(() => { mic.node.port.postMessage(false); finalizeTake(r, D); }, r.comp*1000 + 250);
+}
+function finalizeTake(r, D){
+  const sr = ctx.sampleRate, N = Math.round(D*sr), f = new Float32Array(N);
+  for(const b of r.blocks){
+    const off = Math.round((b.t - r.C0) * sr);
+    for(let k=0;k<b.d.length;k++){ const i = off + k; if(i >= 0 && i < N) f[i] = b.d[k]; }
+  }
+  const M = Math.round(D*SR), out = new Int16Array(M), ratio = sr / SR;
+  for(let i=0;i<M;i++){
+    const x = i*ratio, j = Math.floor(x), fr = x - j;
+    const v = (f[j]||0)*(1-fr) + (f[j+1]||0)*fr;
+    out[i] = clamp(Math.round(v*32767), -32768, 32767);
+  }
+  capTarget = null;
+  const id = 't' + Date.now().toString(36) + Math.random().toString(36).slice(2,5);
+  P.takeNo = (P.takeNo||0) + 1;
+  const tk = {id, no:P.takeNo, startS:Math.round(r.fromT*SR), lenS:M, created:Date.now()};
+  P.takes.push(tk);
+  P.layers.push({takeId:id, aS:tk.startS, bS:tk.startS+M, prio:maxPrio()+1});
+  pcm.set(id, out);
+  idb.put('pcm', id, out.buffer).catch(e => alert('録音の保存に失敗しました：' + e.message));
+  save();
+  setStatus(`テイク${tk.no}を保存しました（${fmt(r.fromT)}〜${fmt(r.fromT+D)}）`);
+  renderTakes(true); drawTimeline(); updateButtons();
+}
+
+/* ---------- 表示（歌詞・タイムライン） ---------- */
+let lyEls = [], focusShown = -1, takesFor = -2;
+function findFocus(t){
+  const L = P.lines;
+  for(let i=0;i<L.length;i++) if(L[i].start!=null && L[i].end!=null && L[i].start <= t && t < L[i].end) return {i, active:true};
+  let next = -1, ns = Infinity;
+  for(let i=0;i<L.length;i++) if(L[i].start!=null && L[i].start > t && L[i].start < ns){ next = i; ns = L[i].start; }
+  if(next >= 0) return {i:next, active:false};
+  return {i:L.length-1, active:false};
+}
+function renderLyrics(){
+  const box = $('#lyrics'); box.innerHTML = '';
+  $('#empty').hidden = P.lines.length > 0;
+  lyEls = P.lines.map((L,i) => {
+    const d = document.createElement('div'); d.className = 'ly';
+    const col = L.role ? roleColor(L.role) : '';
+    if(col) d.style.setProperty('--wipe', col);
+    d.innerHTML = (L.role ? `<span class="role" style="color:${col}">${esc(L.role)}</span>` : '') + `<span class="tx">${esc(L.text)}</span><div class="gauge"><i></i></div>`;
+    d.onclick = () => seekLine(i);
+    box.appendChild(d); return d;
+  });
+  $('#lyrics').style.setProperty('--fs', (P.settings.fontSize || 20) + 'px');
+  focusShown = -1;
+  updateView(true);
+}
+function updateView(force){
+  if(!P) return;
+  const t = curTime();
+  $('#time').textContent = fmt(t) + ' / ' + fmt(totalDur());
+  if(!P.lines.length){ $('#countdown').textContent = ''; if(takesFor !== -1) renderTakes(true); return; }
+  const f = findFocus(t);
+  if(f.i !== focusShown || force){
+    if(focusShown >= 0 && lyEls[focusShown]) lyEls[focusShown].querySelector('.gauge i').style.width = '0';
+    focusShown = f.i;
+    lyEls.forEach((el,i) => el.classList.toggle('focus', i === f.i));
+    const el = lyEls[f.i];
+    if(el && curTab === 'rec'){
+      const H = $('#stage').clientHeight;
+      $('#lyrics').style.transform = `translateY(${H*0.32 - el.offsetTop - el.offsetHeight/2}px)`;
+    }
+    document.querySelectorAll('#rows tr.playing').forEach(tr => tr.classList.remove('playing'));
+    const tr = document.querySelector(`#rows tr[data-i="${f.i}"]`); if(tr) tr.classList.add('playing');
+    renderTakes();
+  }
+  const L = P.lines[f.i], el = lyEls[f.i];
+  if(L && el){
+    // ゲージ：このセリフの開始から終了までの経過
+    const pr = t < L.start ? 0 : t >= L.end ? 1 : (t - L.start) / Math.max(0.01, L.end - L.start);
+    el.querySelector('.gauge i').style.width = (pr*100).toFixed(2) + '%';
+    // カウントダウン（3秒以上の間があるとき）
+    let cd = '';
+    if(!f.active){
+      let prevEnd = 0; for(const x of P.lines) if(x.end!=null && x.end <= L.start + 1e-6) prevEnd = Math.max(prevEnd, x.end);
+      const rem = L.start - t;
+      if(rem > 0 && rem <= 3 && L.start - prevEnd >= 3) cd = '●'.repeat(Math.ceil(rem));
+    }
+    $('#countdown').textContent = cd;
+  }
+}
+function drawTimeline(){
+  if(!P) return;
+  const cv = $('#tl'), w = cv.clientWidth, h = cv.clientHeight, dpr = window.devicePixelRatio || 1;
+  if(!w) return;
+  if(cv.width !== Math.round(w*dpr) || cv.height !== Math.round(h*dpr)){ cv.width = Math.round(w*dpr); cv.height = Math.round(h*dpr); }
+  const g = cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,w,h);
+  const T = totalDur(), X = t => t / T * w;
+  if(bgmBuf){ g.fillStyle = 'rgba(255,255,255,.05)'; g.fillRect(0, 0, X(bgmBuf.duration), h); }
+  P.lines.forEach((L,i) => {
+    if(L.start == null || L.end == null) return;
+    g.fillStyle = L.role ? roleColor(L.role) : '#38c6f4';
+    g.globalAlpha = i === focusShown ? 1 : .55;
+    g.fillRect(X(L.start), 8, Math.max(1, X(L.end) - X(L.start) - 1), 16);
+  });
+  g.globalAlpha = 1;
+  if(P.layers.length){
+    const ls = [...P.layers].sort((a,b) => b.prio - a.prio).map(l => ({l, tk:takeById(l.takeId)})).filter(o => o.tk);
+    for(let px=0; px<w; px++){
+      const s = Math.round((px+.5)/w*T*SR);
+      for(const o of ls){
+        if(s >= Math.max(o.l.aS, o.tk.startS) && s < Math.min(o.l.bS, o.tk.startS+o.tk.lenS)){ g.fillStyle = takeColor(o.tk); g.fillRect(px, 32, 1, 18); break; }
+      }
+    }
+  }
+  const x = X(curTime());
+  g.fillStyle = rec ? '#ff4d5e' : '#ffffff'; g.fillRect(x-1, 0, 2, h);
+}
+
+/* ---------- テイク一覧 ---------- */
+function renderTakes(force){
+  const box = $('#takes');
+  if(!P.lines.length){ takesFor = -1; box.innerHTML = '<div class="mut">台本を読み込むと、セリフごとのテイクがここに表示されます。</div>'; return; }
+  const i = focusShown; if(i === takesFor && !force) return; takesFor = i;
+  const L = P.lines[i]; if(!L){ box.innerHTML = ''; return; }
+  const aS = Math.round(L.start*SR), bS = Math.round(L.end*SR);
+  const list = P.takes.filter(tk => tk.startS < bS && tk.startS + tk.lenS > aS).sort((x,y) => x.no - y.no);
+  // 採用中＝そのセリフの区間で最も長く聞こえているテイク
+  const cnt = {};
+  for(let k=0;k<100;k++){ const ly = topLayerAt(L.start + (L.end - L.start)*(k+.5)/100); if(ly) cnt[ly.takeId] = (cnt[ly.takeId]||0) + 1; }
+  const topId = Object.keys(cnt).sort((a,b) => cnt[b] - cnt[a])[0];
+  const top = topId ? {takeId:topId} : null;
+  let html = `<div class="head"><b>セリフ ${i+1} のテイク <span class="mut">（${fmt(L.start)}〜${fmt(L.end)}）</span></b>
+    <button data-a="playline" ${list.length?'':'disabled'}>▶ 採用中の音で聞く</button>
+    <button data-a="recline" class="rec">● このセリフから録り直す</button></div>`;
+  if(!list.length) html += '<div class="mut" style="padding:6px 0">このセリフの録音はまだありません。</div>';
+  for(const tk of list){
+    const d = new Date(tk.created), hm = `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    const adopted = top && top.takeId === tk.id;
+    html += `<div class="take" data-id="${tk.id}"><span class="dot" style="background:${takeColor(tk)}"></span><span class="nm">テイク${tk.no}</span>
+      ${adopted ? '<span class="badge">採用中</span>' : ''}
+      <span class="info">${fmt(tk.startS/SR)}〜${fmt((tk.startS+tk.lenS)/SR)}　録音 ${hm}</span>
+      <button data-a="playtake">▶ 聞く</button>
+      <button data-a="adopt" ${adopted?'disabled':''}>このセリフに採用</button>
+      <button data-a="deltake">削除</button></div>`;
+  }
+  box.innerHTML = html;
+}
+$('#takes').addEventListener('click', e => {
+  const a = e.target.dataset.a; if(!a) return;
+  const L = P.lines[takesFor]; if(!L) return;
+  if(a === 'recline'){ if(rec || tap) return; seekLine(takesFor); startRecording(); return; }
+  if(rec || tap) return;
+  if(a === 'playline'){ play(L.start, {endAt:L.end}); return; }
+  const tk = takeById(e.target.closest('.take').dataset.id); if(!tk) return;
+  if(a === 'playtake'){
+    const s = Math.max(L.start, tk.startS/SR), en = Math.min(L.end, (tk.startS+tk.lenS)/SR);
+    play(s, {onlyTake:tk.id, endAt:en});
+  } else if(a === 'adopt'){
+    haltPlayback();
+    P.layers.push({takeId:tk.id, aS:Math.max(Math.round(L.start*SR), tk.startS), bS:Math.min(Math.round(L.end*SR), tk.startS+tk.lenS), prio:maxPrio()+1});
+    save(); renderTakes(true); drawTimeline(); updateButtons();
+    setStatus(`セリフ ${takesFor+1} にテイク${tk.no}を採用しました`);
+  } else if(a === 'deltake'){
+    if(!confirm(`テイク${tk.no}を削除します。元に戻せません。よろしいですか？`)) return;
+    haltPlayback();
+    P.takes = P.takes.filter(x => x.id !== tk.id);
+    P.layers = P.layers.filter(l => l.takeId !== tk.id);
+    pcm.delete(tk.id); idb.del('pcm', tk.id);
+    save(); renderTakes(true); drawTimeline(); updateButtons();
+  }
+});
+
+/* ---------- 台本の読み込み・自動割り振り ---------- */
+function mkLine(text, st, en){
+  let role = ''; const m = text.match(/^【([^】]{1,20})】\s*/);
+  if(m){ role = m[1].trim(); text = text.slice(m[0].length); }
+  const ok = v => (v == null || Number.isNaN(v)) ? null : r2(v);
+  return {start:ok(st), end:ok(en), role, text:text.trim()};
+}
+function parseScript(txt){
+  txt = txt.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
+  const out = [];
+  const TS = '(?:\\d{1,3}:)?\\d{1,3}:\\d{1,2}(?:[.,]\\d+)?';
+  if(/-->/.test(txt)){
+    for(const blk of txt.split(/\n\s*\n/)){
+      const ls = blk.split('\n').map(s => s.trim()).filter(Boolean);
+      const k = ls.findIndex(s => s.includes('-->')); if(k < 0) continue;
+      const [a, b] = ls[k].split('-->');
+      const text = ls.slice(k+1).join(' ').replace(/<[^>]+>/g, '').trim();
+      if(text) out.push(mkLine(text, parseTime(a.trim().split(/\s+/)[0]), parseTime(b.trim().split(/\s+/)[0])));
+    }
+    return out;
+  }
+  const reLrc = new RegExp('^\\[(' + TS + ')\\]\\s*');
+  const reRange = new RegExp('^(' + TS + ')\\s*(?:-|〜|~|–|－|->)\\s*(' + TS + ')\\s*');
+  const reOne = new RegExp('^(' + TS + ')\\s+');
+  for(const raw of txt.split('\n')){
+    let s = raw.trim(); if(!s) continue;
+    let st = null, en = null, m;
+    if((m = s.match(reLrc))){ st = parseTime(m[1]); s = s.slice(m[0].length); }
+    else if((m = s.match(reRange))){ st = parseTime(m[1]); en = parseTime(m[2]); s = s.slice(m[0].length); }
+    else if((m = s.match(reOne))){ st = parseTime(m[1]); s = s.slice(m[0].length); }
+    if(s.trim()) out.push(mkLine(s, st, en));
+  }
+  return out;
+}
+function autofill(){
+  const L = P.lines, cps = P.settings.cps || 7;
+  let i = 0;
+  while(i < L.length){
+    if(L[i].start != null){ i++; continue; }
+    let j = i; while(j < L.length && L[j].start == null) j++;
+    const prev = L[i-1];
+    const from = prev ? (prev.end != null ? prev.end : prev.start + tlen(prev.text)/cps) : 0;
+    const lens = L.slice(i, j).map(x => tlen(x.text)), sum = lens.reduce((a,b) => a+b, 0);
+    let to = j < L.length ? L[j].start : from + sum/cps;
+    if(to <= from + 0.2*(j-i)) to = from + sum/cps;
+    let t = from;
+    for(let k=i;k<j;k++){ const d = (to-from)*lens[k-i]/sum; L[k].start = r2(t); L[k].end = r2(t+d); L[k].auto = true; t += d; }
+    i = j;
+  }
+  for(let k=0;k<L.length;k++){
+    if(L[k].end == null){
+      const nx = L[k+1];
+      L[k].end = r2(nx && nx.start > L[k].start ? nx.start : L[k].start + tlen(L[k].text)/cps);
+      L[k].auto = true;
+    }
+    if(L[k].end <= L[k].start) L[k].end = r2(L[k].start + 0.3);
+  }
+}
+async function readTextFile(f){
+  const buf = await f.arrayBuffer();
+  try{ return new TextDecoder('utf-8', {fatal:true}).decode(buf); }
+  catch(e){ return new TextDecoder('shift_jis').decode(buf); }
+}
+function importScript(txt){
+  const lines = parseScript(txt);
+  if(!lines.length){ alert('読み込めるセリフがありませんでした'); return; }
+  if(P.lines.length && !confirm(`今の台本（${P.lines.length}行）を、読み込んだ ${lines.length} 行で置き換えます。録音は消えません。よろしいですか？`)) return;
+  stopAll();
+  P.lines = lines; autofill(); selIdx = 0;
+  linesChanged(true);
+  $('#imp').value = '';
+  const timed = lines.filter(l => !l.auto).length;
+  alert(`${lines.length} 行を読み込みました。` + (timed < lines.length ? `\n時刻のない ${lines.length - timed} 行には仮の時刻を割り振りました。` : ''));
+}
+$('#impBtn').onclick = () => importScript($('#imp').value);
+$('#impFile').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if(!f) return;
+  if(/\.json$/i.test(f.name)) await openScriptJson(f); else importScript(await readTextFile(f));
+};
+$('#cps').onchange = e => { const v = parseFloat(e.target.value); if(v > 0){ P.settings.cps = v; save(); } };
+
+/* ---------- セリフ一覧（表） ---------- */
+function renderTable(){
+  const tb = $('#rows'); tb.innerHTML = '';
+  P.lines.forEach((L,i) => {
+    const tr = document.createElement('tr'); tr.dataset.i = i;
+    tr.className = (L.auto ? 'auto ' : '') + (i === selIdx ? 'sel ' : '') + (i === focusShown ? 'playing' : '');
+    tr.innerHTML = `<td class="no">${i+1}</td>
+      <td class="c-st"><span class="tsw"><button class="ng" data-a="nudge" data-k="start" data-d="-0.1" aria-label="開始を0.1秒早く">−</button><input class="ts" data-k="start" value="${fmt(L.start)}" inputmode="decimal"><button class="ng" data-a="nudge" data-k="start" data-d="0.1" aria-label="開始を0.1秒遅く">＋</button></span></td>
+      <td class="c-en"><span class="tsw"><button class="ng" data-a="nudge" data-k="end" data-d="-0.1" aria-label="終了を0.1秒早く">−</button><input class="ts" data-k="end" value="${fmt(L.end)}" inputmode="decimal"><button class="ng" data-a="nudge" data-k="end" data-d="0.1" aria-label="終了を0.1秒遅く">＋</button></span></td>
+      <td class="c-rl"><input class="rl" data-k="role" value="${esc(L.role)}" placeholder="役名なし"></td>
+      <td class="c-tx"><textarea data-k="text" rows="1">${esc(L.text)}</textarea></td>
+      <td class="ops"><button data-a="play" title="ここから再生">▶</button><button data-a="add" title="下に行を追加">＋</button><button data-a="del" title="この行を削除">✕</button></td>`;
+    tb.appendChild(tr);
+  });
+}
+function refreshTableValues(){
+  const rows = document.querySelectorAll('#rows tr');
+  if(rows.length !== P.lines.length){ renderTable(); return; }
+  rows.forEach((tr,i) => {
+    const L = P.lines[i]; tr.classList.toggle('auto', !!L.auto); tr.classList.toggle('sel', i === selIdx);
+    for(const inp of tr.querySelectorAll('[data-k]')){
+      if(inp === document.activeElement) continue;
+      const k = inp.dataset.k; inp.value = (k === 'start' || k === 'end') ? fmt(L[k]) : (L[k] || '');
+    }
+  });
+}
+function linesChanged(full){
+  save();
+  if(full) renderTable(); else refreshTableValues();
+  renderLyrics(); renderTakes(true); drawTimeline();
+}
+function setSel(i){ selIdx = i; document.querySelectorAll('#rows tr').forEach((tr,k) => tr.classList.toggle('sel', k === i)); }
+$('#rows').addEventListener('change', e => {
+  const tr = e.target.closest('tr'), k = e.target.dataset.k; if(!tr || !k) return;
+  const L = P.lines[+tr.dataset.i];
+  if(k === 'start' || k === 'end'){
+    const v = parseTime(e.target.value);
+    if(Number.isNaN(v)){ alert('時刻は 1:23.45 のような形で入力してください'); e.target.value = fmt(L[k]); return; }
+    L[k] = v == null ? null : r2(v); L.auto = false;
+    if(L.start != null && L.end != null && L.end <= L.start) L.end = r2(L.start + 0.3);
+    autofill();
+  } else if(k === 'text'){ L.text = e.target.value.replace(/\n/g, ' ').trim(); }
+  else { L[k] = e.target.value.trim(); }
+  linesChanged(false);
+});
+$('#rows').addEventListener('focusin', e => { const tr = e.target.closest('tr'); if(tr) setSel(+tr.dataset.i); });
+$('#rows').addEventListener('click', e => {
+  const tr = e.target.closest('tr'); if(!tr) return;
+  const i = +tr.dataset.i; setSel(i);
+  const a = e.target.dataset.a; if(!a || rec || tap) return;
+  if(a === 'play'){ play(P.lines[i].start ?? 0); }
+  else if(a === 'nudge'){
+    const L = P.lines[i], k = e.target.dataset.k, d = parseFloat(e.target.dataset.d);
+    if(L[k] == null) return;
+    L[k] = r2(Math.max(0, L[k] + d)); L.auto = false;
+    if(k === 'start' && L.end != null && L.end <= L.start) L.end = r2(L.start + 0.1);
+    if(k === 'end' && L.end <= L.start) L.end = r2(L.start + 0.1);
+    linesChanged(false);
+  }
+  else if(a === 'add'){ P.lines.splice(i+1, 0, {start:null, end:null, role:P.lines[i].role || '', text:'', auto:true}); autofill(); selIdx = i+1; linesChanged(true); }
+  else if(a === 'del'){ if(confirm(`${i+1}行目を削除しますか？`)){ stopAll(); P.lines.splice(i, 1); selIdx = Math.min(selIdx, P.lines.length-1); linesChanged(true); } }
+});
+$('#addEnd').onclick = () => { P.lines.push({start:null, end:null, role:'', text:'', auto:true}); autofill(); selIdx = P.lines.length-1; linesChanged(true); };
+$('#sortBtn').onclick = () => { P.lines.sort((a,b) => (a.start ?? 0) - (b.start ?? 0)); linesChanged(true); };
+
+/* ---------- キー押下での時刻付け ---------- */
+function startTap(){
+  if(!P.lines.length || rec) return;
+  stopAll();
+  const i = clamp(selIdx, 0, P.lines.length-1), prev = P.lines[i-1];
+  const from = Math.max(0, (prev ? (prev.end ?? prev.start ?? 0) : 0) - 1.5);
+  tap = {i, down:false};
+  if(document.activeElement) document.activeElement.blur();
+  $('#tapPanel').hidden = false; renderTap();
+  $('#tapPanel').scrollIntoView({block:'center', behavior:'smooth'});
+  play(from, {noVoice:true});
+}
+function renderTap(){
+  if(!tap) return;
+  const L = P.lines[tap.i], N = P.lines[tap.i+1];
+  $('#tapInfo').textContent = `${tap.i+1} / ${P.lines.length} 行目` + (tap.down ? '（押している間＝話している区間）' : '');
+  $('#tapNow').textContent = L ? (L.role ? `【${L.role}】` : '') + L.text : '';
+  $('#tapNext').textContent = N ? '次：' + N.text : '（最後の行です）';
+}
+function tapDown(){
+  if(!tap || tap.down) return; const L = P.lines[tap.i]; if(!L) return;
+  tap.down = true; L.start = r2(curTime()); L.end = null; L.auto = false;
+  $('#tapBtn').classList.add('down'); renderTap();
+}
+function tapUp(){
+  if(!tap || !tap.down) return; const L = P.lines[tap.i];
+  tap.down = false; L.end = r2(Math.max(curTime(), L.start + 0.2)); L.auto = false;
+  tap.i++; $('#tapBtn').classList.remove('down');
+  refreshTapRow(tap.i-1); save();
+  if(tap.i >= P.lines.length) endTap(); else renderTap();
+}
+function refreshTapRow(i){
+  const tr = document.querySelector(`#rows tr[data-i="${i}"]`); if(!tr) return;
+  tr.classList.remove('auto');
+  tr.querySelector('[data-k=start]').value = fmt(P.lines[i].start);
+  tr.querySelector('[data-k=end]').value = fmt(P.lines[i].end);
+}
+function endTap(){
+  if(!tap) return;
+  if(tap.down) tapUp();
+  if(!tap) return;
+  const done = tap.i; tap = null;
+  haltPlayback(); $('#tapPanel').hidden = true; $('#tapBtn').classList.remove('down');
+  // 時刻付けした行より後ろの「仮の時刻」は、付け直した時刻に合わせて割り振り直す
+  for(let k=done;k<P.lines.length;k++) if(P.lines[k].auto){ P.lines[k].start = null; P.lines[k].end = null; }
+  autofill(); selIdx = Math.min(done, P.lines.length-1);
+  linesChanged(true); updateButtons();
+}
+$('#tapStart').onclick = startTap;
+$('#tapEnd').onclick = () => endTap();
+$('#tapBtn').addEventListener('pointerdown', e => { e.preventDefault(); tapDown(); });
+$('#tapBtn').addEventListener('pointerup', tapUp);
+$('#tapBtn').addEventListener('pointerleave', tapUp);
+$('#tapBtn').addEventListener('pointercancel', tapUp);
+$('#tapBtn').addEventListener('contextmenu', e => e.preventDefault());
+
+/* ---------- 伴奏 ---------- */
+// P.bgmRef = この台本が想定している伴奏（ファイル名と長さ）。曲そのものは台本ファイルに入れない
+function bgmNeedText(){ return P.bgmRef && !bgmBuf ? `この台本は伴奏「${P.bgmRef.name}」（${fmt(P.bgmRef.duration)}）を使います。ファイルを選んでください。` : ''; }
+function renderBgm(){
+  $('#bgmName').textContent = bgmBuf ? `${P.bgmName}（${fmt(bgmBuf.duration)}）` : 'なし（無音で時間だけ進みます）';
+  $('#bgmDel').disabled = !bgmBuf && !P.bgmRef; $('#expMix').disabled = !bgmBuf;
+  const need = bgmNeedText(); $('#bgmNeed').textContent = need; $('#bgmNeed').hidden = !need;
+}
+$('#bgmFile').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if(!f) return;
+  stopAll();
+  let buf;
+  try{ buf = await ac().decodeAudioData(await f.arrayBuffer()); }
+  catch(err){ alert('この音声ファイルは読み込めませんでした'); return; }
+  if(P.bgmRef && Math.abs(buf.duration - P.bgmRef.duration) > 1 &&
+     !confirm(`この台本で記録されている伴奏と長さが違います。\n記録：${P.bgmRef.name}（${fmt(P.bgmRef.duration)}）\n選んだ曲：${f.name}（${fmt(buf.duration)}）\n別の音源の可能性があり、時刻がずれることがあります。このまま使いますか？`)) return;
+  bgmBuf = buf; P.bgmName = f.name; P.bgmRef = {name:f.name, duration:r2(buf.duration)};
+  try{ await idb.put('bgm', P.id, f); }catch(err){}
+  save(); renderBgm(); updateView(); drawTimeline(); setStatus('');
+};
+$('#bgmDel').onclick = () => { stopAll(); bgmBuf = null; P.bgmName = ''; P.bgmRef = null; idb.del('bgm', P.id); save(); renderBgm(); drawTimeline(); };
+
+/* ---------- 台本ファイル（JSON） ---------- */
+function saveScriptJson(){
+  const data = {
+    format:'serifu-studio-script', version:1, name:P.name,
+    bgm: P.bgmRef ? {name:P.bgmRef.name, duration:P.bgmRef.duration} : null,
+    lines: P.lines.map(L => ({start:L.start, end:L.end, role:L.role || '', text:L.text})),
+  };
+  download([JSON.stringify(data, null, 2)], safeName() + '.json', 'application/json');
+}
+async function openScriptJson(f){
+  let d;
+  try{ d = JSON.parse((await readTextFile(f)).replace(/^﻿/, '')); }catch(e){ alert('JSONとして読み込めませんでした'); return; }
+  if(!d || !Array.isArray(d.lines)){ alert('このツールの台本ファイルではないようです'); return; }
+  const lines = d.lines.filter(x => x && typeof x.text === 'string').map(x => {
+    const num = v => (typeof v === 'number' && isFinite(v)) ? r2(v) : null;
+    return {start:num(x.start), end:num(x.end), role:String(x.role || ''), text:x.text};
+  });
+  const ref = d.bgm && d.bgm.name ? {name:String(d.bgm.name), duration:+d.bgm.duration || 0} : null;
+  const name = String(d.name || f.name.replace(/\.json$/i, ''));
+  stopAll();
+  if(P.lines.length || P.takes.length){
+    const p = newProject(name, lines); p.bgmRef = ref;
+    await idb.put('projects', p.id, p); await openProject(p.id);
+  } else {
+    P.name = name; P.lines = lines; P.bgmRef = ref;
+    if(bgmBuf){ bgmBuf = null; P.bgmName = ''; idb.del('bgm', P.id); }
+    await idb.put('projects', P.id, P); await openProject(P.id);
+  }
+  autofill(); linesChanged(true); renderBgm();
+  if(ref) setStatus(bgmNeedText());
+  alert(`台本「${P.name}」を開きました（${P.lines.length} 行）。` + (ref ? `\n伴奏「${ref.name}」を「台本・タイミング」タブで選んでください。` : ''));
+}
+$('#jsonSave').onclick = saveScriptJson;
+$('#jsonOpen').onchange = async e => { const f = e.target.files[0]; e.target.value = ''; if(f) await openScriptJson(f); };
+
+/* ---------- 書き出し ---------- */
+function wavHeader(frames, ch, sr){
+  const b = new ArrayBuffer(44), v = new DataView(b), len = frames*ch*2;
+  const w = (o,s) => { for(let i=0;i<s.length;i++) v.setUint8(o+i, s.charCodeAt(i)); };
+  w(0,'RIFF'); v.setUint32(4, 36+len, true); w(8,'WAVE'); w(12,'fmt '); v.setUint32(16,16,true); v.setUint16(20,1,true);
+  v.setUint16(22,ch,true); v.setUint32(24,sr,true); v.setUint32(28,sr*ch*2,true); v.setUint16(32,ch*2,true); v.setUint16(34,16,true);
+  w(36,'data'); v.setUint32(40, len, true); return b;
+}
+function download(parts, name, type){
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(parts, {type})); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 120000);
+}
+const tick = () => new Promise(r => setTimeout(r, 0));
+const safeName = () => P.name.replace(/[\\/:*?"<>|]/g, '_');
+async function exportVoice(){
+  const total = voiceEndS(); if(!total){ alert('まだ録音がありません'); return; }
+  stopAll(); $('#expStatus').textContent = '書き出し中…';
+  const parts = [wavHeader(total, 1, SR)], CH = SR*10;
+  for(let s=0;s<total;s+=CH){
+    const n = Math.min(CH, total-s), f = compositeS(s, n), o = new Int16Array(n);
+    if(f) for(let i=0;i<n;i++) o[i] = clamp(Math.round(f[i]*32767), -32768, 32767);
+    parts.push(o.buffer);
+    $('#expStatus').textContent = `書き出し中… ${Math.round(s/total*100)}%`; await tick();
+  }
+  download(parts, safeName() + '_声.wav', 'audio/wav');
+  $('#expStatus').textContent = '書き出しました';
+}
+async function exportMix(){
+  if(!bgmBuf){ alert('伴奏が読み込まれていません'); return; }
+  stopAll(); $('#expStatus').textContent = '書き出し中…';
+  const sr = bgmBuf.sampleRate, vEnd = voiceEndS()/SR;
+  const frames = Math.round(Math.max(vEnd, bgmBuf.duration) * sr);
+  const bl = bgmBuf.getChannelData(0), br = bgmBuf.numberOfChannels > 1 ? bgmBuf.getChannelData(1) : bl;
+  const vv = P.settings.voiceVol, bv = P.settings.bgmVol;
+  const parts = [wavHeader(frames, 2, sr)], CH = sr*10;
+  for(let g0=0; g0<frames; g0+=CH){
+    const n = Math.min(CH, frames-g0);
+    const va = Math.floor(g0/sr*SR), vn = Math.ceil(n/sr*SR) + 2, vf = compositeS(va, vn);
+    const o = new Int16Array(n*2);
+    for(let i=0;i<n;i++){
+      const g = g0 + i; let v = 0;
+      if(vf){ const x = g/sr*SR - va, j = Math.floor(x), fr = x - j; v = ((vf[j]||0)*(1-fr) + (vf[j+1]||0)*fr) * vv; }
+      const L = (g < bl.length ? bl[g] : 0)*bv + v, R = (g < br.length ? br[g] : 0)*bv + v;
+      o[i*2] = clamp(Math.round(L*32767), -32768, 32767); o[i*2+1] = clamp(Math.round(R*32767), -32768, 32767);
+    }
+    parts.push(o.buffer);
+    $('#expStatus').textContent = `書き出し中… ${Math.round(g0/frames*100)}%`; await tick();
+  }
+  download(parts, safeName() + '_声と伴奏.wav', 'audio/wav');
+  $('#expStatus').textContent = '書き出しました';
+}
+function exportSrt(){
+  const ts = t => { t = Math.max(0, t||0); const h = Math.floor(t/3600), m = Math.floor(t/60)%60, s = Math.floor(t)%60, ms = Math.round((t - Math.floor(t))*1000);
+    const p = (v,n) => String(v).padStart(n,'0'); return `${p(h,2)}:${p(m,2)}:${p(s,2)},${p(Math.min(ms,999),3)}`; };
+  const txt = P.lines.map((L,i) => `${i+1}\n${ts(L.start)} --> ${ts(L.end)}\n${L.role ? '【'+L.role+'】' : ''}${L.text}\n`).join('\n');
+  download(['\uFEFF' + txt], safeName() + '.srt', 'text/plain');
+}
+$('#expVoice').onclick = exportVoice;
+$('#expMix').onclick = exportMix;
+$('#expSrt').onclick = exportSrt;
+
+/* ---------- 設定 ---------- */
+function renderSettings(){
+  const s = P.settings;
+  $('#setPre').value = s.preroll; $('#setOff').value = s.offsetMs; $('#setNs').checked = !!s.ns;
+  $('#setVv').value = s.voiceVol; $('#setBv').value = s.bgmVol; $('#cps').value = s.cps;
+  $('#vvTx').textContent = Math.round(s.voiceVol*100) + '%'; $('#bvTx').textContent = Math.round(s.bgmVol*100) + '%';
+}
+$('#setPre').onchange = e => { P.settings.preroll = Math.max(0, parseFloat(e.target.value) || 0); save(); };
+$('#setOff').onchange = e => { P.settings.offsetMs = parseFloat(e.target.value) || 0; save(); };
+$('#setNs').onchange = e => { P.settings.ns = e.target.checked; save(); };
+$('#setVv').oninput = e => { P.settings.voiceVol = +e.target.value; applyVol(); renderSettings(); save(); };
+$('#setBv').oninput = e => { P.settings.bgmVol = +e.target.value; applyVol(); renderSettings(); save(); };
+
+/* ---------- プロジェクト ---------- */
+let saveTimer = null;
+function save(){ clearTimeout(saveTimer); const p = P; saveTimer = setTimeout(() => idb.put('projects', p.id, p).catch(e => setStatus('保存に失敗しました：' + e.message)), 300); }
+async function renderProjSelect(){
+  const all = (await idb.all('projects')).sort((a,b) => a.created - b.created);
+  $('#projSel').innerHTML = all.map(p => `<option value="${p.id}" ${p.id === P.id ? 'selected' : ''}>${esc(p.name)}</option>`).join('');
+}
+async function openProject(id){
+  if(rec || tap) stopAll(); haltPlayback();
+  const p = await idb.get('projects', id); if(!p) return;
+  P = p; P.settings = Object.assign(defaultSettings(), P.settings || {}); P.layers = P.layers || []; P.takes = P.takes || [];
+  pcm.clear();
+  for(const tk of P.takes){ const ab = await idb.get('pcm', tk.id); if(ab) pcm.set(tk.id, new Int16Array(ab)); }
+  bgmBuf = null;
+  const blob = await idb.get('bgm', P.id);
+  if(blob){ try{ bgmBuf = await ac().decodeAudioData(await blob.arrayBuffer()); }catch(e){} }
+  if(bgmBuf && !P.bgmRef) P.bgmRef = {name:P.bgmName || '伴奏', duration:r2(bgmBuf.duration)};
+  pos = 0; selIdx = 0; takesFor = -2; applyVol();
+  try{ localStorage.setItem('serifu-last', id); }catch(e){}
+  await renderProjSelect(); renderTable(); renderLyrics(); renderTakes(true); renderBgm(); renderSettings(); drawTimeline(); updateButtons(); setStatus(bgmNeedText());
+}
+async function createProject(name, lines){
+  const p = newProject(name, lines);
+  await idb.put('projects', p.id, p); await openProject(p.id);
+}
+$('#projSel').onchange = e => openProject(e.target.value);
+$('#projNew').onclick = async () => {
+  const name = prompt('新しいプロジェクトの名前（例：講演練習、カラオケ、声劇）', '新しいプロジェクト'); if(!name) return;
+  await createProject(name.trim(), []);
+  switchTab('edit');
+};
+$('#projRename').onclick = async () => { const name = prompt('プロジェクトの名前', P.name); if(!name) return; P.name = name.trim(); await idb.put('projects', P.id, P); renderProjSelect(); };
+$('#projDel').onclick = async () => {
+  if(!confirm(`「${P.name}」を削除します。台本・録音・伴奏がすべて消え、元に戻せません。よろしいですか？`)) return;
+  stopAll();
+  for(const tk of P.takes) await idb.del('pcm', tk.id);
+  await idb.del('bgm', P.id); await idb.del('projects', P.id);
+  const rest = await idb.all('projects');
+  if(rest.length) await openProject(rest.sort((a,b) => a.created - b.created)[0].id);
+  else await createProject('サンプル', sampleLines());
+};
+
+/* ---------- 画面まわり ---------- */
+function setStatus(s){ $('#status').textContent = s; }
+function updateButtons(){
+  const playingOnly = player.playing && !rec && !tap;
+  $('#btnPlay').textContent = playingOnly ? '■ 停止' : '▶ 再生';
+  $('#btnPlay').disabled = !!rec || !!tap;
+  $('#btnRec').textContent = rec ? '■ 録音を止める' : '● ここから録音';
+  $('#btnRec').disabled = !!tap || (!!capTarget && !rec);
+  for(const b of ['#btnTop','#btnPrev','#btnNext']) $(b).disabled = !!rec || !!tap;
+}
+function switchTab(t){
+  curTab = t;
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+  for(const k of ['rec','edit','out']) $('#tab-' + k).hidden = k !== t;
+  if(t === 'rec'){ updateView(true); drawTimeline(); }
+}
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => { if(tap) endTap(); switchTab(b.dataset.tab); });
+$('#btnPlay').onclick = togglePlay;
+$('#btnRec').onclick = () => rec ? stopAll() : startRecording();
+$('#btnTop').onclick = () => seek(0);
+function setFontSize(v){ P.settings.fontSize = clamp(v, 12, 40); save(); $('#lyrics').style.setProperty('--fs', P.settings.fontSize + 'px'); updateView(true); }
+$('#fsDown').onclick = () => setFontSize((P.settings.fontSize || 20) - 2);
+$('#fsUp').onclick = () => setFontSize((P.settings.fontSize || 20) + 2);
+$('#btnPrev').onclick = () => seekLine(focusShown - 1);
+$('#btnNext').onclick = () => seekLine(focusShown + 1);
+$('#tl').addEventListener('click', e => { const r = e.currentTarget.getBoundingClientRect(); seek((e.clientX - r.left) / r.width * totalDur()); });
+document.addEventListener('keydown', e => {
+  if(tap){
+    if(e.code === 'Space' || e.code === 'Enter'){ e.preventDefault(); if(!e.repeat) tapDown(); }
+    else if(e.code === 'Escape'){ e.preventDefault(); endTap(); }
+    return;
+  }
+  if(e.target.matches('input,textarea,select')) return;
+  if(e.code === 'Space'){ e.preventDefault(); if(rec) stopAll(); else togglePlay(); return; }
+  if(curTab !== 'rec') return;
+  if(e.code === 'KeyR'){ e.preventDefault(); rec ? stopAll() : startRecording(); }
+  else if(e.code === 'ArrowUp'){ e.preventDefault(); seekLine(focusShown - 1); }
+  else if(e.code === 'ArrowDown'){ e.preventDefault(); seekLine(focusShown + 1); }
+  else if(e.code === 'ArrowLeft'){ e.preventDefault(); seek(curTime() - 5); }
+  else if(e.code === 'ArrowRight'){ e.preventDefault(); seek(curTime() + 5); }
+  else if(e.code === 'Home'){ e.preventDefault(); seek(0); }
+});
+document.addEventListener('keyup', e => { if(tap && (e.code === 'Space' || e.code === 'Enter')){ e.preventDefault(); tapUp(); } });
+window.addEventListener('resize', () => { updateView(true); drawTimeline(); });
+
+/* ---------- 起動 ---------- */
+(async () => {
+  const ok = await idb.open();
+  if(!ok) alert('このブラウザではデータを保存できません。閉じると台本と録音が消えるため、書き出してから閉じてください。');
+  try{ navigator.storage && navigator.storage.persist && navigator.storage.persist(); }catch(e){}
+  const all = await idb.all('projects');
+  let last = null; try{ last = localStorage.getItem('serifu-last'); }catch(e){}
+  if(!all.length) await createProject('サンプル', sampleLines());
+  else await openProject(all.some(p => p.id === last) ? last : all.sort((a,b) => a.created - b.created)[0].id);
+})();
+</script>
+</body>
+</html>
