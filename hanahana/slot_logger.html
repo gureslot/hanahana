@@ -746,6 +746,30 @@ tbody.addEventListener('dblclick', function(e){
   if (cc) openCell(cc.getAttribute('data-id'), cc.getAttribute('data-col'));
 });
 
+/* ---- 横スワイプで表/裏を切り替え（しっかり長く横に動かした時だけ） ---- */
+var swX=0, swY=0, swOn=false;
+var SWIPE_EDGE = 24;         // 画面端から始めた操作はSafariの戻る/進むと競合するので無視
+function swipeMinDx(){ return Math.max(110, (window.innerWidth || 390) * 0.35); }
+tbody.addEventListener('touchstart', function(e){
+  swOn = false;
+  if (e.touches.length !== 1) return;                    // 2本指(ピンチ等)は対象外
+  var t = e.touches[0], w = window.innerWidth || 390;
+  if (t.clientX < SWIPE_EDGE || t.clientX > w - SWIPE_EDGE) return;
+  swX = t.clientX; swY = t.clientY; swOn = true;
+}, { passive:true });
+tbody.addEventListener('touchmove', function(e){
+  if (swOn && e.touches.length !== 1) swOn = false;      // 途中で指が増えたら中止
+}, { passive:true });
+tbody.addEventListener('touchend', function(e){
+  if (!swOn) return;
+  swOn = false;
+  var ch = e.changedTouches[0];
+  var dx = ch.clientX - swX, dy = ch.clientY - swY;
+  if (Math.abs(dx) < swipeMinDx()) return;               // 距離が足りない
+  if (Math.abs(dy) > Math.abs(dx) * 0.5) return;         // 縦成分が大きい＝スクロール扱い
+  switchPage(dx < 0 ? 'back' : 'front');                 // 左へ払う→裏 / 右へ払う→表
+}, { passive:true });
+
 function openCell(id, colKey){
   var now = Date.now();
   if (now - lastOpenT < 450) return;     // guard against touch + synthetic dblclick double-fire
