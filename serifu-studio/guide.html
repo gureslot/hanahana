@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#181b22">
+<title>台本の作り方｜セリフ録音スタジオ</title>
+<style>
+:root{--bg:#0f1115;--panel:#181b22;--panel2:#22262f;--line:#2e3440;--tx:#e8eaf0;--mut:#98a0af;--accent:#38c6f4;--ok:#5bd68a;--warn:#ffd54f}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic UI","Meiryo",system-ui,sans-serif;font-size:15px;line-height:1.8}
+header{background:var(--panel);border-bottom:1px solid var(--line);padding:12px 16px;padding-top:max(12px, env(safe-area-inset-top))}
+header .in{max-width:860px;margin:0 auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+header h1{font-size:18px;margin:0;margin-right:auto}
+header a{color:var(--accent);text-decoration:none;font-size:14px}
+main{max-width:860px;margin:0 auto;padding:18px 16px calc(48px + env(safe-area-inset-bottom))}
+h2{font-size:18px;margin:36px 0 10px;display:flex;align-items:center;gap:10px}
+h2 .n{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:var(--accent);color:#04202b;font-size:15px;flex:none}
+h3{font-size:15px;margin:22px 0 6px;color:var(--accent)}
+p{margin:8px 0}
+.mut{color:var(--mut)}
+.small{font-size:13px}
+code{background:#0b0d11;border:1px solid var(--line);border-radius:4px;padding:0 5px;font-size:13px}
+.flow{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0 4px}
+.flow div{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:14px;line-height:1.6}
+.flow b{display:block;color:var(--accent);font-size:12px;letter-spacing:.08em}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.card b{display:block;margin-bottom:4px}
+.card ul{margin:4px 0 0;padding-left:1.2em}
+.note{border-left:3px solid var(--warn);background:#1b1a14;padding:8px 12px;border-radius:0 8px 8px 0;margin:12px 0;font-size:14px}
+.rec{border-left-color:var(--ok);background:#131c17}
+ol.steps{padding-left:1.4em;margin:8px 0}
+ol.steps li{margin:4px 0}
+.tpl{background:var(--panel);border:1px solid var(--line);border-radius:12px;margin:12px 0;overflow:hidden}
+.tpl .bar{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.tpl .bar b{margin-right:auto}
+.tpl pre{margin:0;padding:12px 14px;white-space:pre-wrap;word-break:break-word;font-family:inherit;font-size:14px;line-height:1.75;max-height:420px;overflow:auto;background:#0b0d11}
+button{font:inherit;color:#04202b;background:var(--accent);border:none;border-radius:8px;padding:6px 14px;font-weight:700;cursor:pointer;min-height:36px;touch-action:manipulation}
+button.done{background:var(--ok)}
+table{border-collapse:collapse;width:100%;margin:8px 0;font-size:14px}
+th,td{border-top:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+th{color:var(--mut);font-weight:400;white-space:nowrap}
+footer{max-width:860px;margin:0 auto;padding:0 16px 40px;font-size:13px}
+footer a{color:var(--accent)}
+@media (max-width:640px){
+  .flow{grid-template-columns:1fr}
+  .cards{grid-template-columns:1fr}
+  h2{font-size:17px}
+  .tpl .bar button{flex:1}
+}
+</style>
+</head>
+<body>
+<header><div class="in">
+  <h1>台本の作り方</h1>
+  <a href="./">← セリフ録音スタジオへ戻る</a>
+</div></header>
+<main>
+
+<p>講演の録音や動画の文字起こしから、セリフ録音スタジオで使う台本を作る手順です。流れは次の3段階です。</p>
+<div class="flow">
+  <div><b>手順1</b>文字起こしを用意する</div>
+  <div><b>手順2</b>AIで1文ずつに整える</div>
+  <div><b>手順3〜4</b>スタジオに取り込み、時刻を合わせる</div>
+</div>
+
+<h2><span class="n">1</span>文字起こしを用意する</h2>
+<p>手元の文字起こしに時刻が付いているかどうかで、このあとの手順が少し変わります。</p>
+<div class="cards">
+  <div class="card">
+    <b>時刻あり</b>
+    <span class="small mut">セリフごとに「0:12」のような時刻が付いているもの</span>
+    <ul class="small">
+      <li>YouTubeの文字起こし（動画の説明欄の「文字起こしを表示」からコピー）</li>
+      <li>字幕ファイル（SRT・VTT）</li>
+      <li>時刻付きで出力できる文字起こしアプリ</li>
+    </ul>
+  </div>
+  <div class="card">
+    <b>時刻なし</b>
+    <span class="small mut">文章だけのもの</span>
+    <ul class="small">
+      <li>ボイスメモなどの録音を文字にしたもの</li>
+      <li>自分で書いた講演の原稿</li>
+      <li>歌詞・声劇の台本</li>
+    </ul>
+  </div>
+</div>
+<p class="small mut">時刻なしの場合は、元の音声の長さ（例：30分15秒）も控えておいてください。手順3で使います。</p>
+
+<h2><span class="n">2</span>AIで1文ずつに整える（おすすめ）</h2>
+<p>文字起こしをそのまま貼っても読み込めますが、次のような理由で読みにくい台本になりがちです。先にAI（ChatGPT、Claude、Geminiなど）で整えるのがおすすめです。</p>
+<ul>
+  <li>字幕は画面の幅で区切られているため、文の途中で切れている</li>
+  <li>聞き取りの誤変換が混ざっている</li>
+  <li>「えー」「あの」などのつなぎ言葉が入っている</li>
+</ul>
+<p>下のテンプレをコピーし、【　】の部分を書き換えて、最後に文字起こしを貼り付けてAIに送ってください。</p>
+
+<div class="tpl">
+  <div class="bar"><b>テンプレA：時刻ありの文字起こし用</b><button data-copy="tplA">コピー</button></div>
+<pre id="tplA">次の時刻付きの文字起こしを、話す練習用の台本に整えてください。
+
+【使い道】
+文字を見ながら話す練習と、その録音に使います。整えた台本は、練習用ツールにそのまま貼り付けます。
+
+【つなぎ言葉】
+「えー」「あの」などのつなぎ言葉は【取る／残す】
+
+【整え方】
+1. 1行に1セリフにする。句点や息継ぎの位置で区切り、1セリフは40文字以内を目安にする
+2. 字幕の途中で切れている文は、つなげてから区切り直す
+3. 聞き取りの誤変換は、話の流れから正しい言葉に直す
+4. 言い換え・要約・言葉の追加はしない
+5. 各行の頭に「開始-終了」の時刻を付ける。開始は、そのセリフの最初の言葉が入っている字幕の時刻にする。終了は、次のセリフの開始時刻にする。最後のセリフの終了は、最後の字幕の時刻に3秒足した時刻にする
+6. 1つの字幕を複数のセリフに分けたときは、その字幕の時間を文字数の比で割り振る
+7. 時刻は「分:秒.小数1桁」で書く（例：12:05.3）
+8. 話す人が複数いる場合は、時刻のあとに【話者名】を付ける
+9. 整えた台本だけをコードブロック1つに入れて出力し、説明は付けない
+
+【出力の形】
+0:00.0-0:03.2 皆さん、こんにちは。
+0:03.2-0:07.8 今日は、練習の進め方についてお話しします。
+
+【文字起こし】
+（ここに文字起こしを貼り付け）</pre>
+</div>
+
+<div class="tpl">
+  <div class="bar"><b>テンプレB：時刻なしの文字起こし・原稿用</b><button data-copy="tplB">コピー</button></div>
+<pre id="tplB">次の文章を、話す練習用の台本に整えてください。
+
+【使い道】
+文字を見ながら話す練習と、その録音に使います。整えた台本は、練習用ツールにそのまま貼り付けます。
+
+【つなぎ言葉】
+「えー」「あの」などのつなぎ言葉は【取る／残す】
+
+【整え方】
+1. 1行に1セリフにする。句点や息継ぎの位置で区切り、1セリフは40文字以内を目安にする
+2. 聞き取りの誤変換は、話の流れから正しい言葉に直す
+3. 言い換え・要約・言葉の追加はしない
+4. 時刻は付けない
+5. 話す人が複数いる場合は、行の頭に【話者名】を付ける
+6. 整えた台本だけをコードブロック1つに入れて出力し、説明は付けない
+
+【出力の形】
+皆さん、こんにちは。
+今日は、練習の進め方についてお話しします。
+
+【文章】
+（ここに文字起こし・原稿を貼り付け）</pre>
+</div>
+
+<div class="note">
+  <b>長い文字起こしは分けて頼む</b><br>
+  30分の講演など長いものは、AIの返事が途中で切れることがあります。10分ぶん程度ずつに分けて頼み、返ってきた台本を順番につなげて貼り付けてください。テンプレAなら時刻が付いているので、つなげても順番が崩れません。
+</div>
+<div class="note">
+  <b>返ってきた台本は一度読み通す</b><br>
+  AIが言葉を言い換えたり、文を抜かしたりしていないかを確認してください。特に固有名詞や数字は誤変換が残りやすい部分です。
+</div>
+
+<h2><span class="n">3</span>スタジオに取り込む</h2>
+<ol class="steps">
+  <li>スタジオの「台本の編集」タブを開く</li>
+  <li>「台本を貼り付ける」の欄に、AIが整えた台本を貼り付ける</li>
+  <li>「貼り付けた内容で台本を置き換える」を押す</li>
+</ol>
+<h3>時刻なしの台本の場合</h3>
+<p>時刻のないセリフには、仮の時刻が自動で入ります（一覧で灰色の斜体になっている時刻）。仮の時刻の入れ方は2通りです。</p>
+<table>
+  <tr><th>音声の長さを入力する</th><td>「音声の長さ」の欄に元の音声の長さ（例：<code>30:15</code>）を入れると、全体をその長さとして、文字数の比で各セリフに時刻を割り振ります。</td></tr>
+  <tr><th>元の音声を読み込む</th><td>「ファイル」タブの「伴奏ファイルを選ぶ」で元の音声を読み込むと、その長さを使って割り振ります。手順4の方法Aでも使うので、こちらがおすすめです。</td></tr>
+</table>
+<p class="small mut">文字数の比で割り振るので、話す速さが一定でない部分や、間が長い部分ではずれます。手順4で合わせてください。</p>
+
+<h2><span class="n">4</span>時刻を合わせる</h2>
+<h3>方法A：元の音声を聞きながら時刻を付ける（正確）</h3>
+<ol class="steps">
+  <li>「ファイル」タブの「伴奏ファイルを選ぶ」で、元の音声（ボイスメモなど）を読み込む</li>
+  <li>「台本の編集」タブのセリフ一覧で、最初のセリフを選ぶ</li>
+  <li>「選んだセリフから時刻付けを始める」を押す。元の音声が流れ始める</li>
+  <li>音声でそのセリフが話されている間だけ、「押している間＝話している区間」のボタン（パソコンでは Space キー）を押し続ける。離すと次のセリフへ進む</li>
+  <li>最後まで終わったら、練習で元の音声が要らなければ「伴奏を外す」を押す（付けた時刻は残る）</li>
+</ol>
+<p class="small mut">途中で失敗したら「時刻付けを終える」で止め、失敗したセリフを選んでからやり直せます。</p>
+
+<h3>方法B：再生しながら少しずつ直す</h3>
+<ol class="steps">
+  <li>「録音」タブで再生し、文字の切り替わりが早い・遅いセリフを探す</li>
+  <li>「台本の編集」タブのセリフ一覧で、そのセリフの開始・終了を「−」「＋」で直す（1回押すと0.1秒）</li>
+  <li>一覧の▶で、そのセリフだけを再生して確かめる</li>
+</ol>
+
+<div class="note rec">
+  <b>時刻合わせのコツ</b><br>
+  開始の時刻は、実際の話し始めより少し早め（0.2〜0.3秒前）にしておくと、文字を見てから話し始めるまでの余裕ができます。
+</div>
+
+<h2><span class="n">5</span>台本を保存する</h2>
+<p>時刻が合ったら、「ファイル」タブの「台本を保存」で保存しておいてください。台本はブラウザの中にも自動で残りますが、ブラウザのデータを消すと失われます。保存したファイルは「台本を開く」で、別のパソコンやスマホでも開けます。</p>
+
+<h2><span class="n">＋</span>AIで整えずにそのまま貼る場合</h2>
+<p>時刻あり・なしのどちらも、そのまま貼れば読み込めます。YouTubeの文字起こしは、時刻の行と本文の行が交互に並んだ形のまま貼って大丈夫です。</p>
+<p>ただし字幕の区切りがそのままセリフの区切りになるため、文の途中で画面が切り替わります。読みにくいと感じたら、手順2で整えてから貼り直してください。</p>
+
+</main>
+<footer>
+  <p><a href="./">← セリフ録音スタジオへ戻る</a></p>
+</footer>
+<script>
+document.querySelectorAll('button[data-copy]').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const text = document.getElementById(btn.dataset.copy).textContent;
+    let ok = false;
+    try{ await navigator.clipboard.writeText(text); ok = true; }
+    catch(e){
+      try{
+        const ta = document.createElement('textarea'); ta.value = text; ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta);
+        ta.select(); ok = document.execCommand('copy'); ta.remove();
+      }catch(e2){}
+    }
+    const label = btn.textContent;
+    btn.textContent = ok ? 'コピーしました' : 'コピーできませんでした';
+    if(ok) btn.classList.add('done');
+    setTimeout(() => { btn.textContent = label; btn.classList.remove('done'); }, 1800);
+  });
+});
+</script>
+</body>
+</html>

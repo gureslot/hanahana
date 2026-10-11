@@ -93,6 +93,9 @@ tr.playing td.no{color:var(--accent);font-weight:700}
 .set{display:grid;grid-template-columns:220px 1fr;gap:10px 14px;align-items:center}
 .set input[type=number]{width:90px}
 
+a.guide{color:var(--accent);font-size:13px}
+a.btnlink{display:inline-block;background:var(--panel2);border:1px solid var(--accent);color:var(--accent);border-radius:8px;padding:6px 12px;text-decoration:none;font-weight:700}
+.guidebox{border-color:#2a5b6e}
 h2.sec{font-size:13px;color:var(--mut);margin:18px 2px 8px;font-weight:700;letter-spacing:.1em}
 h2.sec:first-child{margin-top:4px}
 .frow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
@@ -135,7 +138,7 @@ footer ul{margin:8px 0 0;padding-left:1.2em;line-height:1.8}
   #stopWrap select{flex:1;min-width:0}
   #stopWrap > span{width:100%;font-size:13px}
   #transport #status{order:5;grid-column:1/-1;min-width:0;font-size:13px}
-  .frow button{flex:1}
+  .frow button,.frow a.btnlink{flex:1;text-align:center;min-height:40px;line-height:26px}
   .flabel{min-width:100%}
   #tl{height:50px}
   .legend{flex-wrap:wrap;gap:4px 10px}
@@ -227,10 +230,11 @@ footer ul{margin:8px 0 0;padding-left:1.2em;line-height:1.8}
 <!-- 台本の編集 -->
 <section id="tab-edit" hidden>
   <div class="box">
-    <b>台本を貼り付ける</b>
+    <div class="row"><b style="margin-right:auto">台本を貼り付ける</b><a class="guide" href="guide.html" target="_blank" rel="noopener">台本の作り方（AIで整える方法）</a></div>
     <div class="small mut" style="margin-top:6px;line-height:1.7">
+      文字起こしは、そのまま貼るより、先にAIで1文ずつに整えてから貼るのがおすすめです。手順とAI用のテンプレは「台本の作り方」にあります。<br>
       1行＝1セリフで貼り付けてください。時刻は付いていてもいなくても読み込めます。<br>
-      時刻付きの文字起こし（<code>[1:23.45]セリフ</code>、<code>1:23.4-1:27.0 セリフ</code>、字幕ファイルのSRT・VTT）もそのまま読み込めます。<br>
+      時刻付きの文字起こし（<code>1:23.4-1:27.0 セリフ</code>、<code>[1:23.45]セリフ</code>、YouTubeの文字起こし、字幕ファイルのSRT・VTT）もそのまま読み込めます。<br>
       役名は行頭に <code>【役名】</code> を付けます（例：<code>【A】こんにちは</code>）。時刻のない行には、文字数から仮の時刻が入ります。
     </div>
     <textarea id="imp" placeholder="ここに台本・文字起こしを貼り付け"></textarea>
@@ -239,7 +243,8 @@ footer ul{margin:8px 0 0;padding-left:1.2em;line-height:1.8}
       <button id="impFileBtn">テキスト・字幕ファイルから読み込む</button>
       <input type="file" id="impFile" accept=".txt,.srt,.vtt,.lrc,.json,text/plain" hidden>
     </div>
-    <div class="row small mut" style="margin-top:8px">仮の時刻を入れる速さ <input type="number" id="cps" min="2" max="20" step="0.5" style="width:70px"> 文字/秒</div>
+    <div class="row small mut" style="margin-top:10px">音声の長さ <input id="totalLen" placeholder="例 30:15" inputmode="decimal" style="width:96px"> <span>時刻のない台本は、この長さに文字数の比で仮の時刻を入れます（伴奏を読み込んでいて未入力なら、伴奏の長さを使います）</span></div>
+    <div class="row small mut" style="margin-top:6px">長さが分からないときの速さ <input type="number" id="cps" min="2" max="20" step="0.5" style="width:70px"> 文字/秒</div>
   </div>
 
   <div class="box">
@@ -273,6 +278,12 @@ footer ul{margin:8px 0 0;padding-left:1.2em;line-height:1.8}
 
 <!-- ファイル -->
 <section id="tab-file" hidden>
+  <div class="box guidebox">
+    <div class="frow">
+      <div class="flabel"><b>台本の作り方</b><span class="small mut">文字起こしをAIで整えて台本にする手順と、AIに渡すテンプレ</span></div>
+      <a class="btnlink" href="guide.html" target="_blank" rel="noopener">台本の作り方を開く</a>
+    </div>
+  </div>
   <h2 class="sec">開く</h2>
   <div class="box">
     <div class="frow">
@@ -407,6 +418,11 @@ function sampleLines(){
 }
 
 /* ---------- 音声の基礎 ---------- */
+/* iPhone・iPad：マイクを使っている間は音が受話口側に回ったり、消音モードで鳴らなくなったりするため、
+   録音中だけ「録音と再生」、それ以外は「再生」の扱いにする（Safari 16.4以降） */
+const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+function setAudioSession(type){ try{ if(navigator.audioSession) navigator.audioSession.type = type; }catch(e){} }
+setAudioSession('playback');
 function ac(){
   if(!ctx){
     ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -472,6 +488,7 @@ async function keepAwake(on){
 }
 document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible' && player.playing) keepAwake(true); });
 function play(from, o={}){
+  if(capTarget && !rec) return; // 録音の保存処理中
   haltPlayback();
   const c = ac(); c.resume();
   Object.assign(player, {playing:true, t0:from, ctxT0:c.currentTime+0.12, schedUntil:from, voiceUntil:o.voiceUntil ?? Infinity,
@@ -547,7 +564,22 @@ function frame(){
 const WORKLET = `class Cap extends AudioWorkletProcessor{constructor(){super();this.on=false;this.buf=new Float32Array(2048);this.n=0;this.t0=0;this.port.onmessage=e=>{this.on=e.data;this.n=0;};}
 process(inputs){const ch=inputs[0]&&inputs[0][0];if(this.on&&ch){if(this.n===0)this.t0=currentTime;this.buf.set(ch,this.n);this.n+=ch.length;if(this.n>=1920){this.port.postMessage({t:this.t0,d:this.buf.slice(0,this.n)});this.n=0;}}return true;}}
 registerProcessor('cap',Cap);`;
+// 録音が終わったらマイクを手放す（iPhoneで再生音が聞こえなくなるのを防ぐ）
+function releaseMic(){
+  if(mic){
+    try{ mic.stream.getTracks().forEach(t => t.stop()); }catch(e){}
+    try{ mic.src.disconnect(); mic.node.disconnect(); }catch(e){}
+    mic = null;
+  }
+  setAudioSession('playback');
+  if(IS_IOS && ctx){
+    // マイクを使ったあとの音声の出力先を確実に戻すため、次の再生で作り直す
+    try{ ctx.close(); }catch(e){}
+    ctx = null; workletReady = false;
+  }
+}
 async function ensureMic(){
+  setAudioSession('play-and-record');
   const c = ac();
   if(mic && mic.ns === !!P.settings.ns) return;
   if(mic){ mic.stream.getTracks().forEach(t=>t.stop()); mic.node.disconnect(); mic = null; }
@@ -576,7 +608,7 @@ async function startRecording(o={}){
   haltPlayback(); updateButtons();
   setStatus('マイクを準備しています…');
   try{ await ensureMic(); }
-  catch(e){ setStatus(''); alert('マイクを使えませんでした。ブラウザのマイクの許可を確認してください。\n(' + e.message + ')'); return; }
+  catch(e){ releaseMic(); setStatus(''); alert('マイクを使えませんでした。ブラウザのマイクの許可を確認してください。\n(' + e.message + ')'); return; }
   const c = ac(); await c.resume();
   const pre = from > 0 ? Math.min(P.settings.preroll || 0, from) : 0;
   play(from - pre, {voiceUntil:from});
@@ -592,7 +624,7 @@ function stopRecording(){
   haltPlayback(); document.body.classList.remove('recording');
   $('#meter i').style.width = '0';
   const D = tStop - r.fromT;
-  if(D < 0.2){ capTarget = null; mic.node.port.postMessage(false); pos = r.fromT; setStatus('録音が始まる前に止めたため、何も保存していません'); updateButtons(); return; }
+  if(D < 0.2){ capTarget = null; mic.node.port.postMessage(false); releaseMic(); pos = r.fromT; setStatus('録音が始まる前に止めたため、何も保存していません'); updateButtons(); return; }
   setStatus('録音を保存しています…');
   setTimeout(() => { mic.node.port.postMessage(false); finalizeTake(r, D); }, r.comp*1000 + 250);
 }
@@ -617,6 +649,7 @@ function finalizeTake(r, D){
   pcm.set(id, out);
   idb.put('pcm', id, out.buffer).catch(e => alert('録音の保存に失敗しました：' + e.message));
   save();
+  releaseMic();
   setStatus(`テイク${tk.no}を保存しました（${fmt(r.fromT)}〜${fmt(r.fromT+D)}）`);
   renderTakes(true); drawTimeline(); updateButtons();
 }
@@ -813,16 +846,26 @@ function parseScript(txt){
   const reLrc = new RegExp('^\\[(' + TS + ')\\]\\s*');
   const reRange = new RegExp('^(' + TS + ')\\s*(?:-|〜|~|–|－|->)\\s*(' + TS + ')\\s*');
   const reOne = new RegExp('^(' + TS + ')\\s+');
+  const reOnlyTs = new RegExp('^\\[?(' + TS + ')\\]?$');
+  const reSpoken = /^(\d+\s*時間\s*)?(\d+\s*分\s*)?\d+\s*秒$/; // 読み上げ用の「1 分 5 秒」などは飛ばす
+  let pending = null;
   for(const raw of txt.split('\n')){
     let s = raw.trim(); if(!s) continue;
     let st = null, en = null, m;
-    if((m = s.match(reLrc))){ st = parseTime(m[1]); s = s.slice(m[0].length); }
+    if((m = s.match(reOnlyTs))){ pending = parseTime(m[1]); continue; }
+    if(reSpoken.test(s)) continue;
+    if(pending != null){ st = pending; pending = null; }
+    if(st != null){}
+    else if((m = s.match(reLrc))){ st = parseTime(m[1]); s = s.slice(m[0].length); }
     else if((m = s.match(reRange))){ st = parseTime(m[1]); en = parseTime(m[2]); s = s.slice(m[0].length); }
     else if((m = s.match(reOne))){ st = parseTime(m[1]); s = s.slice(m[0].length); }
     if(s.trim()) out.push(mkLine(s, st, en));
   }
   return out;
 }
+function audioLen(){ return P.settings.totalLen || (bgmBuf ? bgmBuf.duration : 0) || 0; }
+// 仮の時刻（自動で入れた時刻）を、今の条件で入れ直す
+function refillAuto(){ for(const L of P.lines) if(L.auto){ L.start = null; L.end = null; } autofill(); }
 function autofill(){
   const L = P.lines, cps = P.settings.cps || 7;
   let i = 0;
@@ -832,7 +875,8 @@ function autofill(){
     const prev = L[i-1];
     const from = prev ? (prev.end != null ? prev.end : prev.start + tlen(prev.text)/cps) : 0;
     const lens = L.slice(i, j).map(x => tlen(x.text)), sum = lens.reduce((a,b) => a+b, 0);
-    let to = j < L.length ? L[j].start : from + sum/cps;
+    const dur = audioLen();
+    let to = j < L.length ? L[j].start : (dur && dur > from + 0.3*(j-i) ? dur : from + sum/cps);
     if(to <= from + 0.2*(j-i)) to = from + sum/cps;
     let t = from;
     for(let k=i;k<j;k++){ const d = (to-from)*lens[k-i]/sum; L[k].start = r2(t); L[k].end = r2(t+d); L[k].auto = true; t += d; }
@@ -841,7 +885,8 @@ function autofill(){
   for(let k=0;k<L.length;k++){
     if(L[k].end == null){
       const nx = L[k+1];
-      L[k].end = r2(nx && nx.start > L[k].start ? nx.start : L[k].start + tlen(L[k].text)/cps);
+      const dur = audioLen();
+      L[k].end = r2(nx && nx.start > L[k].start ? nx.start : (!nx && dur > L[k].start + 0.3 ? dur : L[k].start + tlen(L[k].text)/cps));
       L[k].auto = true;
     }
     if(L[k].end <= L[k].start) L[k].end = r2(L[k].start + 0.3);
@@ -868,7 +913,12 @@ $('#impFile').onchange = async e => {
   const f = e.target.files[0]; e.target.value = ''; if(!f) return;
   if(/\.json$/i.test(f.name)) await openScriptJson(f); else importScript(await readTextFile(f));
 };
-$('#cps').onchange = e => { const v = parseFloat(e.target.value); if(v > 0){ P.settings.cps = v; save(); } };
+$('#cps').onchange = e => { const v = parseFloat(e.target.value); if(v > 0){ P.settings.cps = v; refillAuto(); linesChanged(false); } };
+$('#totalLen').onchange = e => {
+  const v = parseTime(e.target.value);
+  if(Number.isNaN(v)){ alert('長さは 30:15 のような形で入力してください'); e.target.value = P.settings.totalLen ? fmt(P.settings.totalLen).replace(/\.00$/, '') : ''; return; }
+  P.settings.totalLen = v || 0; refillAuto(); linesChanged(false);
+};
 
 /* ---------- セリフ一覧（表） ---------- */
 function renderTable(){
@@ -1013,6 +1063,7 @@ $('#bgmFile').onchange = async e => {
   if(P.bgmRef && Math.abs(buf.duration - P.bgmRef.duration) > 1 &&
      !confirm(`この台本で記録されている伴奏と長さが違います。\n記録：${P.bgmRef.name}（${fmt(P.bgmRef.duration)}）\n選んだ曲：${f.name}（${fmt(buf.duration)}）\n別の音源の可能性があり、時刻がずれることがあります。このまま使いますか？`)) return;
   bgmBuf = buf; P.bgmName = f.name; P.bgmRef = {name:f.name, duration:r2(buf.duration)};
+  if(!P.settings.totalLen && P.lines.some(l => l.auto)){ refillAuto(); linesChanged(false); }
   try{ await idb.put('bgm', P.id, f); }catch(err){}
   save(); renderBgm(); updateView(); drawTimeline(); setStatus('');
 };
@@ -1120,6 +1171,7 @@ $('#expMix').onclick = exportMix;
 function renderSettings(){
   const s = P.settings;
   $('#stopMode').value = s.stopMode || 'line'; renderStopLine();
+  $('#totalLen').value = s.totalLen ? fmt(s.totalLen).replace(/\.00$/, '') : '';
   $('#setPre').value = s.preroll; $('#setOff').value = s.offsetMs; $('#setNs').checked = !!s.ns;
   $('#setVv').value = s.voiceVol; $('#setBv').value = s.bgmVol; $('#cps').value = s.cps;
   $('#vvTx').textContent = Math.round(s.voiceVol*100) + '%'; $('#bvTx').textContent = Math.round(s.bgmVol*100) + '%';
