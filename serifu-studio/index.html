@@ -898,7 +898,10 @@ async function readTextFile(f){
   catch(e){ return new TextDecoder('shift_jis').decode(buf); }
 }
 function importScript(txt){
-  const lines = parseScript(txt);
+  let lines = null;
+  const tt = txt.trim();
+  if(tt.startsWith('[') || tt.startsWith('{')){ try{ lines = jsonToLines(JSON.parse(tt.replace(/^\uFEFF/, ''))); }catch(e){} }
+  if(!lines) lines = parseScript(txt);
   if(!lines.length){ alert('読み込めるセリフがありませんでした'); return; }
   if(P.lines.length && !confirm(`今の台本（${P.lines.length}行）を、読み込んだ ${lines.length} 行で置き換えます。録音は消えません。よろしいですか？`)) return;
   stopAll();
@@ -1078,16 +1081,37 @@ function saveScriptJson(){
   };
   download([JSON.stringify(data, null, 2)], safeName() + '.json', 'application/json');
 }
+// AIなどが出すさまざまな形のJSONを台本にする
+// ・配列そのもの、または lines / segments / script / items などに配列が入った形
+// ・時刻は秒数（83.5）でも文字（"1:23.5"）でもよい
+// ・役名は role / speaker / name、セリフは text / line / content
+function jsonToLines(d){
+  let arr = Array.isArray(d) ? d : null;
+  if(!arr && d && typeof d === 'object'){
+    for(const k of ['lines','segments','script','items','data','transcript']) if(Array.isArray(d[k])){ arr = d[k]; break; }
+  }
+  if(!arr) return null;
+  const num = v => {
+    if(typeof v === 'number') return isFinite(v) ? r2(v) : null;
+    if(typeof v === 'string'){ const t = parseTime(v); return (t == null || Number.isNaN(t)) ? null : r2(t); }
+    return null;
+  };
+  const str = v => (v == null ? '' : String(v)).trim();
+  const lines = arr.filter(x => x && typeof x === 'object').map(x => ({
+    start: num(x.start ?? x.begin ?? x.from),
+    end: num(x.end ?? x.to),
+    role: str(x.role ?? x.speaker ?? x.name),
+    text: str(x.text ?? x.line ?? x.content),
+  })).filter(L => L.text);
+  return lines.length ? lines : null;
+}
 async function openScriptJson(f){
   let d;
   try{ d = JSON.parse((await readTextFile(f)).replace(/^﻿/, '')); }catch(e){ alert('JSONとして読み込めませんでした'); return; }
-  if(!d || !Array.isArray(d.lines)){ alert('このツールの台本ファイルではないようです'); return; }
-  const lines = d.lines.filter(x => x && typeof x.text === 'string').map(x => {
-    const num = v => (typeof v === 'number' && isFinite(v)) ? r2(v) : null;
-    return {start:num(x.start), end:num(x.end), role:String(x.role || ''), text:x.text};
-  });
-  const ref = d.bgm && d.bgm.name ? {name:String(d.bgm.name), duration:+d.bgm.duration || 0} : null;
-  const name = String(d.name || f.name.replace(/\.json$/i, ''));
+  const lines = jsonToLines(d);
+  if(!lines){ alert('台本として読める形のJSONではありませんでした'); return; }
+  const ref = d && !Array.isArray(d) && d.bgm && d.bgm.name ? {name:String(d.bgm.name), duration:+d.bgm.duration || 0} : null;
+  const name = String((d && !Array.isArray(d) && d.name) || f.name.replace(/\.json$/i, ''));
   stopAll();
   if(P.lines.length || P.takes.length){
     const p = newProject(name, lines); p.bgmRef = ref;
