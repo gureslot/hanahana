@@ -103,9 +103,14 @@ h2.sec:first-child{margin-top:4px}
 .flabel b{font-size:15px}
 .cur{margin-top:8px}
 #bgmName{font-weight:700}
+#fxRoles{display:flex;flex-direction:column;gap:6px}
+#fxRoles .fr{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+#fxRoles .fr b{min-width:80px}
+.fxrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:-2px 0 8px}
 #stopWrap{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 footer{margin-top:28px;border-top:1px solid var(--line);padding-top:12px;font-size:12px;color:var(--mut)}
 footer summary{cursor:pointer}
+footer a{color:var(--accent)}
 footer ul{margin:8px 0 0;padding-left:1.2em;line-height:1.8}
 
 /* ---------- スマホ・狭い画面 ---------- */
@@ -314,7 +319,8 @@ footer ul{margin:8px 0 0;padding-left:1.2em;line-height:1.8}
   </div>
   <div class="box">
     <div class="frow">
-      <div class="flabel"><b>録音</b><span class="small mut">各セリフで採用中のテイクをつないだ、通しの録音（WAVファイル）</span></div>
+      <div class="flabel"><b>録音</b><span class="small mut">各セリフで採用中のテイクをつないだ、通しの録音</span></div>
+      <label class="mut">形式 <select id="expFmt"><option value="mp3">MP3</option><option value="wav">WAV</option></select></label>
       <button id="expVoice" class="primary">声だけで保存</button>
       <button id="expMix" class="primary">声＋伴奏で保存</button>
     </div>
@@ -334,6 +340,16 @@ footer ul{margin:8px 0 0;padding-left:1.2em;line-height:1.8}
     </div>
   </div>
   <div class="box">
+    <b>エフェクト（再生と「声＋伴奏で保存」に反映）</b>
+    <div class="set" style="margin-top:10px">
+      <span>全体のエフェクト</span><span><select id="fxAll"></select> <span class="small mut">個別に選んでいないセリフにかかります</span></span>
+      <span>かかり具合</span><span><input type="range" id="fxAmt" min="0" max="1" step="0.05"> <span id="fxAmtTx"></span></span>
+      <span>役ごとにまとめて設定</span><span id="fxRoles"></span>
+      <span>セリフごとの設定</span><span><span id="fxCount" class="small mut"></span> <button id="fxReset">すべて「全体と同じ」に戻す</button></span>
+    </div>
+    <div class="small mut" style="margin-top:8px">セリフごとのエフェクトは、「録音」タブのテイク一覧で選べます。</div>
+  </div>
+  <div class="box">
     <b>音量（再生と「声＋伴奏で保存」に反映）</b>
     <div class="set" style="margin-top:10px">
       <span>声</span><span><input type="range" id="setVv" min="0" max="2" step="0.05"> <span id="vvTx"></span></span>
@@ -348,6 +364,7 @@ footer ul{margin:8px 0 0;padding-left:1.2em;line-height:1.8}
     <ul>
       <li>読み込む台本・伴奏・音声の権利は、利用者ご自身で確認してください。市販の曲やカラオケ音源を使った録音を公開・配布する場合は、権利者の許可が必要になることがあります。</li>
       <li>台本と録音は、利用者の端末（ブラウザ）の中にだけ保存されます。外部のサーバーへ送信することはありません。</li>
+      <li>MP3への変換には <a href="https://lame.sourceforge.io/" target="_blank" rel="noopener">LAME</a> をJavaScriptに移植した <a href="https://github.com/zhuker/lamejs" target="_blank" rel="noopener">lamejs</a>（LGPL）を使っています。</li>
       <li>このツールは現状のまま提供しています。データの消失や不具合によって生じた損害について、制作者は責任を負いません。大切な録音や台本は、「ファイル」タブで保存しておいてください。</li>
     </ul>
   </details>
@@ -401,7 +418,7 @@ const player = {playing:false, t0:0, ctxT0:0, sources:[], timer:null, schedUntil
 let rec = null, capTarget = null, mic = null, workletReady = false, level = 0;
 let tap = null;
 
-function defaultSettings(){ return {preroll:3, offsetMs:0, ns:false, voiceVol:1, bgmVol:0.8, cps:7, fontSize:20, stopMode:'line'}; }
+function defaultSettings(){ return {preroll:3, offsetMs:0, ns:false, voiceVol:1, bgmVol:0.8, cps:7, fontSize:20, stopMode:'line', fx:'none', fxAmt:0.5, expFmt:'mp3'}; }
 function newProject(name, lines){
   return {id:'p'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), name, lines:lines||[], takes:[], layers:[], takeNo:0, settings:defaultSettings(), bgmName:'', created:Date.now()};
 }
@@ -472,6 +489,82 @@ function roleColor(role){
   const i = order.indexOf(role); return ROLE_COLORS[(i<0?0:i) % ROLE_COLORS.length];
 }
 
+/* ---------- エフェクト（録った声はそのまま。再生と「声＋伴奏で保存」でだけかける） ---------- */
+const FX_LIST = [['none','なし'],['studio','スタジオ'],['hall','ホール'],['karaoke','カラオケ'],['stage','ステージ'],['radio','ラジオ']];
+const FX_NAME = Object.fromEntries(FX_LIST);
+function fxAmt(){ return P.settings.fxAmt ?? 0.5; }
+function makeIR(c, sec, decay, seed){
+  const sr = c.sampleRate, n = Math.round(sec*sr), b = c.createBuffer(2, n, sr);
+  for(let ch=0; ch<2; ch++){
+    let x = (seed*9973 + ch*7919) >>> 0; const d = b.getChannelData(ch);
+    for(let i=0;i<n;i++){ x = (Math.imul(x, 1103515245) + 12345) >>> 0; d[i] = ((x / 4294967296) * 2 - 1) * Math.pow(1 - i/n, decay); }
+  }
+  return b;
+}
+// 1つの出力先に対して、種類ごとのエフェクトの入口を用意する
+function makeFxBank(c, dest, amt){
+  const out = c.createGain(); out.connect(dest);
+  const bank = {amt, out, map:{}};
+  bank.get = type => {
+    type = FX_NAME[type] ? type : 'none';
+    if(bank.map[type]) return bank.map[type];
+    const inp = c.createGain(), a = amt;
+    if(type === 'none'){ inp.connect(out); }
+    else {
+      const dry = c.createGain(), wet = c.createGain(); dry.connect(out); wet.connect(out); inp.connect(dry);
+      if(type === 'studio' || type === 'hall'){
+        const cv = c.createConvolver(); cv.normalize = true;
+        cv.buffer = type === 'studio' ? makeIR(c, 0.9, 3, 11) : makeIR(c, 2.8, 2.2, 23);
+        inp.connect(cv); cv.connect(wet); wet.gain.value = (type === 'studio' ? 0.4 : 0.6) * a;
+      } else if(type === 'karaoke' || type === 'stage'){
+        const dl = c.createDelay(2); dl.delayTime.value = type === 'karaoke' ? 0.26 : 0.2;
+        const fb = c.createGain(); fb.gain.value = type === 'karaoke' ? 0.38 : 0.3;
+        const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 3200;
+        inp.connect(dl); dl.connect(lp); lp.connect(fb); fb.connect(dl); lp.connect(wet);
+        wet.gain.value = (type === 'karaoke' ? 0.6 : 0.45) * a;
+        if(type === 'stage'){
+          const cv = c.createConvolver(); cv.normalize = true; cv.buffer = makeIR(c, 1.8, 2.5, 37);
+          const w2 = c.createGain(); w2.gain.value = 0.5 * a; inp.connect(cv); cv.connect(w2); w2.connect(out);
+        }
+      } else if(type === 'radio'){
+        const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 500;
+        const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 3000;
+        const pk = c.createBiquadFilter(); pk.type = 'peaking'; pk.frequency.value = 1500; pk.Q.value = 1; pk.gain.value = 6;
+        inp.connect(hp); hp.connect(lp); lp.connect(pk); pk.connect(wet);
+        dry.gain.value = 1 - a; wet.gain.value = 1.3 * a;
+      }
+    }
+    return bank.map[type] = inp;
+  };
+  return bank;
+}
+function liveBank(){
+  const c = ac(), amt = fxAmt();
+  if(!c._bank || c._bank.amt !== amt){ if(c._bank) try{ c._bank.out.disconnect(); }catch(e){} c._bank = makeFxBank(c, voiceGain, amt); }
+  return c._bank;
+}
+function fxOfLine(L){ return (L && L.fx && FX_NAME[L.fx]) ? L.fx : (P.settings.fx || 'none'); }
+function fxAt(t){
+  for(const L of P.lines) if(L.start != null && L.end != null && L.start <= t && t < L.end) return fxOfLine(L);
+  return P.settings.fx || 'none';
+}
+// 区間 [a,b)（秒）を、エフェクトの種類が同じ部分ごとに分ける
+function fxSegments(a, b){
+  const cuts = [a, b];
+  for(const L of P.lines){
+    if(L.start != null && L.start > a && L.start < b) cuts.push(L.start);
+    if(L.end != null && L.end > a && L.end < b) cuts.push(L.end);
+  }
+  cuts.sort((x,y) => x - y);
+  const out = [];
+  for(let i=0;i<cuts.length-1;i++){
+    if(cuts[i+1] <= cuts[i]) continue;
+    const type = fxAt((cuts[i] + cuts[i+1]) / 2), last = out[out.length-1];
+    if(last && last.type === type) last.b = cuts[i+1]; else out.push({a:cuts[i], b:cuts[i+1], type});
+  }
+  return out;
+}
+
 /* ---------- 再生 ---------- */
 function curTime(){
   if(!player.playing) return pos;
@@ -511,12 +604,17 @@ function schedule(){
     if(n > 0){
       const data = compositeS(a0, n, player.onlyTake);
       if(data){
-        const buf = c.createBuffer(1, n, SR); buf.copyToChannel(data, 0);
-        const s = c.createBufferSource(); s.buffer = buf; s.connect(voiceGain);
-        const when = player.ctxT0 + (a0/SR - player.t0);
-        if(when < c.currentTime){ const off = c.currentTime - when; if(off < buf.duration) s.start(c.currentTime, off); }
-        else s.start(when);
-        player.sources.push(s);
+        const bank = liveBank();
+        for(const sg of fxSegments(a0/SR, (a0+n)/SR)){
+          const s0 = Math.max(0, Math.round(sg.a*SR) - a0), s1 = Math.min(n, Math.round(sg.b*SR) - a0);
+          if(s1 <= s0) continue;
+          const buf = c.createBuffer(1, s1 - s0, SR); buf.copyToChannel(data.subarray(s0, s1), 0);
+          const s = c.createBufferSource(); s.buffer = buf; s.connect(bank.get(sg.type));
+          const when = player.ctxT0 + ((a0 + s0)/SR - player.t0);
+          if(when < c.currentTime){ const off = c.currentTime - when; if(off < buf.duration) s.start(c.currentTime, off); }
+          else s.start(when);
+          player.sources.push(s);
+        }
       }
     }
     player.schedUntil = b;
@@ -783,7 +881,8 @@ function renderTakes(force){
   const top = topId ? {takeId:topId} : null;
   let html = `<div class="head"><b>セリフ ${i+1} のテイク <span class="mut">（${fmt(L.start)}〜${fmt(L.end)}）</span></b>
     <button data-a="playline" ${list.length?'':'disabled'}>▶ 採用中の音で聞く</button>
-    <button data-a="recline" class="rec">● このセリフだけ録り直す</button></div>`;
+    <button data-a="recline" class="rec">● このセリフだけ録り直す</button></div>
+    <div class="fxrow"><span class="mut">このセリフのエフェクト</span><select data-a="linefx">${fxOptions(L.fx || '', true)}</select></div>`;
   if(!list.length) html += '<div class="mut" style="padding:6px 0">このセリフの録音はまだありません。</div>';
   for(const tk of list){
     const d = new Date(tk.created), hm = `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
@@ -797,6 +896,12 @@ function renderTakes(force){
   }
   box.innerHTML = html;
 }
+$('#takes').addEventListener('change', e => {
+  if(e.target.dataset.a !== 'linefx') return;
+  const L = P.lines[takesFor]; if(!L) return;
+  if(e.target.value) L.fx = e.target.value; else delete L.fx;
+  save(); renderFx();
+});
 $('#takes').addEventListener('click', e => {
   const a = e.target.dataset.a; if(!a) return;
   const L = P.lines[takesFor]; if(!L) return;
@@ -1054,7 +1159,8 @@ $('#tapBtn').addEventListener('contextmenu', e => e.preventDefault());
 function bgmNeedText(){ return P.bgmRef && !bgmBuf ? `この台本は伴奏「${P.bgmRef.name}」（${fmt(P.bgmRef.duration)}）を使います。ファイルを選んでください。` : ''; }
 function renderBgm(){
   $('#bgmName').textContent = bgmBuf ? `${P.bgmName}（${fmt(bgmBuf.duration)}）` : '未選択';
-  $('#bgmDel').disabled = !bgmBuf && !P.bgmRef; $('#expMix').disabled = !bgmBuf;
+  $('#bgmDel').disabled = !bgmBuf && !P.bgmRef;
+  $('#expMix').textContent = bgmBuf ? '声＋伴奏で保存' : 'エフェクト付きの声で保存';
   const need = bgmNeedText(); $('#bgmNeed').textContent = need; $('#bgmNeed').hidden = !need;
 }
 $('#bgmFile').onchange = async e => {
@@ -1077,7 +1183,8 @@ function saveScriptJson(){
   const data = {
     format:'serifu-studio-script', version:1, name:P.name,
     bgm: P.bgmRef ? {name:P.bgmRef.name, duration:P.bgmRef.duration} : null,
-    lines: P.lines.map(L => ({start:L.start, end:L.end, role:L.role || '', text:L.text})),
+    fx: {type:P.settings.fx || 'none', amount:fxAmt()},
+    lines: P.lines.map(L => { const o = {start:L.start, end:L.end, role:L.role || '', text:L.text}; if(L.fx) o.fx = L.fx; return o; }),
   };
   download([JSON.stringify(data, null, 2)], safeName() + '.json', 'application/json');
 }
@@ -1102,7 +1209,9 @@ function jsonToLines(d){
     end: num(x.end ?? x.to),
     role: str(x.role ?? x.speaker ?? x.name),
     text: str(x.text ?? x.line ?? x.content),
+    fx: FX_NAME[x.fx] ? x.fx : undefined,
   })).filter(L => L.text);
+  for(const L of lines) if(!L.fx) delete L.fx;
   return lines.length ? lines : null;
 }
 async function openScriptJson(f){
@@ -1112,12 +1221,15 @@ async function openScriptJson(f){
   if(!lines){ alert('台本として読める形のJSONではありませんでした'); return; }
   const ref = d && !Array.isArray(d) && d.bgm && d.bgm.name ? {name:String(d.bgm.name), duration:+d.bgm.duration || 0} : null;
   const name = String((d && !Array.isArray(d) && d.name) || f.name.replace(/\.json$/i, ''));
+  const fxSet = d && !Array.isArray(d) && d.fx && FX_NAME[d.fx.type] ? d.fx : null;
   stopAll();
   if(P.lines.length || P.takes.length){
     const p = newProject(name, lines); p.bgmRef = ref;
+    if(fxSet){ p.settings.fx = fxSet.type; p.settings.fxAmt = clamp(+fxSet.amount || 0.5, 0, 1); }
     await idb.put('projects', p.id, p); await openProject(p.id);
   } else {
     P.name = name; P.lines = lines; P.bgmRef = ref;
+    if(fxSet){ P.settings.fx = fxSet.type; P.settings.fxAmt = clamp(+fxSet.amount || 0.5, 0, 1); }
     if(bgmBuf){ bgmBuf = null; P.bgmName = ''; idb.del('bgm', P.id); }
     await idb.put('projects', P.id, P); await openProject(P.id);
   }
@@ -1144,43 +1256,94 @@ function download(parts, name, type){
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 120000);
 }
 const tick = () => new Promise(r => setTimeout(r, 0));
+function loadLame(){
+  if(window.lamejs && window.lamejs.Mp3Encoder) return Promise.resolve();
+  return new Promise((res, rej) => {
+    const sc = document.createElement('script'); sc.src = 'lame.min.js';
+    sc.onload = () => (window.lamejs && window.lamejs.Mp3Encoder) ? res() : rej(new Error('MP3変換の部品が正しく読み込めませんでした'));
+    sc.onerror = () => rej(new Error('MP3変換の部品（lame.min.js）が見つかりませんでした'));
+    document.head.appendChild(sc);
+  });
+}
+// 保存形式ごとの書き出し口。push には左右（モノラルなら左だけ）の Int16Array を渡す
+async function makeWriter(fmt, ch, sr, kbps){
+  const parts = []; let frames = 0;
+  if(fmt === 'mp3'){
+    await loadLame();
+    const enc = new lamejs.Mp3Encoder(ch, sr, kbps);
+    return {
+      ext:'mp3', type:'audio/mpeg',
+      push(L, R){ const BL = 1152*20; for(let i=0;i<L.length;i+=BL){ const d = ch === 2 ? enc.encodeBuffer(L.subarray(i, i+BL), R.subarray(i, i+BL)) : enc.encodeBuffer(L.subarray(i, i+BL)); if(d.length) parts.push(d); } },
+      finish(){ const d = enc.flush(); if(d.length) parts.push(d); return parts; },
+    };
+  }
+  return {
+    ext:'wav', type:'audio/wav',
+    push(L, R){
+      if(ch === 1){ parts.push(L.slice().buffer); frames += L.length; return; }
+      const o = new Int16Array(L.length*2); for(let i=0;i<L.length;i++){ o[i*2] = L[i]; o[i*2+1] = R[i]; }
+      parts.push(o.buffer); frames += L.length;
+    },
+    finish(){ return [wavHeader(frames, ch, sr), ...parts]; },
+  };
+}
+const toI16 = (f, n) => { const o = new Int16Array(n); if(f) for(let i=0;i<n;i++) o[i] = clamp(Math.round(f[i]*32767), -32768, 32767); return o; };
 const safeName = () => P.name.replace(/[\\/:*?"<>|]/g, '_');
 async function exportVoice(){
   const total = voiceEndS(); if(!total){ alert('まだ録音がありません'); return; }
   stopAll(); $('#expStatus').textContent = '書き出し中…';
-  const parts = [wavHeader(total, 1, SR)], CH = SR*10;
-  for(let s=0;s<total;s+=CH){
-    const n = Math.min(CH, total-s), f = compositeS(s, n), o = new Int16Array(n);
-    if(f) for(let i=0;i<n;i++) o[i] = clamp(Math.round(f[i]*32767), -32768, 32767);
-    parts.push(o.buffer);
-    $('#expStatus').textContent = `書き出し中… ${Math.round(s/total*100)}%`; await tick();
-  }
-  download(parts, safeName() + '_声.wav', 'audio/wav');
-  $('#expStatus').textContent = '書き出しました';
+  const fmt = P.settings.expFmt || 'mp3';
+  try{
+    const w = await makeWriter(fmt, 1, SR, 128), CH = SR*10;
+    for(let s=0;s<total;s+=CH){
+      const n = Math.min(CH, total-s);
+      w.push(toI16(compositeS(s, n), n));
+      $('#expStatus').textContent = `書き出し中… ${Math.round((s+n)/total*100)}%`; await tick();
+    }
+    download(w.finish(), safeName() + '_声.' + w.ext, w.type);
+    $('#expStatus').textContent = '書き出しました';
+  }catch(e){ $('#expStatus').textContent = ''; alert('書き出しに失敗しました：' + e.message); }
 }
 async function exportMix(){
-  if(!bgmBuf){ alert('伴奏が読み込まれていません'); return; }
+  const vEnd = voiceEndS()/SR;
+  const anyFx = (P.settings.fx && P.settings.fx !== 'none') || P.lines.some(L => L.fx && L.fx !== 'none');
+  const total = Math.max(vEnd + (anyFx ? 3 : 0), bgmBuf ? bgmBuf.duration : 0); // 残響の余韻ぶん長めに
+  if(!vEnd){ alert('まだ録音がありません'); return; }
   stopAll(); $('#expStatus').textContent = '書き出し中…';
-  const sr = bgmBuf.sampleRate, vEnd = voiceEndS()/SR;
-  const frames = Math.round(Math.max(vEnd, bgmBuf.duration) * sr);
-  const bl = bgmBuf.getChannelData(0), br = bgmBuf.numberOfChannels > 1 ? bgmBuf.getChannelData(1) : bl;
+  const sr = bgmBuf ? bgmBuf.sampleRate : 44100, amt = fxAmt();
   const vv = P.settings.voiceVol, bv = P.settings.bgmVol;
-  const parts = [wavHeader(frames, 2, sr)], CH = sr*10;
-  for(let g0=0; g0<frames; g0+=CH){
-    const n = Math.min(CH, frames-g0);
-    const va = Math.floor(g0/sr*SR), vn = Math.ceil(n/sr*SR) + 2, vf = compositeS(va, vn);
-    const o = new Int16Array(n*2);
-    for(let i=0;i<n;i++){
-      const g = g0 + i; let v = 0;
-      if(vf){ const x = g/sr*SR - va, j = Math.floor(x), fr = x - j; v = ((vf[j]||0)*(1-fr) + (vf[j+1]||0)*fr) * vv; }
-      const L = (g < bl.length ? bl[g] : 0)*bv + v, R = (g < br.length ? br[g] : 0)*bv + v;
-      o[i*2] = clamp(Math.round(L*32767), -32768, 32767); o[i*2+1] = clamp(Math.round(R*32767), -32768, 32767);
+  const PRE = 6, STEP = 20; // 残響が途切れないよう、各区切りの6秒前から計算して重ねる
+  const fmt = P.settings.expFmt || 'mp3';
+  try{
+    const w = await makeWriter(fmt, 2, sr, 192);
+    for(let t0=0; t0<total; t0+=STEP){
+      const t1 = Math.min(total, t0 + STEP), r0 = Math.max(0, t0 - PRE);
+      const len = Math.max(1, Math.round((t1 - r0) * sr));
+      const oc = new OfflineAudioContext(2, len, sr);
+      const vg = oc.createGain(); vg.gain.value = vv; vg.connect(oc.destination);
+      const bank = makeFxBank(oc, vg, amt);
+      const va = Math.round(r0*SR), vn = Math.round(t1*SR) - va, data = vn > 0 ? compositeS(va, vn) : null;
+      if(data){
+        for(const sg of fxSegments(r0, t1)){
+          const s0 = Math.max(0, Math.round(sg.a*SR) - va), s1 = Math.min(vn, Math.round(sg.b*SR) - va);
+          if(s1 <= s0) continue;
+          const buf = oc.createBuffer(1, s1 - s0, SR); buf.copyToChannel(data.subarray(s0, s1), 0);
+          const src = oc.createBufferSource(); src.buffer = buf; src.connect(bank.get(sg.type)); src.start(s0 / SR);
+        }
+      }
+      if(bgmBuf && r0 < bgmBuf.duration){
+        const src = oc.createBufferSource(); src.buffer = bgmBuf; const g = oc.createGain(); g.gain.value = bv;
+        src.connect(g); g.connect(oc.destination); src.start(0, r0);
+      }
+      const out = await oc.startRendering();
+      const L = out.getChannelData(0), R = out.getChannelData(1);
+      const skip = Math.round((t0 - r0) * sr), n = Math.min(out.length - skip, Math.round(t1*sr) - Math.round(t0*sr));
+      w.push(toI16(L.subarray(skip, skip+n), n), toI16(R.subarray(skip, skip+n), n));
+      $('#expStatus').textContent = `書き出し中… ${Math.round(t1/total*100)}%`; await tick();
     }
-    parts.push(o.buffer);
-    $('#expStatus').textContent = `書き出し中… ${Math.round(g0/frames*100)}%`; await tick();
-  }
-  download(parts, safeName() + '_声と伴奏.wav', 'audio/wav');
-  $('#expStatus').textContent = '書き出しました';
+    download(w.finish(), safeName() + (bgmBuf ? '_声と伴奏.' : '_エフェクト付き.') + w.ext, w.type);
+    $('#expStatus').textContent = '書き出しました';
+  }catch(e){ $('#expStatus').textContent = ''; alert('書き出しに失敗しました：' + e.message); }
 }
 function exportSrt(){
   const ts = t => { t = Math.max(0, t||0); const h = Math.floor(t/3600), m = Math.floor(t/60)%60, s = Math.floor(t)%60, ms = Math.round((t - Math.floor(t))*1000);
@@ -1189,11 +1352,43 @@ function exportSrt(){
   download(['\uFEFF' + txt], safeName() + '.srt', 'text/plain');
 }
 $('#expVoice').onclick = exportVoice;
+$('#expFmt').onchange = e => { P.settings.expFmt = e.target.value; save(); };
 $('#expMix').onclick = exportMix;
 
 /* ---------- 設定 ---------- */
+function fxOptions(sel, withInherit){
+  let h = withInherit ? `<option value="">全体と同じ（${FX_NAME[P.settings.fx || 'none']}）</option>` : '';
+  for(const [k,n] of FX_LIST) h += `<option value="${k}" ${k===sel?'selected':''}>${n}</option>`;
+  return h;
+}
+function renderFx(){
+  $('#fxAll').innerHTML = fxOptions(P.settings.fx || 'none', false);
+  $('#fxAmt').value = fxAmt(); $('#fxAmtTx').textContent = Math.round(fxAmt()*100) + '%';
+  const roles = []; for(const L of P.lines){ const r = L.role || ''; if(!roles.includes(r)) roles.push(r); }
+  if(!P.lines.length){ $('#fxRoles').innerHTML = '<span class="small mut">台本がありません</span>'; }
+  else $('#fxRoles').innerHTML = roles.map(r => {
+    const ls = P.lines.filter(L => (L.role || '') === r), set = new Set(ls.map(L => L.fx || ''));
+    const cur = set.size === 1 ? [...set][0] : null;
+    return `<div class="fr"><b>${r ? esc(r) : '役なし'}</b><span class="small mut">${ls.length}行</span>
+      <select data-role="${esc(r)}">${cur === null ? '<option value="__mixed" selected>セリフごとに違う</option>' : ''}${fxOptions(cur ?? '', true)}</select></div>`;
+  }).join('');
+  const nSet = P.lines.filter(L => L.fx).length;
+  $('#fxCount').textContent = nSet ? `${nSet}行で個別に設定中` : '個別の設定はありません';
+  $('#fxReset').disabled = !nSet;
+}
+$('#fxAll').onchange = e => { P.settings.fx = e.target.value; save(); renderFx(); renderTakes(true); };
+$('#fxAmt').oninput = e => { P.settings.fxAmt = +e.target.value; $('#fxAmtTx').textContent = Math.round(fxAmt()*100) + '%'; save(); };
+$('#fxRoles').addEventListener('change', e => {
+  const sel = e.target.closest('select'); if(!sel || sel.value === '__mixed') return;
+  const r = sel.dataset.role;
+  for(const L of P.lines) if((L.role || '') === r){ if(sel.value) L.fx = sel.value; else delete L.fx; }
+  save(); renderFx(); renderTakes(true);
+});
+$('#fxReset').onclick = () => { for(const L of P.lines) delete L.fx; save(); renderFx(); renderTakes(true); };
 function renderSettings(){
   const s = P.settings;
+  $('#expFmt').value = s.expFmt || 'mp3';
+  renderFx();
   $('#stopMode').value = s.stopMode || 'line'; renderStopLine();
   $('#totalLen').value = s.totalLen ? fmt(s.totalLen).replace(/\.00$/, '') : '';
   $('#setPre').value = s.preroll; $('#setOff').value = s.offsetMs; $('#setNs').checked = !!s.ns;
@@ -1270,6 +1465,7 @@ function switchTab(t){
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   for(const k of ['rec','edit','file','set']) $('#tab-' + k).hidden = k !== t;
   if(t === 'rec'){ updateView(true); drawTimeline(); }
+  if(t === 'set') renderFx();
 }
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => { if(tap) endTap(); switchTab(b.dataset.tab); });
 $('#btnPlay').onclick = togglePlay;
