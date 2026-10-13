@@ -37,10 +37,10 @@ h3{font-size:14px;margin:18px 0 8px;color:var(--accent)}
 body.recording #stage{box-shadow:0 0 0 2px var(--rec)}
 #lyrics{position:absolute;left:0;right:0;top:0;padding:0 7%;transition:transform .45s cubic-bezier(.2,.7,.2,1)}
 .ly{text-align:center;font-size:var(--fs,20px);font-weight:500;line-height:1.6;padding:6px 16px 8px;margin:1px 0;transition:background .25s;color:#e8ecf3;cursor:pointer;border-radius:10px}
-.ly.focus{background:rgba(56,198,244,.12);box-shadow:inset 3px 0 0 var(--wipe,var(--accent))}
+.ly{position:relative}
+.ly.focus{background:rgba(56,198,244,.12);box-shadow:inset 3px 0 0 var(--accent)}
 .ly .tx{white-space:pre-line}
-.ly.inrange{box-shadow:inset 3px 0 0 var(--rec)}
-.ly.focus.inrange{box-shadow:inset 3px 0 0 var(--rec)}
+.ly.inrange::before{content:'';position:absolute;left:-14px;top:50%;width:8px;height:8px;margin-top:-4px;border-radius:50%;background:var(--rec)}
 .ly .gauge{display:none;height:6px;margin:6px auto 0;max-width:640px;background:rgba(255,255,255,.12);border-radius:3px;overflow:hidden}
 .ly.focus .gauge{display:block}
 .ly .gauge i{display:block;height:100%;width:0;background:var(--wipe,var(--accent))}
@@ -111,13 +111,14 @@ a.btnlink{display:inline-block;background:var(--panel2);border:1px solid var(--a
 .okhead{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .okhead b{margin-right:auto}
 .okhead select{max-width:260px}
-#okStage{position:relative;height:46vh;min-height:260px;margin:10px 0;background:radial-gradient(ellipse at 50% 40%,#1b2230,#0b0d12 75%);border:1px solid var(--line);border-radius:12px;overflow:hidden;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+#okStage{position:relative;height:calc(100svh - 115px);min-height:260px;margin:10px 0;background:radial-gradient(ellipse at 50% 40%,#1b2230,#0b0d12 75%);border:1px solid var(--line);border-radius:12px;overflow:hidden;touch-action:manipulation;user-select:none;-webkit-user-select:none}
 #okStage.running{border-color:var(--rec);cursor:pointer}
 #okList{position:absolute;left:0;right:0;top:0;padding:0 6%;transition:transform .35s cubic-bezier(.2,.7,.2,1)}
 #okStage .ly{cursor:inherit}
 #okStage .ly.focus.wait{background:transparent;box-shadow:inset 0 0 0 1px var(--accent)}
 #okStage .meta{display:block;font-size:12px;color:var(--mut);font-weight:400;font-variant-numeric:tabular-nums;margin-top:2px}
 #okStage .ly.focus .meta{color:var(--accent)}
+#okCount{position:absolute;left:0;right:0;top:12px;text-align:center;font-size:30px;font-weight:700;color:var(--accent);z-index:2;pointer-events:none}
 #okClock{position:absolute;right:12px;top:10px;font-variant-numeric:tabular-nums;color:var(--rec);font-weight:700;display:none;z-index:2}
 #okStage.running #okClock{display:block}
 #okClock::before{content:"● ";animation:blink 1s steps(2) infinite}
@@ -213,6 +214,7 @@ footer ul{margin:8px 0 0;padding-left:1.2em;line-height:1.8}
 
   .okctl button{flex:1}
   #okTap{flex-basis:100%;min-height:56px}
+  #okStage{height:calc(100svh - 260px)}
   .okhead select{max-width:none;flex:1}
   /* 書き出し・設定 */
   .set{grid-template-columns:1fr}
@@ -275,7 +277,7 @@ footer ul{margin:8px 0 0;padding-left:1.2em;line-height:1.8}
       <select id="okHist" title="時刻の履歴"></select>
       <button class="okfs" data-d="-2" title="文字を小さく">A−</button><button class="okfs" data-d="2" title="文字を大きく">A＋</button>
     </div>
-    <div id="okStage"><div id="okClock"></div><div id="okList"></div></div>
+    <div id="okStage"><div id="okClock"></div><div id="okCount"></div><div id="okList"></div></div>
     <div class="okctl" id="okIdle">
       <button id="okStart" class="primary" title="最初の「次へ」で1行目が始まる">▶ スタート</button>
       <button id="okStartNow" title="押した瞬間に1行目が始まる">▶ 1行目と同時にスタート</button>
@@ -1327,8 +1329,9 @@ function okTick(){
   if(!tap) return;
   const t = curTime();
   $('#okClock').textContent = fmt1(t);
+  $('#okCount').textContent = (tap.countTo != null && t < tap.countTo) ? String(Math.ceil(tap.countTo - t)) : '';
   const L = P.lines[tap.i];
-  if(L && tap.i >= tap.from && okEls[tap.i]) okEls[tap.i].querySelector('.meta').textContent = `${fmt1(L.start)}〜　${(t - L.start).toFixed(1)}秒`;
+  if(L && tap.i >= tap.from && okEls[tap.i]) okEls[tap.i].querySelector('.meta').textContent = `${fmt1(L.start)}〜` + (t >= L.start ? `　${(t - L.start).toFixed(1)}秒` : '');
   requestAnimationFrame(okTick);
 }
 function startTap(now){
@@ -1340,7 +1343,7 @@ function startTap(now){
   if(document.activeElement) document.activeElement.blur();
   $('#okDone').hidden = true; $('#okCmp').hidden = true;
   renderOkFrom(); renderOk();
-  $('#okStage').scrollIntoView({block:'nearest', behavior:'smooth'});
+  $('.okbox').scrollIntoView({block:'start', behavior:'smooth'});
   play(now ? base : Math.max(0, base - (from === 0 ? 0 : 2)), {noVoice:true});
   if(now) tapNext();
   requestAnimationFrame(okTick);
@@ -1366,11 +1369,15 @@ function tapUndo(){
   if(!tap || !tap.hist.length) return;
   const h = tap.hist.pop();
   const undone = P.lines[tap.i];
+  const boundary = undone && undone.start != null ? undone.start : curTime();
   if(undone && h.nx){ undone.start = h.nx.start; undone.end = h.nx.end; undone.auto = h.nx.auto; refreshTapRow(tap.i); }
   if(h.pv != null && P.lines[h.i]){ P.lines[h.i].end = h.pv; refreshTapRow(h.i); }
   tap.i = h.i;
   const cur = P.lines[tap.i];
   if(cur && h.cur){ cur.end = h.cur.end; cur.auto = h.cur.auto; refreshTapRow(tap.i); }
+  // 一度止めて、取り消した位置の3秒前から「3・2・1」で再開
+  tap.countTo = boundary;
+  play(Math.max(0, boundary - 3), {noVoice:true});
   renderOk();
 }
 function refreshTapRow(i){
