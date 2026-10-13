@@ -39,6 +39,8 @@ body.recording #stage{box-shadow:0 0 0 2px var(--rec)}
 .ly{text-align:center;font-size:var(--fs,20px);font-weight:500;line-height:1.6;padding:6px 16px 8px;margin:1px 0;transition:background .25s;color:#e8ecf3;cursor:pointer;border-radius:10px}
 .ly.focus{background:rgba(56,198,244,.12);box-shadow:inset 3px 0 0 var(--wipe,var(--accent))}
 .ly .tx{white-space:pre-line}
+.ly.inrange{box-shadow:inset 3px 0 0 var(--rec)}
+.ly.focus.inrange{box-shadow:inset 3px 0 0 var(--rec)}
 .ly .gauge{display:none;height:6px;margin:6px auto 0;max-width:640px;background:rgba(255,255,255,.12);border-radius:3px;overflow:hidden}
 .ly.focus .gauge{display:block}
 .ly .gauge i{display:block;height:100%;width:0;background:var(--wipe,var(--accent))}
@@ -56,8 +58,7 @@ body.recording #status{color:var(--rec);font-weight:700}
 #tlWrap.zoomed{cursor:grab}
 #tlWrap.dragging{cursor:grabbing}
 #tlInner{height:64px}
-#tl{position:sticky;left:0;width:100%;height:64px;display:block}
-#tlWrap:not(.zoomed) #tl{width:100%}
+#tl{position:sticky;left:0;height:64px;display:block}
 .legend .zoom{display:inline-flex;gap:0}
 .legend .zoom button{padding:2px 12px;border-radius:0;font-size:12px}
 .legend .zoom button:first-child{border-radius:6px 0 0 6px}
@@ -101,22 +102,38 @@ tr.playing td.no{color:var(--accent);font-weight:700}
 .set input[type=number]{width:90px}
 
 a.guide{color:var(--accent);font-size:13px}
+details.help{margin-top:8px;font-size:12px;color:var(--mut)}
+details.help summary{cursor:pointer;width:max-content}
+details.help > div{margin-top:6px;line-height:1.9}
 a.btnlink{display:inline-block;background:var(--panel2);border:1px solid var(--accent);color:var(--accent);border-radius:8px;padding:6px 12px;text-decoration:none;font-weight:700}
 .guidebox{border-color:#2a5b6e}
 .okbox{border-color:#2a5b6e}
-#okStage{margin:10px 0;background:radial-gradient(ellipse at 50% 40%,#1b2230,#0b0d12 75%);border:1px solid var(--line);border-radius:12px;padding:10px 4%;min-height:230px;touch-action:manipulation;user-select:none;-webkit-user-select:none;cursor:pointer}
-#okStage.running{border-color:var(--accent)}
-#okStage .ly{cursor:inherit;opacity:1}
-#okStage .ly.focus{background:rgba(56,198,244,.12)}
-#okStage .ly .tag{display:block;font-size:12px;color:var(--mut);margin-bottom:2px;font-weight:400}
-#okStage .ly.focus .tag{color:var(--accent)}
-#okStage .msg{color:var(--mut);text-align:center;padding:70px 0}
-.okctl{display:grid;grid-template-columns:1fr 2fr 1fr 1fr;gap:8px}
-.okctl button{min-height:48px;font-size:15px}
-#okTap{font-size:18px;font-weight:700;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
-#okTap:not(:disabled){background:var(--accent);color:#04202b;border-color:transparent}
+.okhead{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.okhead b{margin-right:auto}
+.okhead select{max-width:260px}
+#okStage{position:relative;height:46vh;min-height:260px;margin:10px 0;background:radial-gradient(ellipse at 50% 40%,#1b2230,#0b0d12 75%);border:1px solid var(--line);border-radius:12px;overflow:hidden;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+#okStage.running{border-color:var(--rec);cursor:pointer}
+#okList{position:absolute;left:0;right:0;top:0;padding:0 6%;transition:transform .35s cubic-bezier(.2,.7,.2,1)}
+#okStage .ly{cursor:inherit}
+#okStage .ly.focus.wait{background:transparent;box-shadow:inset 0 0 0 1px var(--accent)}
+#okStage .meta{display:block;font-size:12px;color:var(--mut);font-weight:400;font-variant-numeric:tabular-nums;margin-top:2px}
+#okStage .ly.focus .meta{color:var(--accent)}
+#okClock{position:absolute;right:12px;top:10px;font-variant-numeric:tabular-nums;color:var(--rec);font-weight:700;display:none;z-index:2}
+#okStage.running #okClock{display:block}
+#okClock::before{content:"● ";animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:0}}
+.okctl{display:flex;gap:8px;flex-wrap:wrap}
+.okctl[hidden]{display:none}
+#okTap{min-width:180px;font-weight:700;touch-action:none;-webkit-touch-callout:none}
+#okTap{background:var(--accent);color:#04202b;border-color:transparent}
 #okTap.hit{filter:brightness(1.4)}
-.okkeys{margin-top:6px}
+#okDone{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#131a22}
+#okDone[hidden]{display:none}
+#okDone span{margin-right:auto}
+#okCmp{margin-top:8px;max-height:300px;overflow:auto;font-size:13px}
+#okCmp[hidden]{display:none}
+#okCmp td,#okCmp th{padding:3px 8px;font-variant-numeric:tabular-nums}
+#okCmp .chg{color:var(--accent)}
 h2.sec{font-size:13px;color:var(--mut);margin:18px 2px 8px;font-weight:700;letter-spacing:.1em}
 h2.sec:first-child{margin-top:4px}
 .frow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
@@ -194,14 +211,14 @@ footer ul{margin:8px 0 0;padding-left:1.2em;line-height:1.8}
   td.ops button{min-width:40px;padding:6px 8px}
   td.c-rl input{width:100%}
 
-  .okctl{grid-template-columns:1fr 1fr 1fr}
-  #okTap{grid-column:1/-1;grid-row:1;min-height:84px}
-  #okStage{min-height:200px}
+  .okctl button{flex:1}
+  #okTap{flex-basis:100%;min-height:56px}
+  .okhead select{max-width:none;flex:1}
   /* 書き出し・設定 */
   .set{grid-template-columns:1fr}
   .set > span:nth-child(odd){color:var(--accent);margin-top:6px}
 }
-@media (pointer: coarse){ .keys,.okkeys{display:none} }
+
 </style>
 </head>
 <body>
@@ -224,14 +241,14 @@ footer ul{margin:8px 0 0;padding-left:1.2em;line-height:1.8}
   <div id="stage">
     <div id="countdown"></div>
     <div id="lyrics"></div>
-    <div id="empty" hidden>台本がありません。「台本の編集」タブで貼り付けるか、「ファイル」タブで台本を開いてください。</div>
+    <div id="empty" hidden>台本がありません</div>
   </div>
   <div id="transport">
     <button id="btnTop" title="先頭へ（Home）">⏮</button>
-    <button id="btnPrev" title="前のセリフへ（↑）">▲</button>
-    <button id="btnNext" title="次のセリフへ（↓）">▼</button>
-    <button id="btnPlay" class="primary">▶ 再生</button>
-    <button id="btnRec" class="rec">● ここから録音</button>
+    <button id="btnPrev" title="前のセリフ（↑）">▲</button>
+    <button id="btnNext" title="次のセリフ（↓）">▼</button>
+    <button id="btnPlay" class="primary" title="Space">▶ 再生</button>
+    <button id="btnRec" class="rec" title="R">● ここから録音</button>
     <span id="time">0:00.00</span>
     <button id="fsDown" title="文字を小さく">A−</button>
     <button id="fsUp" title="文字を大きく">A＋</button>
@@ -240,64 +257,62 @@ footer ul{margin:8px 0 0;padding-left:1.2em;line-height:1.8}
   </div>
   <div id="stopWrap">
     <span class="mut">録音を止める位置</span>
-    <select id="stopMode">
-      <option value="manual">停止を押すまで</option>
-      <option value="line">このセリフまで</option>
-      <option value="range">指定したセリフまで</option>
-    </select>
-    <select id="stopLine" hidden></select>
+    <select id="stopMode"></select>
   </div>
   <div id="tlWrap"><div id="tlInner"><canvas id="tl"></canvas></div></div>
   <div class="legend small mut">
     <span class="zoom"><button id="zoomAll" class="on">全体</button><button id="zoomIn">拡大</button></span>
-    <span>上段：セリフ（押すとそのセリフへ）</span><span>下段：採用中の録音（色＝テイク）</span>
   </div>
   <div id="takes"></div>
-  <div class="keys small mut">Space：再生／停止　R：録音開始／停止　↑↓：前後のセリフへ　←→：5秒移動　Home：先頭へ　セリフをクリックでそこへ移動</div>
 </section>
 
 <!-- 台本の編集 -->
 <section id="tab-edit" hidden>
   <div class="box okbox">
-    <div class="row">
-      <b style="margin-right:auto">文字送りで時刻を付ける</b>
-      <span class="small mut">始めるセリフ</span><select id="okFrom"></select>
+    <div class="okhead">
+      <b>文字送りで時刻を付ける</b>
+      <select id="okFrom" title="始めるセリフ"></select>
+      <select id="okHist" title="時刻の履歴"></select>
+      <button class="okfs" data-d="-2" title="文字を小さく">A−</button><button class="okfs" data-d="2" title="文字を大きく">A＋</button>
     </div>
-    <div class="small mut" style="margin-top:6px;line-height:1.7">「スタート」を押すと時間が流れ始めます（伴奏や元の音声を読み込んでいれば、それも流れます）。セリフを読み始めたら「次へ」、次のセリフに移ったらまた「次へ」を押してください。押した瞬間が、前のセリフの終わりと次のセリフの始まりになります。</div>
-    <div id="okStage"></div>
-    <div class="okctl">
-      <button id="okStart" class="primary">▶ スタート</button>
-      <button id="okTap" disabled>次へ</button>
-      <button id="okUndo" disabled>↩ 1つ戻る</button>
-      <button id="okStop" disabled>■ 終了</button>
+    <div id="okStage"><div id="okClock"></div><div id="okList"></div></div>
+    <div class="okctl" id="okIdle">
+      <button id="okStart" class="primary" title="最初の「次へ」で1行目が始まる">▶ スタート</button>
+      <button id="okStartNow" title="押した瞬間に1行目が始まる">▶ 1行目と同時にスタート</button>
     </div>
-    <div class="small mut okkeys">パソコンでは、次へ：Space・→・Enter　1つ戻る：←　終了：Esc</div>
+    <div class="okctl" id="okRun" hidden>
+      <button id="okTap" title="Space / → / Enter">次へ</button>
+      <button id="okUndo" title="←">↩ 1つ戻る</button>
+      <button id="okStop" title="Esc">■ 終了</button>
+    </div>
+    <div id="okDone" hidden><span id="okDoneTx"></span><button id="okCmpBtn">前と比べる</button><button id="okRevert">元に戻す</button></div>
+    <div id="okCmp" hidden></div>
   </div>
 
   <div class="box">
-    <div class="row"><b style="margin-right:auto">台本を貼り付ける</b><a class="guide" href="guide.html" target="_blank" rel="noopener">台本の作り方（AIで整える方法）</a></div>
-    <div class="small mut" style="margin-top:6px;line-height:1.7">
-      文字起こしは、そのまま貼るより、先にAIで1文ずつに整えてから貼るのがおすすめです。手順とAI用のテンプレは「台本の作り方」にあります。<br>
-      1行＝1セリフで貼り付けてください。時刻は付いていてもいなくても読み込めます。<br>
-      時刻付きの文字起こし（<code>1:23.4-1:27.0 セリフ</code>、<code>[1:23.45]セリフ</code>、YouTubeの文字起こし、字幕ファイルのSRT・VTT）もそのまま読み込めます。<br>
-      役名は行頭に <code>【役名】</code> を付けます（例：<code>【A】こんにちは</code>）。時刻のない行には、文字数から仮の時刻が入ります。
-    </div>
-    <textarea id="imp" placeholder="ここに台本・文字起こしを貼り付け"></textarea>
+    <div class="row"><b style="margin-right:auto">台本を貼り付ける</b><a class="guide" href="guide.html" target="_blank" rel="noopener">台本の作り方</a></div>
+    <textarea id="imp" placeholder="1行に1セリフ。時刻付き・字幕ファイルの形式もそのまま貼れます"></textarea>
     <div class="row">
-      <button id="impBtn" class="primary">貼り付けた内容で台本を置き換える</button>
-      <button id="impFileBtn">テキスト・字幕ファイルから読み込む</button>
+      <button id="impBtn" class="primary">この内容で置き換える</button>
+      <button id="impFileBtn">ファイルから読み込む</button>
       <input type="file" id="impFile" accept=".txt,.srt,.vtt,.lrc,.json,text/plain" hidden>
+      <label class="small mut" title="時刻のないセリフに、この長さを文字数の比で割り振ります">音声の長さ <input id="totalLen" placeholder="30:15" inputmode="decimal" style="width:80px"></label>
     </div>
-    <div class="row small mut" style="margin-top:10px">音声の長さ <input id="totalLen" placeholder="例 30:15" inputmode="decimal" style="width:96px"> <span>時刻のない台本は、この長さに文字数の比で仮の時刻を入れます（伴奏を読み込んでいて未入力なら、伴奏の長さを使います）</span></div>
-    <div class="row small mut" style="margin-top:6px">長さが分からないときの速さ <input type="number" id="cps" min="2" max="20" step="0.5" style="width:70px"> 文字/秒</div>
+    <details class="help">
+      <summary>？ 読み込める形式</summary>
+      <div>
+        <code>1:23.4-1:27.0 セリフ</code>　<code>[1:23.45]セリフ</code>　YouTubeの文字起こし　SRT・VTT・JSON<br>
+        役名：行頭に <code>【役名】</code><br>
+        時刻のない行：音声の長さ（未入力なら伴奏の長さ、それもなければ <input type="number" id="cps" min="2" max="20" step="0.5" style="width:60px"> 文字/秒）から仮の時刻
+      </div>
+    </details>
   </div>
 
   <div class="box">
     <div class="row" style="margin-bottom:6px">
       <b style="margin-right:auto">セリフ一覧</b>
-      <span class="small mut">灰色の斜体の時刻は仮の時刻です</span>
       <button id="sortBtn">時刻順に並べ替え</button>
-      <button id="addEnd">＋ 末尾に行を追加</button>
+      <button id="addEnd">＋ 行を追加</button>
     </div>
     <table>
       <thead><tr><th></th><th>開始</th><th>終了</th><th>役名</th><th>セリフ</th><th></th></tr></thead>
@@ -310,7 +325,7 @@ footer ul{margin:8px 0 0;padding-left:1.2em;line-height:1.8}
 <section id="tab-file" hidden>
   <div class="box guidebox">
     <div class="frow">
-      <div class="flabel"><b>台本の作り方</b><span class="small mut">文字起こしをAIで整えて台本にする手順と、AIに渡すテンプレ</span></div>
+      <div class="flabel"><b>台本の作り方</b><span class="small mut">文字起こしをAIで整える手順とテンプレ</span></div>
       <a class="btnlink" href="guide.html" target="_blank" rel="noopener">台本の作り方を開く</a>
     </div>
   </div>
@@ -321,37 +336,34 @@ footer ul{margin:8px 0 0;padding-left:1.2em;line-height:1.8}
       <button id="jsonOpenBtn" class="primary">台本を開く</button>
       <input type="file" id="jsonOpen" accept=".json,application/json" hidden>
     </div>
-    <div class="small mut" style="margin-top:6px">開いた台本は新しいプロジェクトになります（今のプロジェクトが空ならそこに入ります）。</div>
   </div>
   <div class="box">
     <div class="frow">
-      <div class="flabel"><b>伴奏</b><span class="small mut">録音中に流す音声（任意）</span></div>
+      <div class="flabel"><b>伴奏</b><span class="small mut">録音中に流す音声</span></div>
       <button id="bgmPick" class="primary">伴奏ファイルを選ぶ</button>
       <button id="bgmDel">伴奏を外す</button>
       <input type="file" id="bgmFile" accept="audio/*,.mp3,.wav,.m4a,.ogg" hidden>
     </div>
     <div class="cur">伴奏ファイル：<span id="bgmName">未選択</span></div>
     <div id="bgmNeed" class="small" style="margin-top:6px;color:#ffd54f" hidden></div>
-    <div class="small mut" style="margin-top:6px">カラオケの伴奏や声劇の相手役の音声です。未選択のときは無音で時間だけ進みます。流しながら録るときはヘッドホンを使ってください。</div>
   </div>
 
   <h2 class="sec">保存</h2>
   <div class="box">
     <div class="frow">
-      <div class="flabel"><b>台本</b><span class="small mut">台本・時刻・役名（JSONファイル）。録音と伴奏の音声は入りません</span></div>
+      <div class="flabel"><b>台本</b><span class="small mut">台本・時刻・役名（JSONファイル）</span></div>
       <button id="jsonSave" class="primary">台本を保存</button>
     </div>
   </div>
   <div class="box">
     <div class="frow">
-      <div class="flabel"><b>録音</b><span class="small mut">各セリフで採用中のテイクをつないだ、通しの録音</span></div>
+      <div class="flabel"><b>録音</b><span class="small mut">採用中のテイクをつないだ通しの録音</span></div>
       <label class="mut">形式 <select id="expFmt"><option value="mp3">MP3</option><option value="wav">WAV</option></select></label>
       <button id="expVoice" class="primary">声だけで保存</button>
       <button id="expMix" class="primary">声＋伴奏で保存</button>
     </div>
     <div id="expStatus" class="small mut" style="margin-top:6px"></div>
   </div>
-  <div class="small mut">録音のテイクと採用状態は、このブラウザの中に自動で保存されます。ブラウザの閲覧データを削除すると消えるため、仕上がった録音は上のボタンで保存してください。</div>
 </section>
 
 <!-- 設定 -->
@@ -359,23 +371,22 @@ footer ul{margin:8px 0 0;padding-left:1.2em;line-height:1.8}
   <div class="box">
     <b>録音の設定</b>
     <div class="set" style="margin-top:10px">
-      <span>録り直しの助走</span><span><input type="number" id="setPre" min="0" max="15" step="0.5"> 秒前から流して、指定位置で録音開始</span>
-      <span>録音タイミングの補正</span><span><input type="number" id="setOff" min="-500" max="500" step="5"> ミリ秒（プラスで声が前にずれる）</span>
-      <span>ノイズ抑制</span><span><label><input type="checkbox" id="setNs"> マイクの雑音を抑える（講演向け。歌では切るのがおすすめ）</label></span>
+      <span>録り直しの助走</span><span><input type="number" id="setPre" min="0" max="15" step="0.5"> 秒前から流す</span>
+      <span>録音タイミングの補正</span><span><input type="number" id="setOff" min="-500" max="500" step="5" title="録った声が遅れて聞こえるときはプラスに"> ミリ秒</span>
+      <span>ノイズ抑制</span><span><label title="歌では切るのがおすすめ"><input type="checkbox" id="setNs"> 雑音を抑える</label></span>
     </div>
   </div>
   <div class="box">
-    <b>エフェクト（再生と「声＋伴奏で保存」に反映）</b>
+    <b>エフェクト</b>
     <div class="set" style="margin-top:10px">
-      <span>全体のエフェクト</span><span><select id="fxAll"></select> <span class="small mut">個別に選んでいないセリフにかかります</span></span>
+      <span>全体のエフェクト</span><span><select id="fxAll"></select></span>
       <span>かかり具合</span><span><input type="range" id="fxAmt" min="0" max="1" step="0.05"> <span id="fxAmtTx"></span></span>
       <span>役ごとにまとめて設定</span><span id="fxRoles"></span>
-      <span>セリフごとの設定</span><span><span id="fxCount" class="small mut"></span> <button id="fxReset">すべて「全体と同じ」に戻す</button></span>
+      <span>セリフごとの設定</span><span><span id="fxCount" class="small mut"></span> <button id="fxReset">すべて全体と同じに戻す</button></span>
     </div>
-    <div class="small mut" style="margin-top:8px">セリフごとのエフェクトは、「録音」タブのテイク一覧で選べます。</div>
   </div>
   <div class="box">
-    <b>音量（再生と「声＋伴奏で保存」に反映）</b>
+    <b>音量</b>
     <div class="set" style="margin-top:10px">
       <span>声</span><span><input type="range" id="setVv" min="0" max="2" step="0.05"> <span id="vvTx"></span></span>
       <span>伴奏</span><span><input type="range" id="setBv" min="0" max="2" step="0.05"> <span id="bvTx"></span></span>
@@ -388,7 +399,7 @@ footer ul{margin:8px 0 0;padding-left:1.2em;line-height:1.8}
     <summary>このツールについて（利用上の注意）</summary>
     <ul>
       <li>読み込む台本・伴奏・音声の権利は、利用者ご自身で確認してください。市販の曲やカラオケ音源を使った録音を公開・配布する場合は、権利者の許可が必要になることがあります。</li>
-      <li>台本と録音は、利用者の端末（ブラウザ）の中にだけ保存されます。外部のサーバーへ送信することはありません。</li>
+      <li>台本と録音は、利用者の端末（ブラウザ）の中にだけ保存されます。外部のサーバーへ送信することはありません。ブラウザの閲覧データを削除すると消えます。</li>
       <li>MP3への変換には <a href="https://lame.sourceforge.io/" target="_blank" rel="noopener">LAME</a> をJavaScriptに移植した <a href="https://github.com/zhuker/lamejs" target="_blank" rel="noopener">lamejs</a>（LGPL）を使っています。</li>
       <li>このツールは現状のまま提供しています。データの消失や不具合によって生じた損害について、制作者は責任を負いません。大切な録音や台本は、「ファイル」タブで保存しておいてください。</li>
     </ul>
@@ -665,7 +676,7 @@ function seek(t){
   t = clamp(t, 0, totalDur());
   if(player.playing && !player.endAt && !player.onlyTake) play(t);
   else { haltPlayback(); pos = t; updateButtons(); }
-  updateView(); drawTimeline();
+  updateView(); tlEnsure(); drawTimeline();
 }
 function seekLine(i){ if(!P.lines.length) return; i = clamp(i, 0, P.lines.length-1); seek(P.lines[i].start ?? 0); }
 function frame(){
@@ -736,7 +747,8 @@ async function startRecording(o={}){
   const pre = from > 0 ? Math.min(P.settings.preroll || 0, from) : 0;
   play(from - pre, {voiceUntil:from});
   const comp = outLat() + 0.01 + (P.settings.offsetMs || 0) / 1000;
-  rec = {fromT:from, C0:player.ctxT0 + pre + comp, comp, blocks:[], stopAt:computeStopAt(from, o.mode)};
+  rec = {fromT:from, C0:player.ctxT0 + pre + comp, comp, blocks:[], stopAt:computeStopAt(from, o.mode), fromIdx:lineAt(from), toIdx:stopTarget(from, o.mode)};
+  markRange();
   capTarget = rec; mic.node.port.postMessage(true);
   document.body.classList.add('recording'); updateButtons();
 }
@@ -779,28 +791,37 @@ function finalizeTake(r, D){
 
 /* ---------- 録音を止める位置 ---------- */
 function lineAt(t){ return P.lines.length ? findFocus(t).i : -1; }
-function computeStopAt(from, mode){
-  mode = mode || $('#stopMode').value;
-  if(mode === 'manual' || !P.lines.length) return null;
+// 止める位置：'manual'（停止を押すまで）／'line'（このセリフまで）／数字（その番号のセリフまで）
+function stopTarget(from, mode){
+  mode = mode ?? (P.settings.stopMode || 'manual');
+  if(mode === 'manual' || !P.lines.length) return -1;
   const i0 = lineAt(from);
-  let i = i0;
-  if(mode === 'range'){ const v = parseInt($('#stopLine').value, 10); if(!isNaN(v)) i = Math.max(i0, v); }
-  const L = P.lines[i];
+  return mode === 'line' ? i0 : Math.max(i0, parseInt(mode, 10) || 0);
+}
+function computeStopAt(from, mode){
+  const i = stopTarget(from, mode), L = P.lines[i];
   return (L && L.end != null && L.end > from) ? L.end : null;
 }
 function renderStopLine(){
-  const sel = $('#stopLine'), mode = $('#stopMode').value;
-  sel.hidden = mode !== 'range';
+  const sel = $('#stopMode'), cur = Math.max(0, focusShown);
+  let mode = P.settings.stopMode || 'manual';
+  if(mode !== 'manual' && mode !== 'line' && (parseInt(mode, 10) <= cur || parseInt(mode, 10) >= P.lines.length)) mode = 'line';
+  const snip = i => esc(Array.from(P.lines[i].text.replace(/\s+/g, ' ')).slice(0, 16).join(''));
+  let html = `<option value="manual">停止を押すまで</option>`;
+  if(P.lines.length) html += `<option value="line">このセリフ（${cur+1}番）まで</option>`;
+  for(let i=cur+1;i<P.lines.length;i++) html += `<option value="${i}">${i+1}番まで　${snip(i)}</option>`;
+  if(sel.dataset.cur !== String(cur) || sel.dataset.n !== String(P.lines.length) || document.activeElement !== sel){ sel.innerHTML = html; sel.dataset.cur = cur; sel.dataset.n = P.lines.length; }
+  sel.value = mode;
+  sel.disabled = !!rec;
   $('#btnRec').textContent = rec ? '■ 録音を止める' : (mode === 'line' ? '● このセリフを録音' : '● ここから録音');
-  if(mode !== 'range') return;
-  const cur = Math.max(0, focusShown), keep = parseInt(sel.value, 10);
-  const want = isNaN(keep) || keep < cur ? cur : keep;
-  let html = '';
-  for(let i=cur;i<P.lines.length;i++){
-    const t = Array.from(P.lines[i].text.replace(/\s+/g, ' ')).slice(0, 14).join('');
-    html += `<option value="${i}" ${i===want?'selected':''}>${i+1}番まで（${esc(t)}…）</option>`;
-  }
-  sel.innerHTML = html;
+  markRange();
+}
+// 録音する範囲のセリフに赤い印
+function markRange(){
+  let a = -1, b = -1;
+  if(rec){ a = rec.fromIdx; b = rec.toIdx; }
+  else { const i = stopTarget(pos); if(i >= 0){ a = lineAt(pos); b = i; } }
+  lyEls.forEach((el,k) => el.classList.toggle('inrange', a >= 0 && k >= a && k <= (b < 0 ? P.lines.length - 1 : b)));
 }
 $('#stopMode').onchange = () => { P.settings.stopMode = $('#stopMode').value; save(); renderStopLine(); };
 
@@ -875,6 +896,11 @@ function tlLayout(){
   inner.style.width = tlZoomed() ? Math.ceil(totalDur() * ZOOM_PX) + 'px' : '100%';
   $('#zoomAll').classList.toggle('on', !tlZoomed()); $('#zoomIn').classList.toggle('on', tlZoomed());
 }
+function tlEnsure(){
+  if(!tlZoomed()) return;
+  const wrap = $('#tlWrap'), w = wrap.clientWidth, px = curTime() * ZOOM_PX - wrap.scrollLeft;
+  if(px < w * 0.08 || px > w * 0.92) tlScrollTo(curTime() * ZOOM_PX - w * 0.3);
+}
 function setZoom(z){
   P.settings.tlZoom = z; save(); tlLayout();
   if(z === 'in') tlScrollTo(curTime() * ZOOM_PX - $('#tlWrap').clientWidth * 0.3);
@@ -890,6 +916,7 @@ function drawTimeline(){
     const px = curTime() * ZOOM_PX - wrap.scrollLeft;
     if(px < 0 || px > w * 0.85) tlScrollTo(curTime() * ZOOM_PX - w * 0.3);
   }
+  if(cv.style.width !== w + 'px') cv.style.width = w + 'px'; // 画面の幅ぶんだけ描き、拡大時も引き伸ばさない
   if(cv.width !== Math.round(w*dpr) || cv.height !== Math.round(h*dpr)){ cv.width = Math.round(w*dpr); cv.height = Math.round(h*dpr); }
   const g = cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,w,h);
   const k = tlScale(), off = tlZoomed() ? wrap.scrollLeft : 0, X = t => t * k - off;
@@ -1165,8 +1192,8 @@ function renderTable(){
     const tr = document.createElement('tr'); tr.dataset.i = i;
     tr.className = (L.auto ? 'auto ' : '') + (i === selIdx ? 'sel ' : '') + (i === focusShown ? 'playing' : '');
     tr.innerHTML = `<td class="no">${i+1}</td>
-      <td class="c-st"><span class="tsw"><button class="ng" data-a="nudge" data-k="start" data-d="-0.1" aria-label="開始を0.1秒早く">−</button><input class="ts" data-k="start" value="${fmt(L.start)}" inputmode="decimal"><button class="ng" data-a="nudge" data-k="start" data-d="0.1" aria-label="開始を0.1秒遅く">＋</button></span></td>
-      <td class="c-en"><span class="tsw"><button class="ng" data-a="nudge" data-k="end" data-d="-0.1" aria-label="終了を0.1秒早く">−</button><input class="ts" data-k="end" value="${fmt(L.end)}" inputmode="decimal"><button class="ng" data-a="nudge" data-k="end" data-d="0.1" aria-label="終了を0.1秒遅く">＋</button></span></td>
+      <td class="c-st"><span class="tsw"><button class="ng" data-a="nudge" data-k="start" data-d="-0.1" aria-label="開始を0.1秒早く">−</button><input class="ts" data-k="start" value="${fmt(L.start)}" inputmode="decimal" ${L.auto ? 'title="仮の時刻"' : ''}><button class="ng" data-a="nudge" data-k="start" data-d="0.1" aria-label="開始を0.1秒遅く">＋</button></span></td>
+      <td class="c-en"><span class="tsw"><button class="ng" data-a="nudge" data-k="end" data-d="-0.1" aria-label="終了を0.1秒早く">−</button><input class="ts" data-k="end" value="${fmt(L.end)}" inputmode="decimal" ${L.auto ? 'title="仮の時刻"' : ''}><button class="ng" data-a="nudge" data-k="end" data-d="0.1" aria-label="終了を0.1秒遅く">＋</button></span></td>
       <td class="c-rl"><input class="rl" data-k="role" value="${esc(L.role)}" placeholder="役名なし"></td>
       <td class="c-tx"><textarea data-k="text" rows="1">${esc(L.text)}</textarea></td>
       <td class="ops"><button data-a="play" title="このセリフを再生">▶</button><button data-a="add" title="下に行を追加">＋</button><button data-a="del" title="この行を削除">✕</button></td>`;
@@ -1187,7 +1214,7 @@ function refreshTableValues(){
 }
 function linesChanged(full){
   save();
-  if(!tap){ renderOkFrom(); renderOk(); }
+  if(!tap){ renderOkFrom(); buildOk(); }
   if(full) renderTable(); else refreshTableValues();
   renderLyrics(); renderTakes(true); drawTimeline();
 }
@@ -1230,44 +1257,93 @@ $('#addEnd').onclick = () => { P.lines.push({start:null, end:null, role:'', text
 $('#sortBtn').onclick = () => { P.lines.sort((a,b) => (a.start ?? 0) - (b.start ?? 0)); linesChanged(true); };
 
 /* ---------- 文字送りで時刻を付ける ---------- */
-// tap = {from, i（今読んでいるセリフ。最初のタップ前は from-1）, hist（取り消し用）}
+// tap = {from, i（今読んでいるセリフ。最初の「次へ」の前は from-1）, hist（1つ戻る用）, snap（始める前の時刻）}
+let okEls = [], okShown = -1, okLast = null;
+const fmt1 = t => { if(t == null || !isFinite(t)) return '—'; t = Math.max(0, t); const m = Math.floor(t/60); return m + ':' + (t - m*60).toFixed(1).padStart(4, '0'); };
+const okMeta = L => (L.start == null || L.end == null) ? '' : `${fmt1(L.start)}〜${fmt1(L.end)}（${(L.end - L.start).toFixed(1)}秒）`;
+function snapTimes(){ return P.lines.map(L => [L.start, L.end, !!L.auto]); }
+function applySnap(sn){ sn.forEach((v,i) => { const L = P.lines[i]; if(L){ L.start = v[0]; L.end = v[1]; L.auto = v[2]; } }); }
+function pushHist(label, sn){
+  P.timeHist = P.timeHist || [];
+  P.timeHist.unshift({at:Date.now(), label, n:P.lines.length, times:sn});
+  P.timeHist.length = Math.min(P.timeHist.length, 10);
+}
+function renderOkHist(){
+  const sel = $('#okHist'); if(!sel) return;
+  const H = P.timeHist || [];
+  const d = t => { const x = new Date(t); return `${x.getMonth()+1}/${x.getDate()} ${String(x.getHours()).padStart(2,'0')}:${String(x.getMinutes()).padStart(2,'0')}`; };
+  sel.innerHTML = `<option value="">時刻の履歴</option>` + H.map((h,i) => `<option value="${i}" ${h.n !== P.lines.length ? 'disabled' : ''}>${d(h.at)}　${esc(h.label)}前</option>`).join('');
+  sel.disabled = !!tap || !H.length;
+}
+$('#okHist').onchange = e => {
+  const i = e.target.value; e.target.value = ''; if(i === '') return;
+  const h = P.timeHist[+i]; if(!h || h.n !== P.lines.length) return;
+  if(!confirm(`${h.label}前の時刻に戻しますか？`)) return;
+  const cur = snapTimes(); applySnap(h.times); pushHist('履歴から戻す', cur);
+  okLast = null; $('#okDone').hidden = true; $('#okCmp').hidden = true;
+  linesChanged(true);
+};
 function renderOkFrom(){
   const sel = $('#okFrom'); if(!sel) return;
   const cur = clamp(selIdx, 0, Math.max(0, P.lines.length - 1));
-  sel.innerHTML = P.lines.map((L,i) => `<option value="${i}" ${i===cur?'selected':''}>${i+1}. ${esc(Array.from(L.text.replace(/\s+/g,' ')).slice(0, 18).join(''))}</option>`).join('');
+  sel.innerHTML = P.lines.map((L,i) => `<option value="${i}" ${i===cur?'selected':''}>${i+1}　${esc(Array.from(L.text.replace(/\s+/g,' ')).slice(0, 16).join(''))}</option>`).join('');
   sel.disabled = !!tap;
+  renderOkHist();
+}
+function buildOk(){
+  const box = $('#okList'); if(!box) return;
+  box.style.setProperty('--fs', (P.settings.fontSize || 20) + 'px');
+  box.innerHTML = '';
+  okEls = P.lines.map((L,i) => {
+    const d = document.createElement('div'); d.className = 'ly';
+    const col = L.role ? roleColor(L.role) : '';
+    if(col) d.style.setProperty('--wipe', col);
+    d.innerHTML = (L.role ? `<span class="role" style="color:${col}">${esc(L.role)}</span>` : '') + `<span class="tx">${esc(L.text)}</span><span class="meta"></span>`;
+    d.onclick = () => { if(!tap){ setSel(i); } };
+    box.appendChild(d); return d;
+  });
+  okShown = -1; renderOk();
 }
 function renderOk(){
-  const box = $('#okStage'); if(!box) return;
-  box.classList.toggle('running', !!tap);
-  $('#okStart').disabled = !!tap || !P.lines.length;
-  $('#okTap').disabled = !tap; $('#okStop').disabled = !tap;
+  if(!$('#okStage')) return;
+  if(okEls.length !== P.lines.length){ buildOk(); return; }
+  $('#okStage').classList.toggle('running', !!tap);
+  $('#okIdle').hidden = !!tap; $('#okRun').hidden = !tap;
+  $('#okStart').disabled = $('#okStartNow').disabled = !P.lines.length || !!rec;
   $('#okUndo').disabled = !tap || !tap.hist.length;
-  $('#okTap').textContent = !tap ? '次へ' : tap.i < tap.from ? '読み始めたら押す' : tap.i >= P.lines.length - 1 ? '読み終えたら押す' : '次へ';
-  if(!P.lines.length){ box.innerHTML = '<div class="msg">台本がありません</div>'; return; }
-  const ci = tap ? Math.max(tap.i, tap.from) : clamp(+$('#okFrom').value || 0, 0, P.lines.length - 1);
-  const waiting = !tap || tap.i < tap.from;
-  const fs = (P.settings.fontSize || 20) + 'px';
-  let html = '';
-  const ahead = window.innerWidth <= 760 ? 2 : 3;
-  for(let k = ci - 1; k <= ci + ahead; k++){
-    const L = P.lines[k]; if(!L) continue;
-    const col = L.role ? roleColor(L.role) : '';
-    const tag = k === ci ? (waiting ? (tap ? '次に読むセリフ（読み始めたら「次へ」）' : '始めるセリフ') : '読んでいるセリフ') : '';
-    html += `<div class="ly ${k === ci ? 'focus' : ''}" style="font-size:${fs};${col ? '--wipe:' + col : ''}">${tag ? `<span class="tag">${tag}　${k+1} / ${P.lines.length}</span>` : ''}${L.role ? `<span class="role" style="color:${col}">${esc(L.role)}</span>` : ''}<span class="tx">${esc(L.text)}</span></div>`;
+  const ci = tap ? Math.max(tap.i, tap.from) : clamp(selIdx, 0, Math.max(0, P.lines.length - 1));
+  const waiting = tap && tap.i < tap.from;
+  okEls.forEach((el,k) => {
+    el.classList.toggle('focus', k === ci); el.classList.toggle('wait', k === ci && (waiting || !tap));
+    if(!(tap && k === ci && !waiting)) el.querySelector('.meta').textContent = okMeta(P.lines[k]);
+  });
+  if(ci !== okShown){
+    okShown = ci; const el = okEls[ci];
+    if(el){ const H = $('#okStage').clientHeight; $('#okList').style.transform = `translateY(${H*0.32 - el.offsetTop - el.offsetHeight/2}px)`; }
   }
-  box.innerHTML = html;
 }
-function startTap(){
+// 動いている間の表示（全体の経過と、今のセリフの経過）
+function okTick(){
+  if(!tap) return;
+  const t = curTime();
+  $('#okClock').textContent = fmt1(t);
+  const L = P.lines[tap.i];
+  if(L && tap.i >= tap.from && okEls[tap.i]) okEls[tap.i].querySelector('.meta').textContent = `${fmt1(L.start)}〜　${(t - L.start).toFixed(1)}秒`;
+  requestAnimationFrame(okTick);
+}
+function startTap(now){
   if(!P.lines.length || rec || tap) return;
   stopAll();
   const from = clamp(+$('#okFrom').value || 0, 0, P.lines.length - 1), L = P.lines[from], prev = P.lines[from - 1];
   const base = from === 0 ? 0 : (L.start != null && !L.auto ? L.start : (prev && prev.end != null ? prev.end : (L.start ?? 0)));
-  tap = {from, i:from - 1, hist:[]};
+  tap = {from, i:from - 1, hist:[], snap:snapTimes()};
   if(document.activeElement) document.activeElement.blur();
-  renderOk(); renderOkFrom();
-  $('.okctl').scrollIntoView({block:'end', behavior:'smooth'});
-  play(Math.max(0, base - (from === 0 ? 0 : 2)), {noVoice:true});
+  $('#okDone').hidden = true; $('#okCmp').hidden = true;
+  renderOkFrom(); renderOk();
+  $('#okStage').scrollIntoView({block:'nearest', behavior:'smooth'});
+  play(now ? base : Math.max(0, base - (from === 0 ? 0 : 2)), {noVoice:true});
+  if(now) tapNext();
+  requestAnimationFrame(okTick);
 }
 function tapNext(){
   if(!tap) return;
@@ -1278,10 +1354,10 @@ function tapNext(){
   tap.i++;
   if(tap.i >= N){ endTap(true); return; }
   nx.start = t; nx.auto = false;
+  if(nx.end != null && nx.end <= t) nx.end = null;
   // 途中から付け直すとき、1つ前のセリフの終わりが新しい開始より後ろなら、開始に合わせて切る
   const pv = P.lines[tap.i - 1];
   if(tap.i === tap.from && pv && pv.end != null && pv.end > t){ tap.hist[tap.hist.length-1].pv = pv.end; pv.end = t; refreshTapRow(tap.i - 1); }
-  if(nx.end != null && nx.end <= t) nx.end = null; // 古い終了時刻が前にある場合は、次に押すまで未定にする
   refreshTapRow(tap.i);
   const b = $('#okTap'); b.classList.add('hit'); setTimeout(() => b.classList.remove('hit'), 120);
   renderOk();
@@ -1291,7 +1367,7 @@ function tapUndo(){
   const h = tap.hist.pop();
   const undone = P.lines[tap.i];
   if(undone && h.nx){ undone.start = h.nx.start; undone.end = h.nx.end; undone.auto = h.nx.auto; refreshTapRow(tap.i); }
-  if(h.pv != null && P.lines[h.i + 0]){ P.lines[h.i].end = h.pv; refreshTapRow(h.i); }
+  if(h.pv != null && P.lines[h.i]){ P.lines[h.i].end = h.pv; refreshTapRow(h.i); }
   tap.i = h.i;
   const cur = P.lines[tap.i];
   if(cur && h.cur){ cur.end = h.cur.end; cur.auto = h.cur.auto; refreshTapRow(tap.i); }
@@ -1306,29 +1382,53 @@ function refreshTapRow(i){
 function endTap(finished){
   if(!tap) return;
   const T = tap; tap = null;
-  // 読んでいる途中で終了したときは、そのセリフを今の時刻で終える
   if(!finished && T.i >= T.from && P.lines[T.i]){
     const L = P.lines[T.i], N = P.lines[T.i + 1];
     L.end = Math.max(r2(curTime()), r2(L.start + 0.1)); L.auto = false;
-    // 次のセリフ（付け直していない）の開始より後ろまでは伸ばさない
     if(N && !N.auto && N.start != null && L.end > N.start && N.start > L.start) L.end = N.start;
   }
   haltPlayback();
   const last = Math.min(T.i, P.lines.length - 1);
-  // 付け直したセリフより後ろの仮の時刻は、付け直した時刻に合わせて入れ直す
   for(let k = last + 1; k < P.lines.length; k++) if(P.lines[k].auto){ P.lines[k].start = null; P.lines[k].end = null; }
   autofill();
-  selIdx = clamp(T.i >= T.from ? T.i + (finished ? 0 : 1) : T.from, 0, P.lines.length - 1);
+  const changed = T.i >= T.from;
+  if(changed){
+    const label = `${T.from + 1}〜${last + 1}番を付け直す`;
+    pushHist(label, T.snap);
+    okLast = {snap:T.snap, from:T.from, to:last};
+    $('#okDoneTx').textContent = `${T.from + 1}〜${last + 1}番の時刻を付けました`;
+    $('#okDone').hidden = false; $('#okCmp').hidden = true;
+  }
+  selIdx = clamp(changed ? last + (finished ? 0 : 1) : T.from, 0, P.lines.length - 1);
   linesChanged(true); updateButtons(); renderOkFrom(); renderOk();
-  if(T.i >= T.from) setStatus(`${T.from + 1}〜${Math.min(T.i, P.lines.length - 1) + 1}番のセリフの時刻を付けました`);
 }
-$('#okStart').onclick = startTap;
+$('#okCmpBtn').onclick = () => {
+  const box = $('#okCmp');
+  if(!box.hidden){ box.hidden = true; return; }
+  if(!okLast) return;
+  let html = '<table><tr><th>番号</th><th>前</th><th>後</th></tr>';
+  for(let i=0;i<P.lines.length;i++){
+    const a = okLast.snap[i], L = P.lines[i]; if(!a) continue;
+    if(a[0] === L.start && a[1] === L.end) continue;
+    html += `<tr><td>${i+1}</td><td>${fmt1(a[0])}〜${fmt1(a[1])}</td><td class="chg">${fmt1(L.start)}〜${fmt1(L.end)}</td></tr>`;
+  }
+  box.innerHTML = html + '</table>'; box.hidden = false;
+};
+$('#okRevert').onclick = () => {
+  if(!okLast) return;
+  const cur = snapTimes(); applySnap(okLast.snap); pushHist('元に戻す', cur);
+  okLast = null; $('#okDone').hidden = true; $('#okCmp').hidden = true;
+  linesChanged(true);
+};
+$('#okStart').onclick = () => startTap(false);
+$('#okStartNow').onclick = () => startTap(true);
 $('#okStop').onclick = () => endTap(false);
 $('#okUndo').onclick = tapUndo;
 $('#okTap').addEventListener('pointerdown', e => { e.preventDefault(); tapNext(); });
 $('#okTap').addEventListener('contextmenu', e => e.preventDefault());
 $('#okStage').addEventListener('pointerdown', e => { if(tap){ e.preventDefault(); tapNext(); } });
-$('#okFrom').onchange = e => { setSel(+e.target.value); renderOk(); };
+$('#okFrom').onchange = e => { setSel(+e.target.value); };
+document.querySelectorAll('.okfs').forEach(b => b.onclick = () => { setFontSize((P.settings.fontSize || 20) + +b.dataset.d); buildOk(); });
 
 /* ---------- 伴奏 ---------- */
 // P.bgmRef = この台本が想定している伴奏（ファイル名と長さ）。曲そのものは台本ファイルに入れない
@@ -1565,7 +1665,7 @@ function renderSettings(){
   const s = P.settings;
   $('#expFmt').value = s.expFmt || 'mp3';
   renderFx();
-  $('#stopMode').value = s.stopMode || 'manual'; renderStopLine();
+  renderStopLine();
   $('#totalLen').value = s.totalLen ? fmt(s.totalLen).replace(/\.00$/, '') : '';
   $('#setPre').value = s.preroll; $('#setOff').value = s.offsetMs; $('#setNs').checked = !!s.ns;
   $('#setVv').value = s.voiceVol; $('#setBv').value = s.bgmVol; $('#cps').value = s.cps;
@@ -1642,7 +1742,7 @@ function switchTab(t){
   for(const k of ['rec','edit','file','set']) $('#tab-' + k).hidden = k !== t;
   if(t === 'rec'){ updateView(true); tlLayout(); drawTimeline(); }
   if(t === 'set') renderFx();
-  if(t === 'edit'){ renderOkFrom(); renderOk(); }
+  if(t === 'edit'){ renderOkFrom(); buildOk(); }
 }
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => { if(tap) endTap(false); switchTab(b.dataset.tab); });
 $('#btnPlay').onclick = togglePlay;
