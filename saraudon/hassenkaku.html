@@ -60,6 +60,33 @@ body {
   font-weight: 700;
   letter-spacing: 2px;
   line-height: 1.3;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+}
+
+/* スキ・大スキの印（ハンコ風）。大スキは二重枠 */
+.seal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-family: var(--serif);
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--accent);
+  border: 2px solid var(--accent);
+  border-radius: 6px;
+  flex-direction: column;
+  font-size: 15px;
+  padding: 7px 5px;
+  transform: rotate(-6deg);
+}
+.seal.is-big {
+  border-width: 3px;
+  box-shadow: inset 0 0 0 2px var(--bg), inset 0 0 0 4px var(--accent);
+  padding: 9px 7px;
 }
 
 /* ─── 2-column layout ─── */
@@ -249,28 +276,6 @@ body {
   white-space: nowrap;
 }
 
-/* 評価の見出し数値（好み度・価格に対する満足度）
-   ラベルが長いので、facts の狭いキー列ではなくこちらに置く */
-.score-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 14px;
-  padding: 5px 0;
-}
-.score-top-label { font-size: 13px; }
-.score-top-val {
-  font-family: 'Courier New', monospace;
-  font-size: 16px;
-  color: var(--accent);
-}
-
-.score-axes.has-top {
-  margin-top: 13px;
-  padding-top: 11px;
-  border-top: 1px solid var(--border);
-}
-
 /* 評価 — 0を中心に左右へ振れる目盛り */
 .ax {
   display: grid;
@@ -411,7 +416,6 @@ footer {
 
       <section class="block" id="score-sec" hidden>
         <p class="section-label">評価</p>
-        <div id="score-top"></div>
         <div class="score-axes" id="scores"></div>
       </section>
 
@@ -444,10 +448,7 @@ footer {
    name        : 店舗名。ページタイトルと見出しに入る
    city        : 市区町村名。index.html の city と同じ表記にする
    address     : 住所。書けば「所在」に住所を出し、空なら city を出す
-   fav         : 個人的好み度。1〜5の整数。0 や未記入なら行ごと消える
-                 特別な店だけ5を超えて書いてよい（そのまま表示される）
-   costSat     : 価格に対する満足度。1〜5の整数。
-                 特別な店だけ5を超えて書いてよい（そのまま表示される）
+   suki        : 好み。2 = 大スキ、1 = スキ、0 なら印なし。店名の横に印が出る
    type        : 皿うどんの型。次の2つから選ぶ
                  あんかけ / 非あんかけ
    shiruke     : 汁気。'有り' か '無し'。空なら行ごと消える
@@ -476,8 +477,7 @@ const SHOP = {
   name: '中華料理 八仙閣 春日店',
   city: '春日市',
   address: '〒816-0813 福岡県春日市惣利１丁目６５',
-  fav:     4,
-  costSat: 3,
+  suki:    0,
   type: '非あんかけ',
   shiruke: '無し',
   oily:    'オイリー',
@@ -515,7 +515,22 @@ const SHOP = {
 
   /* --- 見出しとタイトル --- */
   const name = (SHOP.name || '').trim();
-  document.getElementById('shop-name').textContent = name;
+  const title = document.getElementById('shop-name');
+  const titleText = document.createElement('span');
+  titleText.textContent = name;
+  title.appendChild(titleText);
+  /* スキの印。2 = 大スキ（二重枠）、1 = スキ */
+  if (SHOP.suki >= 1) {
+    const seal = document.createElement('span');
+    seal.className = 'seal' + (SHOP.suki >= 2 ? ' is-big' : '');
+    /* 1文字ずつ縦に積む（縦書き指定はフォントによって文字が重なるため使わない） */
+    Array.from(SHOP.suki >= 2 ? '大スキ' : 'スキ').forEach(function (ch) {
+      const c = document.createElement('span');
+      c.textContent = ch;
+      seal.appendChild(c);
+    });
+    title.appendChild(seal);
+  }
   document.title = name ? name + ' | ' + SITE : '店舗ページ | ' + SITE;
 
   /* --- 左: 画像 --- */
@@ -613,7 +628,7 @@ const SHOP = {
     media.appendChild(wrap);
   }
 
-  /* --- 右: 所在・型・好み度 --- */
+  /* --- 右: 所在・型・汁気・オイリーさ --- */
   const facts = document.getElementById('facts');
   function addFact(key, val, cls) {
     if (!val) return;                     // 未設定の項目は行ごと出さない
@@ -655,25 +670,6 @@ const SHOP = {
     });
     document.getElementById('price-sec').hidden = false;
   }
-
-  /* --- 右: 評価（好み度・価格に対する満足度）。0や未記入なら行ごと出さない --- */
-  const topBox = document.getElementById('score-top');
-  let topDrawn = 0;
-  [['好み度', SHOP.fav], ['価格に対する満足度', SHOP.costSat]].forEach(function (t) {
-    if (!(t[1] > 0)) return;
-    const row = document.createElement('div');
-    row.className = 'score-top';
-    const l = document.createElement('span');
-    l.className = 'score-top-label';
-    l.textContent = t[0];
-    const v = document.createElement('span');
-    v.className = 'score-top-val';
-    v.textContent = String(t[1]);
-    row.appendChild(l);
-    row.appendChild(v);
-    topBox.appendChild(row);
-    topDrawn++;
-  });
 
   /* 麺の硬さ: -2〜2 を横幅に置き換える。中央が0で、そこから値の向きへ伸ばす */
   const AXES = [['katasa', '麺の硬さ', '弱', '強']];
@@ -737,8 +733,7 @@ const SHOP = {
     scoreBox.appendChild(row);
     drawn++;
   });
-  if (drawn && topDrawn) scoreBox.classList.add('has-top');   // 両方あるときだけ区切る
-  if (drawn || topDrawn) document.getElementById('score-sec').hidden = false;
+  if (drawn) document.getElementById('score-sec').hidden = false;
 
   /* --- 右: 具材 --- */
   const ing = (SHOP.ingredients || []).map(function (s) { return (s || '').trim(); })

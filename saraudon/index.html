@@ -220,9 +220,9 @@ body {
 .shop-list { list-style: none; }
 .shop-row {
   display: grid;
-  grid-template-columns: 1fr auto 2.4em;
+  grid-template-columns: 1fr auto;
   gap: 14px;
-  align-items: baseline;
+  align-items: center;
   padding: 14px 8px 14px 10px;
   border-bottom: 1px solid var(--border);
   border-left: 2px solid transparent;
@@ -244,11 +244,28 @@ body {
   line-height: 1.5;
 }
 .row-city { font-size: 12px; color: var(--muted); white-space: nowrap; }
-.row-fav {
-  font-family: 'Courier New', monospace;
-  font-size: 13px;
+.row-name { display: flex; align-items: center; gap: 12px; }
+
+/* スキ・大スキの印（ハンコ風）。大スキは二重枠 */
+.seal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-family: var(--serif);
+  font-weight: 700;
+  line-height: 1.15;
   color: var(--accent);
-  text-align: right;
+  border: 1.5px solid var(--accent);
+  border-radius: 5px;
+  flex-direction: column;
+  font-size: 11px;
+  padding: 5px 3px;
+  transform: rotate(-6deg);
+}
+.seal.is-big {
+  box-shadow: inset 0 0 0 1.5px var(--surface), inset 0 0 0 3px var(--accent);
+  padding: 6px 4px;
 }
 
 .list-empty {
@@ -297,7 +314,9 @@ body {
   justify-content: space-between;
   gap: 10px;
 }
-.thumb-fav { font-family: 'Courier New', monospace; color: var(--accent); }
+.thumb-meta { align-items: center; }
+.thumb .seal { box-shadow: none; }
+.thumb .seal.is-big { box-shadow: inset 0 0 0 1.5px var(--surface), inset 0 0 0 3px var(--accent); }
 
 /* ─── footer ─── */
 footer {
@@ -385,7 +404,7 @@ footer a { color: var(--muted); }
     <div class="list-panel">
       <div class="sortbar">
         <span class="sortbar-label">並び替え</span>
-        <button class="sort-opt" type="button" data-sort="fav"  aria-pressed="true">好み度</button>
+        <button class="sort-opt" type="button" data-sort="suki" aria-pressed="true">スキ</button>
         <button class="sort-opt" type="button" data-sort="name" aria-pressed="false">店舗名</button>
         <button class="sort-opt" type="button" data-sort="city" aria-pressed="false">市町村</button>
       </div>
@@ -405,7 +424,7 @@ footer a { color: var(--muted); }
     <p class="thumb-name" id="thumb-name"></p>
     <p class="thumb-meta">
       <span id="thumb-city"></span>
-      <span class="thumb-fav" id="thumb-fav"></span>
+      <span id="thumb-suki"></span>
     </p>
   </div>
 </div>
@@ -431,7 +450,7 @@ footer a { color: var(--muted); }
            例) 福岡市博多区 / 久留米市 / 糟屋郡粕屋町
    lat   : 緯度（Googleマップで右クリック→座標をコピー）
    lng   : 経度
-   fav   : 個人的好み度。1〜5の整数。特別な店だけ5を超えて書いてよい
+   suki  : 好み。2 = 大スキ、1 = スキ、0 または未記入なら印なし
    thumb : 地図ホバー時に出すサムネイル画像のパス。店舗外観の写真を使う
    branches : 店舗が複数あるときだけ書く。書くと lat/lng の代わりに、
               ここに並べた場所すべてに点を打つ（どの点も同じページへ飛ぶ）。
@@ -440,7 +459,7 @@ footer a { color: var(--muted); }
 
    例)
    { id:'aaa-shokudo', name:'○○食堂', kana:'まるまるしょくどう',
-     city:'福岡市博多区', lat:33.5902, lng:130.4017, fav:4,
+     city:'福岡市博多区', lat:33.5902, lng:130.4017, suki:1,
      thumb:'images/aaa-shokudo-gaikan.jpg' },
 
    個別ページは index.html と同じ階層に置くため、id に index および
@@ -448,21 +467,21 @@ footer a { color: var(--muted); }
    ================================================================== */
 const SHOPS = [
   { id:'yamakasa', name:'居酒屋山笠', kana:'いざかややまかさ', city:'福岡市博多区',
-    lat:33.562706, lng:130.460297, fav:6, thumb:'images/yamakasa-thumb.jpg' },
+    lat:33.562706, lng:130.460297, suki:2, thumb:'images/yamakasa-thumb.jpg' },
   { id:'koshunkaku', name:'中華料理 香春閣', kana:'ちゅうかりょうりこうしゅんかく', city:'小郡市',
-    lat:33.377018, lng:130.556778, fav:5, thumb:'images/koshunkaku-thumb.jpg' },
+    lat:33.377018, lng:130.556778, suki:1, thumb:'images/koshunkaku-thumb.jpg' },
   { id:'taishuen', name:'中華料理 泰洲園', kana:'ちゅうかりょうりたいしゅうえん', city:'福岡市早良区',
-    lat:33.550297, lng:130.348373, fav:5, thumb:'images/taishuen-thumb.jpg' },
+    lat:33.550297, lng:130.348373, suki:1, thumb:'images/taishuen-thumb.jpg' },
   { id:'senju', name:'麺屋千寿', kana:'めんやせんじゅ', city:'飯塚市',
-    fav:5, thumb:'images/senju-thumb.jpg',
+    suki:1, thumb:'images/senju-thumb.jpg',
     branches:[
       { label:'飯塚店', city:'飯塚市',       lat:33.635551, lng:130.673279 },
       { label:'桂川店', city:'嘉穂郡桂川町', lat:33.580696, lng:130.666946 },
     ] },
   { id:'haruchan', name:'中華はるちゃん', kana:'ちゅうかはるちゃん', city:'柳川市',
-    lat:33.152397, lng:130.401978, fav:5, thumb:'images/haruchan-thumb.jpg' },
+    lat:33.152397, lng:130.401978, suki:1, thumb:'images/haruchan-thumb.jpg' },
   { id:'hassenkaku', name:'中華料理 八仙閣 春日店', kana:'ちゅうかりょうりはっせんかくかすがてん', city:'春日市',
-    lat:33.513123, lng:130.469116, fav:4, thumb:'images/hassenkaku-thumb.jpg' },
+    lat:33.513123, lng:130.469116, suki:0, thumb:'images/hassenkaku-thumb.jpg' },
 ];
 
 /* 個別ページの置き場所（index.html から見た相対パス）。
@@ -609,7 +628,8 @@ const SHOP_DIR = '';
   /* --- 一覧の描画とソート --- */
   const collator = new Intl.Collator('ja');
   const sorters = {
-    fav:  function (a, b) { return (b.fav - a.fav) || collator.compare(a.kana, b.kana); },
+    /* スキの印 → 50音順 */
+    suki: function (a, b) { return ((b.suki || 0) - (a.suki || 0)) || collator.compare(a.kana, b.kana); },
     name: function (a, b) { return collator.compare(a.kana, b.kana); },
     city: function (a, b) {
       return collator.compare(cityKana(a.city), cityKana(b.city))
@@ -621,8 +641,19 @@ const SHOP_DIR = '';
   M.cities.forEach(function (c) { kanaByCity[c.label] = c.kana; });
   function cityKana(label) { return kanaByCity[label] || label; }
 
-  /* 好み度は1〜5。未設定の0を「0点」と読ませないため印に置き換える */
-  function favText(n) { return n > 0 ? String(n) : '—'; }
+  /* スキの印。2 = 大スキ（二重枠）、1 = スキ、それ以外は何も出さない */
+  function sealOf(s) {
+    const lv = s.suki || 0;
+    if (lv < 1) return null;
+    const el = document.createElement('span');
+    el.className = 'seal' + (lv >= 2 ? ' is-big' : '');
+    Array.from(lv >= 2 ? '大スキ' : 'スキ').forEach(function (ch) {
+      const c = document.createElement('span');
+      c.textContent = ch;
+      el.appendChild(c);
+    });
+    return el;
+  }
 
   function render(mode) {
     const rows = SHOPS.slice().sort(sorters[mode]);
@@ -636,13 +667,16 @@ const SHOP_DIR = '';
       a.dataset.id = s.id;
 
       const n = document.createElement('span');
-      n.className = 'row-name'; n.textContent = s.name;
+      n.className = 'row-name';
+      const t = document.createElement('span');
+      t.textContent = s.name;
+      n.appendChild(t);
+      const seal = sealOf(s);
+      if (seal) n.appendChild(seal);
       const c = document.createElement('span');
       c.className = 'row-city'; c.textContent = s.city;
-      const v = document.createElement('span');
-      v.className = 'row-fav';  v.textContent = favText(s.fav);
 
-      a.appendChild(n); a.appendChild(c); a.appendChild(v);
+      a.appendChild(n); a.appendChild(c);
       li.appendChild(a); f.appendChild(li);
       nodes[s.id].row = a;
     });
@@ -657,7 +691,7 @@ const SHOP_DIR = '';
       render(btn.dataset.sort);
     });
   });
-  render('fav');
+  render('suki');
 
   /* --- サムネイルの先読み（地図に触れた時点で開始） --- */
   let preloaded = false;
@@ -695,7 +729,7 @@ const SHOP_DIR = '';
   const tImg  = document.getElementById('thumb-img');
   const tName = document.getElementById('thumb-name');
   const tCity = document.getElementById('thumb-city');
-  const tFav  = document.getElementById('thumb-fav');
+  const tSuki = document.getElementById('thumb-suki');
 
   /* ファイルがまだ無いときは壊れた画像を出さず、文字だけのパネルにする */
   tImg.addEventListener('error', function () { tImg.hidden = true; });
@@ -705,7 +739,9 @@ const SHOP_DIR = '';
     else { tImg.removeAttribute('src'); tImg.hidden = true; }
     tName.textContent = s.name;
     tCity.textContent = (p && p.label) ? p.label + '　' + p.city : s.city;
-    tFav.textContent  = favText(s.fav);
+    tSuki.textContent = '';
+    const seal = sealOf(s);
+    if (seal) tSuki.appendChild(seal);
   }
 
   function placeThumb(cx, cy) {
