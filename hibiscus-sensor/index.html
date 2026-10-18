@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ハイビスカス点滅センサー | グレイト・プレ・善太</title>
+<link rel="canonical" href="https://gureslot.github.io/hanahana/hibiscus-sensor/">
+<meta name="description" content="ハナハナのハイビスカスランプの点滅をスマホのカメラで認識するブラウザ用センサー。チカリアン・ちかりちゃんは成長するで使っている判定をそのまま公開。調整・改変・組み込み自由。">
+<meta property="og:title" content="ハイビスカス点滅センサー">
+<meta property="og:description" content="ハナハナのハイビスカスの点滅をカメラで認識。ゲームなどに自由に組み込めます。">
+<meta property="og:url" content="https://gureslot.github.io/hanahana/hibiscus-sensor/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="グレイト・プレ・善太">
+<link rel="icon" type="image/png" sizes="32x32" href="../icon_32x32.png">
+<style>
+  :root{--bg:#0d0a0c;--panel:#18131a;--line:#2e2630;--text:#f1e9ec;--sub:#a8979e;--red:#ff2d55;--green:#32d74b;--yellow:#ffd60a;--ok:#3fe08a;}
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Hiragino Sans","Yu Gothic UI",sans-serif;line-height:1.7;}
+  .wrap{max-width:480px;margin:0 auto;padding:0 0 40px;}
+  header{padding:16px 16px 12px;}
+  h1{font-size:19px;letter-spacing:.5px;}
+  .lead{font-size:12px;color:var(--sub);}
+
+  #cam{position:relative;width:100%;aspect-ratio:4/3;background:#000;overflow:hidden;}
+  #video{width:100%;height:100%;object-fit:cover;display:block;}
+  #cam.blink::after{content:"";position:absolute;inset:0;box-shadow:inset 0 0 0 4px var(--ok);pointer-events:none;}
+  .rbox{position:absolute;border:2px solid;border-radius:3px;pointer-events:none;z-index:1;}
+  .rbox.in{border-width:1px;border-style:dashed;opacity:.7;z-index:2;}
+  #cam.edit .rbox{pointer-events:auto;touch-action:none;cursor:move;background:rgba(255,255,255,.04);}
+  #cam.edit .rbox.in{opacity:1;border-width:2px;}
+  .rbox i{display:none;position:absolute;right:-9px;bottom:-9px;width:18px;height:18px;border-radius:50%;background:currentColor;border:2px solid #000;cursor:nwse-resize;}
+  #cam.edit .rbox i{display:block;}
+  #cam.edit #startBtn{display:none;}
+  #startBtn{position:absolute;inset:0;margin:auto;width:150px;height:150px;border-radius:50%;border:2px solid var(--red);background:rgba(255,45,85,.12);color:var(--text);font-size:15px;font-weight:700;cursor:pointer;}
+  #side{position:absolute;left:8px;bottom:8px;display:flex;background:rgba(0,0,0,.55);border-radius:10px;overflow:hidden;}
+  #side button{border:0;background:none;color:var(--sub);font-size:13px;padding:7px 16px;cursor:pointer;}
+  #side button.on{color:#fff;background:rgba(255,255,255,.14);}
+
+  .live{padding:14px 16px 4px;display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center;}
+  #count{font-size:44px;font-weight:800;line-height:1;min-width:2ch;text-align:center;font-variant-numeric:tabular-nums;}
+  #countLbl{font-size:10px;color:var(--sub);text-align:center;}
+  #gauge{height:10px;background:#000;border:1px solid var(--line);border-radius:6px;overflow:hidden;}
+  #gauge>div{height:100%;width:0;background:#ff9500;transition:width .15s;}
+  #gauge.locked>div{background:var(--ok);}
+  .lamps{display:flex;gap:4px;flex-wrap:wrap;margin-top:8px;}
+  .lamps span{font-size:11px;padding:2px 8px;border-radius:6px;background:#3a1418;color:#e88;}
+  .lamps span.on{background:#123a20;color:#9f9;}
+  #vals{padding:4px 16px 0;font:10px/1.6 ui-monospace,Menlo,monospace;color:var(--sub);min-height:16px;}
+
+  details{margin:10px 16px 0;background:var(--panel);border:1px solid var(--line);border-radius:12px;}
+  summary{padding:12px 14px;font-size:14px;font-weight:700;cursor:pointer;list-style:none;display:flex;justify-content:space-between;}
+  summary::-webkit-details-marker{display:none;}
+  summary::after{content:"＋";color:var(--sub);}
+  details[open] summary::after{content:"－";}
+  .body{padding:0 14px 14px;font-size:13px;}
+  .body p+p,.body ul+p,.body p+ul{margin-top:8px;}
+  .body ul{padding-left:1.2em;}
+  .body li+li{margin-top:6px;}
+  .body b{color:#fff;}
+  .sub{color:var(--sub);font-size:12px;}
+
+  .tune label{display:grid;grid-template-columns:1fr auto;font-size:12px;margin-top:10px;}
+  .tune label b{font-variant-numeric:tabular-nums;color:var(--yellow);}
+  .tune input{grid-column:1/-1;width:100%;accent-color:var(--red);}
+  .row{display:flex;gap:8px;margin-top:14px;}
+  .row button,.copyBtn{flex:1;padding:9px;border-radius:8px;border:1px solid var(--line);background:#231c25;color:var(--text);font-size:13px;cursor:pointer;}
+
+  pre{margin-top:8px;max-height:320px;overflow:auto;background:#000;border-radius:8px;padding:10px;font:11px/1.5 ui-monospace,Menlo,monospace;color:#ddd;white-space:pre;}
+  .copyBtn{display:block;width:100%;margin-top:8px;}
+
+  footer{margin:20px 16px 0;font-size:12px;color:var(--sub);}
+  footer a{color:var(--text);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>ハイビスカス点滅センサー</h1>
+  <p class="lead">ハナハナのハイビスカスの点滅をカメラで認識します。</p>
+</header>
+
+<div id="cam">
+  <video id="video" autoplay playsinline muted></video>
+  <button id="startBtn">カメラを起動</button>
+  <div id="side"><button data-s="L" class="on">左ランプ</button><button data-s="R">右ランプ</button></div>
+</div>
+
+<div class="live">
+  <div><div id="count">0</div><div id="countLbl">点滅</div></div>
+  <div>
+    <div id="gauge"><div></div></div>
+    <div class="lamps"><span data-k="shape">形</span><span data-k="red">花の赤</span><span data-k="gap">色の違い</span><span data-k="leaf">葉の緑</span><span data-k="hz">速さ</span></div>
+  </div>
+</div>
+<div id="vals"></div>
+
+<details class="tune">
+  <summary>調整</summary>
+  <div class="body" id="tuneBody">
+    <div class="row"><button id="editBoxes">枠を動かす</button></div>
+    <div class="row"><button id="copyTune">設定値をコピー</button><button id="resetTune">初期値に戻す</button></div>
+  </div>
+</details>
+
+<details>
+  <summary>使い方</summary>
+  <div class="body">
+    <ul>
+      <li>ボーナス中に点滅しているランプを、色付きの枠にぴったり合わせて映します。</li>
+      <li>左右どちらのランプを映すかを、左下で選びます。</li>
+      <li>5つの判定が緑に揃うとゲージが緑になり、点滅を数え始めます。</li>
+      <li>枠がランプに合わないときは「調整」→「枠を動かす」で、枠をドラッグして移動、右下の丸でサイズを変えます。外枠は部位全体、破線の内枠は色が確実に出る中心部に合わせます。</li>
+      <li>判定が揃わないときは、赤いままの判定のしきい値をスライダーで動かします。カメラの下に出る数値が目安です。</li>
+      <li>調整した内容はこの端末に保存されます。「設定値をコピー」で書き出せます。</li>
+    </ul>
+  </div>
+</details>
+
+<details>
+  <summary>仕組み</summary>
+  <div class="body">
+    <p>映像を320×240に縮小し、0.05秒ごとに枠の中の色と明るさを測ります。毎回、次の5つを全部満たしているかを見ます。</p>
+    <ul>
+      <li><b>形</b>：枠の内側が、枠の外（背景）より十分に明るい</li>
+      <li><b>花の赤</b>：花びらの枠の色相が赤〜橙</li>
+      <li><b>色の違い</b>：花びらとめしべが別の色（赤と黄）</li>
+      <li><b>葉の緑</b>：左右の葉の枠が、どちらも赤ではない</li>
+      <li><b>速さ</b>：明るさの変化が1秒に5.5〜12回</li>
+    </ul>
+    <p>直近20回のうち6割以上が合格すると「ロック」になり、そこから花びらが明るくなって暗くなるたびに1点滅と数えます。</p>
+    <p>枠は2重です。太い外枠は部位をまるごと包む範囲で、形の判定に使います。破線の内枠はその部位の色が確実に出る範囲で、色の判定に使います。</p>
+  </div>
+</details>
+
+<details>
+  <summary>つまずいた所とコツ</summary>
+  <div class="body">
+    <ul>
+      <li><b>一瞬の色で判定すると揺れる。</b>点滅は半分が消灯しているので、1コマずつ判定すると点滅に合わせて合否が行ったり来たりしました。直近の合格率でロックする形にして落ち着きました。</li>
+      <li><b>勘で調整するより、測ってから決める。</b>判定を書いて実機で外れて数字をいじる、の繰り返しは収束しませんでした。判定なしで生の数値を記録するモードを作り、本物とMAX BETランプなどを撮り比べて、2つを分ける境目を逆算する方法に変えてから決まりました。</li>
+      <li><b>明るさの絶対値は当てにならない。</b>ホールごとに照明が違うので、「何以上」という明るさの基準は場所で崩れます。色相や、枠の内と外の差のような相対的な値で見ています。</li>
+      <li><b>点滅の速さだけでは弱い。</b>本物は約7回/秒、MAX BETは約3回/秒ではっきり分かれますが、一定のリズムで手を振っても似た速さは出せます。色と形を主役にして、速さは補助に回しています。</li>
+      <li><b>露出を下げると形が取れる。</b>カメラの露出を下げると、黒い背景に赤い花・緑の葉・黄色いめしべがくっきり浮きます。起動時に自動で下げています（下げられない機種もあります）。</li>
+      <li><b>枠は大きすぎると色が薄まる。</b>めしべの枠を大きく取っていたときは、背景が混ざって黄色が出ませんでした。2重枠にしたのはこのためです。</li>
+      <li><b>めしべだけの点滅は拾えない。</b>画面の一部しか光らないので、全体の変化に埋もれます。対象はボーナス中の全体点滅に絞りました。</li>
+      <li><b>光った瞬間に反応させない。</b>明るくなっただけで数えると何にでも反応します。数秒かけてパターンを確かめてから数え始める形にしています。</li>
+    </ul>
+    <p>赤・緑・黄の配置と点滅の速さを合わせて見ているので、同じ赤いハイビスカスでも沖ドキのランプには反応しません。</p>
+  </div>
+</details>
+
+<details>
+  <summary>ゲームに組み込む</summary>
+  <div class="body">
+    <p>判定部分だけを1つの関数にまとめています。下のコードをコピーし、video要素を渡すだけで動きます。</p>
+    <pre id="usage">const sensor = createHibiscusSensor(document.querySelector('video'), {
+  side: 'L',                        // 'L'=左ランプ / 'R'=右ランプ
+  // 「調整」の「設定値をコピー」の内容（tune: … boxes: …）をここに貼ると反映。省略時は初期値
+  onBlink() { /* 点滅1回ごと（ロック中のみ） */ },
+  onFrame(s) { /* s.locked, s.rate, s.checks, s.hz など */ },
+});
+sensor.start();   // カメラ起動（ボタンを押したときに呼ぶ）
+// sensor.stop();  sensor.setSide('R');  sensor.tune.LOCK_RATE = 0.7;</pre>
+    <pre id="src"></pre>
+    <button class="copyBtn" id="copySrc">コードをコピー</button>
+  </div>
+</details>
+
+<footer>
+  <p>このセンサーは、自作ゲームの<a href="../Chikarian/">チカリアン</a>と<a href="../chikarichan/">ちかりちゃんは成長する</a>で使っている判定そのままです。</p>
+  <p>改変・組み込み・再配布・商用利用、すべて自由です。連絡もクレジットも要りません。何か作るときの役に立てばうれしいです。</p>
+  <p style="margin-top:12px"><a href="../games.html">自作ゲーム一覧へ</a></p>
+</footer>
+
+</div>
+
+<script id="sensorSrc">
+/* ハイビスカス点滅センサー  https://gureslot.github.io/hanahana/hibiscus-sensor/
+   チカリアン／ちかりちゃんは成長する と同じ判定。改変・利用自由。 */
+function createHibiscusSensor(video, opt = {}) {
+  const tune = Object.assign({
+    U_DIFF_MIN: 39,    // 形：枠の内側−外側の明るさの差
+    COLORGAP_MIN: 25,  // 花びらとめしべの色の差
+    PETAL_H: 60,       // 花の赤：色相がこれ未満（または340超）
+    LEAF_H_LO: 15,     // 葉の緑：左右とも色相がこれ以上
+    HZ_LO: 5.5, HZ_HI: 12.0, // 点滅の速さ（回/秒）
+    LOCK_WIN: 20,      // ロック判定に使うフレーム数
+    LOCK_RATE: 0.60,   // ロックに必要な合格率
+    HZ_WIN: 20, PEAK_WIN: 10,
+  }, opt.tune || {});
+
+  // 枠（左ランプ基準・画面に対する比率 0〜1）。外枠=部位を包む範囲、内枠=その色が確実に出る範囲
+  const boxes = JSON.parse(JSON.stringify(opt.boxes || {
+    outer: {
+      stamen: { x: .564, y: .075, w: .219, h: .280 },
+      petal:  { x: .171, y: .180, w: .588, h: .670 },
+      leaf1:  { x: .144, y: .595, w: .231, h: .288 },
+      leaf2:  { x: .652, y: .446, w: .188, h: .280 },
+    },
+    inner: {
+      stamen: { x: .646, y: .178, w: .055, h: .073 },
+      petal:  { x: .304, y: .292, w: .278, h: .279 },
+      leaf1:  { x: .203, y: .658, w: .098, h: .119 },
+      leaf2:  { x: .721, y: .553, w: .050, h: .065 },
+    },
+  }));
+  const W = 320, H = 240, MS = 50;
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d', { willReadFrequently: true });
+  let side = opt.side || 'L', stream = null, timer = null;
+  let br = [], ts = [], ud = [], ok = [], prev = 0, rising = false, lastPeak = 0, locked = false;
+
+  const mirror = r => ({ x: 1 - r.x - r.w, y: r.y, w: r.w, h: r.h });
+  function regions() {   // 右ランプは左の鏡像（葉の左右も入れ替わる）
+    if (side === 'L') return boxes;
+    const m = o => ({ stamen: mirror(o.stamen), petal: mirror(o.petal), leaf1: mirror(o.leaf2), leaf2: mirror(o.leaf1) });
+    return { outer: m(boxes.outer), inner: m(boxes.inner) };
+  }
+  function avg(img, r) {
+    const x0 = Math.floor(r.x * W), y0 = Math.floor(r.y * H), x1 = Math.floor((r.x + r.w) * W), y1 = Math.floor((r.y + r.h) * H);
+    let R = 0, G = 0, B = 0, n = 0;
+    for (let y = y0; y < y1; y += 2) for (let x = x0; x < x1; x += 2) { const i = (y * W + x) * 4; R += img[i]; G += img[i + 1]; B += img[i + 2]; n++; }
+    if (!n) return { r: 0, g: 0, b: 0, br: 0, h: 0 };
+    R /= n; G /= n; B /= n;
+    const mx = Math.max(R, G, B), d = mx - Math.min(R, G, B); let h = 0;
+    if (d) { h = mx === R ? ((G - B) / d) % 6 : mx === G ? (B - R) / d + 2 : (R - G) / d + 4; h *= 60; if (h < 0) h += 360; }
+    return { r: R, g: G, b: B, br: (R + G + B) / 3, h };
+  }
+  function inOutDiff(img, outer) {   // 外枠4つの和集合の内側 − それ以外（背景）
+    const bs = Object.values(outer).map(r => [r.x * W, r.y * H, (r.x + r.w) * W, (r.y + r.h) * H]);
+    let a = 0, an = 0, b = 0, bn = 0;
+    for (let y = 0; y < H; y += 2) for (let x = 0; x < W; x += 2) {
+      const i = (y * W + x) * 4, v = (img[i] + img[i + 1] + img[i + 2]) / 3;
+      if (bs.some(q => x >= q[0] && x < q[2] && y >= q[1] && y < q[3])) { a += v; an++; } else { b += v; bn++; }
+    }
+    return (an ? a / an : 0) - (bn ? b / bn : 0);
+  }
+  function dominantHz() {   // 花びらの明るさの時系列から一番強い周波数（Hann窓＋DFT）
+    const m = Math.min(br.length, tune.HZ_WIN); if (m < tune.HZ_WIN) return 0;
+    const v = br.slice(-m), t = ts.slice(-m);
+    if ((t[m - 1] - t[0]) / 1000 < 0.4) return 0;
+    const mean = v.reduce((p, q) => p + q, 0) / m;
+    const w = v.map((x, i) => (x - mean) * (0.5 - 0.5 * Math.cos(2 * Math.PI * i / (m - 1))));
+    let best = 0, bm = -1;
+    for (let f = 1; f <= 12; f += 0.1) {
+      let re = 0, im = 0;
+      for (let i = 0; i < m; i++) { const ph = -2 * Math.PI * f * (t[i] - t[0]) / 1000; re += w[i] * Math.cos(ph); im += w[i] * Math.sin(ph); }
+      if (re * re + im * im > bm) { bm = re * re + im * im; best = f; }
+    }
+    return best;
+  }
+  function tick() {
+    if (!video.videoWidth) return;
+    ctx.drawImage(video, 0, 0, W, H);
+    const img = ctx.getImageData(0, 0, W, H).data, rs = regions();
+    const P = avg(img, rs.inner.petal), S = avg(img, rs.inner.stamen), L1 = avg(img, rs.inner.leaf1), L2 = avg(img, rs.inner.leaf2);
+    const diff = inOutDiff(img, rs.outer);
+    br.push(P.br); ts.push(Date.now()); if (br.length > tune.HZ_WIN) { br.shift(); ts.shift(); }
+    ud.push(diff); if (ud.length > tune.PEAK_WIN) ud.shift();
+    const hz = dominantHz(), gap = (Math.abs(P.r - S.r) + Math.abs(P.g - S.g) + Math.abs(P.b - S.b)) / 3;
+    const checks = {
+      shape: Math.max(...ud) > tune.U_DIFF_MIN,
+      red: P.h < tune.PETAL_H || P.h > 340,
+      gap: gap > tune.COLORGAP_MIN,
+      leaf: L1.h >= tune.LEAF_H_LO && L2.h >= tune.LEAF_H_LO,
+      hz: hz >= tune.HZ_LO && hz <= tune.HZ_HI,
+    };
+    ok.push(Object.values(checks).every(Boolean) ? 1 : 0); if (ok.length > tune.LOCK_WIN) ok.shift();
+    const rate = ok.reduce((p, q) => p + q, 0) / ok.length;
+    locked = ok.length >= tune.LOCK_WIN && rate >= tune.LOCK_RATE;
+    if (locked) {   // 明るさが上がって下がった山を1点滅（最短80ms間隔）
+      if (P.br > prev) rising = true;
+      else if (rising && P.br < prev) { rising = false; const now = Date.now(); if (now - lastPeak > 80) { lastPeak = now; opt.onBlink && opt.onBlink(); } }
+    } else rising = false;
+    prev = P.br;
+    opt.onFrame && opt.onFrame({ locked, rate, checks, hz, values: { diff, petalH: P.h, gap, leafH: [L1.h, L2.h] } });
+  }
+  async function lowerExposure(track) {   // 露出を下げてランプを黒背景から浮かせる（非対応なら何もしない）
+    if (!track.getCapabilities) return;
+    try {
+      const c = track.getCapabilities(), a = [];
+      if (c.exposureMode && c.exposureMode.includes('manual')) a.push({ exposureMode: 'manual' });
+      if (c.exposureCompensation) a.push({ exposureCompensation: Math.max(c.exposureCompensation.min, -2) });
+      if (c.iso) a.push({ iso: c.iso.min });
+      if (a.length) await track.applyConstraints({ advanced: a });
+    } catch (e) {}
+  }
+  return {
+    tune,
+    boxes,          // 左ランプ基準の枠。書き換えると即反映
+    regions,        // 今の左右に合わせた枠
+    get side() { return side; },
+    get locked() { return locked; },
+    async start() {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } } });
+      video.srcObject = stream; await video.play();
+      lowerExposure(stream.getVideoTracks()[0]);
+      timer = setInterval(tick, MS);
+    },
+    stop() { clearInterval(timer); if (stream) stream.getTracks().forEach(t => t.stop()); },
+    setSide(s) { side = s; ok = []; },
+    resetLock() { ok = []; },
+  };
+}
+</script>
+
+<script>
+const $ = s => document.querySelector(s);
+const cam = $('#cam'), video = $('#video');
+const COLORS = { stamen: '#ffd60a', petal: '#ff2d55', leaf1: '#32d74b', leaf2: '#32d74b' };
+let count = 0, blinkT = null;
+
+const sensor = createHibiscusSensor(video, {
+  onBlink() {
+    $('#count').textContent = ++count;
+    cam.classList.add('blink'); clearTimeout(blinkT); blinkT = setTimeout(() => cam.classList.remove('blink'), 80);
+  },
+  onFrame(s) {
+    $('#gauge').classList.toggle('locked', s.locked);
+    $('#gauge>div').style.width = Math.min(100, s.rate / sensor.tune.LOCK_RATE * 100) + '%';
+    document.querySelectorAll('.lamps span').forEach(el => el.classList.toggle('on', s.checks[el.dataset.k]));
+    const v = s.values;
+    $('#vals').textContent = `形 ${v.diff | 0} / 花の色相 ${v.petalH | 0} / 色の違い ${v.gap | 0} / 葉の色相 ${v.leafH[0] | 0}・${v.leafH[1] | 0} / 速さ ${s.hz.toFixed(1)}回`;
+  },
+});
+
+// 枠の表示と編集（ドラッグで移動・右下の丸でサイズ変更）
+const DEF_BOXES = JSON.parse(JSON.stringify(sensor.boxes));
+try {
+  const s = JSON.parse(localStorage.getItem('hibiscus_boxes') || 'null');
+  if (s) for (const g of ['outer', 'inner']) for (const k in s[g]) Object.assign(sensor.boxes[g][k], s[g][k]);
+} catch (e) {}
+const saveBoxes = () => { try { localStorage.setItem('hibiscus_boxes', JSON.stringify(sensor.boxes)); } catch (e) {} };
+const SWAP = { stamen: 'stamen', petal: 'petal', leaf1: 'leaf2', leaf2: 'leaf1' };
+const place = (d, r) => d.style.cssText = `left:${r.x * 100}%;top:${r.y * 100}%;width:${r.w * 100}%;height:${r.h * 100}%;border-color:${d.dataset.c};color:${d.dataset.c}`;
+
+function drawBoxes() {
+  cam.querySelectorAll('.rbox').forEach(e => e.remove());
+  const rs = sensor.regions();
+  for (const g of ['outer', 'inner']) for (const k of ['petal', 'stamen', 'leaf1', 'leaf2']) {
+    const d = document.createElement('div');
+    d.className = 'rbox' + (g === 'inner' ? ' in' : ''); d.dataset.c = COLORS[k];
+    d.appendChild(document.createElement('i'));
+    place(d, rs[g][k]);
+    d.onpointerdown = e => startDrag(e, d, g, k);
+    cam.insertBefore(d, $('#startBtn'));
+  }
+}
+function startDrag(e, d, g, k) {
+  if (!cam.classList.contains('edit')) return;
+  e.preventDefault(); d.setPointerCapture(e.pointerId);
+  const resize = e.target.tagName === 'I', R = cam.getBoundingClientRect();
+  const r0 = Object.assign({}, sensor.regions()[g][k]), x0 = e.clientX, y0 = e.clientY;
+  d.onpointermove = ev => {
+    const dx = (ev.clientX - x0) / R.width, dy = (ev.clientY - y0) / R.height, r = Object.assign({}, r0);
+    if (resize) { r.w = Math.min(1 - r.x, Math.max(.02, r0.w + dx)); r.h = Math.min(1 - r.y, Math.max(.02, r0.h + dy)); }
+    else { r.x = Math.min(1 - r.w, Math.max(0, r0.x + dx)); r.y = Math.min(1 - r.h, Math.max(0, r0.y + dy)); }
+    for (const p in r) r[p] = Math.round(r[p] * 1000) / 1000;
+    place(d, r);
+    // 右ランプ表示中は左右反転して左ランプ基準に戻して保存
+    const base = sensor.side === 'L' ? sensor.boxes[g][k] : sensor.boxes[g][SWAP[k]];
+    Object.assign(base, sensor.side === 'L' ? r : { x: Math.round((1 - r.x - r.w) * 1000) / 1000, y: r.y, w: r.w, h: r.h });
+  };
+  d.onpointerup = d.onpointercancel = () => { d.onpointermove = null; sensor.resetLock(); saveBoxes(); };
+}
+drawBoxes();
+$('#editBoxes').onclick = e => {
+  const on = cam.classList.toggle('edit');
+  e.target.textContent = on ? '枠の調整を終える' : '枠を動かす';
+  if (on) cam.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+$('#startBtn').onclick = async e => {
+  try { await sensor.start(); e.target.remove(); }
+  catch (err) { e.target.textContent = 'カメラを使えません'; }
+};
+document.querySelectorAll('#side button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('#side button').forEach(x => x.classList.toggle('on', x === b));
+  sensor.setSide(b.dataset.s); drawBoxes();
+});
+
+// 調整スライダー
+const DEF = Object.assign({}, sensor.tune);
+const SLIDERS = [
+  ['U_DIFF_MIN', '形（枠の内外の明るさの差）', 0, 80, 1],
+  ['COLORGAP_MIN', '色の違い（花びらとめしべ）', 0, 100, 1],
+  ['PETAL_H', '花の赤（色相の上限）', 10, 120, 1],
+  ['LEAF_H_LO', '葉の緑（色相の下限）', 0, 160, 1],
+  ['HZ_LO', '速さの下限（回/秒）', 2, 10, .1],
+  ['HZ_HI', '速さの上限（回/秒）', 4, 12, .1],
+  ['LOCK_WIN', 'ロックまでのフレーム数', 10, 60, 1],
+  ['LOCK_RATE', 'ロックに必要な合格率', .2, .9, .01],
+];
+try { Object.assign(sensor.tune, JSON.parse(localStorage.getItem('hibiscus_tune') || '{}')); } catch (e) {}
+const fmt = (v, st) => st < 1 ? v.toFixed(st < .1 ? 2 : 1) : String(v);
+const tb = $('#tuneBody'), row = tb.querySelector('.row');
+for (const [key, label, min, max, step] of SLIDERS) {
+  const l = document.createElement('label');
+  l.innerHTML = `${label}<b></b><input type="range" min="${min}" max="${max}" step="${step}">`;
+  const inp = l.querySelector('input'), out = l.querySelector('b');
+  const sync = () => { inp.value = sensor.tune[key]; out.textContent = fmt(sensor.tune[key], step); };
+  inp.oninput = () => {
+    sensor.tune[key] = +inp.value; out.textContent = fmt(+inp.value, step); sensor.resetLock();
+    try { localStorage.setItem('hibiscus_tune', JSON.stringify(sensor.tune)); } catch (e) {}
+  };
+  l.sync = sync; sync(); tb.insertBefore(l, row);
+}
+$('#resetTune').onclick = () => {
+  Object.assign(sensor.tune, DEF); sensor.resetLock();
+  for (const g of ['outer', 'inner']) for (const k in DEF_BOXES[g]) Object.assign(sensor.boxes[g][k], DEF_BOXES[g][k]);
+  try { localStorage.removeItem('hibiscus_tune'); localStorage.removeItem('hibiscus_boxes'); } catch (e) {}
+  tb.querySelectorAll('label').forEach(l => l.sync());
+  drawBoxes();
+};
+function copy(text, btn) {
+  const done = () => { const t = btn.textContent; btn.textContent = 'コピーしました'; setTimeout(() => btn.textContent = t, 1200); };
+  navigator.clipboard.writeText(text).then(done).catch(() => prompt('コピーしてください', text));
+}
+// createHibiscusSensor の第2引数にそのまま貼れる形でコピー
+$('#copyTune').onclick = e => copy(
+  `tune: ${JSON.stringify(Object.fromEntries(SLIDERS.map(([k]) => [k, sensor.tune[k]])))},\n` +
+  `boxes: ${JSON.stringify(sensor.boxes)},`, e.target);
+
+// 組み込み用コード（実際に動いているものをそのまま表示）
+const src = $('#sensorSrc').textContent.trim();
+$('#src').textContent = src;
+$('#copySrc').onclick = e => copy(src, e.target);
+</script>
+</body>
+</html>
