@@ -18,152 +18,283 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
 
 <style>
+/* 料理を美味しく見せるための配色。サイト全体の黒ではなく、明るい小麦色の地に
+   照りの琥珀と醤油色の文字。料理写真をヘッダーのように全幅で置く */
 :root {
-  --accent:    #ff2a6d;
-  --bg:        #080808;
-  --surface:   #111111;
-  --surface-2: #171717;
-  --border:    #1e1e1e;
-  --text:      #e0dbd5;
-  --muted:     #5e5e5e;
-  --serif:     'Noto Serif JP', 'YuMincho', '游明朝', serif;
-  --sans:      'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+  --bg:      #fbf5ec;
+  --paper:   #ffffff;
+  --ink:     #2b1d12;
+  --sub:     #6f5642;
+  --line:    #ead9c3;
+  --amber:   #c9670f;
+  --shu:     #d1392b;
+  --chip:    #f3e6d4;
+  --soy:     #2b1d12;
+  --display: 'Shippori Mincho B1', 'Noto Serif JP', 'YuMincho', '游明朝', serif;
+  --sans:    'Zen Kaku Gothic New', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+  color-scheme: light;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
+[hidden] { display: none !important; }
 
 body {
   background: var(--bg);
-  color: var(--text);
+  color: var(--ink);
   font-family: var(--sans);
 }
 
-/* ─── page title ─── */
-.page-head {
+/* ─── 料理写真（ヘッダー） ─── */
+.hero {
+  position: relative;
   max-width: 1200px;
-  margin: 56px auto 0;
-  padding: 0 24px;
+  margin: 0 auto;
+  aspect-ratio: 16 / 9;
+  max-height: 72vh;
+  overflow: hidden;
 }
-.page-eyebrow {
-  font-family: var(--serif);
+.hero img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 60%;
+  display: block;
+  transform-origin: 50% 60%;
+  animation: slowzoom 14s ease-out forwards;
+  filter: saturate(1.16) contrast(1.05) brightness(1.08);
+}
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 22%;
+  background: linear-gradient(to bottom, rgba(251, 245, 236, 0), var(--bg));
+}
+@keyframes slowzoom { from { transform: scale(1); } to { transform: scale(1.08); } }
+
+/* 湯気 */
+.steam { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.steam i {
+  position: absolute;
+  bottom: 30%;
+  width: 38%;
+  height: 55%;
+  background: radial-gradient(closest-side, rgba(255, 255, 255, .24), rgba(255, 255, 255, 0));
+  filter: blur(14px);
+  opacity: 0;
+  animation: rise 7s ease-in infinite;
+}
+.steam i:nth-child(1) { left: 18%; }
+.steam i:nth-child(2) { left: 42%; width: 30%; animation-delay: 2.4s; }
+.steam i:nth-child(3) { left: 60%; width: 34%; animation-delay: 4.6s; }
+@keyframes rise {
+  0%   { transform: translate(0, 30%) scale(.7, .9); opacity: 0; }
+  30%  { opacity: .9; }
+  100% { transform: translate(-8%, -70%) scale(1.25, 1.4); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .steam { display: none; }
+  .hero img { animation: none; }
+}
+
+/* ─── 本体 ─── */
+.wrap {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 24px 56px;
+}
+.no-hero .wrap { padding-top: 56px; }
+
+.eyebrow {
   font-size: 11px;
-  letter-spacing: 3px;
-  color: var(--muted);
-  margin-bottom: 12px;
+  letter-spacing: .32em;
+  color: var(--amber);
+  margin-bottom: 8px;
 }
-.page-title {
-  font-family: var(--serif);
-  font-size: 30px;
-  font-weight: 700;
-  letter-spacing: 2px;
-  line-height: 1.3;
+.title {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: clamp(32px, 6vw, 52px);
+  line-height: 1.15;
+  letter-spacing: .06em;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 10px 20px;
+  gap: 10px 16px;
 }
 
 /* スキ・大スキの印（ハンコ風）。大スキは二重枠 */
 .seal {
   display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  font-family: var(--serif);
-  font-weight: 700;
-  line-height: 1.15;
-  color: var(--accent);
-  border: 2px solid var(--accent);
-  border-radius: 6px;
   flex-direction: column;
-  font-size: 15px;
-  padding: 7px 5px;
+  align-items: center;
+  flex-shrink: 0;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 14px;
+  line-height: 1.08;
+  color: var(--shu);
+  border: 2px solid var(--shu);
+  border-radius: 4px;
+  padding: 6px 5px;
   transform: rotate(-6deg);
 }
 .seal.is-big {
-  border-width: 3px;
-  box-shadow: inset 0 0 0 2px var(--bg), inset 0 0 0 4px var(--accent);
-  padding: 9px 7px;
+  outline: 1px solid var(--shu);
+  outline-offset: 2px;
 }
 
-/* ─── 2-column layout ─── */
-.container {
+/* 市町村と、型・汁気・オイリーさ */
+.where {
   display: flex;
-  max-width: 1200px;
-  margin: 32px auto 80px;
-  padding: 0 24px;
-  gap: 32px;
-  align-items: flex-start;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin: 12px 0 26px;
+  font-size: 14px;
+  color: var(--sub);
 }
-.left  { width: 58%; flex-shrink: 0; }
-/* 右側は固定しない。レビュー本文が長くなると枠の中でスクロールする形になり、
-   読み進めづらくなるため、ページと一緒に流す */
-.right { width: 42%; }
-
-.section-label {
-  font-family: var(--serif);
-  font-size: 11px;
-  letter-spacing: 3px;
-  color: var(--muted);
-  margin: 0 0 10px 0;
+.where .tag {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 13px;
+  color: var(--ink);
 }
 
-/* ─── media (left) ─── */
-.media { display: flex; flex-direction: column; gap: 26px; }
-
-.shot img {
-  width: 100%;
-  height: auto;
-  display: block;
+/* ─── 値段 ─── */
+.prices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  max-width: 760px;
+}
+.pc {
+  flex: 1 1 150px;
+  background: var(--paper);
+  border: 1px solid var(--line);
   border-radius: 12px;
-  border: 1px solid var(--border);
-  background: var(--surface);
+  padding: 14px 16px 16px;
 }
-
-/* 拡大できる画像（メニューなど、字を読む必要があるもの）。
-   別タブで元画像を開くので、端末側のピンチ拡大・スクロールがそのまま使える */
-.shot-zoom {
+.pc-item {
   display: block;
-  position: relative;
-  cursor: zoom-in;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 16px;
+  margin-bottom: 6px;
 }
-.shot-zoom::after {
-  content: '拡大';
-  position: absolute;
-  right: 12px;
-  bottom: 12px;
-  font-family: var(--serif);
-  font-size: 11px;
-  letter-spacing: 2px;
-  color: var(--text);
-  background: rgba(8, 8, 8, .74);
-  border: 1px solid var(--accent);
-  border-radius: 6px;
-  padding: 5px 13px;
-  opacity: .9;
-  transition: background 0.18s, opacity 0.18s;
+.pc-yen {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: clamp(34px, 9vw, 44px);
+  color: var(--amber);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
-.shot-zoom:hover::after { background: var(--accent); opacity: 1; }
+.pc-yen small {
+  font-size: 16px;
+  margin-left: 3px;
+  color: var(--ink);
+  font-weight: 600;
+}
+.others {
+  font-size: 14px;
+  color: var(--sub);
+  margin-top: 10px;
+  padding-left: 4px;
+}
 
-/* 動画: 押されるまでYouTubeを読み込まない */
+/* 麺の硬さ: -2〜2 を横幅に置き換える。中央が0 */
+.ax {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto 2.2em;
+  gap: 10px;
+  align-items: center;
+  max-width: 760px;
+  margin-top: 22px;
+  padding: 12px 16px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.ax-name { font-family: var(--display); font-weight: 600; font-size: 15px; }
+.ax-pole { font-size: 12px; color: var(--sub); text-align: center; }
+.ax-track { position: relative; height: 16px; }
+.ax-track::before {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; top: 50%;
+  height: 4px;
+  margin-top: -2px;
+  border-radius: 2px;
+  background: var(--chip);
+}
+.ax-zero {
+  position: absolute;
+  left: 50%; top: 1px; bottom: 1px;
+  width: 1px;
+  background: var(--line);
+}
+.ax-fill {
+  position: absolute;
+  top: 50%;
+  height: 4px;
+  margin-top: -2px;
+  background: var(--amber);
+}
+.ax-dot {
+  position: absolute;
+  top: 50%;
+  width: 12px; height: 12px;
+  margin: -6px 0 0 -6px;
+  border-radius: 50%;
+  background: var(--amber);
+  box-shadow: 0 0 0 3px var(--paper);
+}
+.ax-val {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 15px;
+  color: var(--amber);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── 見出し ─── */
+.label {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: .12em;
+  margin-bottom: 12px;
+}
+.sec { margin-top: 44px; }
+
+/* ─── 動画と本文。動画は本文を読みながら見られる位置に置く ─── */
+.read {
+  display: grid;
+  gap: 24px;
+}
+.video-col { min-width: 0; }
 .video-frame {
   position: relative;
   width: 100%;
   aspect-ratio: 16 / 9;
-  border-radius: 12px;
-  border: 1px solid var(--border);
+  border-radius: 14px;
   overflow: hidden;
-  background: var(--surface);
+  background: var(--soy);
+  box-shadow: 0 14px 28px -18px rgba(120, 70, 20, .5);
 }
 .video-frame.is-short {
   aspect-ratio: 9 / 16;
-  max-width: 340px;
+  max-width: 320px;
+  margin: 0 auto;
 }
 .video-frame iframe { width: 100%; height: 100%; display: block; border: 0; }
-
 .video-btn {
   position: absolute;
   inset: 0;
@@ -171,265 +302,203 @@ body {
   height: 100%;
   padding: 0;
   border: 0;
-  background: var(--surface);
+  background: var(--soy);
   cursor: pointer;
-  display: block;
+  display: grid;
+  place-items: center;
 }
 .video-btn img {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  display: block;
-  opacity: 0.62;
-  transition: opacity 0.18s;
+  opacity: .78;
+  transition: opacity .18s;
 }
-.video-btn:hover img { opacity: 0.82; }
-
+.video-btn:hover img { opacity: .92; }
+.video-btn:focus-visible { outline: 3px solid var(--amber); outline-offset: -3px; }
 .video-play {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 62px;
-  height: 62px;
-  margin: -31px 0 0 -31px;
+  position: relative;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
-  background: rgba(8, 8, 8, .72);
-  border: 2px solid var(--accent);
-  transition: background 0.18s;
+  background: var(--shu);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, .35);
 }
-.video-btn:hover .video-play { background: var(--accent); }
 .video-play::after {
-  content: '';
+  content: "";
   position: absolute;
-  top: 50%;
-  left: 50%;
-  margin: -10px 0 0 -6px;
+  top: 50%; left: 50%;
+  margin: -11px 0 0 -6px;
   border-style: solid;
-  border-width: 10px 0 10px 16px;
-  border-color: transparent transparent transparent var(--text);
+  border-width: 11px 0 11px 18px;
+  border-color: transparent transparent transparent #fff;
 }
 
-.video-cap {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 14px;
-  text-align: center;
-  font-family: var(--serif);
-  font-size: 12px;
-  letter-spacing: 2px;
-  color: var(--text);
-  text-shadow: 0 2px 8px rgba(0, 0, 0, .9);
-}
-
-/* ─── text (right) ─── */
-.info {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 26px 26px 24px;
-}
-
-.facts { margin: 0 0 4px 0; }
-.fact {
-  display: flex;
-  gap: 16px;
-  align-items: baseline;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--border);
-}
-.fact:first-child { padding-top: 0; }
-.fact:last-child { border-bottom: none; padding-bottom: 0; }
-.fact-key {
-  font-family: var(--serif);
-  font-size: 11px;
-  letter-spacing: 2px;
-  color: var(--muted);
-  flex: 0 0 68px;
-}
-.fact-val { font-size: 15px; line-height: 1.6; white-space: pre-line; }
-.fact-val.is-fav {
-  font-family: 'Courier New', monospace;
-  color: var(--accent);
-  font-size: 16px;
-}
-
-/* 区切りを持つ塊。中身が無いものは JS 側で丸ごと消す */
-.block {
-  margin-top: 20px;
-  padding-top: 18px;
-  border-top: 1px solid var(--border);
-}
-
-/* 価格 */
-.price {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 14px;
-  padding: 5px 0;
-}
-.price-label { font-size: 13px; }
-.price-yen {
-  font-family: 'Courier New', monospace;
-  font-size: 14px;
-  white-space: nowrap;
-}
-
-/* 評価 — 0を中心に左右へ振れる目盛り */
-.ax {
-  display: grid;
-  grid-template-columns: 4.6em 1.2em 1fr 1.2em 2.1em;
-  gap: 8px;
-  align-items: center;
-  padding: 7px 0;
-}
-.ax-name { font-size: 12px; line-height: 1.35; }
-.ax-pole { font-size: 10px; color: var(--muted); text-align: center; }
-.ax-track { position: relative; height: 14px; }
-.ax-track::before {
-  content: '';
-  position: absolute;
-  left: 0; right: 0; top: 50%;
-  height: 2px;
-  margin-top: -1px;
-  border-radius: 1px;
-  background: #1c1c1c;
-}
-.ax-zero {
-  position: absolute;
-  left: 50%; top: 2px; bottom: 2px;
-  width: 1px;
-  margin-left: -0.5px;
-  background: #3a3a3a;
-}
-.ax-fill {
-  position: absolute;
-  top: 50%;
-  height: 4px;
-  margin-top: -2px;
-  background: var(--accent);
-}
-.ax-fill.is-pos { border-radius: 0 2px 2px 0; }
-.ax-fill.is-neg { border-radius: 2px 0 0 2px; }
-.ax-dot {
-  position: absolute;
-  top: 50%;
-  width: 9px; height: 9px;
-  margin: -4.5px 0 0 -4.5px;
-  border-radius: 50%;
-  background: var(--accent);
-}
-.ax-val {
-  font-family: 'Courier New', monospace;
-  font-size: 12px;
-  color: var(--accent);
-  text-align: right;
+.comment {
+  min-width: 0;
+  font-size: 15px;
+  line-height: 2.05;
+  color: #3d2c1e;
+  white-space: pre-wrap;
+  max-width: 40em;
 }
 
 /* 具材 */
-.ingredients { font-size: 13px; line-height: 1.95; }
-
-.comment {
+.tags { display: flex; flex-wrap: wrap; gap: 8px; }
+.tags span {
+  background: var(--chip);
+  border-radius: 999px;
+  padding: 7px 14px;
   font-size: 14px;
-  line-height: 2;
-  white-space: pre-wrap;
+  font-weight: 500;
+}
+
+/* ─── お店（外観・所在・メニュー） ─── */
+.shop {
+  display: grid;
+  gap: 14px;
+  align-items: start;
+}
+.shop-side { display: grid; gap: 14px; }
+.ph {
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--paper);
+  box-shadow: 0 14px 28px -18px rgba(120, 70, 20, .5);
+}
+.ph img { width: 100%; display: block; }
+.ph-cap {
+  position: absolute;
+  left: 12px; top: 12px;
+  background: rgba(255, 255, 255, .92);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+/* メニューは押すと別タブで元画像が開く（端末のピンチ拡大で字を読めるように） */
+.ph-zoom { display: block; cursor: zoom-in; }
+.ph-zoom::after {
+  content: "拡大";
+  position: absolute;
+  right: 12px; bottom: 12px;
+  background: rgba(43, 29, 18, .78);
+  color: #fff;
+  font-size: 12px;
+  padding: 5px 12px;
+  border-radius: 999px;
+}
+.addr {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 16px;
+  font-size: 14px;
+  line-height: 1.8;
+  white-space: pre-line;
+}
+.addr b {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--sub);
+  letter-spacing: .1em;
 }
 
 /* ─── nav / footer ─── */
 .site-nav {
   padding: 4px 24px 0;
   display: flex;
-  gap: 14px;
+  gap: 12px;
   justify-content: center;
   flex-wrap: wrap;
 }
 .site-nav a {
   display: inline-block;
-  padding: 12px 30px;
-  border: 2px solid var(--accent);
-  color: var(--text);
+  padding: 12px 28px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  color: var(--ink);
   text-decoration: none;
-  border-radius: 8px;
+  border-radius: 999px;
   font-size: 15px;
   font-weight: 700;
   letter-spacing: 1px;
-  transition: background 0.15s;
+  transition: background .15s, color .15s;
 }
-.site-nav a:hover { background: var(--accent); }
+.site-nav a:hover { background: var(--ink); color: #fff; border-color: var(--ink); }
 
 footer {
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--line);
   margin-top: 40px;
   padding: 28px 24px;
   text-align: center;
   font-size: 12px;
-  color: var(--muted);
-  letter-spacing: 0.1em;
-  font-family: var(--serif);
+  color: var(--sub);
+  letter-spacing: .1em;
 }
 
-/* ─── responsive ─── */
-@media (max-width: 900px) {
-  .container { flex-direction: column; margin-top: 24px; }
-  .left, .right { width: 100%; }
-  .left { max-width: 560px; margin: 0 auto; }
-  .right { max-width: 560px; margin: 0 auto; }
-  .video-frame.is-short { max-width: 100%; }
+/* ─── PC ─── */
+@media (min-width: 900px) {
+  .read.has-video { grid-template-columns: 320px minmax(0, 1fr); gap: 40px; align-items: start; }
+  .read.has-video.is-wide { grid-template-columns: minmax(0, 46%) minmax(0, 1fr); }
+  .read.has-video .video-col { position: sticky; top: 24px; }
+  .shop { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 20px; }
 }
-@media (max-width: 768px) {
-  .page-head { margin-top: 40px; }
-  .page-title { font-size: 25px; }
+
+/* ─── スマホ ─── */
+@media (max-width: 700px) {
+  .hero { aspect-ratio: 4 / 3.4; max-height: 74vh; }
+}
+@media (max-width: 899px) {
+  /* 縦長の動画は本文の上に置くので、画面を埋めない大きさにする */
+  .video-frame.is-short { max-width: min(320px, 62vw); }
 }
 @media (max-width: 480px) {
-  .page-head, .container { padding: 0 14px; }
-  .container { gap: 24px; }
-  .media { gap: 20px; }
-  .info { padding: 20px 18px 18px; }
+  .wrap { padding: 0 20px 48px; }
+  .no-hero .wrap { padding-top: 40px; }
 }
 </style>
 </head>
 
 <body>
 
-<div class="page-head">
-  <p class="page-eyebrow">FUKUOKA SARA-UDON MAP</p>
-  <h1 class="page-title" id="shop-name"></h1>
+<div class="hero" id="hero" hidden>
+  <img id="hero-img" alt="">
+  <div class="steam"><i></i><i></i><i></i></div>
 </div>
 
-<div class="container">
+<div class="wrap">
+  <p class="eyebrow">FUKUOKA SARA-UDON MAP</p>
+  <h1 class="title" id="shop-name"></h1>
+  <div class="where" id="where"></div>
 
-  <!-- LEFT: 画像と動画 -->
-  <div class="left">
-    <div class="media" id="media"></div>
+  <div id="price-sec" hidden>
+    <div class="prices" id="prices"></div>
+    <p class="others" id="others" hidden></p>
   </div>
 
-  <!-- RIGHT: テキスト -->
-  <div class="right">
-    <div class="info">
-      <div class="facts" id="facts"></div>
+  <div id="katasa"></div>
 
-      <section class="block" id="price-sec" hidden>
-        <p class="section-label">価格</p>
-        <div id="prices"></div>
-      </section>
+  <section class="sec read" id="read" hidden>
+    <div class="video-col" id="video-col" hidden></div>
+    <p class="comment" id="comment" hidden></p>
+  </section>
 
-      <section class="block" id="score-sec" hidden>
-        <p class="section-label">評価</p>
-        <div class="score-axes" id="scores"></div>
-      </section>
+  <section class="sec" id="ing-sec" hidden>
+    <p class="label">具材</p>
+    <div class="tags" id="ingredients"></div>
+  </section>
 
-      <section class="block" id="ing-sec" hidden>
-        <p class="section-label">具材</p>
-        <p class="ingredients" id="ingredients"></p>
-      </section>
-
-      <section class="block" id="comment-sec" hidden>
-        <p class="comment" id="comment"></p>
-      </section>
-    </div>
-  </div>
-
+  <section class="sec" id="shop-sec" hidden>
+    <p class="label">お店</p>
+    <div class="shop" id="shop"></div>
+  </section>
 </div>
 
 <nav class="site-nav">
@@ -459,6 +528,7 @@ footer {
    ingredients : 具材。空なら欄ごと消える
    comment     : 本文。空なら欄ごと消える。改行はそのまま反映される
    photos      : 外観・メニュー・料理の画像パス。空のものは消える
+                 料理の写真はページ上部に横幅いっぱいで出す
    video       : YouTubeの動画ID。URLではなくIDだけ
                  https://www.youtube.com/watch?v=XXXXXXXXXXX -> XXXXXXXXXXX
                  https://youtube.com/shorts/XXXXXXXXXXX      -> XXXXXXXXXXX
@@ -469,7 +539,6 @@ footer {
    画像は saraudon/images/ に置く。
    ファイルがまだ無いパスを書いても、その枠が消えるだけで崩れない。
    メニューの画像には「拡大」が付き、押すと別タブで元画像が開く。
-   対象を増やすときは、下の ZOOMABLE に項目名を足す。
    このファイルをコピーして店舗ごとのHTMLを作る。
    ファイル名は index.html の SHOPS に書いた id と揃える。
    ================================================================== */
@@ -503,114 +572,147 @@ const SHOP = {
   videoShort:  true,
   videoPoster: '',
 };
-
 /* ================================================================== */
 (function () {
   'use strict';
 
-  const SITE  = '福岡やわ麺皿うどんMAP';
-  const LABEL = { gaikan: '外観', menu: 'メニュー', ryori: '料理' };
-  const ORDER = ['gaikan', 'menu', 'ryori'];
-  /* 別タブで元画像を開けるようにするもの。外観や料理も対象にしたければここに足す */
-  const ZOOMABLE = ['menu'];
-
-  /* --- 見出しとタイトル --- */
+  const SITE = '福岡やわ麺皿うどんMAP';
   const name = (SHOP.name || '').trim();
+  const photos = SHOP.photos || {};
+  const pic = function (k) { return (photos[k] || '').trim(); };
+
+  function el(tag, cls, text) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+
+  /* --- 料理写真（ヘッダー）。無い・読めないときは出さない --- */
+  const hero = document.getElementById('hero');
+  const heroImg = document.getElementById('hero-img');
+  if (pic('ryori')) {
+    heroImg.src = pic('ryori');
+    heroImg.alt = name ? name + ' の皿うどん' : '皿うどん';
+    hero.hidden = false;
+    heroImg.addEventListener('error', function () {
+      hero.remove();
+      document.body.classList.add('no-hero');
+      console.warn('画像が読めないため非表示にしました: ' + pic('ryori'));
+    });
+  } else {
+    document.body.classList.add('no-hero');
+  }
+
+  /* --- 見出しとスキの印。2 = 大スキ（二重枠）、1 = スキ --- */
   const title = document.getElementById('shop-name');
-  const titleText = document.createElement('span');
-  titleText.textContent = name;
-  title.appendChild(titleText);
-  /* スキの印。2 = 大スキ（二重枠）、1 = スキ */
+  title.appendChild(el('span', '', name));
   if (SHOP.suki >= 1) {
-    const seal = document.createElement('span');
-    seal.className = 'seal' + (SHOP.suki >= 2 ? ' is-big' : '');
+    const seal = el('span', 'seal' + (SHOP.suki >= 2 ? ' is-big' : ''));
     /* 1文字ずつ縦に積む（縦書き指定はフォントによって文字が重なるため使わない） */
     Array.from(SHOP.suki >= 2 ? '大スキ' : 'スキ').forEach(function (ch) {
-      const c = document.createElement('span');
-      c.textContent = ch;
-      seal.appendChild(c);
+      seal.appendChild(el('span', '', ch));
     });
     title.appendChild(seal);
   }
   document.title = name ? name + ' | ' + SITE : '店舗ページ | ' + SITE;
 
-  /* --- 左: 画像 --- */
-  const media = document.getElementById('media');
+  /* --- 市町村と、型・汁気・オイリーさ --- */
+  const where = document.getElementById('where');
+  const city = (SHOP.city || '').trim();
+  if (city) where.appendChild(el('span', '', city));
+  const type = (SHOP.type || '').trim();
+  const shiruke = (SHOP.shiruke || '').trim();
+  const oily = (SHOP.oily || '').trim();
+  if (type)    where.appendChild(el('span', 'tag', type));
+  if (shiruke) where.appendChild(el('span', 'tag', '汁気 ' + shiruke));
+  if (oily)    where.appendChild(el('span', 'tag', oily));
+  if (!where.children.length) where.remove();
 
-  ORDER.forEach(function (key) {
-    const src = (SHOP.photos && SHOP.photos[key] || '').trim();
-    if (!src) return;                     // 未設定の画像は枠ごと出さない
-
-    const box = document.createElement('figure');
-    box.className = 'shot';
-
-    const cap = document.createElement('p');
-    cap.className = 'section-label';
-    cap.textContent = LABEL[key];
-
-    const img = document.createElement('img');
-    img.src = src;
-    img.alt = name ? name + ' の' + LABEL[key] : LABEL[key];
-    img.loading = 'lazy';
-    /* ファイルがまだ無いときは壊れた画像を出さず、枠ごと消す */
-    img.addEventListener('error', function () {
-      box.remove();
-      console.warn('画像が読めないため非表示にしました: ' + src);
-    });
-
-    box.appendChild(cap);
-
-    if (ZOOMABLE.indexOf(key) >= 0) {
-      const zoom = document.createElement('a');
-      zoom.className = 'shot-zoom';
-      zoom.href = src;
-      zoom.target = '_blank';
-      zoom.rel = 'noopener';
-      zoom.setAttribute('aria-label', LABEL[key] + 'を拡大表示');
-      zoom.appendChild(img);
-      box.appendChild(zoom);
-    } else {
-      box.appendChild(img);
-    }
-
-    media.appendChild(box);
+  /* --- 値段。「皿うどん」を含む品は大きな札で、それ以外は下に1行で --- */
+  const prices = (SHOP.prices || []).filter(function (p) {
+    return p && (p.label || '').trim() && p.yen > 0;
   });
+  if (prices.length) {
+    const box = document.getElementById('prices');
+    const others = [];
+    prices.forEach(function (p) {
+      const label = p.label.trim();
+      const yen = Number(p.yen).toLocaleString('ja-JP');
+      if (label.indexOf('皿うどん') >= 0) {
+        const card = el('div', 'pc');
+        card.appendChild(el('span', 'pc-item', label));
+        const y = el('span', 'pc-yen', yen);
+        y.appendChild(el('small', '', '円'));
+        card.appendChild(y);
+        box.appendChild(card);
+      } else {
+        others.push(label + '　' + yen + '円');
+      }
+    });
+    if (!box.children.length) box.remove();
+    if (others.length) {
+      const o = document.getElementById('others');
+      o.textContent = others.join('　／　');
+      o.hidden = false;
+    }
+    document.getElementById('price-sec').hidden = false;
+  }
 
-  /* --- 左: 動画（押されるまでYouTubeを読み込まない） --- */
+  /* --- 麺の硬さ: -2〜2 を横幅に置き換える。中央が0で、そこから値の向きへ伸ばす --- */
+  const kv = SHOP.katasa;
+  const kbox = document.getElementById('katasa');
+  if (typeof kv === 'number' && isFinite(kv)) {
+    const MAXV = 2;
+    const val = Math.max(-MAXV, Math.min(MAXV, kv));
+    const pct = 50 / MAXV;
+    const row = el('div', 'ax');
+    row.appendChild(el('span', 'ax-name', '麺の硬さ'));
+    row.appendChild(el('span', 'ax-pole', 'やわ'));
+    const track = el('div', 'ax-track');
+    track.setAttribute('role', 'img');
+    track.setAttribute('aria-label',
+      '麺の硬さ ' + (val > 0 ? '+' : '') + val + '（やわらかい〜かたい の5段階）');
+    track.appendChild(el('span', 'ax-zero'));
+    if (val !== 0) {
+      const fill = el('span', 'ax-fill');
+      fill.style.left  = (val > 0 ? 50 : 50 + val * pct) + '%';
+      fill.style.width = Math.abs(val) * pct + '%';
+      track.appendChild(fill);
+    }
+    const dot = el('span', 'ax-dot');
+    dot.style.left = (50 + val * pct) + '%';
+    track.appendChild(dot);
+    row.appendChild(track);
+    row.appendChild(el('span', 'ax-pole', 'かた'));
+    row.appendChild(el('span', 'ax-val', (val > 0 ? '+' : '') + val));
+    kbox.appendChild(row);
+  } else {
+    kbox.remove();
+  }
+
+  /* --- 動画と本文。動画は本文を読みながら見られるよう、本文の横（スマホは上）に置く --- */
+  const read = document.getElementById('read');
   const vid = (SHOP.video || '').trim();
+  const note = (SHOP.comment || '').trim();
+
   if (vid) {
-    const wrap = document.createElement('div');
-
-    const cap = document.createElement('p');
-    cap.className = 'section-label';
-    cap.textContent = '動画';
-
-    const frame = document.createElement('div');
-    frame.className = 'video-frame' + (SHOP.videoShort ? ' is-short' : '');
-
-    const btn = document.createElement('button');
+    const col = document.getElementById('video-col');
+    const frame = el('div', 'video-frame' + (SHOP.videoShort ? ' is-short' : ''));
+    const btn = el('button', 'video-btn');
     btn.type = 'button';
-    btn.className = 'video-btn';
     btn.setAttribute('aria-label', '動画を再生');
 
+    /* 押されるまでYouTubeを読み込まない */
     const poster = document.createElement('img');
     poster.src = (SHOP.videoPoster || '').trim()
               || 'https://i.ytimg.com/vi/' + vid + '/hqdefault.jpg';
     poster.alt = '';
     poster.loading = 'lazy';
-    /* サムネが読めなくても再生ボタンは残す */
     poster.addEventListener('error', function () { poster.hidden = true; });
 
-    const play = document.createElement('span');
-    play.className = 'video-play';
-
-    const txt = document.createElement('span');
-    txt.className = 'video-cap';
-    txt.textContent = '動画を再生';
-
     btn.appendChild(poster);
-    btn.appendChild(play);
-    btn.appendChild(txt);
+    btn.appendChild(el('span', 'video-play'));
     frame.appendChild(btn);
 
     btn.addEventListener('click', function () {
@@ -624,142 +726,74 @@ const SHOP = {
       frame.appendChild(f);
     });
 
-    wrap.appendChild(cap);
-    wrap.appendChild(frame);
-    media.appendChild(wrap);
+    col.appendChild(frame);
+    col.hidden = false;
+    read.classList.add('has-video');
+    if (!SHOP.videoShort) read.classList.add('is-wide');
   }
-
-  /* --- 右: 所在・型・汁気・オイリーさ --- */
-  const facts = document.getElementById('facts');
-  function addFact(key, val, cls) {
-    if (!val) return;                     // 未設定の項目は行ごと出さない
-    const row = document.createElement('div');
-    row.className = 'fact';
-    const k = document.createElement('span');
-    k.className = 'fact-key';
-    k.textContent = key;
-    const v = document.createElement('span');
-    v.className = 'fact-val' + (cls ? ' ' + cls : '');
-    v.textContent = val;
-    row.appendChild(k);
-    row.appendChild(v);
-    facts.appendChild(row);
+  if (note) {
+    const c = document.getElementById('comment');
+    c.textContent = note;
+    c.hidden = false;
   }
-  addFact('所在', (SHOP.address || SHOP.city || '').trim());
-  addFact('型',   (SHOP.type || '').trim());
-  addFact('汁気', (SHOP.shiruke || '').trim());
-  addFact('オイリーさ', (SHOP.oily || '').trim());
+  if (vid || note) read.hidden = false;
 
-  /* --- 右: 価格 --- */
-  const prices = (SHOP.prices || []).filter(function (p) {
-    return p && (p.label || '').trim() && p.yen > 0;
-  });
-  if (prices.length) {
-    const box = document.getElementById('prices');
-    prices.forEach(function (p) {
-      const row = document.createElement('div');
-      row.className = 'price';
-      const l = document.createElement('span');
-      l.className = 'price-label';
-      l.textContent = p.label;
-      const y = document.createElement('span');
-      y.className = 'price-yen';
-      y.textContent = Number(p.yen).toLocaleString('ja-JP') + '円';
-      row.appendChild(l);
-      row.appendChild(y);
-      box.appendChild(row);
-    });
-    document.getElementById('price-sec').hidden = false;
-  }
-
-  /* 麺の硬さ: -2〜2 を横幅に置き換える。中央が0で、そこから値の向きへ伸ばす */
-  const AXES = [['katasa', '麺の硬さ', '弱', '強']];
-  const MAXV = 2;
-  const scoreBox = document.getElementById('scores');
-  let drawn = 0;
-  AXES.forEach(function (ax) {
-    const key = ax[0];
-    const v = SHOP[key];
-    if (typeof v !== 'number' || !isFinite(v)) return;   // null は行ごと出さない
-    const val = Math.max(-MAXV, Math.min(MAXV, v));
-    const pct = 50 / MAXV;                               // 1目盛りあたりの幅(%)
-
-    const row = document.createElement('div');
-    row.className = 'ax';
-
-    const nm = document.createElement('span');
-    nm.className = 'ax-name';
-    nm.textContent = ax[1];
-
-    const lo = document.createElement('span');
-    lo.className = 'ax-pole';
-    lo.textContent = ax[2];
-
-    const track = document.createElement('div');
-    track.className = 'ax-track';
-    track.setAttribute('role', 'img');
-    track.setAttribute('aria-label',
-      ax[1] + ' ' + (val > 0 ? '+' : '') + val + '（' + ax[2] + 'い〜' + ax[3] + 'い の5段階）');
-
-    const zero = document.createElement('span');
-    zero.className = 'ax-zero';
-    track.appendChild(zero);
-
-    if (val !== 0) {
-      const fill = document.createElement('span');
-      fill.className = 'ax-fill ' + (val > 0 ? 'is-pos' : 'is-neg');
-      fill.style.left  = (val > 0 ? 50 : 50 + val * pct) + '%';
-      fill.style.width = Math.abs(val) * pct + '%';
-      track.appendChild(fill);
-    }
-
-    const dot = document.createElement('span');
-    dot.className = 'ax-dot';
-    dot.style.left = (50 + val * pct) + '%';
-    track.appendChild(dot);
-
-    const hi = document.createElement('span');
-    hi.className = 'ax-pole';
-    hi.textContent = ax[3];
-
-    const num = document.createElement('span');
-    num.className = 'ax-val';
-    num.textContent = (val > 0 ? '+' : '') + val;
-
-    row.appendChild(nm);
-    row.appendChild(lo);
-    row.appendChild(track);
-    row.appendChild(hi);
-    row.appendChild(num);
-    scoreBox.appendChild(row);
-    drawn++;
-  });
-  if (drawn) document.getElementById('score-sec').hidden = false;
-
-  /* --- 右: 具材 --- */
+  /* --- 具材 --- */
   const ing = (SHOP.ingredients || []).map(function (s) { return (s || '').trim(); })
                                       .filter(Boolean);
   if (ing.length) {
-    document.getElementById('ingredients').textContent = ing.join('・');
+    const box = document.getElementById('ingredients');
+    ing.forEach(function (s) { box.appendChild(el('span', '', s)); });
     document.getElementById('ing-sec').hidden = false;
   }
 
-  /* --- 右: コメント --- */
-  const note = (SHOP.comment || '').trim();
-  if (note) {
-    document.getElementById('comment').textContent = note;
-    document.getElementById('comment-sec').hidden = false;
+  /* --- お店: 外観・所在・メニュー --- */
+  const shop = document.getElementById('shop');
+
+  function photo(key, label, zoom) {
+    const src = pic(key);
+    if (!src) return null;
+    const fig = el('figure', 'ph');
+    const img = document.createElement('img');
+    img.src = src;
+    img.alt = name ? name + ' の' + label : label;
+    img.loading = 'lazy';
+    /* ファイルがまだ無いときは壊れた画像を出さず、枠ごと消す */
+    img.addEventListener('error', function () {
+      fig.remove();
+      console.warn('画像が読めないため非表示にしました: ' + src);
+    });
+    if (zoom) {
+      const a = el('a', 'ph-zoom');
+      a.href = src;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.setAttribute('aria-label', label + 'を拡大表示');
+      a.appendChild(img);
+      fig.appendChild(a);
+    } else {
+      fig.appendChild(img);
+    }
+    fig.appendChild(el('span', 'ph-cap', label));
+    return fig;
   }
 
-  /* 先頭に来た塊は上の区切り線を消す */
-  const info = document.querySelector('.info');
-  if (!facts.children.length) facts.remove();
-  const first = info.querySelector('.block:not([hidden])');
-  if (first && !info.querySelector('.facts')) {
-    first.style.marginTop = '0';
-    first.style.paddingTop = '0';
-    first.style.borderTop  = 'none';
+  const gaikan = photo('gaikan', '外観', false);
+  if (gaikan) shop.appendChild(gaikan);
+
+  const side = el('div', 'shop-side');
+  const addr = (SHOP.address || SHOP.city || '').trim();
+  if (addr) {
+    const a = el('div', 'addr');
+    a.appendChild(el('b', '', '所在'));
+    a.appendChild(document.createTextNode(addr));
+    side.appendChild(a);
   }
+  const menu = photo('menu', 'メニュー', true);
+  if (menu) side.appendChild(menu);
+  if (side.children.length) shop.appendChild(side);
+
+  if (shop.children.length) document.getElementById('shop-sec').hidden = false;
 })();
 </script>
 
