@@ -47,33 +47,36 @@ body {
   font-family: var(--sans);
 }
 
-/* ─── 料理写真（ヘッダー） ─── */
-.hero {
+/* ─── 料理写真と店の情報 ─── */
+/* 料理写真は切らずに元の形のまま置き、縁だけを地の色に溶かす。
+   PCは写真を左、店名・値段などを右に並べる。スマホは写真の下に情報 */
+.top {
+  display: grid;
+  gap: 22px;
+  align-items: center;
+  padding: 40px 0 8px;
+}
+.photo {
   position: relative;
-  max-width: 1200px;
-  margin: 0 auto;
-  aspect-ratio: 16 / 9;
-  max-height: 72vh;
-  overflow: hidden;
-}
-.hero img {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: 50% 60%;
+  max-width: 560px;
+  margin: 0 auto;
+}
+.photo img {
   display: block;
-  transform-origin: 50% 60%;
-  animation: slowzoom 14s ease-out forwards;
-  filter: saturate(1.16) contrast(1.05) brightness(1.08);
+  width: 100%;
+  height: auto;
+  filter: saturate(1.12) contrast(1.04) brightness(1.06);
+  -webkit-mask-image:
+    linear-gradient(to right, transparent, #000 9%, #000 91%, transparent),
+    linear-gradient(to bottom, transparent, #000 9%, #000 91%, transparent);
+  -webkit-mask-composite: source-in;
+          mask-image:
+    linear-gradient(to right, transparent, #000 9%, #000 91%, transparent),
+    linear-gradient(to bottom, transparent, #000 9%, #000 91%, transparent);
+          mask-composite: intersect;
 }
-.hero::after {
-  content: "";
-  position: absolute;
-  inset: auto 0 0;
-  height: 22%;
-  background: linear-gradient(to bottom, rgba(251, 245, 236, 0), var(--bg));
-}
-@keyframes slowzoom { from { transform: scale(1); } to { transform: scale(1.08); } }
+.info { min-width: 0; }
 
 /* 湯気 */
 .steam { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
@@ -97,16 +100,14 @@ body {
 }
 @media (prefers-reduced-motion: reduce) {
   .steam { display: none; }
-  .hero img { animation: none; }
 }
 
 /* ─── 本体 ─── */
 .wrap {
-  max-width: 1080px;
+  max-width: 1120px;
   margin: 0 auto;
   padding: 0 24px 56px;
 }
-.no-hero .wrap { padding-top: 56px; }
 
 .eyebrow {
   font-size: 11px;
@@ -445,6 +446,9 @@ footer {
 
 /* ─── PC ─── */
 @media (min-width: 900px) {
+  .top { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 48px; padding: 48px 0 16px; }
+  .top.no-photo { grid-template-columns: minmax(0, 1fr); }
+  .photo img { width: auto; max-width: 100%; max-height: 82vh; margin: 0 auto; }
   .read.has-video { grid-template-columns: 320px minmax(0, 1fr); gap: 40px; align-items: start; }
   .read.has-video.is-wide { grid-template-columns: minmax(0, 46%) minmax(0, 1fr); }
   .read.has-video .video-col { position: sticky; top: 24px; }
@@ -452,38 +456,37 @@ footer {
 }
 
 /* ─── スマホ ─── */
-@media (max-width: 700px) {
-  .hero { aspect-ratio: 4 / 3.4; max-height: 74vh; }
-}
 @media (max-width: 899px) {
   /* 縦長の動画は本文の上に置くので、画面を埋めない大きさにする */
   .video-frame.is-short { max-width: min(320px, 62vw); }
 }
 @media (max-width: 480px) {
   .wrap { padding: 0 20px 48px; }
-  .no-hero .wrap { padding-top: 40px; }
 }
 </style>
 </head>
 
 <body>
 
-<div class="hero" id="hero" hidden>
-  <img id="hero-img" alt="">
-  <div class="steam"><i></i><i></i><i></i></div>
-</div>
-
 <div class="wrap">
-  <p class="eyebrow">FUKUOKA SARA-UDON MAP</p>
-  <h1 class="title" id="shop-name"></h1>
-  <div class="where" id="where"></div>
+  <div class="top" id="top">
+    <figure class="photo" id="photo" hidden>
+      <img id="photo-img" alt="">
+      <div class="steam"><i></i><i></i><i></i></div>
+    </figure>
+    <div class="info">
+      <p class="eyebrow">FUKUOKA SARA-UDON MAP</p>
+      <h1 class="title" id="shop-name"></h1>
+      <div class="where" id="where"></div>
 
-  <div id="price-sec" hidden>
-    <div class="prices" id="prices"></div>
-    <p class="others" id="others" hidden></p>
+      <div id="price-sec" hidden>
+        <div class="prices" id="prices"></div>
+        <p class="others" id="others" hidden></p>
+      </div>
+
+      <div id="katasa"></div>
+    </div>
   </div>
-
-  <div id="katasa"></div>
 
   <section class="sec read" id="read" hidden>
     <div class="video-col" id="video-col" hidden></div>
@@ -525,10 +528,11 @@ footer {
    prices      : 品名と値段の並び。空なら欄ごと消える
    katasa      : 麺の硬さ。-2 -1 0 1 2 の5段階。右（+）ほど硬く、0がちょうどよい。
                  0 は値なので、未記入は null と書く（null なら行ごと消える）
-   ingredients : 具材。空なら欄ごと消える
+   ingredients : 具材。空なら欄ごと消える。書く順番は自由（表示は下の ING_ORDER の順に並ぶ）
+                 表記は 玉ねぎ・えび にそろえる
    comment     : 本文。空なら欄ごと消える。改行はそのまま反映される
    photos      : 外観・メニュー・料理の画像パス。空のものは消える
-                 料理の写真はページ上部に横幅いっぱいで出す
+                 料理の写真は切らずに、ページ上部で店名の横（スマホは上）に出す
    video       : YouTubeの動画ID。URLではなくIDだけ
                  https://www.youtube.com/watch?v=XXXXXXXXXXX -> XXXXXXXXXXX
                  https://youtube.com/shorts/XXXXXXXXXXX      -> XXXXXXXXXXX
@@ -588,20 +592,21 @@ const SHOP = {
     return e;
   }
 
-  /* --- 料理写真（ヘッダー）。無い・読めないときは出さない --- */
-  const hero = document.getElementById('hero');
-  const heroImg = document.getElementById('hero-img');
+  /* --- 料理写真。切らずに元の形のまま出す。無い・読めないときは出さない --- */
+  const photoBox = document.getElementById('photo');
+  const photoImg = document.getElementById('photo-img');
+  const topBox = document.getElementById('top');
   if (pic('ryori')) {
-    heroImg.src = pic('ryori');
-    heroImg.alt = name ? name + ' の皿うどん' : '皿うどん';
-    hero.hidden = false;
-    heroImg.addEventListener('error', function () {
-      hero.remove();
-      document.body.classList.add('no-hero');
+    photoImg.src = pic('ryori');
+    photoImg.alt = name ? name + ' の皿うどん' : '皿うどん';
+    photoBox.hidden = false;
+    photoImg.addEventListener('error', function () {
+      photoBox.remove();
+      topBox.classList.add('no-photo');
       console.warn('画像が読めないため非表示にしました: ' + pic('ryori'));
     });
   } else {
-    document.body.classList.add('no-hero');
+    topBox.classList.add('no-photo');
   }
 
   /* --- 見出しとスキの印。2 = 大スキ（二重枠）、1 = スキ --- */
@@ -738,9 +743,26 @@ const SHOP = {
   }
   if (vid || note) read.hidden = false;
 
-  /* --- 具材 --- */
+  /* --- 具材 ---
+     全店で同じ並びにする。種類ごと（野菜 → きのこ → 肉 → 魚介 → 練り物）にまとめ、
+     種類の中は多くの店で使われているものから。ここに無い具材は最後に、書いた順で並ぶ。
+     新しい具材が出てきたら、該当する種類の位置に足す */
+  const ING_ORDER = [
+    'キャベツ', 'もやし', '玉ねぎ', 'にんじん', 'ネギ', '小松菜',   // 野菜
+    'キクラゲ',                                                       // きのこ
+    '豚肉',                                                           // 肉
+    'イカ', 'えび', 'えび天',                                         // 魚介
+    'かまぼこ', 'さつま揚げ', 'ちくわ',                               // 練り物
+  ];
+  const rank = function (s) {
+    const i = ING_ORDER.indexOf(s.replace(/[？?]$/, ''));
+    return i < 0 ? ING_ORDER.length : i;
+  };
   const ing = (SHOP.ingredients || []).map(function (s) { return (s || '').trim(); })
-                                      .filter(Boolean);
+                                      .filter(Boolean)
+                                      .map(function (s, i) { return { s: s, i: i }; })
+                                      .sort(function (a, b) { return (rank(a.s) - rank(b.s)) || (a.i - b.i); })
+                                      .map(function (o) { return o.s; });
   if (ing.length) {
     const box = document.getElementById('ingredients');
     ing.forEach(function (s) { box.appendChild(el('span', '', s)); });
