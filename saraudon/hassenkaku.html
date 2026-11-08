@@ -337,16 +337,19 @@ body {
   border-color: transparent transparent transparent #fff;
 }
 
-.comment {
-  min-width: 0;
-  font-size: 15px;
-  line-height: 2.05;
-  color: #3d2c1e;
-  white-space: pre-wrap;
-  max-width: 40em;
+/* 特徴。1項目1行で、細い線で区切る */
+.feat-col { min-width: 0; max-width: 36em; }
+.feat { list-style: none; border-top: 1px solid var(--line); }
+.feat li {
+  padding: 13px 2px;
+  border-bottom: 1px solid var(--line);
+  font-size: 16px;
+  line-height: 1.75;
 }
 
-/* 具材 */
+/* 具材（麺の硬さの下） */
+.ing { margin-top: 22px; }
+.ing .label { margin-bottom: 10px; }
 .tags { display: flex; flex-wrap: wrap; gap: 8px; }
 .tags span {
   background: var(--chip);
@@ -411,6 +414,18 @@ body {
   letter-spacing: .1em;
 }
 
+
+/* ─── 写真（あとから増やす写真）。大きく1枚ずつ見せ、下のサムネイルで切り替える。押すと別タブで元画像が開く ─── */
+.more a { display: block; border-radius: 12px; overflow: hidden; background: var(--paper); cursor: zoom-in; }
+.more .solo-main { display: grid; place-items: center; background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
+.more .solo-main a { background: none; border-radius: 6px; }
+.more .solo-main img { width: auto; max-width: 100%; max-height: 72vh; height: auto; object-fit: contain; }
+.more .solo-thumbs { display: flex; gap: 8px; margin-top: 10px; overflow-x: auto; padding-bottom: 4px; }
+.more .solo-thumbs button { flex: 0 0 auto; width: 72px; height: 72px; padding: 0; border: 2px solid transparent; border-radius: 8px; overflow: hidden; background: none; cursor: pointer; opacity: .6; }
+.more .solo-thumbs button[aria-current="true"] { border-color: var(--amber); opacity: 1; }
+.more .solo-thumbs button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+.more .solo-thumbs img { width: 100%; height: 100%; object-fit: cover; }
+
 /* ─── nav / footer ─── */
 .site-nav {
   padding: 4px 24px 0;
@@ -451,6 +466,7 @@ footer {
   .photo img { width: auto; max-width: 100%; max-height: 82vh; margin: 0 auto; }
   .read.has-video { grid-template-columns: 320px minmax(0, 1fr); gap: 40px; align-items: start; }
   .read.has-video.is-wide { grid-template-columns: minmax(0, 46%) minmax(0, 1fr); }
+  .read.has-video .feat-col { padding-top: 4px; }
   .read.has-video .video-col { position: sticky; top: 24px; }
   .shop { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 20px; }
 }
@@ -485,22 +501,30 @@ footer {
       </div>
 
       <div id="katasa"></div>
+
+      <div class="ing" id="ing-sec" hidden>
+        <p class="label">具材</p>
+        <div class="tags" id="ingredients"></div>
+      </div>
     </div>
   </div>
 
   <section class="sec read" id="read" hidden>
     <div class="video-col" id="video-col" hidden></div>
-    <p class="comment" id="comment" hidden></p>
-  </section>
-
-  <section class="sec" id="ing-sec" hidden>
-    <p class="label">具材</p>
-    <div class="tags" id="ingredients"></div>
+    <div class="feat-col" id="feat-col" hidden>
+      <p class="label">特徴</p>
+      <ul class="feat" id="features"></ul>
+    </div>
   </section>
 
   <section class="sec" id="shop-sec" hidden>
     <p class="label">お店</p>
     <div class="shop" id="shop"></div>
+  </section>
+
+  <section class="sec" id="more-sec" hidden>
+    <p class="label">写真</p>
+    <div class="more" id="more"></div>
   </section>
 </div>
 
@@ -530,9 +554,10 @@ footer {
                  0 は値なので、未記入は null と書く（null なら行ごと消える）
    ingredients : 具材。空なら欄ごと消える。書く順番は自由（表示は下の ING_ORDER の順に並ぶ）
                  表記は 玉ねぎ・えび にそろえる
-   comment     : 本文。空なら欄ごと消える。改行はそのまま反映される
+   features    : 特徴。1項目1行で並ぶ。空なら欄ごと消える
    photos      : 外観・メニュー・料理の画像パス。空のものは消える
                  料理の写真は切らずに、ページ上部で店名の横（スマホは上）に出す
+   more        : あとから増やす写真の画像パス。足した順に「写真」の欄に並ぶ。空なら欄ごと消える
    video       : YouTubeの動画ID。URLではなくIDだけ
                  https://www.youtube.com/watch?v=XXXXXXXXXXX -> XXXXXXXXXXX
                  https://youtube.com/shorts/XXXXXXXXXXX      -> XXXXXXXXXXX
@@ -563,13 +588,18 @@ const SHOP = {
 
   ingredients: ['えび天', 'かまぼこ', 'キャベツ', '小松菜？', 'にんじん', '豚肉', '玉ねぎ', 'もやし'],
 
-  comment: 'まっすぐな博多皿うどん。\n整った美味しさ。',
+  features: [
+    'まっすぐな博多皿うどん',
+    '整った美味しさ',
+  ],
 
   photos: {
     gaikan: 'images/hassenkaku-gaikan.jpg',
     menu:   'images/hassenkaku-menu.jpg',
     ryori:  'images/hassenkaku-ryori.jpg',
   },
+
+  more: [],
 
   video:       'VgNWLYnohLU',
   videoShort:  true,
@@ -698,7 +728,7 @@ const SHOP = {
   /* --- 動画と本文。動画は本文を読みながら見られるよう、本文の横（スマホは上）に置く --- */
   const read = document.getElementById('read');
   const vid = (SHOP.video || '').trim();
-  const note = (SHOP.comment || '').trim();
+  const feats = (SHOP.features || []).map(function (s) { return (s || '').trim(); }).filter(Boolean);
 
   if (vid) {
     const col = document.getElementById('video-col');
@@ -735,12 +765,12 @@ const SHOP = {
     read.classList.add('has-video');
     if (!SHOP.videoShort) read.classList.add('is-wide');
   }
-  if (note) {
-    const c = document.getElementById('comment');
-    c.textContent = note;
-    c.hidden = false;
+  if (feats.length) {
+    const ul = document.getElementById('features');
+    feats.forEach(function (s) { ul.appendChild(el('li', '', s)); });
+    document.getElementById('feat-col').hidden = false;
   }
-  if (vid || note) read.hidden = false;
+  if (vid || feats.length) read.hidden = false;
 
   /* --- 具材 ---
      全店で同じ並びにする。種類ごと（野菜 → きのこ → 肉 → 魚介 → 練り物）にまとめ、
@@ -815,6 +845,44 @@ const SHOP = {
   if (side.children.length) shop.appendChild(side);
 
   if (shop.children.length) document.getElementById('shop-sec').hidden = false;
+
+  /* --- 写真（あとから増やす写真）。SHOP.more に画像パスを足すだけで並ぶ --- */
+  const more = (SHOP.more || []).map(function (s) { return (s || '').trim(); }).filter(Boolean);
+  if (more.length) {
+    const box = document.getElementById('more');
+    const link = function (src, i) {
+      const a = el('a');
+      a.href = src; a.target = '_blank'; a.rel = 'noopener';
+      a.setAttribute('aria-label', '写真' + (i + 1) + 'を拡大表示');
+      const img = document.createElement('img');
+      img.src = src; img.alt = name ? name + ' の写真' + (i + 1) : '写真' + (i + 1); img.loading = 'lazy';
+      a.appendChild(img);
+      return a;
+    };
+    {
+      const main = el('div', 'solo-main');
+      main.appendChild(link(more[0], 0));
+      box.appendChild(main);
+      if (more.length > 1) {
+        const thumbs = el('div', 'solo-thumbs');
+        more.forEach(function (src, i) {
+          const t = el('button');
+          t.type = 'button';
+          t.setAttribute('aria-label', '写真' + (i + 1) + 'を表示');
+          t.setAttribute('aria-current', String(i === 0));
+          const ti = document.createElement('img'); ti.src = src; ti.alt = ''; ti.loading = 'lazy';
+          t.appendChild(ti);
+          t.addEventListener('click', function () {
+            main.textContent = ''; main.appendChild(link(src, i));
+            thumbs.querySelectorAll('button').forEach(function (b) { b.setAttribute('aria-current', String(b === t)); });
+          });
+          thumbs.appendChild(t);
+        });
+        box.appendChild(thumbs);
+      }
+    }
+    document.getElementById('more-sec').hidden = false;
+  }
 })();
 </script>
 
