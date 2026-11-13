@@ -187,6 +187,8 @@ body {
   font-weight: 600;
   font-size: 16px;
   margin-bottom: 6px;
+  word-break: keep-all;   /* 「皿うどん S（0.8玉）」をカッコの途中で折り返さない */
+  overflow-wrap: anywhere;
 }
 .pc-yen {
   font-family: var(--display);
@@ -207,7 +209,9 @@ body {
   color: var(--sub);
   margin-top: 10px;
   padding-left: 4px;
+  line-height: 1.9;
 }
+.others span { white-space: nowrap; }   /* 品名と値段の間で折り返さない */
 
 /* 麺の硬さ: -2〜2 を横幅に置き換える。中央が0 */
 .ax {
@@ -688,7 +692,10 @@ const SHOP = {
     if (!box.children.length) box.remove();
     if (others.length) {
       const o = document.getElementById('others');
-      o.textContent = others.join('　／　');
+      others.forEach(function (s, i) {
+        if (i) o.appendChild(document.createTextNode('　／　'));
+        o.appendChild(el('span', '', s));
+      });
       o.hidden = false;
     }
     document.getElementById('price-sec').hidden = false;
@@ -781,7 +788,7 @@ const SHOP = {
     'キャベツ', 'もやし', '玉ねぎ', 'にんじん', 'ネギ', '小松菜',   // 野菜
     'キクラゲ',                                                       // きのこ
     '豚肉',                                                           // 肉
-    'イカ', 'えび', 'えび天',                                         // 魚介
+    'イカ', 'えび', 'えび天', 'アサリ',                               // 魚介
     'かまぼこ', 'さつま揚げ', 'ちくわ',                               // 練り物
   ];
   const rank = function (s) {
