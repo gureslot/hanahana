@@ -549,6 +549,7 @@ footer {
    city        : 市区町村名。index.html の city と同じ表記にする
    address     : 住所。書けば「所在」に住所を出し、空なら city を出す
    suki        : 好み。2 = 大スキ、1 = スキ、0 なら印なし。店名の横に印が出る
+   hakata      : 博多皿うどんなら true。市町村の横に「博多皿うどん」の札が出る
    type        : 皿うどんの型。次の2つから選ぶ
                  あんかけ / 非あんかけ
    shiruke     : 汁気。'有り' か '無し'。空なら行ごと消える
@@ -580,6 +581,7 @@ const SHOP = {
   city: '福岡市東区',
   address: '〒813-0062 福岡県福岡市東区松島3-22-43',
   suki:    0,
+  hakata:  true,
   type: '非あんかけ',
   shiruke: '有り',
   oily:    '',
@@ -593,7 +595,6 @@ const SHOP = {
   ingredients: ['キャベツ', '玉ねぎ', 'もやし', 'にんじん', '豚肉', 'イカ', 'かまぼこ', 'さつま揚げ'],
 
   features: [
-    '博多皿うどん',
     '濃いめで少し辛めの味',
   ],
 
@@ -662,6 +663,7 @@ const SHOP = {
   const type = (SHOP.type || '').trim();
   const shiruke = (SHOP.shiruke || '').trim();
   const oily = (SHOP.oily || '').trim();
+  if (SHOP.hakata) where.appendChild(el('span', 'tag', '博多皿うどん'));
   if (type)    where.appendChild(el('span', 'tag', type));
   if (shiruke) where.appendChild(el('span', 'tag', '汁気 ' + shiruke));
   if (oily)    where.appendChild(el('span', 'tag', oily));
