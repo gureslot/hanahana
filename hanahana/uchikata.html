@@ -489,7 +489,6 @@ footer { border-top: 1px solid var(--border); padding: 26px 24px; text-align: ce
 #v-hasami .cond dt { margin-top: 10px; color: var(--text); }
 #v-hasami .cond dt::before { content: ''; display: inline-block; width: 5px; height: 5px; margin: 0 8px 2px 0; border-radius: 50%; background: var(--accent); vertical-align: middle; }
 #v-hasami .cond dd { margin: 0 0 0 13px; color: var(--muted); }
-#v-hasami .hs-link { display: inline-block; margin-top: 18px; padding: 8px 16px; border: 1px solid #333; border-radius: 999px; color: var(--text); text-decoration: none; font-size: 12px; }
 /* ─── lmslide ─── */
 #v-lmslide {
   --accent: #ff2a6d;
@@ -2098,6 +2097,15 @@ footer { border-top: 1px solid var(--border); padding: 26px 24px; text-align: ce
 #v-video .gauge-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 5px; background: linear-gradient(90deg, #2bb3a3 0%, #e8c53a 50%, #ff5a36 100%); transition: width 0.35s cubic-bezier(.2,.8,.2,1), background-size 0.35s cubic-bezier(.2,.8,.2,1); }
 #v-video .gauge-ends { display: flex; justify-content: space-between; max-width: 320px; margin: 7px auto 0; font-size: 10px; color: var(--muted); letter-spacing: 0.04em; }
 #v-video .diff-note { max-width: 380px; margin: 16px auto 0; font-size: 11px; line-height: 1.8; color: var(--muted); text-align: center; }
+
+/* ─── 実演動画の埋め込み（サムネイルを押すと再生） ─── */
+.yt { position: relative; width: 100%; aspect-ratio: 16 / 9; margin-top: 10px; background: #111; border-radius: 10px; overflow: hidden; }
+.yt.short { max-width: min(300px, calc(62vh * 0.5625)); aspect-ratio: 9 / 16; }
+.yt img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.yt iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; }
+.yt button { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; border: none; background: transparent; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.yt button span { width: 52px; height: 52px; border-radius: 50%; background: rgba(255, 42, 109, 0.85); border: 2px solid rgba(255, 255, 255, 0.45); display: flex; align-items: center; justify-content: center; }
+.yt button span::after { content: ''; border-style: solid; border-width: 10px 0 10px 18px; border-color: transparent transparent transparent #fff; margin-left: 4px; }
 </style>
 </head>
 <body>
@@ -2319,7 +2327,7 @@ footer { border-top: 1px solid var(--border); padding: 26px 24px; text-align: ce
     <div class="slip">
       <div class="slip-row"><span>右→中のずれ</span><div class="chips sub" data-slip="m"></div></div>
     </div>
-    <a class="hs-link" href="https://youtube.com/shorts/SeqfZMJNzdk" target="_blank" rel="noopener">実演動画を見る</a>
+    <div class="hs-sub">実演</div><div class="yt short" data-yt="SeqfZMJNzdk"></div>
   </section>
   <section class="diff">
     <h2 class="diff-title">目押し難易度</h2>
@@ -2580,7 +2588,7 @@ footer { border-top: 1px solid var(--border); padding: 26px 24px; text-align: ce
     <div class="hs-head"><span class="hs-no">4</span><h2 class="hs-title">スイカが続いて右がずれたら<small>右第一停止のハサミ打ちに切り替える</small></h2></div>
     <div class="hs-list" data-fig="d"></div>
     <p class="hs-note">ピンクBARの上のスイカ（右4番）を拾ったあとにスライドすると、その上のスイカ（右8番）が滑ってくる。スイカが続くと右が下にずれていき、スライドでは揃わない目になる。そのときは左だけを見て、右→左→中を2コマずれくらいで続けて押す。</p>
-    <a class="hs-link" href="https://youtu.be/rZWWzGfMSVs" target="_blank" rel="noopener">実演動画を見る</a>
+    <div class="hs-sub">実演</div><div class="yt" data-yt="rZWWzGfMSVs"></div>
   </section>
   <section class="pc">
     <h2 class="pc-title">メリット・デメリット</h2>
@@ -2631,7 +2639,7 @@ footer { border-top: 1px solid var(--border); padding: 26px 24px; text-align: ce
       <tr><td>白系 水平・右下がり</td><td>白7中段ビタ → 右 → 中を各1コマの高速ハサミ</td></tr>
       <tr><td>白系 右上がり</td><td>順押しスライド。中0コマ・右1コマが最速。中1コマ・右3コマなら下段一直線</td></tr>
     </table>
-    <a class="hs-link" href="https://youtube.com/shorts/ebYBcCKpDus" target="_blank" rel="noopener">実演動画を見る</a>
+    <div class="hs-sub">実演</div><div class="yt short" data-yt="ebYBcCKpDus"></div>
   </section>
   <section class="diff">
     <h2 class="diff-title">目押し難易度</h2>
@@ -5386,6 +5394,16 @@ ROOT.querySelector('[data-vbody]').textContent = VIDEO.thoughts;
   };
   requestAnimationFrame(tick);
 })();
+</script>
+<script>
+/* 実演動画：サムネイルを押すとその場で再生 */
+document.querySelectorAll('.yt[data-yt]').forEach(el => {
+  const id = el.dataset.yt;
+  el.innerHTML = `<img src="https://img.youtube.com/vi/${id}/hqdefault.jpg" alt="実演動画" loading="lazy"><button aria-label="再生"><span></span></button>`;
+  el.querySelector('button').addEventListener('click', () => {
+    el.innerHTML = `<iframe src="https://www.youtube.com/embed/${id}?autoplay=1&playsinline=1" allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture" allowfullscreen></iframe>`;
+  });
+});
 </script>
 </body>
 </html>
