@@ -2117,7 +2117,7 @@ footer { border-top: 1px solid var(--border); padding: 26px 24px; text-align: ce
       <h2 class="scene-name">通常時<span class="col-head"><span class="h-diff">目押し難易度</span><span class="h-freq">回数</span></span></h2>
       <a class="item" href="#ddt"><span class="item-name">チェリー枠内狙いDDT</span><span class="item-diff"><b data-diff="ddt"></b></span><span class="item-freq"><b>3</b></span><span class="item-go"></span></a>
       <a class="item" href="#slide"><span class="item-name">スライド打ちDDT</span><span class="item-diff"><b>21〜53</b></span><span class="item-freq"><b>1〜3</b></span><span class="item-go"></span></a>
-      <a class="item" href="#hasami"><span class="item-name">白BAR上中段からのハサミ打ち</span><span class="item-diff"><b data-diff="hasami"></b></span><span class="item-freq"><b>3</b></span><span class="item-go"></span></a>
+      <a class="item" href="#hasami"><span class="item-name">白BAR上中段からのハサミ打ち</span><span class="item-diff"><b data-diff="hasami"></b></span><span class="item-freq"><b>2〜3</b></span><span class="item-go"></span></a>
       <a class="item" href="#lmslide"><span class="item-name">白BARの左中スライド</span><span class="item-diff"><b data-diff="lmslide"></b></span><span class="item-freq"><b>3</b></span><span class="item-go"></span></a>
       <div class="item soon"><span class="item-name">左右順序可変DDT</span><span class="item-diff">準備中</span><span class="item-freq"></span><span class="item-go" style="visibility:hidden"></span></div>
     </section>
@@ -2303,6 +2303,9 @@ footer { border-top: 1px solid var(--border); padding: 26px 24px; text-align: ce
     <div class="hs-list" data-fig="s1"></div>
     <div class="hs-sub">止まり方と成立役</div>
     <div class="hs-list" data-fig="s1r"></div>
+    <div class="hs-sub">チェリー下段のとき　右中段にボーナス図柄を狙う</div>
+    <div class="chips sub" data-bsym style="justify-content:flex-start"></div>
+    <div data-mv="rb"></div>
   </section>
 
   <section class="hs-step">
@@ -3643,6 +3646,22 @@ function viewersHS() {
     ok: P => reach('right', P, 'suika', ['mid']).length > 0,
     verdict: P => reach('right', P, 'suika', ['mid']).length ? OKV('中段スイカに届く') : NGV('スイカを取りこぼす') });
 }
+/* チェリー下段のとき：右中段にボーナス図柄（7・BAR）を狙う。余裕4コマ（中段まで0〜3コマ滑る位置）で考える */
+function viewerBonus() {
+  const box = ROOT.querySelector('[data-bsym]'); if (!box) return;
+  const SYMS = [['white7', '白7'], ['whiteBAR', '白BAR'], ['pink7', 'ピンク7'], ['pinkBAR', 'ピンクBAR']];
+  const posOf = name => { for (let n = 1; n <= 21; n++) if (sym('right', n) === name) return n; };
+  let cur = 0;
+  const draw = () => {
+    box.innerHTML = SYMS.map(([, t], i) => `<button class="chip" data-i="${i}" aria-pressed="${i === cur}">${t}</button>`).join('');
+    const [name, label] = SYMS[cur], S = posOf(name);
+    const ok = P => ((S - P) % 21 + 21) % 21 <= 3;
+    mvq('[data-mv="rb"]', { reel: 'right', start: S, fixed: { left: 3 }, marks: [0], labels: { [S]: label },
+      ok, verdict: P => ok(P) ? OKV('中段に止まったら、チェリー重複ボーナス確定') : NGV(`${label}が中段に届かない`) });
+  };
+  box.addEventListener('click', e => { const c = e.target.closest('.chip'); if (c) { cur = +c.dataset.i; draw(); } });
+  draw();
+}
 function drawStatic() {
   const SM = spin('middle'), SR = spin('right'), L6 = col('left', 6);
   // 1 左：押す位置（中段番号 2・3）
@@ -3790,7 +3809,8 @@ const bitaUnit = w => Math.log2(N / w) / Math.log2(N);
 function init() {
   drawStatic();
   viewersHS();
-  ROOT.querySelector('[data-score]').textContent = '61〜67';
+  viewerBonus();
+  ROOT.querySelector('[data-score]').textContent = '44〜67';
   for (const k of ['middle', 'right']) {
     const el = ROOT.querySelector(`.reel[data-r="${k}"]`);
     const tr = document.createElement('div'); tr.className = 'track'; el.appendChild(tr);
@@ -3804,7 +3824,7 @@ document.fonts ? document.fonts.ready.then(init) : init();
 
 /* ─── 目押し難易度（押す順のフロー・点数・ゲージ） ─── */
 (function () {
-  const FLOWS = [{"label": "", "nodes": [["左", 2, "白BAR上中段"], ["右", 2, "白7下スイカ<br>上中段"], ["中", [[9, "ピンク7付近<br>スイカ成立時"], [5, "白7付近<br>スイカ・ボーナス"]]]]}];
+  const FLOWS = [{"label": "チェリー成立時", "nodes": [["左", 2, "白BAR上中段"], ["右", 4, "7かBAR<br>中段"], ["中", 21, "適当打ち"]]}, {"label": "スイカ成立時", "nodes": [["左", 2, "白BAR上中段"], ["右", 2, "白7下スイカ<br>上中段"], ["中", [[9, "ピンク7付近<br>スイカ成立時"], [5, "白7付近<br>スイカ・ボーナス"]]]]}];
   const unit = w => Math.log2(21 / w) / Math.log2(21);
   // 狙う場所が複数あるリールは、ボタンを縦に並べて選ぶ
   const opts = n => Array.isArray(n[1]) ? n[1] : [[n[1], n[2]]];
