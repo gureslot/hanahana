@@ -489,6 +489,7 @@ footer { border-top: 1px solid var(--border); padding: 26px 24px; text-align: ce
 #v-hasami .cond dt { margin-top: 10px; color: var(--text); }
 #v-hasami .cond dt::before { content: ''; display: inline-block; width: 5px; height: 5px; margin: 0 8px 2px 0; border-radius: 50%; background: var(--accent); vertical-align: middle; }
 #v-hasami .cond dd { margin: 0 0 0 13px; color: var(--muted); }
+#v-hasami .hs-src { display: block; margin-top: 12px; font-size: 11px; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; line-height: 1.6; }
 /* ─── lmslide ─── */
 #v-lmslide {
   --accent: #ff2a6d;
@@ -2303,9 +2304,12 @@ footer { border-top: 1px solid var(--border); padding: 26px 24px; text-align: ce
     <div class="hs-list" data-fig="s1"></div>
     <div class="hs-sub">止まり方と成立役</div>
     <div class="hs-list" data-fig="s1r"></div>
-    <div class="hs-sub">チェリー下段のとき　右中段にボーナス図柄を狙う</div>
-    <div class="chips sub" data-bsym style="justify-content:flex-start"></div>
+    <div class="hs-sub">チェリー下段のとき　中は適当打ち、右中段にボーナス図柄を狙う</div>
     <div data-mv="rb"></div>
+    <div class="hs-sub">右中段にスイカがビタ止まりしたとき</div>
+    <dl class="cond"><dt>左</dt><dd>中段BAR（色は問わない）・下段チェリー。何コマ滑ってもよい</dd><dt>中</dt><dd>何コマ滑ってもよい</dd><dt>右</dt><dd>スイカが中段にビタ止まり。1コマでも滑ったらだめ</dd></dl>
+    <div class="hs-list" data-fig="sv"></div>
+    <a class="hs-src" href="https://ameblo.jp/datyo1062/entry-12949882522.html" target="_blank" rel="noopener">出典：だちょうとろぴさんのブログ「ビタスイカのNGパターンがあったので補足」</a>
   </section>
 
   <section class="hs-step">
@@ -3646,21 +3650,19 @@ function viewersHS() {
     ok: P => reach('right', P, 'suika', ['mid']).length > 0,
     verdict: P => reach('right', P, 'suika', ['mid']).length ? OKV('中段スイカに届く') : NGV('スイカを取りこぼす') });
 }
-/* チェリー下段のとき：右中段にボーナス図柄（7・BAR）を狙う。余裕4コマ（中段まで0〜3コマ滑る位置）で考える */
+/* チェリー下段のとき：右中段にボーナス図柄（7・BAR）を狙う。図柄ごとに余裕4コマ（中段まで0〜3コマ滑る位置）で考える */
 function viewerBonus() {
-  const box = ROOT.querySelector('[data-bsym]'); if (!box) return;
-  const SYMS = [['white7', '白7'], ['whiteBAR', '白BAR'], ['pink7', 'ピンク7'], ['pinkBAR', 'ピンクBAR']];
-  const posOf = name => { for (let n = 1; n <= 21; n++) if (sym('right', n) === name) return n; };
-  let cur = 0;
-  const draw = () => {
-    box.innerHTML = SYMS.map(([, t], i) => `<button class="chip" data-i="${i}" aria-pressed="${i === cur}">${t}</button>`).join('');
-    const [name, label] = SYMS[cur], S = posOf(name);
-    const ok = P => ((S - P) % 21 + 21) % 21 <= 3;
-    mvq('[data-mv="rb"]', { reel: 'right', start: S, fixed: { left: 3 }, marks: [0], labels: { [S]: label },
-      ok, verdict: P => ok(P) ? OKV('中段に止まったら、チェリー重複ボーナス確定') : NGV(`${label}が中段に届かない`) });
-  };
-  box.addEventListener('click', e => { const c = e.target.closest('.chip'); if (c) { cur = +c.dataset.i; draw(); } });
-  draw();
+  if (!ROOT.querySelector('[data-mv="rb"]')) return;
+  const S = []; for (let n = 1; n <= 21; n++) if (['white7', 'whiteBAR', 'pink7', 'pinkBAR'].includes(sym('right', n))) S.push(n);
+  const ok = P => S.some(x => ((x - P) % 21 + 21) % 21 <= 3);
+  mvq('[data-mv="rb"]', { reel: 'right', start: 11, fixed: { left: 3 }, marks: [0], labels: { 11: '白7・白BAR', 21: 'ピンク7・ピンクBAR' },
+    ok, verdict: P => ok(P) ? OKV('ボーナス図柄が中段に止まったら、チェリー重複ボーナス確定') : NGV('ボーナス図柄を中段に狙えていない') });
+  // 右中段ビタスイカ（左3番・右8番）：中の止まり方で分ける
+  const sv = ROOT.querySelector('[data-fig="sv"]');
+  sv.innerHTML =
+    item(col('left', 3) + col('middle', 16) + col('right', 8), '中段HANA・上段スイカ<small><strong>チェリー重複ボーナス確定</strong></small>') +
+    item(col('left', 3) + col('middle', 19) + col('right', 8), '中段ピンク7<small><strong>チェリー重複ボーナス確定</strong></small>') +
+    item(col('left', 3) + col('middle', 4) + col('right', 8), '中段HANA・下段ベル<small>ボーナスでなくても止まる</small>');
 }
 function drawStatic() {
   const SM = spin('middle'), SR = spin('right'), L6 = col('left', 6);
@@ -3670,7 +3672,7 @@ function drawStatic() {
          '白BARを上段か中段に狙う<small>チェリーは中段か下段</small>');
   ROOT.querySelector('[data-fig="s1r"]').innerHTML =
     item(col('left', 4) + SM + SR, 'BAR下段<small>ハズレ・ベル・リプレイ<br>中・右 適当打ち</small>') +
-    item(col('left', 3) + SM + SR, 'チェリー下段<small>チェリー<br>右中段にボーナス図柄を狙う<br>中段に止まったら<strong>チェリー重複ボーナス確定</strong></small>') +
+    item(col('left', 3) + SM + SR, 'チェリー下段<small>チェリー<br>中は適当打ち、右中段にボーナス図柄を狙う<br>中段に止まったら<strong>チェリー重複ボーナス確定</strong></small>') +
     item(L6 + SM + SR, '白7上段<small><strong>スイカorボーナス</strong>　→ 2へ</small>') +
     item(col('left', 7) + SM + SR, '白7中段<small>白BAR中段ビタ押しから4コマ滑ったときだけ<br><strong>スイカ重複BIG確定</strong><br>スイカを揃えてからBIG狙い<br>チェリー枠内に押せていなかったら単独BIG</small>');
   // 2 右：押す位置（中段番号 7・8）
@@ -3810,7 +3812,7 @@ function init() {
   drawStatic();
   viewersHS();
   viewerBonus();
-  ROOT.querySelector('[data-score]').textContent = '44〜67';
+  ROOT.querySelector('[data-score]').textContent = '39〜67';
   for (const k of ['middle', 'right']) {
     const el = ROOT.querySelector(`.reel[data-r="${k}"]`);
     const tr = document.createElement('div'); tr.className = 'track'; el.appendChild(tr);
@@ -3824,7 +3826,7 @@ document.fonts ? document.fonts.ready.then(init) : init();
 
 /* ─── 目押し難易度（押す順のフロー・点数・ゲージ） ─── */
 (function () {
-  const FLOWS = [{"label": "チェリー成立時", "nodes": [["左", 2, "白BAR上中段"], ["右", 4, "7かBAR<br>中段"], ["中", 21, "適当打ち"]]}, {"label": "スイカ成立時", "nodes": [["左", 2, "白BAR上中段"], ["右", 2, "白7下スイカ<br>上中段"], ["中", [[9, "ピンク7付近<br>スイカ成立時"], [5, "白7付近<br>スイカ・ボーナス"]]]]}];
+  const FLOWS = [{"label": "チェリー成立時", "nodes": [["左", 2, "白BAR上中段"], ["中", 21, "適当打ち"], ["右", [[5, "白7・白BAR<br>中段"], [6, "ピンク7・<br>ピンクBAR中段"]]]]}, {"label": "スイカ成立時", "nodes": [["左", 2, "白BAR上中段"], ["右", 2, "白7下スイカ<br>上中段"], ["中", [[9, "ピンク7付近<br>スイカ成立時"], [5, "白7付近<br>スイカ・ボーナス"]]]]}];
   const unit = w => Math.log2(21 / w) / Math.log2(21);
   // 狙う場所が複数あるリールは、ボタンを縦に並べて選ぶ
   const opts = n => Array.isArray(n[1]) ? n[1] : [[n[1], n[2]]];
