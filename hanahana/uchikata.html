@@ -2306,7 +2306,7 @@ footer { border-top: 1px solid var(--border); padding: 26px 24px; text-align: ce
     <div class="hs-list" data-fig="s1r"></div>
     <div class="hs-sub">チェリー下段のとき　中は適当打ち、右中段にボーナス図柄を狙う</div>
     <div data-mv="rb"></div>
-    <div class="hs-sub">右中段にスイカがビタ止まりしたとき</div>
+    <div class="hs-sub">右中段スイカビタでチェリー重複ボーナスになるパターン</div>
     <dl class="cond"><dt>左</dt><dd>中段BAR（色は問わない）・下段チェリー。何コマ滑ってもよい</dd><dt>中</dt><dd>何コマ滑ってもよい</dd><dt>右</dt><dd>スイカが中段にビタ止まり。1コマでも滑ったらだめ</dd></dl>
     <div class="hs-list" data-fig="sv"></div>
     <a class="hs-src" href="https://ameblo.jp/datyo1062/entry-12949882522.html" target="_blank" rel="noopener">出典：だちょうとろぴさんのブログ「ビタスイカのNGパターンがあったので補足」</a>
@@ -3660,9 +3660,9 @@ function viewerBonus() {
   // 右中段ビタスイカ（左3番・右8番）：中の止まり方で分ける
   const sv = ROOT.querySelector('[data-fig="sv"]');
   sv.innerHTML =
-    item(col('left', 3) + col('middle', 16) + col('right', 8), '中段HANA・上段スイカ<small><strong>チェリー重複ボーナス確定</strong></small>') +
-    item(col('left', 3) + col('middle', 19) + col('right', 8), '中段ピンク7<small><strong>チェリー重複ボーナス確定</strong></small>') +
-    item(col('left', 3) + col('middle', 4) + col('right', 8), '中段HANA・下段ベル<small>ボーナスでなくても止まる</small>');
+    item(col('left', 3) + col('middle', 16) + col('right', 8), '中リール⑯番HANA・右スイカ中段ビタ<small><strong>チェリー重複ボーナス確定</strong></small>') +
+    item(col('left', 3) + col('middle', 19) + col('right', 8), '中リール中段ピンク7・右スイカ中段ビタ<small><strong>チェリー重複ボーナス確定</strong></small>') +
+    item(col('left', 3) + col('middle', 4) + col('right', 8), '中リール④番HANA・右スイカ中段ビタ<small>ボーナスでなくても止まる</small>');
 }
 function drawStatic() {
   const SM = spin('middle'), SR = spin('right'), L6 = col('left', 6);
