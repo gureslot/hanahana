@@ -3386,7 +3386,7 @@ function update(reel, P) {
       if (reel === 'middle' && viewers.middle && viewers.middle.user && state.leftRow === 'up' && state.midRow !== r[0].r) { state.midRow = r[0].r; syncBranch(); refresh('right'); }
     } else {
       const txt = uniq.length > 1 ? uniq.map(x => ROW_JA[x]).join('か') + 'にスイカ' : `${ROW_JA[uniq[0]]}スイカ`;
-      v.innerHTML = `<span class="ok"><span class="mark">○</span>${txt}</span><span class="sub">${r.map(o => o.s).join('・')}コマスベリのどちらで止まるかは決まっていない</span>`;
+      v.innerHTML = `<span class="ok"><span class="mark">○</span>${txt}</span>`;
       state[reel === 'middle' ? 'midX' : 'rightX'] = null;
     }
   }
@@ -4725,7 +4725,7 @@ function drawStatic() {
   const PINK = P => P >= 12 || P === 1;
   const okA = P => PINK(P) && reach('middle', P, 'suika', ['up', 'low']).length > 0;
   mv('a', { reel: 'middle', start: 19, marks: [1, -1], labels: { 19: 'ピンク7付近' },
-    ok: okA, verdict: P => okA(P) ? OKV('この位置で押せば、スイカ成立時はスイカが必ず上段か下段に止まる') : NGV('ピンク7付近のスイカが上段・下段に届かない') });
+    ok: okA, verdict: P => { if (!okA(P)) return NGV('ピンク7付近のスイカが上段・下段に届かない'); const r = ['up', 'low'].filter(x => reach('middle', P, 'suika', [x]).length); return OKV(r.length === 2 ? 'スイカ上段か下段' : `スイカ${r[0] === 'up' ? '上段' : '下段'}`); } });
   put('b', item(SL + col('middle', 20) + SR, '上段スイカ<small>スイカ</small>') +
            item(SL + col('middle', 18) + SR, '下段スイカ<small>スイカ</small>') +
            item(SL + col('middle', 19) + SR, 'スイカが上段・下段にない<small>チェリー</small>'));
@@ -4748,7 +4748,7 @@ function drawStatic() {
   // チェリー成立時：左はチェリーだけ。BIG中のチェリーは上段か下段に止まる
   const okC = P => reach('left', P, 'cherry', ['up', 'low']).length > 0;
   mv('c', { reel: 'left', start: 2, fixed: { middle: 19 }, marks: [1, 0, -1], labels: { 2: '白BAR下チェリー', 12: 'ピンクBAR下チェリー' },
-    ok: okC, verdict: P => { const r = ['up', 'low'].filter(x => reach('left', P, 'cherry', [x]).length); return !r.length ? NGV('チェリーを取りこぼす') : r.length === 2 ? OKV('チェリーが上段か下段に止まる（どちらに止まるかは決まっていない）') : OKV(`チェリーが${ROWJ[r[0]]}に止まる`); } });
+    ok: okC, verdict: P => { const r = ['up', 'low'].filter(x => reach('left', P, 'cherry', [x]).length); return !r.length ? NGV('チェリーを取りこぼす') : r.length === 2 ? OKV('チェリーが上段か下段に止まる') : OKV(`チェリーが${ROWJ[r[0]]}に止まる`); } });
 
 }
 document.fonts ? document.fonts.ready.then(drawStatic) : drawStatic();
@@ -5016,7 +5016,7 @@ function drawStatic() {
 
   mv('a', { reel: 'right', start: 5, marks: [1, -1], labels: { 5: 'ピンク7と白7の間', 14: '白BAR付近' },
     ok: P => reach('right', P, 'suika', ['up', 'low']).length > 0,
-    verdict: P => reach('right', P, 'suika', ['up', 'low']).length ? OKV('この位置で押せば、スイカ成立時はスイカが必ず上段か下段に止まる') : NGV('スイカが上段・下段に届かない') });
+    verdict: P => { const r = ['up', 'low'].filter(x => reach('right', P, 'suika', [x]).length); return !r.length ? NGV('スイカが上段・下段に届かない') : OKV(r.length === 2 ? 'スイカ上段か下段' : `スイカ${r[0] === 'up' ? '上段' : '下段'}`); } });
   put('b', item(SL + SM + col('right', 3), '上段スイカ<small>スイカ</small>') +
            item(SL + SM + col('right', 5), '下段スイカ<small>スイカ</small>') +
            item(SL + SM + col('right', 4), 'スイカが上段・下段にない<small>チェリー</small>'));
@@ -5027,8 +5027,6 @@ function drawStatic() {
   const LJ = { up: '左上段', low: '左下段', both: '左上下段' };
   // 右と左の止まり方 → 中がスイカを止めてよい段・ライン
   const MROWS = { 'up-up': ['up'], 'up-low': ['mid'], 'up-both': ['up', 'mid'], 'low-low': ['low'], 'low-up': ['mid'], 'low-both': ['mid', 'low'] };
-  const LINE = { 'up-up': '上段一直線', 'up-low': '右上がり', 'up-both': '上段一直線か右上がり',
-                 'low-low': '下段一直線', 'low-up': '右下がり', 'low-both': '下段一直線か右下がり' };
   let rr = 'up', lr = 'up';
   const cR = ROOT.querySelector('[data-recvr]'), cL = ROOT.querySelector('[data-recvl]');
   const drawChips = () => {
@@ -5039,12 +5037,12 @@ function drawStatic() {
   const drawM = () => {
     const k = rr + '-' + lr, rows = MROWS[k], okM = P => reach('middle', P, 'suika', rows).length > 0;
     mv('m', { reel: 'middle', start: 19, fixed: { left: LX[lr], right: RX[rr] }, marks: rows.map(r => OFF[r]), labels: { 19: 'ピンク7付近', 8: '白7付近' },
-      ok: okM, verdict: P => okM(P) ? OKV(`中${rows.map(r => ROWJ[r]).join('か')}にスイカ（${LINE[k]}）`) : NGV('スイカを取りこぼす') });
+      ok: okM, verdict: P => okM(P) ? OKV(`中${rows.map(r => ROWJ[r]).join('か')}にスイカ`) : NGV('スイカを取りこぼす') });
   };
   const drawL = () => {
     mv('l', { reel: 'left', start: 7, fixed: { right: RX[rr] }, marks: [1, -1], labels: { 7: '白7付近', 13: 'ピンクBAR付近' },
       ok: P => lRows(P).length > 0,
-      verdict: P => { const r = lRows(P); return !r.length ? NGV('スイカを取りこぼす') : r.length === 2 ? OKV('スイカ上段か下段（どちらに止まるかは決まっていない）') : OKV(`左${ROWJ[r[0]]}にスイカ`); },
+      verdict: P => { const r = lRows(P); return !r.length ? NGV('スイカを取りこぼす') : r.length === 2 ? OKV('スイカ上段か下段') : OKV(`左${ROWJ[r[0]]}にスイカ`); },
       onPos: P => { const r = lRows(P); if (r.length === 1 && r[0] !== lr) { lr = r[0]; drawChips(); drawM(); } } });
   };
   cR.addEventListener('click', e => { const c = e.target.closest('.chip'); if (c && c.dataset.r !== rr) { rr = c.dataset.r; drawChips(); drawL(); drawM(); } });
@@ -5057,7 +5055,7 @@ function drawStatic() {
   // チェリー成立時：左はチェリーだけ。BIG中のチェリーは上段か下段に止まる
   const okC = P => reach('left', P, 'cherry', ['up', 'low']).length > 0;
   mv('c', { reel: 'left', start: 2, fixed: { right: 6 }, marks: [1, 0, -1], labels: { 2: '白BAR下チェリー', 12: 'ピンクBAR下チェリー' },
-    ok: okC, verdict: P => { const r = ['up', 'low'].filter(x => reach('left', P, 'cherry', [x]).length); return !r.length ? NGV('チェリーを取りこぼす') : r.length === 2 ? OKV('チェリーが上段か下段に止まる（どちらに止まるかは決まっていない）') : OKV(`チェリーが${ROWJ[r[0]]}に止まる`); } });
+    ok: okC, verdict: P => { const r = ['up', 'low'].filter(x => reach('left', P, 'cherry', [x]).length); return !r.length ? NGV('チェリーを取りこぼす') : r.length === 2 ? OKV('チェリーが上段か下段に止まる') : OKV(`チェリーが${ROWJ[r[0]]}に止まる`); } });
 
 }
 document.fonts ? document.fonts.ready.then(drawStatic) : drawStatic();
