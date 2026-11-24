@@ -4730,7 +4730,7 @@ function drawStatic() {
            item(SL + col('middle', 18) + SR, '下段スイカ<small>スイカ</small>') +
            item(SL + col('middle', 19) + SR, 'スイカが上段・下段にない<small>チェリー</small>'));
   const ROWJ = { up: '上段', mid: '中段', low: '下段' };
-  const MX = { up: 16, low: 18 }, LX = { up: 7, low: 9 };   // その段にスイカが止まった形
+  const MX = { up: 20, low: 18 }, LX = { up: 7, low: 9 };   // その段にスイカが止まった形（上段スイカ＝下段ピンク7、下段スイカ＝上段ピンク7）
   let row = 'up';
   const chips = ROOT.querySelector('[data-recv]');
   const drawChips = () => { chips.innerHTML = ['up', 'low'].map(r => `<button class="chip" data-r="${r}" aria-pressed="${r === row}">中${ROWJ[r]}</button>`).join(''); };
@@ -4743,7 +4743,7 @@ function drawStatic() {
   };
   chips.addEventListener('click', e => { const c = e.target.closest('.chip'); if (c && c.dataset.r !== row) { row = c.dataset.r; drawChips(); draw(); } });
   drawChips(); draw();
-  put('c', item(col('left', 7) + col('middle', 16) + col('right', 7), '上段一直線<small>中上段</small>') +
+  put('c', item(col('left', 7) + col('middle', 20) + col('right', 7), '上段一直線<small>中上段</small>') +
            item(col('left', 9) + col('middle', 18) + col('right', 9), '下段一直線<small>中下段</small>'));
   // チェリー成立時：左はチェリーだけ。BIG中のチェリーは上段か下段に止まる
   const okC = P => reach('left', P, 'cherry', ['up', 'low']).length > 0;
