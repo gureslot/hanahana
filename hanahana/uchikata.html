@@ -4552,7 +4552,7 @@ function drawStatic() {
     verdict: P => reach('right', P, 'suika', ['up', 'low']).length ? OKV('この位置で押せば、スイカ成立時はスイカが必ず上段か下段に止まる') : NGV('スイカが上段・下段に届かない') });
   put('b', item(SL + SM + col('right', 3), '上段スイカ<small>スイカ</small>') +
            item(SL + SM + col('right', 5), '下段スイカ<small>スイカ</small>') +
-           item(SL + SM + col('right', 6), 'スイカが上段・下段にない<small>チェリー</small>'));
+           item(SL + SM + col('right', 4), 'スイカが上段・下段にない<small>チェリー</small>'));
   const ROWJ = { up: '上段', mid: '中段', low: '下段' };
   const RX = { up: 3, low: 5 };
   // 左のスイカの止まり方：上段のみ（5番が中段）／下段のみ（9番が中段）／上下段（7番が中段＝2ライン）
