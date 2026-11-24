@@ -2979,7 +2979,7 @@ footer { border-top: 1px solid var(--border); padding: 26px 24px; text-align: ce
 
   <section class="pc">
     <h2 class="pc-title">スイカの高速揃え参考用</h2>
-    <div class="yt" data-yt="PcfsVj-06Ys" style="margin-top:14px"></div>
+    <div class="yt short" data-yt="PcfsVj-06Ys" style="margin-top:14px"></div>
   </section>
 </main>
 </section>
@@ -3022,7 +3022,7 @@ footer { border-top: 1px solid var(--border); padding: 26px 24px; text-align: ce
 
   <section class="pc">
     <h2 class="pc-title">スイカの高速揃え参考用</h2>
-    <div class="yt" data-yt="FFCKdK2GONs" style="margin-top:14px"></div>
+    <div class="yt short" data-yt="FFCKdK2GONs" style="margin-top:14px"></div>
   </section>
 </main>
 </section>
@@ -5825,6 +5825,8 @@ ROOT.querySelector('[data-vbody]').textContent = VIDEO.thoughts;
     const id = location.hash.slice(1);
     const view = id && document.getElementById('v-' + (ALIAS[id] || id));
     document.querySelectorAll('.view').forEach(v => { v.hidden = v !== view; });
+    // 画面を離れたら、再生中の動画を止める（サムネイルに戻す）
+    document.querySelectorAll('.yt iframe').forEach(f => { const el = f.closest('.yt'); if (!view || !view.contains(el)) window.ytThumb(el); });
     list.hidden = !!view; bar.hidden = !view;
     if (view) {
       bar.querySelector('[data-scene]').textContent = SCENE[id] || '';
@@ -5889,13 +5891,14 @@ ROOT.querySelector('[data-vbody]').textContent = VIDEO.thoughts;
 </script>
 <script>
 /* 実演動画：サムネイルを押すとその場で再生 */
-document.querySelectorAll('.yt[data-yt]').forEach(el => {
+window.ytThumb = el => {
   const id = el.dataset.yt;
   el.innerHTML = `<img src="https://img.youtube.com/vi/${id}/hqdefault.jpg" alt="実演動画" loading="lazy"><button aria-label="再生"><span></span></button>`;
   el.querySelector('button').addEventListener('click', () => {
     el.innerHTML = `<iframe src="https://www.youtube.com/embed/${id}?autoplay=1&playsinline=1" allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture" allowfullscreen></iframe>`;
   });
-});
+};
+document.querySelectorAll('.yt[data-yt]').forEach(window.ytThumb);
 </script>
 </body>
 </html>
