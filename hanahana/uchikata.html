@@ -3059,11 +3059,11 @@ footer { border-top: 1px solid var(--border); padding: 26px 24px; text-align: ce
     <p class="hs-note muted">少し遅く押して失敗しても3番のベルが中段に止まるので、成功したかどうかは判定できない</p>
   </section>
   <section class="hs-step">
-    <div class="hs-head"><span class="hs-no">2</span><h2 class="hs-title">右　ピンクBARを枠下か枠枠下にビタ押し<small>21番のピンクBAR</small></h2></div>
+    <div class="hs-head"><span class="hs-no">2</span><h2 class="hs-title">右　ピンクBARを枠下か枠下下にビタ押し<small>21番のピンクBAR</small></h2></div>
     <div class="hs-list" data-fig="n2"></div>
     <div class="hs-sub">止まり方</div>
     <div class="hs-list" data-fig="n2r"></div>
-    <p class="hs-note muted">枠下と枠枠下のどちらでビタ押しすればよいかは、紹介しているポストでも「少し微妙」とされていて、はっきりしていない</p>
+    <p class="hs-note muted">枠下と枠下下のどちらでビタ押しすればよいかは、紹介しているポストでも「少し微妙」とされていて、はっきりしていない</p>
   </section>
   <section class="hs-step">
     <div class="hs-head"><span class="hs-no">3</span><h2 class="hs-title">左　白7を枠下にビタ押し</h2></div>
@@ -5721,7 +5721,7 @@ function drawStatic() {
   put('n1', item(SL + colKey('middle', 21) + SR, 'ピンク7が枠下に来た瞬間に押す') +
             item(SL + col('middle', 3) + SR, '3番のベルが中段に止まる'));
   put('n2', item(SL + col('middle', 3) + colKey('right', 2), 'ピンクBARが枠下に来た瞬間に押す') +
-            item(SL + col('middle', 3) + colKey('right', 3, 3), 'ピンクBARが枠枠下に来た瞬間に押す'));
+            item(SL + col('middle', 3) + colKey('right', 3, 3), 'ピンクBARが枠下下に来た瞬間に押す'));
   put('n2r', item(SL + col('middle', 3) + col('right', 6), '5番のベルが下段まで滑る<small>→ 3へ</small>') +
              item(SL + col('middle', 3) + col('right', 5), '5番のベルが中段に止まる<small>失敗か、たぶん非成立</small>'));
   put('n3', item(colKey('left', 9) + col('middle', 3) + col('right', 6), '白7が枠下に来た瞬間に押す'));
@@ -5732,7 +5732,7 @@ document.fonts ? document.fonts.ready.then(drawStatic) : drawStatic();
 
 /* ─── 目押し難易度（押す順のフロー・点数・ゲージ） ─── */
 (function () {
-  const FLOWS = [{"label": "キング・ドラゴン閃光", "nodes": [["中", 1, "白7枠下ビタ"], ["左", 1, "白7枠下ビタ"], ["右", 21, "適当打ち"]]}, {"label": "ニューキング", "nodes": [["中", 1, "ピンク7<br>枠下ビタ"], ["右", 1, "ピンクBAR<br>枠下か枠枠下ビタ"], ["左", 1, "白7枠下ビタ"]]}];
+  const FLOWS = [{"label": "キング・ドラゴン閃光", "nodes": [["中", 1, "白7枠下ビタ"], ["左", 1, "白7枠下ビタ"], ["右", 21, "適当打ち"]]}, {"label": "ニューキング", "nodes": [["中", 1, "ピンク7<br>枠下ビタ"], ["右", 1, "ピンクBAR<br>枠下か枠下下ビタ"], ["左", 1, "白7枠下ビタ"]]}];
   const root = ROOT.querySelector('[data-droot="0"]') || document;
   const unit = w => Math.log2(21 / w) / Math.log2(21);
   // 狙う場所が複数あるリールは、ボタンを縦に並べて選ぶ
