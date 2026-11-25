@@ -2542,6 +2542,8 @@ footer { border-top: 1px solid var(--border); padding: 26px 24px; text-align: ce
   <section class="pc">
     <h2 class="pc-title">メリット・デメリット</h2>
     <div class="pc-row"><span class="pc-tag">デメリット</span><span>常にスライドではできない。出目がずれてきたら、どこかで調節が必要</span></div>
+    <div class="pc-row" data-only="slide"><span class="pc-tag">デメリット</span><span>完璧にできても、チェリー重複ボーナスを完全には察知できない</span></div>
+    <div class="pc-row" data-only="slide"><span class="pc-tag">デメリット</span><span>完璧にできても、次G告知時のボーナスを成立ゲームで入賞させられない</span></div>
   </section>
   <section class="diff" data-droot="0">
     <h2 class="diff-title">目押し難易度</h2>
@@ -5830,6 +5832,8 @@ ROOT.querySelector('[data-vbody]').textContent = VIDEO.thoughts;
     list.hidden = !!view; bar.hidden = !view;
     if (view) {
       bar.querySelector('[data-scene]').textContent = SCENE[id] || '';
+      // 同じ画面を別の場面で使うとき、その場面だけの行（data-only）を出し分ける
+      view.querySelectorAll('[data-only]').forEach(e => { e.style.display = e.dataset.only.split(' ').includes(id) ? '' : 'none'; });
       window.scrollTo(0, 0);
       window.dispatchEvent(new Event('resize'));
     } else {
