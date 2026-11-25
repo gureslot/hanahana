@@ -3041,12 +3041,19 @@ footer { border-top: 1px solid var(--border); padding: 26px 24px; text-align: ce
   <p class="method-diff"></p>
 </header>
 <main>
-<style>.tips p { margin: 0; padding: 18px 0; border-top: 1px solid var(--border); font-size: 14px; line-height: 1.9; } .tips p:first-child { border-top: 0; }</style>
+<style>
+.tip { padding: 20px 0; border-top: 1px solid var(--border); }
+.tip:first-child { border-top: 0; padding-top: 4px; }
+.tip h2 { margin: 0; font-family: var(--serif); font-size: 16px; font-weight: 700; }
+.tip ul { margin: 8px 0 0; padding: 0; list-style: none; }
+.tip li { position: relative; margin-top: 6px; padding-left: 14px; font-size: 13px; line-height: 1.8; }
+.tip li::before { content: ''; position: absolute; left: 0; top: 0.8em; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
+</style>
   <div class="tips">
-    <p>設定変更後の1G目は、リールがガックンと動く。ただし個体差や出目によって、分かりにくいこともある。</p>
-    <p>スイカ・ベル・リプレイとの重複BIGでは、必ず何かしらの特別な演出がある。チェリー重複ボーナスはREGもあるので、重複が確定していても特別な演出がないことがある。演出があればBIG。</p>
-    <p>チェリー重複のとき、4コマ滑って中段にチェリーが止まる位置をビタ押ししたときだけ、チェリー重複ボーナス確定の中段チェリーが出る。払い出しは1ライン分少なくなる。</p>
-    <p>REG後にフェザーランプへ色が付く確率は、ゲーム数に応じて段階的に上がる。電源を切るとリセットされる。</p>
+    <section class="tip"><h2>設定変更後の1G目</h2><ul><li>リールがガックンと動く</li><li>個体差や出目によっては、分かりにくいこともある</li></ul></section>
+    <section class="tip"><h2>重複ボーナスの演出</h2><ul><li>スイカ・ベル・リプレイとの重複BIG → 必ず何かしらの特別な演出がある</li><li>チェリー重複ボーナス → REGもあるので、重複が確定していても特別な演出がないことがある。演出があればBIG</li></ul></section>
+    <section class="tip"><h2>中段チェリー</h2><ul><li>チェリー重複のとき、4コマ滑って中段にチェリーが止まる位置をビタ押ししたときだけ出る（チェリー重複ボーナス確定）</li><li>払い出しは1ライン分少なくなる</li></ul></section>
+    <section class="tip"><h2>REG後のフェザーランプ</h2><ul><li>色が付く確率は、ゲーム数に応じて段階的に上がる</li><li>電源を切るとリセットされる</li></ul></section>
   </div>
 </main>
 </section>
