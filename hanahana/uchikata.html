@@ -5709,7 +5709,9 @@ function drawStatic() {
   const colKey = (reel, X, d = 2) => `<div class="hs-col">${[1, 0, -1].map(o => `<img src="${IMG[sym(reel, X + o)]}" alt="">`).join('')}${d === 3 ? `<img class="below" src="${IMG[sym(reel, X - 2)]}" alt="">` : ''}<img class="key" src="${IMG[sym(reel, X - d)]}" alt=""></div>`;
   const col4 = (reel, X) => `<div class="hs-col">${[1, 0, -1].map(o => `<img src="${IMG[sym(reel, X + o)]}" alt="">`).join('')}<img class="below" src="${IMG[sym(reel, X - 2)]}" alt=""></div>`;
   // スターハナハナ（右は4・8・16番のどれでも、窓の3段は同じ並び）
-  put('s', item(col('left', 11) + col('middle', 3) + col('right', 4), '中段は左⑪・中③<small>右は不明</small>'));
+  // 左は枠上の段（13番ピンクBAR）も出す。中・右はその段を空けて窓の高さをそろえる（右は番号が不明なので枠上は描かない）
+  const colTop = (reel, X, show) => `<div class="hs-col">${show ? `<img style="opacity:0.8" src="${IMG[sym(reel, X + 2)]}" alt="">` : '<span style="display:block;height:25px;background:#0d0d0d"></span>'}${[1, 0, -1].map(o => `<img src="${IMG[sym(reel, X + o)]}" alt="">`).join('')}</div>`;
+  put('s', item(colTop('left', 11, true) + colTop('middle', 3) + colTop('right', 4), '中段は左⑪・中③<small>右は不明</small>'));
   // キング・ドラゴン閃光
   put('a', item(SL + colKey('middle', 12) + SR, '白7が枠下に来た瞬間に押す'));
   put('b', item(SL + col4('middle', 12) + SR, '白7が枠下のまま止まる<small><strong>15枚役成立</strong>　→ 2へ</small>') +
