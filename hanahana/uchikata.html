@@ -3046,6 +3046,9 @@ footer { border-top: 1px solid var(--border); padding: 26px 24px; text-align: ce
 .tip:first-child { margin-top: 20px; }
 .tip h2 { margin: 0; padding: 10px 12px; border-left: 4px solid var(--accent); background: #171717; font-family: var(--serif); font-size: 19px; font-weight: 700; letter-spacing: 0; }
 .tip ul { margin: 10px 0 0; padding: 0; list-style: none; }
+.tip-more { margin-top: 10px; font-size: 13px; }
+.tip-more summary { cursor: pointer; color: var(--muted); }
+.tip-more pre { margin: 8px 0 0; padding: 12px; background: #171717; border-radius: 6px; font-size: 11.5px; line-height: 1.7; white-space: pre-wrap; overflow-x: auto; }
 .tip li { position: relative; margin-top: 6px; padding-left: 1em; font-size: 13px; line-height: 1.8; }
 .tip li::before { content: '・'; position: absolute; left: 0; top: 0; }
 </style>
@@ -3054,6 +3057,16 @@ footer { border-top: 1px solid var(--border); padding: 26px 24px; text-align: ce
     <section class="tip"><h2>重複ボーナスの演出</h2><ul><li>スイカ・ベル・リプレイとの重複BIG → 必ず何かしらの特別な演出がある</li><li>チェリー重複ボーナス → REGもあるので、重複が確定していても特別な演出がないことがある。演出があればBIG</li></ul></section>
     <section class="tip"><h2>中段チェリー</h2><ul><li>チェリー重複のとき、4コマ滑って中段にチェリーが止まる位置をビタ押ししたときだけ出る（チェリー重複ボーナス確定）</li><li>払い出しは1ライン分少なくなる</li></ul></section>
     <section class="tip"><h2>REG後のフェザーランプ</h2><ul><li>色が付く確率は、ゲーム数に応じて段階的に上がる</li><li>電源を切るとリセットされる</li></ul></section>
+    <section class="tip"><h2>設定変更後1回目のBIGの<br>フェザーランプ</h2><ul><li>白・青・黄・緑・赤が均等の確率で選ばれる</li></ul></section>
+    <section class="tip"><h2>BIG後の連チャンサウンド</h2><ul><li>連チャンサウンドになる権利・状態は、電源を切っても引き継がれる</li><li>設定変更でリセットされる</li></ul></section>
+    <section class="tip"><h2>ストップボタン<br>受付開始のタイミング</h2><ul><li>実機で確かめた法則ではなく、「こうなっているのでは」という仮説</li><li>各リールには10番と21番の2か所に基準点がある（ほぼ半周間隔）</li><li>3リールすべてが基準点を通過した3コマ後に、3リール同時に受付が始まる</li><li>一番遅れて基準点に届くリールで、受付のタイミングが決まる</li><li>例：出目 左4・中5・右10 → 一番遅いのは左（10番まで6コマ）。6＋3＝9コマ進んだ左13・中14・右19で受付開始</li><li>例：右だけ11にすると、右が21番まで10コマかかる。10＋3＝13コマ進んだ左17・中18・右3で受付開始</li><li>11番は基準点を通過した直後なので、どのリールでも受付が一番遅くなる位置</li></ul><details class="tip-more"><summary>式</summary><pre>d = min((10 − S) mod 21, (21 − S) mod 21)
+D = max(d左, d中, d右) + 3
+X = ((S − 1 + D) mod 21) + 1
+
+S … レバーを叩く前の中段の番号
+d … S から次の基準点までのコマ数
+D … 始動から受付開始までに進むコマ数（3リール共通）
+X … 受付が始まった瞬間の中段の番号</pre></details></section>
   </div>
 </main>
 </section>
