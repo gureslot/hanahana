@@ -664,6 +664,187 @@ footer { border-top: 1px solid var(--border); padding: 26px 24px; text-align: ce
 #v-lmslide .pc-row { display: flex; align-items: baseline; gap: 10px; margin-top: 12px; font-size: 13px; line-height: 1.8; }
 #v-lmslide .pc-tag { flex: 0 0 72px; box-sizing: border-box; text-align: center; padding: 1px 0; border: 1px solid #444; border-radius: 999px; font-size: 11px; color: var(--muted); }
 #v-lmslide .pc-tag.good { border-color: var(--accent); color: var(--accent); }
+/* ─── sayu ─── */
+#v-sayu {
+  --accent: #ff2a6d;
+  --bg:     #0d0d0d;
+  --border: #1e1e1e;
+  --text:   #e0dbd5;
+  --muted:  #5e5e5e;
+  --serif:  'Noto Serif JP', 'YuMincho', '游明朝', serif;
+  --sans:   'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+  --h: 25px;
+  --w: 50px;
+  --g: 4px;           
+  --lab: 96px;        
+  --rows: 11;
+}
+#v-sayu .head { max-width: 560px; margin: 34px auto 8px; padding: 0 22px; text-align: center; }
+#v-sayu .page-title { font-family: var(--serif); font-size: clamp(24px, 6vw, 30px); font-weight: 700; letter-spacing: 4px; }
+#v-sayu .method-diff { margin-top: 6px; font-size: 12px; color: var(--muted); letter-spacing: 0.08em; }
+#v-sayu .method-diff b { font-family: var(--serif); font-size: 18px; color: var(--text); margin-left: 4px; letter-spacing: 1px; }
+#v-sayu .method-title { margin-top: 14px; font-family: var(--serif); font-size: 17px; font-weight: 700; letter-spacing: 2px; }
+#v-sayu main { max-width: 560px; margin: 0 auto; padding: 0 18px; }
+#v-sayu .chips { display: flex; justify-content: center; gap: 8px; margin-top: 20px; flex-wrap: wrap; }
+#v-sayu .chip {
+  font: inherit; font-size: 12px; letter-spacing: 0.05em; color: var(--text);
+  background: #161616; border: 1px solid #333; border-radius: 999px; padding: 7px 14px; cursor: pointer;
+  -webkit-tap-highlight-color: transparent; transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+#v-sayu .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+#v-sayu .stage-cap { margin: 26px 0 0; text-align: left; font-family: var(--serif); font-size: 13px; letter-spacing: 0.12em; color: var(--text); }
+#v-sayu .stage {
+  position: relative; margin: 10px 0 0;   
+  width: calc(var(--w) * 3 + var(--g) * 2 + var(--lab));
+  height: calc(var(--h) * var(--rows));
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 calc(var(--h) * 1.2), #000 calc(100% - var(--h) * 1.2), transparent 100%);
+          mask-image: linear-gradient(to bottom, transparent 0, #000 calc(var(--h) * 1.2), #000 calc(100% - var(--h) * 1.2), transparent 100%);
+}
+#v-sayu .reel {
+  position: absolute; top: 0; height: 100%; width: calc(var(--w) + var(--g));
+  overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab;
+  -webkit-tap-highlight-color: transparent;
+}
+#v-sayu .reel:active { cursor: grabbing; }
+#v-sayu .reel[data-r="left"] { left: 0; }
+#v-sayu .reel[data-r="middle"] { left: calc(var(--w) + var(--g)); }
+#v-sayu .reel[data-r="middle"] { width: calc(var(--w) * 2 + var(--g) + var(--lab)); z-index: 2; }
+#v-sayu .reel[data-r="right"] { left: calc((var(--w) + var(--g)) * 2); }
+#v-sayu .track { position: absolute; left: 0; top: 0; width: 100%; will-change: transform; z-index: 2; }
+#v-sayu .cell { height: var(--h); width: var(--w); }
+#v-sayu .cell img { display: block; width: 100%; height: 100%; pointer-events: none; -webkit-user-drag: none; transition: filter 0.2s; }
+#v-sayu .cell.ng img { filter: grayscale(1) brightness(0.3); }
+#v-sayu .cell.half img { filter: grayscale(0.6) brightness(0.62); }
+#v-sayu .band { position: absolute; left: calc(var(--w) + 5px); width: 7px; border: 2px solid var(--accent); border-left: 0; pointer-events: none; }
+#v-sayu .band b { position: absolute; left: calc(var(--w) + 12px); top: 50%; transform: translateY(-50%); font-family: var(--serif); font-size: 18px; font-weight: 700; color: var(--accent); white-space: nowrap; }
+#v-sayu .band.half { border-color: #8a4a5e; }
+#v-sayu .band.half b { color: #8a4a5e; font-size: 14px; }
+#v-sayu .win-line { position: absolute; z-index: 3; left: -4px; width: calc(var(--w) * 3 + var(--g) * 2 + 8px); height: 4px; background: #101010; box-shadow: 0 0 0 1px #f2efe9; pointer-events: none; }
+#v-sayu .mark { position: absolute; z-index: 3; width: var(--w); pointer-events: none; box-shadow: inset 3px 0 0 var(--accent), inset -3px 0 0 var(--accent); transition: box-shadow 0.12s, background 0.12s; }
+#v-sayu .mark.hit { background: rgba(255, 42, 109, 0.16); box-shadow: inset 3px 0 0 var(--accent), inset -3px 0 0 var(--accent), 0 0 0 2px var(--accent), 0 0 16px 2px rgba(255, 42, 109, 0.75); }
+#v-sayu .row-label { margin-top: 16px; text-align: center; font-size: 11px; color: var(--muted); letter-spacing: 0.08em; }
+#v-sayu .chips.sub { margin-top: 8px; }
+#v-sayu .chips.sub .chip { padding: 6px 12px; font-size: 11px; }
+#v-sayu .chips[data-press] { display: grid; grid-template-columns: repeat(3, auto); justify-content: center; }
+#v-sayu .aim { width: calc(var(--w) * 3 + var(--g) * 3); margin: 8px auto 0; font-size: 11px; line-height: 1.4; color: var(--text); }
+#v-sayu .aim span { display: block; width: calc(var(--w) + var(--g) / 2); text-align: center; }
+#v-sayu .aim small { display: block; color: var(--muted); font-size: 10px; }
+#v-sayu .slip { margin: 22px auto 0; display: grid; gap: 8px; justify-content: center; }
+#v-sayu .slip-row { display: flex; align-items: center; gap: 10px; font-size: 11px; color: var(--muted); }
+#v-sayu .slip-row .chips { margin: 0; }
+#v-sayu .slip-row .chip { min-width: 52px; }
+#v-sayu .slip-row { flex-direction: column; gap: 6px; }
+#v-sayu .slip-row .chips { display: grid; grid-template-columns: repeat(3, auto); justify-content: center; gap: 6px; }
+#v-sayu .labels { display: flex; justify-content: flex-start; width: calc(var(--w) * 3 + var(--g) * 3); margin: 8px auto 0; }
+#v-sayu .labels span { width: calc(var(--w) + var(--g)); padding-left: 0; font-size: 11px; color: var(--muted); }
+#v-sayu .labels span b { display: block; width: var(--w); text-align: center; font-weight: 400; }
+#v-sayu .verdict { min-height: 46px; margin-top: 16px; text-align: left; font-size: 14px; line-height: 1.7; }
+#v-sayu .verdict .mark-t { font-family: var(--serif); font-weight: 700; margin-right: 6px; }
+#v-sayu .verdict .ng { color: var(--muted); }
+#v-sayu .verdict .sub { display: block; font-size: 11px; color: var(--muted); }
+#v-sayu details.note { max-width: 560px; margin: 26px auto 0; padding: 0 18px; font-size: 12px; color: var(--muted); line-height: 1.9; }
+#v-sayu details.note summary { cursor: pointer; font-family: var(--serif); color: var(--text); font-size: 13px; padding: 10px 0; list-style: none; text-align: center; }
+#v-sayu details.note summary::-webkit-details-marker { display: none; }
+#v-sayu details.note ul { list-style: none; padding: 4px 0 10px; }
+#v-sayu details.note li { padding-left: 1em; text-indent: -1em; }
+#v-sayu details.note li::before { content: '・'; }
+#v-sayu .site-nav { border-top: 1px solid var(--border); margin-top: 40px; padding: 30px 24px 34px; display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+#v-sayu .site-nav a { display: inline-block; padding: 12px 30px; border: 2px solid var(--accent); color: var(--text); text-decoration: none; border-radius: 8px; font-size: 15px; font-weight: 700; letter-spacing: 1px; }
+#v-sayu footer { border-top: 1px solid var(--border); padding: 26px 24px; text-align: center; font-size: 12px; color: var(--muted); letter-spacing: 0.1em; font-family: var(--serif); }
+#v-sayu .hs-step { padding: 26px 0 4px; }
+#v-sayu .hs-head { display: flex; align-items: baseline; gap: 12px; }
+#v-sayu .hs-no { font-family: var(--serif); font-size: 13px; color: var(--accent); letter-spacing: 2px; flex-shrink: 0; }
+#v-sayu .hs-title { font-family: var(--serif); font-size: 18px; font-weight: 700; letter-spacing: 1px; line-height: 1.5; }
+#v-sayu .hs-title small { display: block; font-size: 12px; font-weight: 400; color: var(--muted); }
+#v-sayu .hs-row { display: flex; justify-content: center; align-items: flex-start; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+#v-sayu .hs-fig { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+#v-sayu .hs-win { display: flex; gap: 4px; align-items: flex-end; }
+#v-sayu .hs-col .over { opacity: 0.32; }
+#v-sayu .hs-col .over.key { opacity: 0.7; }
+#v-sayu .hs-col.tall { background: transparent; outline: 0; }
+#v-sayu .hs-col.tall .win { background: #fff; outline: 2px solid var(--accent); }
+#v-sayu .hs-col { width: 50px; background: #fff; outline: 1px solid #2a2a2a; }
+#v-sayu .hs-col img { display: block; width: 50px; height: 25px; }
+#v-sayu .hs-col.aim { outline: 2px solid var(--accent); }
+#v-sayu .hs-col.blank { background: #1c1c1c; }
+#v-sayu .hs-col.spin { background: #1a1a1a; height: 75px; overflow: hidden; position: relative; }
+#v-sayu .hs-col.spin::after { content: ''; position: absolute; inset: 0; z-index: 1; background: rgba(0, 0, 0, 0.45); pointer-events: none; }
+#v-sayu .hs-col.spin .spin-track { will-change: transform; }
+#v-sayu .hs-cap { font-size: 11px; color: var(--text); text-align: center; line-height: 1.45; }
+#v-sayu .hs-cap small { display: block; color: var(--muted); font-size: 10px; }
+#v-sayu .hs-cap strong { color: var(--accent); font-weight: 700; }
+#v-sayu .hs-arrow { align-self: center; width: 9px; height: 9px; border-top: 1px solid var(--muted); border-right: 1px solid var(--muted); transform: rotate(45deg); margin: 0 4px 22px; }
+#v-sayu .hs-yoyu { margin-top: 10px; text-align: center; font-size: 11px; color: var(--muted); }
+#v-sayu .hs-yoyu b { font-family: var(--serif); font-size: 18px; color: var(--accent); margin: 0 2px; }
+#v-sayu .hs-list { margin-top: 16px; display: grid; gap: 14px; }
+#v-sayu .hs-item { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: center; }
+#v-sayu .hs-item .hs-cap { text-align: left; font-size: 12px; line-height: 1.6; }
+#v-sayu .hs-item .hs-cap small { font-size: 11px; }
+#v-sayu .hs-lead { margin-top: 10px; font-size: 13px; line-height: 1.8; color: var(--text); }
+#v-sayu .hs-sub { margin-top: 14px; font-size: 11px; color: var(--muted); letter-spacing: 0.06em; }
+#v-sayu .hs-col.aim2 { outline: 2px solid var(--accent); }
+#v-sayu .reel.fixed { cursor: default; touch-action: auto; }
+#v-sayu .hs-note { margin-top: 12px; font-size: 12px; line-height: 1.8; color: var(--text); }
+#v-sayu .reel-void { position: absolute; top: 0; left: 0; height: 100%; width: var(--w); background: #121212; }
+#v-sayu .diff { padding: 34px 0 30px; margin-top: 30px; border-top: 1px solid var(--border); }
+#v-sayu .diff-title { font-family: var(--serif); font-size: 20px; font-weight: 700; letter-spacing: 1px; text-align: center; }
+#v-sayu .diff .chips { margin-top: 16px; }
+#v-sayu .flow { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; align-items: start; gap: 0 4px; max-width: 380px; margin: 20px auto 0; }
+#v-sayu .flow-node { display: flex; flex-direction: column; align-items: stretch; gap: 6px; min-width: 0; }
+#v-sayu .flow-reel { text-align: center; font-family: var(--serif); font-size: 12px; color: var(--accent); letter-spacing: 2px; }
+#v-sayu .flow-arrow { width: 8px; height: 8px; margin: 46px 3px 0; border-top: 1px solid var(--muted); border-right: 1px solid var(--muted); transform: rotate(45deg); flex-shrink: 0; }
+#v-sayu .flow .fnode { width: 100%; height: 58px; padding: 4px; border: 1px solid #333; border-radius: 14px; background: #161616; font-size: 10px; line-height: 1.3; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text); }
+#v-sayu .flow .fnode b { display: block; font-family: var(--serif); font-size: 17px; font-weight: 700; }
+#v-sayu .flow .fnode.free b { color: var(--muted); }
+#v-sayu .flow .fnode.opt { cursor: pointer; font: inherit; font-size: 10px; color: var(--muted); -webkit-tap-highlight-color: transparent; }
+#v-sayu .flow .fnode.opt[aria-pressed="true"] { border-color: var(--accent); background: rgba(255, 42, 109, 0.14); color: var(--text); }
+#v-sayu .score { margin-top: 26px; text-align: center; }
+#v-sayu .score-num { font-family: var(--serif); font-size: 52px; font-weight: 700; line-height: 1; letter-spacing: 1px; font-variant-numeric: tabular-nums; }
+#v-sayu .score-num small { font-size: 14px; color: var(--muted); margin-left: 4px; letter-spacing: 0; }
+#v-sayu .score-sub { margin-top: 10px; font-size: 12px; color: var(--muted); letter-spacing: 0.06em; }
+#v-sayu .score-sub b { font-family: var(--serif); font-size: 17px; font-weight: 700; color: var(--text); margin: 0 3px; }
+#v-sayu .gauge { position: relative; max-width: 320px; height: 10px; margin: 16px auto 0; border-radius: 5px; background: #1c1c1c; overflow: hidden; }
+#v-sayu .gauge-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 5px; background: linear-gradient(90deg, #2bb3a3 0%, #e8c53a 50%, #ff5a36 100%); transition: width 0.35s cubic-bezier(.2,.8,.2,1), background-size 0.35s cubic-bezier(.2,.8,.2,1); }
+#v-sayu .gauge-ends { display: flex; justify-content: space-between; max-width: 320px; margin: 7px auto 0; font-size: 10px; color: var(--muted); letter-spacing: 0.04em; }
+#v-sayu .diff-note { max-width: 380px; margin: 16px auto 0; font-size: 11px; line-height: 1.8; color: var(--muted); text-align: center; }
+#v-sayu .mv { position: relative; width: 100%; height: calc(25px * 9); margin: 16px 0 0; overflow: hidden; touch-action: none;
+  user-select: none; -webkit-user-select: none; cursor: grab; -webkit-tap-highlight-color: transparent;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 30px, #000 calc(100% - 30px), transparent 100%);
+          mask-image: linear-gradient(to bottom, transparent 0, #000 30px, #000 calc(100% - 30px), transparent 100%); }
+#v-sayu .mv-track { position: absolute; left: 0; top: 0; width: 100%; z-index: 2; will-change: transform; }
+#v-sayu .mv-cell { height: 25px; width: 50px; margin-left: var(--cx); }
+#v-sayu .mv-cell img { display: block; width: 100%; height: 100%; pointer-events: none; -webkit-user-drag: none; }
+#v-sayu .mv-cell.ng img { filter: grayscale(1) brightness(0.3); }
+#v-sayu .mv-fix { position: absolute; z-index: 1; width: 50px; }
+#v-sayu .mv-fix img { display: block; width: 50px; height: 25px; }
+#v-sayu .mv-band { position: absolute; left: calc(var(--cx) + 50px + 6px); width: 9px; border: 2px solid var(--accent); border-left: 0; pointer-events: none; }
+#v-sayu .mv-band div { position: absolute; left: 17px; top: 50%; transform: translateY(-50%); white-space: nowrap; line-height: 1.25; }
+#v-sayu .mv-band b { display: block; font-family: var(--serif); font-size: 14px; color: var(--accent); }
+#v-sayu .mv-band b em { font-style: normal; font-size: 19px; }
+#v-sayu .mv-band span { display: block; font-size: 10px; color: var(--text); }
+#v-sayu .mv.out .mv-band { left: calc(var(--cx) + 50px); width: 0; border: 0; border-right: 3px solid var(--accent); }
+#v-sayu .mv.out .mv-band div { left: var(--lx); }
+#v-sayu .mv-line { position: absolute; z-index: 3; left: -2px; width: calc(var(--cx) + 54px); height: 4px; background: #101010; box-shadow: 0 0 0 1px #f2efe9; pointer-events: none; }
+#v-sayu .mv-mark { position: absolute; z-index: 3; left: var(--cx); width: 50px; height: 25px; pointer-events: none;
+  box-shadow: inset 3px 0 0 var(--accent), inset -3px 0 0 var(--accent); transition: box-shadow 0.12s, background 0.12s; }
+#v-sayu .mv.hit .mv-mark { background: rgba(255, 42, 109, 0.16); box-shadow: inset 3px 0 0 var(--accent), inset -3px 0 0 var(--accent), 0 0 0 2px var(--accent), 0 0 16px 2px rgba(255, 42, 109, 0.75); }
+#v-sayu .mv-verdict { min-height: 24px; margin-top: 8px; text-align: left; font-size: 13px; line-height: 1.7; }
+#v-sayu .mv-verdict .ng { color: var(--muted); }
+#v-sayu .hs-col.tgt { background: #fff; outline: 2px solid var(--accent); }
+#v-sayu .hs-col.tgt.plain { outline: 1px solid #2a2a2a; }
+#v-sayu .hs-col.tgt .no { height: 25px; background: #1c1c1c; }
+#v-sayu .pc { margin-top: 34px; padding-top: 24px; border-top: 1px solid var(--border); }
+#v-sayu .pc-title { font-family: var(--serif); font-size: 17px; font-weight: 700; letter-spacing: 1px; }
+#v-sayu .pc-row { display: flex; align-items: baseline; gap: 10px; margin-top: 12px; font-size: 13px; line-height: 1.8; }
+#v-sayu .pc-tag { flex: 0 0 72px; box-sizing: border-box; text-align: center; padding: 1px 0; border: 1px solid #444; border-radius: 999px; font-size: 11px; color: var(--muted); }
+#v-sayu .pc-tag.good { border-color: var(--accent); color: var(--accent); }
+#v-sayu .cond { margin: 14px 0 0; font-size: 12px; line-height: 1.7; }
+#v-sayu .cond dt { margin-top: 10px; color: var(--text); }
+#v-sayu .cond dt::before { content: ''; display: inline-block; width: 5px; height: 5px; margin: 0 8px 2px 0; border-radius: 50%; background: var(--accent); vertical-align: middle; }
+#v-sayu .cond dd { margin: 0 0 0 13px; color: var(--muted); }
+#v-sayu .reel[data-r="right"] { width: calc(var(--w) + var(--lab)); z-index: 2; }
+#v-sayu .hs-col img.dim { opacity: 0.28; }
+#v-sayu .cond strong { color: var(--accent); font-weight: 700; }
 /* ─── big-left ─── */
 #v-big-left {
   --accent: #ff2a6d;
@@ -2404,7 +2585,7 @@ footer { border-top: 1px solid var(--border); padding: 26px 24px; text-align: ce
       <a class="item" href="#slide"><span class="item-name">スライド打ちDDT</span><span class="item-diff"><b>21〜53</b></span><span class="item-freq"><b>1〜3</b></span><span class="item-go"></span></a>
       <a class="item" href="#hasami"><span class="item-name">白BAR上中段からのハサミ打ち</span><span class="item-diff"><b data-diff="hasami"></b></span><span class="item-freq"><b>2〜3</b></span><span class="item-go"></span></a>
       <a class="item" href="#lmslide"><span class="item-name">白BARの左中スライド</span><span class="item-diff"><b data-diff="lmslide"></b></span><span class="item-freq"><b>3</b></span><span class="item-go"></span></a>
-      <div class="item soon"><span class="item-name">左右順序可変DDT</span><span class="item-diff">準備中</span><span class="item-freq"></span><span class="item-go" style="visibility:hidden"></span></div>
+      <a class="item" href="#sayu"><span class="item-name">左右⑧スイカ打ち分けDDT</span><span class="item-diff"><b data-diff="sayu"></b></span><span class="item-freq"><b>1〜2</b></span><span class="item-go"></span></a>
     </section>
     <section class="scene big">
       <h2 class="scene-name"><span class="sn">BIG中<small>BT機はBIG前半</small></span><span class="col-head"><span class="h-diff">目押し難易度<br>チェリー／スイカ</span><span class="h-freq">回数</span></span></h2>
@@ -2724,6 +2905,85 @@ footer { border-top: 1px solid var(--border); padding: 26px 24px; text-align: ce
     <li>中が白7上段・スイカ中段に止まれば、スイカ・BIG・REGを全部フォローできる。中を回して、右を押す瞬間の中の位置ごとに、下の○×△で判定する</li>
     <li>目押し難易度＝左（2コマ）・中（白7上段に止まる押し位置5コマ）・右（ボーナスとスイカを同時なら2コマ、スイカだけなら9コマ）。続けて押せるのは限られた位置関係のときだけなので、中も目押しとして数える</li>
     <li>リール配列からの計算値（スベリ最大4コマ、5ライン）。右のBIGは上段白7、REGは上段白BARに止まる（本人説明・計算）</li>
+  </ul>
+</details>
+
+</section>
+<section class="view" id="v-sayu" hidden>
+
+<header class="head">
+  <p class="method-title">左右⑧スイカ打ち分けDDT</p>
+  <p class="method-diff">目押し難易度 <b data-score></b></p>
+</header>
+
+<main>
+  <section class="hs-step">
+    <div class="hs-head"><span class="hs-no">1</span><h2 class="hs-title">押す順を決める　⑧スイカの傾き<small>左の白7が中段に来た瞬間の、右の⑧スイカ</small></h2></div>
+    <div class="hs-list" data-fig="s1"></div>
+  </section>
+
+  <section class="hs-step">
+    <div class="hs-head"><span class="hs-no">2</span><h2 class="hs-title">左　白7を中段にビタ押し<small>右とほぼ同時に押す</small></h2></div>
+    <div data-mv="l"></div>
+  </section>
+
+  <section class="hs-step">
+    <div class="hs-head"><span class="hs-no">3</span><h2 class="hs-title">右　左と続けて押す<small>目押しはしない。左との間隔だけ合わせる</small></h2></div>
+    <div class="stage-cap">いま止まっている出目</div>
+    <div class="stage" data-stage>
+      <div class="reel" data-r="left"></div>
+      <div class="reel-void" style="left: calc(var(--w) + var(--g))"></div>
+      <div class="reel" data-r="right"></div>
+    </div>
+    <div class="verdict" data-verdict></div>
+    <div class="slip">
+      <div class="slip-row"><span>左右の間隔</span><div class="chips sub" data-slip="g"></div></div>
+    </div>
+    <div class="hs-sub">止まり方と成立役　右第1停止</div>
+    <div class="hs-list" data-fig="rf"></div>
+    <dl class="cond"><dt>⑧スイカが枠上・上段の位置で押した</dt><dd>ボーナス図柄まで滑ったら<strong>ボーナス確定</strong></dd><dt>⑧スイカが中段の位置で押した</dt><dd>白BARまで滑ったら<strong>チェリー重複REG確定</strong><br>白7まで滑ったときはハズレもある</dd></dl>
+    <div class="hs-sub">止まり方と成立役　左第1停止</div>
+    <div class="hs-list" data-fig="lf"></div>
+  </section>
+
+  <section class="hs-step">
+    <div class="hs-head"><span class="hs-no">4</span><h2 class="hs-title">中　白7を狙う<small>どのテンパイにも届く位置</small></h2></div>
+    <div data-mv="m"></div>
+    <div class="hs-sub">実演</div><div class="yt" data-yt="eeZVC2uUMTE"></div>
+  </section>
+
+  <section class="pc">
+    <h2 class="pc-title">メリット・デメリット</h2>
+    <div class="pc-row"><span class="pc-tag good">メリット</span><span>目押しは左だけ。中も白7を狙い続ければ、一定のリズムで押せる</span></div>
+    <div class="pc-row"><span class="pc-tag good">メリット</span><span>右第1停止での唐突な2確</span></div>
+    <div class="pc-row"><span class="pc-tag good">メリット</span><span>ハズレのときは出目が一定（右中段⑧・左中段⑧）で、リズムも見る場所も一定</span></div>
+    <div class="pc-row"><span class="pc-tag">デメリット</span><span>水平のときは右左で押すので、次G告知時のREGは分からなくなる</span></div>
+  </section>
+
+  <section class="diff" data-droot="0">
+    <h2 class="diff-title">目押し難易度</h2>
+    <div class="chips" data-dtabs></div>
+    <div class="flow" data-dflow></div>
+    <div class="score">
+      <div class="score-num" data-dscore></div>
+      <div class="score-sub">目押し<b data-dcount></b>回</div>
+      <div class="gauge"><div class="gauge-fill" data-dgauge></div></div>
+      <div class="gauge-ends"><span>0 全部適当打ち</span><span>全部ビタ押し 100</span></div>
+    </div>
+    <p class="diff-note">押す順に左から並べています。余裕21コマ＝適当打ち（0点）</p>
+  </section>
+</main>
+
+<details class="note">
+  <summary>数字の見方</summary>
+  <ul>
+    <li>⑧スイカ＝左の8番（白7の1つ上）と右の8番（白7の3つ下）のスイカ</li>
+    <li>3の図は、いま止まっている出目。3リールは同時に同じ速さで回り始めるので、止まっている左右の位置関係が、次ゲームの⑧スイカの傾きになる。左右を回して出目を変え、間隔を選ぶと、右を押す位置と、スイカ・BIG・REGに届くかが分かる</li>
+    <li>左は白7中段ビタで押す計算。水平・右下がりは右→左、左下がりは左→右。傾きが2〜4コマならそのコマ数くらい間隔をあける。大きくずれていたら目押しで調整する</li>
+    <li>明るい右のコマ＝止まっている出目でそのコマが中段にあれば、スイカとBIGに届く範囲。数字は余裕コマ数</li>
+    <li>4の中の明るいコマ＝右・左がどう止まっても、テンパイしたスイカ・白7に届く押し位置（中段7・8番）</li>
+    <li>目押し難易度＝左（白7中段ビタ1コマ）・右（リズム押し）・中（白7が枠上の2コマ、またはリズム押し）</li>
+    <li>リール配列からの計算値（スベリ最大4コマ、5ライン）。左第1停止の中段白7はBIG確定目で、REGのときは中段に止まらない（本人説明）</li>
   </ul>
 </details>
 
@@ -4507,6 +4767,290 @@ document.fonts ? document.fonts.ready.then(init) : init();
 })();
 
 })(document.getElementById("v-lmslide"));
+/* ─── sayu ─── */
+(function (ROOT) {
+
+const N = 21, MID_ROW = 5;
+const wrap = n => ((n - 1) % N + N) % N + 1;
+const sym = (reel, n) => REELS[reel][wrap(n) - 1];
+const OFF = { up: 1, mid: 0, low: -1 };
+function reach(reel, P, name, rows) {
+  const out = [];
+  for (let s = 0; s <= 4; s++) { const X = wrap(P + s); for (const r of rows) if (sym(reel, X + OFF[r]) === name) out.push({ s, r, X }); }
+  return out;
+}
+
+/* ─── 静止画 ─── */
+const col = (reel, X, cls = '') => `<div class="hs-col ${cls}">${[1, 0, -1].map(o => `<img src="${IMG[sym(reel, X + o)]}" alt="">`).join('')}</div>`;
+const spin = reel => { let h = ''; for (let k = 0; k < 2; k++) for (let n = N; n >= 1; n--) h += `<img src="${IMG[sym(reel, n)]}" alt="">`; return `<div class="hs-col spin"><div class="spin-track">${h}</div></div>`; };
+const item = (cols, cap) => `<div class="hs-item"><div class="hs-win">${cols}</div><div class="hs-cap">${cap}</div></div>`;
+
+/* ─── 回せるリール1本 ─── */
+function makeViewer(host, o) {
+  const H = 25, MID = 4, NN = 21;
+  const COL = { left: 0, middle: 1, right: 2 }[o.reel];
+  const wr = n => ((n - 1) % NN + NN) % NN + 1;
+  { const fresh = host.cloneNode(false); host.replaceWith(fresh); host = fresh; }
+  host.classList.add('mv'); host.innerHTML = '';
+  // すでに止まっているリール（窓の3段だけ）
+  for (const r in (o.fixed || {})) {
+    const X = o.fixed[r], c = { left: 0, middle: 1, right: 2 }[r];
+    host.insertAdjacentHTML('beforeend', `<div class="mv-fix" style="left:${c * 54}px;top:${(MID - 1) * H}px">${[1, 0, -1].map(d => `<img src="${IMG[sym(r, X + d)]}" alt="">`).join('')}</div>`);
+  }
+  host.style.setProperty('--cx', (COL * 54) + 'px');   // 上の窓（50px＋すき間4px）と同じ列
+  // 右側にリールが止まって見えているときは、余裕の囲みを線1本にして、文字は右端のリールの外へ（窓の線や図柄に重ねない）
+  const fx = Object.keys(o.fixed || {}).map(r => ({ left: 0, middle: 1, right: 2 }[r]));
+  if (fx.some(c => c > COL)) { host.classList.add('out'); host.style.setProperty('--lx', (Math.max(...fx) * 54 + 50 + 8 - (COL * 54 + 50)) + 'px'); }
+  const track = document.createElement('div'); track.className = 'mv-track'; host.appendChild(track);
+  for (let i = 0; i < NN * 3; i++) {
+    const n = wr(NN - (i % NN));
+    track.insertAdjacentHTML('beforeend', `<div class="mv-cell${o.ok(n) ? '' : ' ng'}"><img src="${IMG[sym(o.reel, n)]}" alt=""></div>`);
+  }
+  // 連続する区間ごとに、余裕の囲み
+  const ok = []; for (let p = 1; p <= NN; p++) ok[p] = !!o.ok(p);
+  let s0 = 1; while (ok[s0] && s0 < NN) s0++;
+  const runs = []; let a = null, len = 0;
+  for (let k = 1; k <= NN; k++) { const p = wr(s0 + k); if (ok[p]) { if (a === null) { a = p; len = 1; } else len++; } else if (a !== null) { runs.push([a, len]); a = null; } }
+  if (a !== null) runs.push([a, len]);
+  for (const [ra, rl] of runs) {
+    let name = ''; for (const k in (o.labels || {})) if (((+k - ra + NN) % NN) < rl) name = o.labels[k];
+    for (let copy = 0; copy < 3; copy++) {
+      const top = copy * NN + (NN - wr(ra + rl - 1));
+      track.insertAdjacentHTML('beforeend', `<div class="mv-band" style="top:${top * H + 2}px;height:${rl * H - 4}px"><div><b>余裕<em>${rl}</em>コマ</b>${name ? `<span>${name}</span>` : ''}</div></div>`);
+    }
+  }
+  const lw = (Math.max(COL, ...Object.keys(o.fixed || {}).map(r => ({ left: 0, middle: 1, right: 2 }[r]))) + 1) * 54;
+  for (const r of [MID - 1, MID + 2]) host.insertAdjacentHTML('beforeend', `<div class="mv-line" style="top:${r * H - 2}px;width:${lw}px"></div>`);
+  for (const off of o.marks) host.insertAdjacentHTML('beforeend', `<div class="mv-mark" style="top:${(MID - off) * H}px"></div>`);
+  let vd = host.nextElementSibling;
+  if (!vd || !vd.classList.contains('mv-verdict')) { vd = document.createElement('div'); vd.className = 'mv-verdict'; host.after(vd); }
+  let m = o.start, last = null;
+  const P = () => wr(Math.round(m));
+  const place = () => {
+    const mm = ((m - 1) % NN + NN) % NN + 1;
+    track.style.transform = `translateY(${(MID - (2 * NN - mm)) * H}px)`;
+    const p = P(); if (p === last) return; last = p;
+    host.classList.toggle('hit', !!o.ok(p));
+    vd.innerHTML = o.verdict(p);
+    if (o.onPos) o.onPos(p);
+  };
+  const anim = (to, dur) => {
+    const from = m, t0 = performance.now();
+    let d = ((to - from) % NN + NN) % NN; if (d > NN / 2) d -= NN;
+    const step = t => { const q = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - q, 3); m = from + d * e; place(); if (q < 1) requestAnimationFrame(step); else { m = Math.round(m); place(); } };
+    requestAnimationFrame(step);
+  };
+  let y0 = null, base = 0, moved = false;
+  host.addEventListener('pointerdown', e => { y0 = e.clientY; base = m; moved = false; host.setPointerCapture(e.pointerId); });
+  host.addEventListener('pointermove', e => { if (y0 === null) return; if (Math.abs(e.clientY - y0) > 4) moved = true; if (moved) { m = base + (e.clientY - y0) / H; place(); } });
+  const end = e => {
+    if (y0 === null) return;
+    if (!moved) { const r = host.getBoundingClientRect(); anim(Math.round(m) + (MID - Math.floor((e.clientY - r.top) / H)), 320); }
+    else anim(Math.round(m), 140);
+    y0 = null;
+  };
+  host.addEventListener('pointerup', end); host.addEventListener('pointercancel', end);
+  place();
+}
+
+const OKV = t => `<span>○ ${t}</span>`, NGV = t => `<span class="ng">× ${t}</span>`;
+const mvq = (sel, o) => makeViewer(ROOT.querySelector(sel), o);
+
+/* 1の図：窓の上に1段（枠上）をうすく出し、⑧スイカ（と左の白7）以外を暗く */
+const tallCol = (reel, X, keep) => {
+  const im = n => `<img class="${keep.includes(wrap(n)) ? '' : 'dim'}" src="${IMG[sym(reel, n)]}" alt="">`;
+  return `<div class="hs-col tall"><img class="over${keep.includes(wrap(X + 2)) ? ' key' : ''}" src="${IMG[sym(reel, X + 2)]}" alt=""><div class="win">${[1, 0, -1].map(o => im(X + o)).join('')}</div></div>`;
+};
+
+function drawStatic() {
+  const SL = spin('left'), SM = spin('middle'), SR = spin('right');
+  const L7 = tallCol('left', 7, [7, 8]);
+  ROOT.querySelector('[data-fig="s1"]').innerHTML =
+    item(L7 + SM + tallCol('right', 7, [8]), '水平<small>右→左</small>') +
+    item(L7 + SM + tallCol('right', 8, [8]), '右下がり<small>右→左</small>') +
+    item(L7 + SM + tallCol('right', 6, [8]), '左下がり<small>左→右</small>');
+  ROOT.querySelector('[data-fig="rf"]').innerHTML =
+    item(SL + SM + col('right', 7), 'スイカ角<small><strong>小役確定</strong>（ベル・リプレイ・スイカ）</small>') +
+    item(SL + SM + col('right', 8), 'スイカ中段<small>ハズレorスイカ重複BIG</small>');
+  ROOT.querySelector('[data-fig="lf"]').innerHTML =
+    item(col('left', 9) + SM + col('right', 7), 'スイカ角からハサミでスイカテンパイ<small>ハズレorスイカ</small>') +
+    item(col('left', 8) + SM + col('right', 8), 'スイカ中段からハサミでスイカテンパイ<small>ハズレorスイカ</small>') +
+    item(col('left', 8) + SM + col('right', 10), 'ハサミでボーナステンパイ<small>ハズレorボーナス</small>') +
+    item(col('left', 7) + SM + SR, '中段白7<small><strong>BIG確定</strong></small>') +
+    item(col('left', 12) + SM + SR, '中段チェリー<small><strong>チェリー重複ボーナス確定</strong>（枚数欠損）<br>白7を下段で押したとき</small>');
+}
+
+function viewers() {
+  mvq('[data-mv="l"]', { reel: 'left', start: 7, marks: [0], labels: { 7: '白7' },
+    ok: P => P === 7,
+    verdict: P => P === 7 ? OKV('スイカ・チェリー・ボーナスを全部フォロー')
+      : P === 8 ? '<span>△ 小役は拾える</span><span class="ng" style="display:block;font-size:11px">チェリー重複のときは中段チェリー（枚数欠損）。次G告知時のボーナスを揃えられないことがある</span>'
+      : P === 6 ? NGV('チェリーのときは白7が枠下まで滑って取りこぼす')
+      : NGV('白7中段ビタから外れている') });
+  // 中：右・左がどう止まっても、テンパイしたスイカ・白7に届く（中段7・8番）
+  mvq('[data-mv="m"]', { reel: 'middle', start: 8, marks: [0], labels: { 8: '白7が枠上' },
+    ok: P => P === 7 || P === 8,
+    verdict: P => (P === 7 || P === 8) ? OKV('どのテンパイにも届く') : NGV('届かないテンパイがある') });
+}
+
+/* ─── 3：止まっている出目から、左右の押す順と間隔 ─── */
+const LP = 7;   // 左は白7中段ビタ（中段7番）で押す
+const ROWS = ['up', 'mid', 'low'];
+const rowsOf = (reel, P, name) => [...new Set(reach(reel, P, name, ROWS).map(o => o.r))];
+const line = (a, b) => a === b || (a === 'up' && b === 'low') || (a === 'low' && b === 'up');
+// 先に止まったリールがどの段に止まっても、後のリールでラインを作れるか
+const robust = (first, second) => first.length > 0 && first.every(a => second.some(b => line(a, b)));
+function follow(order, R) {
+  const ls = rowsOf('left', LP, 'suika'), rs = rowsOf('right', R, 'suika');
+  const r7 = rowsOf('right', R, 'white7'), rB = rowsOf('right', R, 'whiteBAR');
+  const L7 = ['mid', 'low'];
+  if (order === 'RL') return { suika: robust(rs, ls), big: robust(r7, L7), reg: robust(rB, L7) };
+  // 左第1停止：中段白7はBIG確定目なので、REGのときの左の白7は下段
+  return { suika: robust(ls, rs), big: robust(L7, r7), reg: robust(['low'], rB) };
+}
+const GAPS = [0, 1, 2, 3, 4, 5];
+let gap = 1;
+const pos = { left: 8, right: 8 };   // ハズレ出目（右中段⑧・左中段⑧）
+const slopeOf = (L, R) => { let d = ((R - L) % N + N) % N; if (d > N / 2) d -= N; return d; };
+const orderOf = d => d >= 0 ? 'RL' : 'LR';
+const rPress = (d, g) => wrap(orderOf(d) === 'RL' ? LP - g + d : LP + g + d);
+const PRESS_JA = { 6: '枠上', 7: '上段', 8: '中段', 9: '下段' };   // 右は⑧スイカが枠上〜下段の位置で押す
+const inZone = R => R in PRESS_JA;
+const okRight = (n, g) => { const d = slopeOf(pos.left, n), R = rPress(d, g); if (Math.abs(d) > 4 || !inZone(R)) return false; const f = follow(orderOf(d), R); return f.suika && f.big; };
+const reels = {};
+const H = () => parseFloat(getComputedStyle(ROOT).getPropertyValue('--h')) || 25;
+
+function runsOf(f) {
+  const ok = []; for (let p = 1; p <= N; p++) ok[p] = !!f(p);
+  if (ok.slice(1).every(Boolean)) return [[1, N]];
+  let s = 1; while (ok[s]) s++;
+  const res = []; let a = null, len = 0;
+  for (let k = 1; k <= N; k++) { const p = wrap(s + k); if (ok[p]) { if (a === null) { a = p; len = 1; } else len++; } else if (a !== null) { res.push([a, len]); a = null; } }
+  if (a !== null) res.push([a, len]);
+  return res;
+}
+function place(reel) { const r = reels[reel]; const m = ((r.m - 1) % N + N) % N + 1; r.track.style.transform = `translateY(${(MID_ROW - (2 * N - m)) * H()}px)`; }
+function build(reel) {
+  const tr = reels[reel].track; tr.innerHTML = '';
+  const lit = reel === 'left' ? () => true : n => okRight(n, gap);
+  for (let i = 0; i < N * 3; i++) {
+    const n = wrap(N - (i % N));
+    tr.insertAdjacentHTML('beforeend', `<div class="cell${lit(n) ? '' : ' ng'}"><img src="${IMG[sym(reel, n)]}" alt=""></div>`);
+  }
+  if (reel === 'right') for (const [a, len] of runsOf(lit)) for (let copy = 0; copy < 3; copy++) {
+    const top = copy * N + (N - wrap(a + len - 1));
+    tr.insertAdjacentHTML('beforeend', `<div class="band" style="top:${top * H() + 2}px;height:${len * H() - 4}px"><b>${len}</b></div>`);
+  }
+  place(reel);
+}
+function buildMarks() {
+  const stage = ROOT.querySelector('[data-stage]');
+  for (const r of [MID_ROW - 1, MID_ROW + 2]) stage.insertAdjacentHTML('beforeend', `<div class="win-line" style="top:calc(var(--h) * ${r} - 2px)"></div>`);
+}
+function judge() {
+  const v = ROOT.querySelector('[data-verdict]');
+  const d = slopeOf(pos.left, pos.right), o = orderOf(d), R = rPress(d, gap), f = follow(o, R);
+  const slope = d === 0 ? '水平' : d > 0 ? `右下がり${d}コマ` : `左下がり${-d}コマ`;
+  const where = PRESS_JA[R] ? `右は⑧スイカが${PRESS_JA[R]}の位置で押す` : '右は⑧スイカから外れた位置で押す';
+  const full = GAPS.filter(g => { const r = rPress(d, g); if (!inZone(r)) return false; const x = follow(o, r); return x.suika && x.big && x.reg; });
+  const sub = [`${slope}　${o === 'RL' ? '右→左' : '左→右'}`, where,
+    Math.abs(d) > 4 ? '大きくずれているので、目押しで調整' : `全部に届く間隔：${full.length ? (full.length > 1 ? full[0] + '〜' + full[full.length - 1] : full[0]) + 'コマ' : 'なし'}`];
+  const miss = [['スイカ', f.suika], ['BIG', f.big], ['REG', f.reg]].filter(x => !x[1]).map(x => x[0]);
+  let head;
+  if (Math.abs(d) > 4 || !inZone(R)) head = '<span class="ng"><span class="mark-t">×</span>⑧スイカから外れた位置で押している</span>';
+  else if (!miss.length) head = '<span><span class="mark-t">○</span>スイカ・BIG・REGに全部届く</span>';
+  else if (miss.length === 1 && miss[0] === 'REG') head = '<span><span class="mark-t">△</span>次G告知時のREGは分からなくなる</span>';
+  else head = `<span class="ng"><span class="mark-t">×</span>${miss.join('・')}を取りこぼす</span>`;
+  v.innerHTML = head + sub.map(t => `<span class="sub">${t}</span>`).join('');
+  ROOT.querySelector('[data-slip="g"]').innerHTML = GAPS.map((g, i) => `<button class="chip" data-gp="${i}" aria-pressed="${gap === g}">${g}コマ</button>`).join('');
+}
+function refresh() { build('right'); judge(); }
+function bind(reel) {
+  const r = reels[reel];
+  let y0 = null, base = 0, moved = false;
+  r.el.addEventListener('pointerdown', e => { y0 = e.clientY; moved = false; base = r.m; r.el.setPointerCapture(e.pointerId); });
+  r.el.addEventListener('pointermove', e => {
+    if (y0 === null) return;
+    if (Math.abs(e.clientY - y0) > 4) moved = true;
+    if (!moved) return;
+    r.m = base + (e.clientY - y0) / H(); place(reel); sync(reel);
+  });
+  const end = e => {
+    if (y0 === null) return;
+    let to;
+    if (!moved) { const rect = r.el.getBoundingClientRect(); to = Math.round(r.m) + (MID_ROW - Math.floor((e.clientY - rect.top) / H())); }
+    else to = Math.round(r.m);
+    const from = r.m, t0 = performance.now(), dur = moved ? 140 : 320;
+    const step = t => { const q = Math.min(1, (t - t0) / dur), ez = 1 - Math.pow(1 - q, 3); r.m = from + (to - from) * ez; place(reel); sync(reel); if (q < 1) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+    y0 = null;
+  };
+  r.el.addEventListener('pointerup', end);
+  r.el.addEventListener('pointercancel', end);
+}
+function sync(reel) {
+  const p = wrap(Math.round(reels[reel].m));
+  if (pos[reel] === p) return;
+  pos[reel] = p;
+  refresh();
+}
+document.addEventListener('click', e => {
+  if (!ROOT.contains(e.target)) return;
+  const b = e.target.closest('[data-gp]'); if (b) { gap = GAPS[+b.dataset.gp]; return refresh(); }
+});
+
+const bitaUnit = w => Math.log2(N / w) / Math.log2(N);
+function init() {
+  drawStatic();
+  viewers();
+  // 左1（白7中段ビタ）・右21（リズム押し）・中は2（白7が枠上）か21（リズム押し）
+  ROOT.querySelector('[data-score]').textContent = `${Math.round((bitaUnit(1) + bitaUnit(21) + bitaUnit(21)) / 3 * 100)}〜${Math.round((bitaUnit(1) + bitaUnit(21) + bitaUnit(2)) / 3 * 100)}`;
+  for (const k of ['left', 'right']) {
+    const el = ROOT.querySelector(`.reel[data-r="${k}"]`);
+    const tr = document.createElement('div'); tr.className = 'track'; el.appendChild(tr);
+    reels[k] = { el, track: tr, m: pos[k] };
+    bind(k);
+  }
+  buildMarks();
+  build('left'); refresh();
+}
+document.fonts ? document.fonts.ready.then(init) : init();
+
+/* ─── 目押し難易度（押す順のフロー・点数・ゲージ） ─── */
+(function () {
+  const FLOWS = [{"label": "右第1停止", "nodes": [["右", 21, "リズム押し"], ["左", 1, "白7中段ビタ"], ["中", [[2, "白7が枠上"], [21, "リズム押し"]]]]}, {"label": "左第1停止", "nodes": [["左", 1, "白7中段ビタ"], ["右", 21, "リズム押し"], ["中", [[2, "白7が枠上"], [21, "リズム押し"]]]]}];
+  const root = ROOT.querySelector('[data-droot="0"]') || document;
+  const unit = w => Math.log2(21 / w) / Math.log2(21);
+  // 狙う場所が複数あるリールは、ボタンを縦に並べて選ぶ
+  const opts = n => Array.isArray(n[1]) ? n[1] : [[n[1], n[2]]];
+  const sel = FLOWS.map(f => f.nodes.map(() => 0));
+  let cur = 0;
+  function draw() {
+    const f = FLOWS[cur];
+    root.querySelector('[data-dtabs]').innerHTML = FLOWS.length > 1
+      ? FLOWS.map((x, i) => `<button class="chip" data-dtab="${i}" aria-pressed="${i === cur}">${x.label}</button>`).join('') : '';
+    root.querySelector('[data-dflow]').innerHTML = f.nodes.map((n, k) => {
+      const o = opts(n), many = o.length > 1;
+      return `<div class="flow-node"><span class="flow-reel">${n[0]}</span>` + o.map(([w, note], j) => many
+        ? `<button class="fnode opt${w === 21 ? ' free' : ''}" data-dopt="${k}-${j}" aria-pressed="${sel[cur][k] === j}"><b>${w}</b>${note}</button>`
+        : `<span class="fnode${w === 21 ? ' free' : ''}"><b>${w}</b>${note}</span>`).join('') + '</div>';
+    }).join('<span class="flow-arrow"></span>');
+    const score = Math.round(f.nodes.reduce((a, n, k) => a + unit(opts(n)[sel[cur][k]][0]), 0) / 3 * 100);
+    root.querySelector('[data-dscore]').innerHTML = `${score}<small>/100</small>`;
+    // 目押しの回数＝適当打ち（21コマ）以外のリールの数
+    root.querySelector('[data-dcount]').textContent = f.nodes.filter((n, k) => opts(n)[sel[cur][k]][0] < 21).length;
+    const g = root.querySelector('[data-dgauge]');
+    g.style.width = score + '%'; g.style.backgroundSize = (score > 0 ? 10000 / score : 100) + '% 100%';
+  }
+  root.addEventListener('click', e => {
+    const b = e.target.closest('[data-dtab]'); if (b) { cur = +b.dataset.dtab; draw(); return; }
+    const o = e.target.closest('[data-dopt]'); if (o) { const [k, j] = o.dataset.dopt.split('-').map(Number); sel[cur][k] = j; draw(); }
+  });
+  draw();
+})();
+
+
+})(document.getElementById("v-sayu"));
 /* ─── big-left ─── */
 (function (ROOT) {
 
@@ -5834,7 +6378,7 @@ ROOT.querySelector('[data-vbody]').textContent = VIDEO.thoughts;
 <script>
 /* ─── 一覧 ⇔ 打ち方の切り替え（URLの末尾 #ddt などで直接開ける） ─── */
 (function () {
-  const SCENE = { ddt: '通常時', slide: '通常時', hasami: '通常時', lmslide: '通常時', 'big-left': 'BIG中', 'big-slide': 'BIG中', 'big-center': 'BIG中', 'big-white': 'BIG中', 'big-right': 'BIG中', 'big-junbi': 'BIG中', reg: 'REG中', bt: 'BT機 BIG後半', 'big-last': 'BIG最終ゲーム', video: '初心者向け' };
+  const SCENE = { ddt: '通常時', slide: '通常時', hasami: '通常時', lmslide: '通常時', sayu: '通常時', 'big-left': 'BIG中', 'big-slide': 'BIG中', 'big-center': 'BIG中', 'big-white': 'BIG中', 'big-right': 'BIG中', 'big-junbi': 'BIG中', reg: 'REG中', bt: 'BT機 BIG後半', 'big-last': 'BIG最終ゲーム', video: '初心者向け' };
   const ALIAS = { 'big-slide': 'slide' };   // BIG中の左からのスライドは、通常時のスライド打ちDDTと同じ計算
   const list = document.getElementById('listView'), bar = document.getElementById('topbar');
   let fromList = false, listY = 0;
@@ -5892,6 +6436,7 @@ ROOT.querySelector('[data-vbody]').textContent = VIDEO.thoughts;
   copy('ddt', '[data-range]');
   copy('hasami', '[data-score]');
   copy('lmslide', '[data-score]');
+  copy('sayu', '[data-score]');
 })();
 </script>
 <script>
