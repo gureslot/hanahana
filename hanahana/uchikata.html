@@ -842,9 +842,10 @@ footer { border-top: 1px solid var(--border); padding: 26px 24px; text-align: ce
 #v-sayu .cond dt { margin-top: 10px; color: var(--text); }
 #v-sayu .cond dt::before { content: ''; display: inline-block; width: 5px; height: 5px; margin: 0 8px 2px 0; border-radius: 50%; background: var(--accent); vertical-align: middle; }
 #v-sayu .cond dd { margin: 0 0 0 13px; color: var(--muted); }
-#v-sayu .reel[data-r="right"] { width: calc(var(--w) + var(--lab)); z-index: 2; }
 #v-sayu .hs-col img.dim { opacity: 0.28; }
 #v-sayu .cond strong { color: var(--accent); font-weight: 700; }
+#v-sayu .hs-sub2 { margin: 26px 0 0; padding: 4px 0 4px 10px; border-left: 3px solid var(--accent); font-family: var(--serif); font-size: 15px; font-weight: 700; letter-spacing: 1px; color: var(--text); }
+#v-sayu [data-order] { margin-top: 34px; }
 /* ─── big-left ─── */
 #v-big-left {
   --accent: #ff2a6d;
@@ -2585,7 +2586,7 @@ footer { border-top: 1px solid var(--border); padding: 26px 24px; text-align: ce
       <a class="item" href="#slide"><span class="item-name">スライド打ちDDT</span><span class="item-diff"><b>21〜53</b></span><span class="item-freq"><b>1〜3</b></span><span class="item-go"></span></a>
       <a class="item" href="#hasami"><span class="item-name">白BAR上中段からのハサミ打ち</span><span class="item-diff"><b data-diff="hasami"></b></span><span class="item-freq"><b>2〜3</b></span><span class="item-go"></span></a>
       <a class="item" href="#lmslide"><span class="item-name">白BARの左中スライド</span><span class="item-diff"><b data-diff="lmslide"></b></span><span class="item-freq"><b>3</b></span><span class="item-go"></span></a>
-      <a class="item" href="#sayu"><span class="item-name">左右⑧スイカ打ち分けDDT</span><span class="item-diff"><b data-diff="sayu"></b></span><span class="item-freq"><b>1〜2</b></span><span class="item-go"></span></a>
+      <a class="item" href="#sayu"><span class="item-name">左右⑧スイカ打ち分けDDT</span><span class="item-diff"><b data-diff="sayu"></b></span><span class="item-freq"><b>3</b></span><span class="item-go"></span></a>
     </section>
     <section class="scene big">
       <h2 class="scene-name"><span class="sn">BIG中<small>BT機はBIG前半</small></span><span class="col-head"><span class="h-diff">目押し難易度<br>チェリー／スイカ</span><span class="h-freq">回数</span></span></h2>
@@ -2918,38 +2919,43 @@ footer { border-top: 1px solid var(--border); padding: 26px 24px; text-align: ce
 
 <main>
   <section class="hs-step">
-    <div class="hs-head"><span class="hs-no">1</span><h2 class="hs-title">押す順を決める　⑧スイカの傾き<small>左の白7が中段に来た瞬間の、右の⑧スイカ</small></h2></div>
+    <div class="hs-head"><span class="hs-no">1</span><h2 class="hs-title">押す順を決める　⑧スイカの傾き<small>リールを回す前の出目で見る</small></h2></div>
     <div class="hs-list" data-fig="s1"></div>
+    <p class="hs-note">左右の間隔は1コマ。傾きが2〜4コマなら、そのコマ数くらい間隔をあける。大きくずれていたら目押しで調整</p>
   </section>
 
-  <section class="hs-step">
-    <div class="hs-head"><span class="hs-no">2</span><h2 class="hs-title">左　白7を中段にビタ押し<small>右とほぼ同時に押す</small></h2></div>
-    <div data-mv="l"></div>
-  </section>
+  <div class="chips" data-order></div>
 
-  <section class="hs-step">
-    <div class="hs-head"><span class="hs-no">3</span><h2 class="hs-title">右　左と続けて押す<small>目押しはしない。左との間隔だけ合わせる</small></h2></div>
-    <div class="stage-cap">いま止まっている出目</div>
-    <div class="stage" data-stage>
-      <div class="reel" data-r="left"></div>
-      <div class="reel-void" style="left: calc(var(--w) + var(--g))"></div>
-      <div class="reel" data-r="right"></div>
-    </div>
-    <div class="verdict" data-verdict></div>
-    <div class="slip">
-      <div class="slip-row"><span>左右の間隔</span><div class="chips sub" data-slip="g"></div></div>
-    </div>
-    <div class="hs-sub">止まり方と成立役　右第1停止</div>
+  <div data-mode="RL">
+    <section class="hs-step">
+      <div class="hs-head"><span class="hs-no">2</span><h2 class="hs-title">右　⑧スイカが枠上の位置で押す<small>目押しはしない。次G告知時のREGは妥協</small></h2></div>
+      <div data-mv="rl"></div>
+    </section>
+    <section class="hs-step">
+      <div class="hs-head"><span class="hs-no">3</span><h2 class="hs-title">左　白7を中段にビタ押し</h2></div>
+      <div class="hs-list" data-fig="rl3"></div>
+    </section>
+    <h3 class="hs-sub2">止まり方と成立役　右第1停止</h3>
     <div class="hs-list" data-fig="rf"></div>
     <dl class="cond"><dt>⑧スイカが枠上・上段の位置で押した</dt><dd>ボーナス図柄まで滑ったら<strong>ボーナス確定</strong></dd><dt>⑧スイカが中段の位置で押した</dt><dd>白BARまで滑ったら<strong>チェリー重複REG確定</strong><br>白7まで滑ったときはハズレもある</dd></dl>
-    <div class="hs-sub">止まり方と成立役　左第1停止</div>
-    <div class="hs-list" data-fig="lf"></div>
-  </section>
+  </div>
 
-  <section class="hs-step">
-    <div class="hs-head"><span class="hs-no">4</span><h2 class="hs-title">中　白7を狙う<small>どのテンパイにも届く位置</small></h2></div>
-    <div data-mv="m"></div>
-    <div class="hs-sub">実演</div><div class="yt" data-yt="eeZVC2uUMTE"></div>
+  <div data-mode="LR" style="display:none">
+    <section class="hs-step">
+      <div class="hs-head"><span class="hs-no">2</span><h2 class="hs-title">左　白7を中段にビタ押し</h2></div>
+      <div class="hs-list" data-fig="lr2"></div>
+    </section>
+    <section class="hs-step">
+      <div class="hs-head"><span class="hs-no">3</span><h2 class="hs-title">右　⑧スイカが上段か中段の位置で押す<small>目押しはしない。完全攻略</small></h2></div>
+      <div data-mv="lr"></div>
+    </section>
+    <h3 class="hs-sub2">止まり方と成立役　左第1停止</h3>
+    <div class="hs-list" data-fig="lf"></div>
+  </div>
+
+  <section class="pc">
+    <h2 class="pc-title">実演</h2>
+    <div class="yt short" data-yt="eeZVC2uUMTE"></div>
   </section>
 
   <section class="pc">
@@ -2978,11 +2984,10 @@ footer { border-top: 1px solid var(--border); padding: 26px 24px; text-align: ce
   <summary>数字の見方</summary>
   <ul>
     <li>⑧スイカ＝左の8番（白7の1つ上）と右の8番（白7の3つ下）のスイカ</li>
-    <li>3の図は、いま止まっている出目。3リールは同時に同じ速さで回り始めるので、止まっている左右の位置関係が、次ゲームの⑧スイカの傾きになる。左右を回して出目を変え、間隔を選ぶと、右を押す位置と、スイカ・BIG・REGに届くかが分かる</li>
-    <li>左は白7中段ビタで押す計算。水平・右下がりは右→左、左下がりは左→右。傾きが2〜4コマならそのコマ数くらい間隔をあける。大きくずれていたら目押しで調整する</li>
-    <li>明るい右のコマ＝止まっている出目でそのコマが中段にあれば、スイカとBIGに届く範囲。数字は余裕コマ数</li>
-    <li>4の中の明るいコマ＝右・左がどう止まっても、テンパイしたスイカ・白7に届く押し位置（中段7・8番）</li>
-    <li>目押し難易度＝左（白7中段ビタ1コマ）・右（リズム押し）・中（白7が枠上の2コマ、またはリズム押し）</li>
+    <li>1の図は、リールを回す前に止まっている出目。3リールは同時に同じ速さで回り始めるので、止まっている左右の⑧スイカの位置関係が、そのまま次ゲームの傾きになる</li>
+    <li>右の回せるリールの明るいコマ＝押した瞬間に中段にあれば成功する位置。数字は余裕コマ数。左は白7中段ビタで押す計算</li>
+    <li>右→左は、次G告知時のREGを妥協してスイカ・BIGに届く位置（⑧スイカが枠上〜下段）。左→右は、スイカ・BIG・REGに全部届く位置（⑧スイカが上段・中段）</li>
+    <li>目押し難易度＝右・中もリズム押しの余裕コマ数で数える。右→左は右⑧枠上・左白7中段の狙い方（中は白7枠上付近の3コマ）、左→右は完全攻略の狙い方（中は2コマ）</li>
     <li>リール配列からの計算値（スベリ最大4コマ、5ライン）。左第1停止の中段白7はBIG確定目で、REGのときは中段に止まらない（本人説明）</li>
   </ul>
 </details>
@@ -4770,7 +4775,7 @@ document.fonts ? document.fonts.ready.then(init) : init();
 /* ─── sayu ─── */
 (function (ROOT) {
 
-const N = 21, MID_ROW = 5;
+const N = 21;
 const wrap = n => ((n - 1) % N + N) % N + 1;
 const sym = (reel, n) => REELS[reel][wrap(n) - 1];
 const OFF = { up: 1, mid: 0, low: -1 };
@@ -4783,7 +4788,12 @@ function reach(reel, P, name, rows) {
 /* ─── 静止画 ─── */
 const col = (reel, X, cls = '') => `<div class="hs-col ${cls}">${[1, 0, -1].map(o => `<img src="${IMG[sym(reel, X + o)]}" alt="">`).join('')}</div>`;
 const spin = reel => { let h = ''; for (let k = 0; k < 2; k++) for (let n = N; n >= 1; n--) h += `<img src="${IMG[sym(reel, n)]}" alt="">`; return `<div class="hs-col spin"><div class="spin-track">${h}</div></div>`; };
+const blank = () => `<div class="hs-col blank" style="height:75px"></div>`;
 const item = (cols, cap) => `<div class="hs-item"><div class="hs-win">${cols}</div><div class="hs-cap">${cap}</div></div>`;
+// ⑧スイカ以外を暗く
+const col8 = (reel, X) => `<div class="hs-col">${[1, 0, -1].map(o => `<img class="${wrap(X + o) === 8 ? '' : 'dim'}" src="${IMG[sym(reel, X + o)]}" alt="">`).join('')}</div>`;
+// 左の狙う図：中段に白7だけ
+const aimL = `<div class="hs-col aim"><div style="height:25px;background:#1c1c1c"></div><img src="${IMG.white7}" alt=""><div style="height:25px;background:#1c1c1c"></div></div>`;
 
 /* ─── 回せるリール1本 ─── */
 function makeViewer(host, o) {
@@ -4856,49 +4866,11 @@ function makeViewer(host, o) {
 const OKV = t => `<span>○ ${t}</span>`, NGV = t => `<span class="ng">× ${t}</span>`;
 const mvq = (sel, o) => makeViewer(ROOT.querySelector(sel), o);
 
-/* 1の図：窓の上に1段（枠上）をうすく出し、⑧スイカ（と左の白7）以外を暗く */
-const tallCol = (reel, X, keep) => {
-  const im = n => `<img class="${keep.includes(wrap(n)) ? '' : 'dim'}" src="${IMG[sym(reel, n)]}" alt="">`;
-  return `<div class="hs-col tall"><img class="over${keep.includes(wrap(X + 2)) ? ' key' : ''}" src="${IMG[sym(reel, X + 2)]}" alt=""><div class="win">${[1, 0, -1].map(o => im(X + o)).join('')}</div></div>`;
-};
-
-function drawStatic() {
-  const SL = spin('left'), SM = spin('middle'), SR = spin('right');
-  const L7 = tallCol('left', 7, [7, 8]);
-  ROOT.querySelector('[data-fig="s1"]').innerHTML =
-    item(L7 + SM + tallCol('right', 7, [8]), '水平<small>右→左</small>') +
-    item(L7 + SM + tallCol('right', 8, [8]), '右下がり<small>右→左</small>') +
-    item(L7 + SM + tallCol('right', 6, [8]), '左下がり<small>左→右</small>');
-  ROOT.querySelector('[data-fig="rf"]').innerHTML =
-    item(SL + SM + col('right', 7), 'スイカ角<small><strong>小役確定</strong>（ベル・リプレイ・スイカ）</small>') +
-    item(SL + SM + col('right', 8), 'スイカ中段<small>ハズレorスイカ重複BIG</small>');
-  ROOT.querySelector('[data-fig="lf"]').innerHTML =
-    item(col('left', 9) + SM + col('right', 7), 'スイカ角からハサミでスイカテンパイ<small>ハズレorスイカ</small>') +
-    item(col('left', 8) + SM + col('right', 8), 'スイカ中段からハサミでスイカテンパイ<small>ハズレorスイカ</small>') +
-    item(col('left', 8) + SM + col('right', 10), 'ハサミでボーナステンパイ<small>ハズレorボーナス</small>') +
-    item(col('left', 7) + SM + SR, '中段白7<small><strong>BIG確定</strong></small>') +
-    item(col('left', 12) + SM + SR, '中段チェリー<small><strong>チェリー重複ボーナス確定</strong>（枚数欠損）<br>白7を下段で押したとき</small>');
-}
-
-function viewers() {
-  mvq('[data-mv="l"]', { reel: 'left', start: 7, marks: [0], labels: { 7: '白7' },
-    ok: P => P === 7,
-    verdict: P => P === 7 ? OKV('スイカ・チェリー・ボーナスを全部フォロー')
-      : P === 8 ? '<span>△ 小役は拾える</span><span class="ng" style="display:block;font-size:11px">チェリー重複のときは中段チェリー（枚数欠損）。次G告知時のボーナスを揃えられないことがある</span>'
-      : P === 6 ? NGV('チェリーのときは白7が枠下まで滑って取りこぼす')
-      : NGV('白7中段ビタから外れている') });
-  // 中：右・左がどう止まっても、テンパイしたスイカ・白7に届く（中段7・8番）
-  mvq('[data-mv="m"]', { reel: 'middle', start: 8, marks: [0], labels: { 8: '白7が枠上' },
-    ok: P => P === 7 || P === 8,
-    verdict: P => (P === 7 || P === 8) ? OKV('どのテンパイにも届く') : NGV('届かないテンパイがある') });
-}
-
-/* ─── 3：止まっている出目から、左右の押す順と間隔 ─── */
+/* ─── 先に止まったリールがどの段に止まっても、後のリールでラインを作れるか ─── */
 const LP = 7;   // 左は白7中段ビタ（中段7番）で押す
 const ROWS = ['up', 'mid', 'low'];
 const rowsOf = (reel, P, name) => [...new Set(reach(reel, P, name, ROWS).map(o => o.r))];
 const line = (a, b) => a === b || (a === 'up' && b === 'low') || (a === 'low' && b === 'up');
-// 先に止まったリールがどの段に止まっても、後のリールでラインを作れるか
 const robust = (first, second) => first.length > 0 && first.every(a => second.some(b => line(a, b)));
 function follow(order, R) {
   const ls = rowsOf('left', LP, 'suika'), rs = rowsOf('right', R, 'suika');
@@ -4908,117 +4880,69 @@ function follow(order, R) {
   // 左第1停止：中段白7はBIG確定目なので、REGのときの左の白7は下段
   return { suika: robust(ls, rs), big: robust(L7, r7), reg: robust(['low'], rB) };
 }
-const GAPS = [0, 1, 2, 3, 4, 5];
-let gap = 1;
-const pos = { left: 8, right: 8 };   // ハズレ出目（右中段⑧・左中段⑧）
-const slopeOf = (L, R) => { let d = ((R - L) % N + N) % N; if (d > N / 2) d -= N; return d; };
-const orderOf = d => d >= 0 ? 'RL' : 'LR';
-const rPress = (d, g) => wrap(orderOf(d) === 'RL' ? LP - g + d : LP + g + d);
-const PRESS_JA = { 6: '枠上', 7: '上段', 8: '中段', 9: '下段' };   // 右は⑧スイカが枠上〜下段の位置で押す
-const inZone = R => R in PRESS_JA;
-const okRight = (n, g) => { const d = slopeOf(pos.left, n), R = rPress(d, g); if (Math.abs(d) > 4 || !inZone(R)) return false; const f = follow(orderOf(d), R); return f.suika && f.big; };
-const reels = {};
-const H = () => parseFloat(getComputedStyle(ROOT).getPropertyValue('--h')) || 25;
+const missOf = f => [['スイカ', f.suika], ['BIG', f.big], ['REG', f.reg]].filter(x => !x[1]).map(x => x[0]);
 
-function runsOf(f) {
-  const ok = []; for (let p = 1; p <= N; p++) ok[p] = !!f(p);
-  if (ok.slice(1).every(Boolean)) return [[1, N]];
-  let s = 1; while (ok[s]) s++;
-  const res = []; let a = null, len = 0;
-  for (let k = 1; k <= N; k++) { const p = wrap(s + k); if (ok[p]) { if (a === null) { a = p; len = 1; } else len++; } else if (a !== null) { res.push([a, len]); a = null; } }
-  if (a !== null) res.push([a, len]);
-  return res;
+function drawStatic() {
+  const SM = spin('middle'), SR = spin('right');
+  // 1：回す前に止まっている出目（左は中段⑧）
+  ROOT.querySelector('[data-fig="s1"]').innerHTML =
+    item(col8('left', 8) + blank() + col8('right', 8), '水平<small>右→左</small>') +
+    item(col8('left', 8) + blank() + col8('right', 9), '右下がり<small>右→左</small>') +
+    item(col8('left', 8) + blank() + col8('right', 7), '左下がり<small>左→右</small>');
+  ROOT.querySelector('[data-fig="rl3"]').innerHTML = item(aimL + SM + blank(), '白7を中段にビタ押し');
+  ROOT.querySelector('[data-fig="lr2"]').innerHTML = item(aimL + SM + SR, '白7を中段にビタ押し');
+  ROOT.querySelector('[data-fig="rf"]').innerHTML =
+    item(spin('left') + SM + col('right', 9), 'スイカ角<small><strong>小役確定</strong>（ベル・リプレイ・スイカ）</small>') +
+    item(spin('left') + SM + col('right', 8), 'スイカ中段<small>ハズレorスイカ重複BIG</small>');
+  ROOT.querySelector('[data-fig="lf"]').innerHTML =
+    item(col('left', 9) + SM + col('right', 7), 'スイカ角からハサミでスイカテンパイ<small>ハズレorスイカ</small>') +
+    item(col('left', 8) + SM + col('right', 8), 'スイカ中段からハサミでスイカテンパイ<small>ハズレorスイカ</small>') +
+    item(col('left', 8) + SM + col('right', 10), 'ハサミでボーナステンパイ<small>ハズレorボーナス</small>') +
+    item(col('left', 7) + SM + SR, '中段白7<small><strong>BIG確定</strong></small>') +
+    item(col('left', 12) + SM + SR, '中段チェリー<small><strong>チェリー重複ボーナス確定</strong>（枚数欠損）<br>白7を下段で押したとき</small>');
 }
-function place(reel) { const r = reels[reel]; const m = ((r.m - 1) % N + N) % N + 1; r.track.style.transform = `translateY(${(MID_ROW - (2 * N - m)) * H()}px)`; }
-function build(reel) {
-  const tr = reels[reel].track; tr.innerHTML = '';
-  const lit = reel === 'left' ? () => true : n => okRight(n, gap);
-  for (let i = 0; i < N * 3; i++) {
-    const n = wrap(N - (i % N));
-    tr.insertAdjacentHTML('beforeend', `<div class="cell${lit(n) ? '' : ' ng'}"><img src="${IMG[sym(reel, n)]}" alt=""></div>`);
-  }
-  if (reel === 'right') for (const [a, len] of runsOf(lit)) for (let copy = 0; copy < 3; copy++) {
-    const top = copy * N + (N - wrap(a + len - 1));
-    tr.insertAdjacentHTML('beforeend', `<div class="band" style="top:${top * H() + 2}px;height:${len * H() - 4}px"><b>${len}</b></div>`);
-  }
-  place(reel);
+
+function viewers() {
+  // 右→左：⑧スイカが枠上〜下段（中段6〜9番）ならスイカ・BIGに届く。枠上はREGに届かない（妥協）
+  mvq('[data-mv="rl"]', { reel: 'right', start: 6, marks: [2], labels: { 8: '⑧スイカ' },
+    ok: P => P >= 6 && P <= 9,
+    verdict: P => {
+      if (P === 6) return OKV('スイカ・BIGに届く。白BARには届かないので、次G告知時のREGは分からない');
+      if (P >= 7 && P <= 9) return OKV('スイカ・BIG・REGに全部届く');
+      return NGV(`${missOf(follow('RL', P)).join('・')}を取りこぼす`);
+    } });
+  // 左→右：⑧スイカが上段・中段（中段7・8番）ならスイカ・BIG・REGに全部届く
+  mvq('[data-mv="lr"]', { reel: 'right', start: 8, marks: [1, 0], labels: { 8: '⑧スイカ' },
+    ok: P => P === 7 || P === 8,
+    verdict: P => (P === 7 || P === 8) ? OKV('スイカ・BIG・REGに全部届く') : NGV(`${missOf(follow('LR', P)).join('・')}を取りこぼす`) });
 }
-function buildMarks() {
-  const stage = ROOT.querySelector('[data-stage]');
-  for (const r of [MID_ROW - 1, MID_ROW + 2]) stage.insertAdjacentHTML('beforeend', `<div class="win-line" style="top:calc(var(--h) * ${r} - 2px)"></div>`);
-}
-function judge() {
-  const v = ROOT.querySelector('[data-verdict]');
-  const d = slopeOf(pos.left, pos.right), o = orderOf(d), R = rPress(d, gap), f = follow(o, R);
-  const slope = d === 0 ? '水平' : d > 0 ? `右下がり${d}コマ` : `左下がり${-d}コマ`;
-  const where = PRESS_JA[R] ? `右は⑧スイカが${PRESS_JA[R]}の位置で押す` : '右は⑧スイカから外れた位置で押す';
-  const full = GAPS.filter(g => { const r = rPress(d, g); if (!inZone(r)) return false; const x = follow(o, r); return x.suika && x.big && x.reg; });
-  const sub = [`${slope}　${o === 'RL' ? '右→左' : '左→右'}`, where,
-    Math.abs(d) > 4 ? '大きくずれているので、目押しで調整' : `全部に届く間隔：${full.length ? (full.length > 1 ? full[0] + '〜' + full[full.length - 1] : full[0]) + 'コマ' : 'なし'}`];
-  const miss = [['スイカ', f.suika], ['BIG', f.big], ['REG', f.reg]].filter(x => !x[1]).map(x => x[0]);
-  let head;
-  if (Math.abs(d) > 4 || !inZone(R)) head = '<span class="ng"><span class="mark-t">×</span>⑧スイカから外れた位置で押している</span>';
-  else if (!miss.length) head = '<span><span class="mark-t">○</span>スイカ・BIG・REGに全部届く</span>';
-  else if (miss.length === 1 && miss[0] === 'REG') head = '<span><span class="mark-t">△</span>次G告知時のREGは分からなくなる</span>';
-  else head = `<span class="ng"><span class="mark-t">×</span>${miss.join('・')}を取りこぼす</span>`;
-  v.innerHTML = head + sub.map(t => `<span class="sub">${t}</span>`).join('');
-  ROOT.querySelector('[data-slip="g"]').innerHTML = GAPS.map((g, i) => `<button class="chip" data-gp="${i}" aria-pressed="${gap === g}">${g}コマ</button>`).join('');
-}
-function refresh() { build('right'); judge(); }
-function bind(reel) {
-  const r = reels[reel];
-  let y0 = null, base = 0, moved = false;
-  r.el.addEventListener('pointerdown', e => { y0 = e.clientY; moved = false; base = r.m; r.el.setPointerCapture(e.pointerId); });
-  r.el.addEventListener('pointermove', e => {
-    if (y0 === null) return;
-    if (Math.abs(e.clientY - y0) > 4) moved = true;
-    if (!moved) return;
-    r.m = base + (e.clientY - y0) / H(); place(reel); sync(reel);
-  });
-  const end = e => {
-    if (y0 === null) return;
-    let to;
-    if (!moved) { const rect = r.el.getBoundingClientRect(); to = Math.round(r.m) + (MID_ROW - Math.floor((e.clientY - rect.top) / H())); }
-    else to = Math.round(r.m);
-    const from = r.m, t0 = performance.now(), dur = moved ? 140 : 320;
-    const step = t => { const q = Math.min(1, (t - t0) / dur), ez = 1 - Math.pow(1 - q, 3); r.m = from + (to - from) * ez; place(reel); sync(reel); if (q < 1) requestAnimationFrame(step); };
-    requestAnimationFrame(step);
-    y0 = null;
-  };
-  r.el.addEventListener('pointerup', end);
-  r.el.addEventListener('pointercancel', end);
-}
-function sync(reel) {
-  const p = wrap(Math.round(reels[reel].m));
-  if (pos[reel] === p) return;
-  pos[reel] = p;
-  refresh();
+
+/* ─── 押す順の切り替え ─── */
+let order = 'RL';
+function drawOrder() {
+  ROOT.querySelector('[data-order]').innerHTML = [['RL', '右→左'], ['LR', '左→右']]
+    .map(([k, t]) => `<button class="chip" data-od="${k}" aria-pressed="${order === k}">${t}</button>`).join('');
+  ROOT.querySelectorAll('[data-mode]').forEach(e => { e.style.display = e.dataset.mode === order ? '' : 'none'; });
 }
 document.addEventListener('click', e => {
   if (!ROOT.contains(e.target)) return;
-  const b = e.target.closest('[data-gp]'); if (b) { gap = GAPS[+b.dataset.gp]; return refresh(); }
+  const b = e.target.closest('[data-od]'); if (b) { order = b.dataset.od; drawOrder(); }
 });
 
-const bitaUnit = w => Math.log2(N / w) / Math.log2(N);
+const unitW = w => Math.log2(N / w) / Math.log2(N);
 function init() {
   drawStatic();
   viewers();
-  // 左1（白7中段ビタ）・右21（リズム押し）・中は2（白7が枠上）か21（リズム押し）
-  ROOT.querySelector('[data-score]').textContent = `${Math.round((bitaUnit(1) + bitaUnit(21) + bitaUnit(21)) / 3 * 100)}〜${Math.round((bitaUnit(1) + bitaUnit(21) + bitaUnit(2)) / 3 * 100)}`;
-  for (const k of ['left', 'right']) {
-    const el = ROOT.querySelector(`.reel[data-r="${k}"]`);
-    const tr = document.createElement('div'); tr.className = 'track'; el.appendChild(tr);
-    reels[k] = { el, track: tr, m: pos[k] };
-    bind(k);
-  }
-  buildMarks();
-  build('left'); refresh();
+  drawOrder();
+  // 右→左：右4・左1・中3／左→右：左1・右2・中2
+  const a = Math.round((unitW(4) + unitW(1) + unitW(3)) / 3 * 100), b = Math.round((unitW(1) + unitW(2) + unitW(2)) / 3 * 100);
+  ROOT.querySelector('[data-score]').textContent = `${Math.min(a, b)}〜${Math.max(a, b)}`;
 }
 document.fonts ? document.fonts.ready.then(init) : init();
 
 /* ─── 目押し難易度（押す順のフロー・点数・ゲージ） ─── */
 (function () {
-  const FLOWS = [{"label": "右第1停止", "nodes": [["右", 21, "リズム押し"], ["左", 1, "白7中段ビタ"], ["中", [[2, "白7が枠上"], [21, "リズム押し"]]]]}, {"label": "左第1停止", "nodes": [["左", 1, "白7中段ビタ"], ["右", 21, "リズム押し"], ["中", [[2, "白7が枠上"], [21, "リズム押し"]]]]}];
+  const FLOWS = [{"label": "右→左（REG妥協）", "nodes": [["右", 4, "⑧枠上〜下段"], ["左", 1, "白7中段ビタ"], ["中", 3, "白7枠上付近"]]}, {"label": "左→右（完全攻略）", "nodes": [["左", 1, "白7中段ビタ"], ["右", 2, "⑧上中段"], ["中", 2, "白7枠上付近"]]}];
   const root = ROOT.querySelector('[data-droot="0"]') || document;
   const unit = w => Math.log2(21 / w) / Math.log2(21);
   // 狙う場所が複数あるリールは、ボタンを縦に並べて選ぶ
