@@ -1291,194 +1291,6 @@ footer { border-top: 1px solid var(--border); padding: 26px 24px; text-align: ce
 #v-big-white .gauge-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 5px; background: linear-gradient(90deg, #2bb3a3 0%, #e8c53a 50%, #ff5a36 100%); transition: width 0.35s cubic-bezier(.2,.8,.2,1), background-size 0.35s cubic-bezier(.2,.8,.2,1); }
 #v-big-white .gauge-ends { display: flex; justify-content: space-between; max-width: 320px; margin: 7px auto 0; font-size: 10px; color: var(--muted); letter-spacing: 0.04em; }
 #v-big-white .diff-note { max-width: 380px; margin: 16px auto 0; font-size: 11px; line-height: 1.8; color: var(--muted); text-align: center; }
-/* ─── tips ─── */
-#v-tips {
-  --accent: #ff2a6d;
-  --bg:     #0d0d0d;
-  --border: #1e1e1e;
-  --text:   #e0dbd5;
-  --muted:  #5e5e5e;
-  --serif:  'Noto Serif JP', 'YuMincho', '游明朝', serif;
-  --sans:   'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
-  --h: 32px;
-  --w: 64px;
-  --g: 46px;          
-  --rows: 11;         
-}
-#v-tips .head { max-width: 560px; margin: 34px auto 8px; padding: 0 22px; text-align: center; }
-#v-tips .page-title { font-family: var(--serif); font-size: clamp(24px, 6vw, 30px); font-weight: 700; letter-spacing: 4px; }
-#v-tips .method-diff { margin-top: 6px; font-size: 12px; color: var(--muted); letter-spacing: 0.08em; }
-#v-tips .method-diff b { font-family: var(--serif); font-size: 18px; color: var(--text); margin-left: 4px; letter-spacing: 1px; }
-#v-tips .method-title { margin-top: 14px; font-family: var(--serif); font-size: 17px; font-weight: 700; letter-spacing: 2px; }
-#v-tips main { max-width: 560px; margin: 0 auto; padding: 0 18px; }
-#v-tips .chips { display: flex; justify-content: center; gap: 8px; margin-top: 20px; flex-wrap: wrap; }
-#v-tips .chip {
-  font: inherit; font-size: 12px; letter-spacing: 0.05em; color: var(--text);
-  background: #161616; border: 1px solid #333; border-radius: 999px; padding: 7px 14px; cursor: pointer;
-  -webkit-tap-highlight-color: transparent; transition: background 0.15s, border-color 0.15s, color 0.15s;
-}
-#v-tips .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
-#v-tips .stage-cap { margin: 26px auto 0; text-align: center; font-family: var(--serif); font-size: 13px; letter-spacing: 0.12em; color: var(--text); }
-#v-tips .stage {
-  position: relative; margin: 10px auto 0;
-  width: calc(var(--w) * 3 + var(--g) * 3);
-  height: calc(var(--h) * var(--rows));
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 calc(var(--h) * 1.2), #000 calc(100% - var(--h) * 0.4), transparent 100%);
-          mask-image: linear-gradient(to bottom, transparent 0, #000 calc(var(--h) * 1.2), #000 calc(100% - var(--h) * 0.4), transparent 100%);
-}
-#v-tips .reel {
-  position: absolute; top: 0; height: 100%; width: calc(var(--w) + var(--g));
-  overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab;
-  -webkit-tap-highlight-color: transparent;
-}
-#v-tips .reel:active { cursor: grabbing; }
-#v-tips .reel[data-r="left"] { left: 0; }
-#v-tips .reel[data-r="middle"] { left: calc(var(--w) + var(--g)); }
-#v-tips .reel[data-r="right"] { left: calc((var(--w) + var(--g)) * 2); }
-#v-tips .track { position: absolute; left: 0; top: 0; width: 100%; will-change: transform; z-index: 2; }
-#v-tips .cell { height: var(--h); width: var(--w); }
-#v-tips .cell img { display: block; width: 100%; height: 100%; pointer-events: none; -webkit-user-drag: none; transition: filter 0.2s; }
-#v-tips .cell.ng img { filter: grayscale(1) brightness(0.3); }
-#v-tips .cell.half img { filter: grayscale(0.6) brightness(0.62); }
-#v-tips .band { position: absolute; left: calc(var(--w) + 5px); width: 7px; border: 2px solid var(--accent); border-left: 0; pointer-events: none; }
-#v-tips .band b { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); font-family: var(--serif); font-size: 20px; font-weight: 700; color: var(--accent); white-space: nowrap; }
-#v-tips .band.half { border-color: #8a4a5e; }
-#v-tips .band.half b { color: #8a4a5e; font-size: 14px; }
-#v-tips .win-line { position: absolute; z-index: 3; left: -4px; width: calc(var(--w) * 3 + var(--g) * 2 + 8px); height: 4px; background: #101010; box-shadow: 0 0 0 1px #f2efe9; pointer-events: none; }
-#v-tips .mark { position: absolute; z-index: 3; width: var(--w); pointer-events: none; box-shadow: inset 3px 0 0 var(--accent), inset -3px 0 0 var(--accent); transition: box-shadow 0.12s, background 0.12s; }
-#v-tips .mark.hit { background: rgba(255, 42, 109, 0.16); box-shadow: inset 3px 0 0 var(--accent), inset -3px 0 0 var(--accent), 0 0 0 2px var(--accent), 0 0 16px 2px rgba(255, 42, 109, 0.75); }
-#v-tips .row-label { margin-top: 16px; text-align: center; font-size: 11px; color: var(--muted); letter-spacing: 0.08em; }
-#v-tips .chips.sub { margin-top: 8px; }
-#v-tips .chips.sub .chip { padding: 6px 12px; font-size: 11px; }
-#v-tips .chips[data-press] { display: grid; grid-template-columns: repeat(3, auto); justify-content: center; }
-#v-tips .aim { width: calc(var(--w) * 3 + var(--g) * 3); margin: 8px auto 0; font-size: 11px; line-height: 1.4; color: var(--text); }
-#v-tips .aim span { display: block; width: calc(var(--w) + var(--g) / 2); text-align: center; }
-#v-tips .aim small { display: block; color: var(--muted); font-size: 10px; }
-#v-tips .slip { margin: 22px auto 0; display: grid; gap: 8px; justify-content: center; }
-#v-tips .slip-row { display: flex; align-items: center; gap: 10px; font-size: 11px; color: var(--muted); }
-#v-tips .slip-row .chips { margin: 0; }
-#v-tips .slip-row .chip { min-width: 52px; }
-#v-tips .slip-row { flex-direction: column; gap: 6px; }
-#v-tips .slip-row .chips { display: grid; grid-template-columns: repeat(3, auto); justify-content: center; gap: 6px; }
-#v-tips .labels { display: flex; justify-content: flex-start; width: calc(var(--w) * 3 + var(--g) * 3); margin: 8px auto 0; }
-#v-tips .labels span { width: calc(var(--w) + var(--g)); padding-left: 0; font-size: 11px; color: var(--muted); }
-#v-tips .labels span b { display: block; width: var(--w); text-align: center; font-weight: 400; }
-#v-tips .verdict { min-height: 46px; margin-top: 16px; text-align: center; font-size: 14px; line-height: 1.7; }
-#v-tips .verdict .mark-t { font-family: var(--serif); font-weight: 700; margin-right: 6px; }
-#v-tips .verdict .ng { color: var(--muted); }
-#v-tips .verdict .sub { display: block; font-size: 11px; color: var(--muted); }
-#v-tips details.note { max-width: 560px; margin: 26px auto 0; padding: 0 18px; font-size: 12px; color: var(--muted); line-height: 1.9; }
-#v-tips details.note summary { cursor: pointer; font-family: var(--serif); color: var(--text); font-size: 13px; padding: 10px 0; list-style: none; text-align: center; }
-#v-tips details.note summary::-webkit-details-marker { display: none; }
-#v-tips details.note ul { list-style: none; padding: 4px 0 10px; }
-#v-tips details.note li { padding-left: 1em; text-indent: -1em; }
-#v-tips details.note li::before { content: '・'; }
-#v-tips .site-nav { border-top: 1px solid var(--border); margin-top: 40px; padding: 30px 24px 34px; display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
-#v-tips .site-nav a { display: inline-block; padding: 12px 30px; border: 2px solid var(--accent); color: var(--text); text-decoration: none; border-radius: 8px; font-size: 15px; font-weight: 700; letter-spacing: 1px; }
-#v-tips footer { border-top: 1px solid var(--border); padding: 26px 24px; text-align: center; font-size: 12px; color: var(--muted); letter-spacing: 0.1em; font-family: var(--serif); }
-@media (max-width: 360px) { #v-tips { --h: 28px; --w: 56px; --g: 40px; } }
-#v-tips .hs-step { padding: 26px 0 4px; }
-#v-tips .hs-head { display: flex; align-items: baseline; gap: 12px; }
-#v-tips .hs-no { font-family: var(--serif); font-size: 13px; color: var(--accent); letter-spacing: 2px; flex-shrink: 0; }
-#v-tips .hs-title { font-family: var(--serif); font-size: 18px; font-weight: 700; letter-spacing: 1px; line-height: 1.5; }
-#v-tips .hs-title small { display: block; font-size: 12px; font-weight: 400; color: var(--muted); }
-#v-tips .hs-row { display: flex; justify-content: center; align-items: flex-start; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
-#v-tips .hs-fig { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-#v-tips .hs-win { display: flex; gap: 4px; align-items: flex-end; }
-#v-tips .hs-col .over { opacity: 0.32; }
-#v-tips .hs-col .over.key { opacity: 0.7; }
-#v-tips .hs-col.tall { background: transparent; outline: 0; }
-#v-tips .hs-col.tall .win { background: #fff; outline: 2px solid var(--accent); }
-#v-tips .hs-col { width: 50px; background: #fff; outline: 1px solid #2a2a2a; }
-#v-tips .hs-col img { display: block; width: 50px; height: 25px; }
-#v-tips .hs-col.aim { outline: 2px solid var(--accent); }
-#v-tips .hs-col.blank { background: #1c1c1c; }
-#v-tips .hs-col.spin { background: #1a1a1a; height: 75px; overflow: hidden; position: relative; }
-#v-tips .hs-col.spin::after { content: ''; position: absolute; inset: 0; z-index: 1; background: rgba(0, 0, 0, 0.45); pointer-events: none; }
-#v-tips .hs-col.spin .spin-track { will-change: transform; }
-#v-tips .hs-cap { font-size: 11px; color: var(--text); text-align: center; line-height: 1.45; }
-#v-tips .hs-cap small { display: block; color: var(--muted); font-size: 10px; }
-#v-tips .hs-cap strong { color: var(--accent); font-weight: 700; }
-#v-tips .hs-arrow { align-self: center; width: 9px; height: 9px; border-top: 1px solid var(--muted); border-right: 1px solid var(--muted); transform: rotate(45deg); margin: 0 4px 22px; }
-#v-tips .hs-yoyu { margin-top: 10px; text-align: center; font-size: 11px; color: var(--muted); }
-#v-tips .hs-yoyu b { font-family: var(--serif); font-size: 18px; color: var(--accent); margin: 0 2px; }
-#v-tips .hs-list { margin-top: 16px; display: grid; gap: 14px; }
-#v-tips .hs-item { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: center; }
-#v-tips .hs-item .hs-cap { text-align: left; font-size: 12px; line-height: 1.6; }
-#v-tips .hs-item .hs-cap small { font-size: 11px; }
-#v-tips .hs-lead { margin-top: 10px; font-size: 13px; line-height: 1.8; color: var(--text); }
-#v-tips .hs-sub { margin-top: 14px; font-size: 11px; color: var(--muted); letter-spacing: 0.06em; }
-#v-tips .hs-col.aim2 { outline: 2px solid var(--accent); }
-#v-tips .reel.fixed { cursor: default; touch-action: auto; }
-#v-tips .reel-void { position: absolute; top: 0; left: 0; height: 100%; width: var(--w); background: #121212; }
-#v-tips .mv { position: relative; width: 100%; height: calc(25px * 9); margin: 16px 0 0; overflow: hidden; touch-action: none;
-  user-select: none; -webkit-user-select: none; cursor: grab; -webkit-tap-highlight-color: transparent;
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 30px, #000 calc(100% - 30px), transparent 100%);
-          mask-image: linear-gradient(to bottom, transparent 0, #000 30px, #000 calc(100% - 30px), transparent 100%); }
-#v-tips .mv-track { position: absolute; left: 0; top: 0; width: 100%; z-index: 2; will-change: transform; }
-#v-tips .mv-cell { height: 25px; width: 50px; margin-left: var(--cx); }
-#v-tips .mv-cell img { display: block; width: 100%; height: 100%; pointer-events: none; -webkit-user-drag: none; }
-#v-tips .mv-cell.ng img { filter: grayscale(1) brightness(0.3); }
-#v-tips .mv-fix { position: absolute; z-index: 1; width: 50px; }
-#v-tips .mv-fix img { display: block; width: 50px; height: 25px; }
-#v-tips .mv-band { position: absolute; left: calc(var(--cx) + 50px + 6px); width: 9px; border: 2px solid var(--accent); border-left: 0; pointer-events: none; }
-#v-tips .mv-band div { position: absolute; left: 17px; top: 50%; transform: translateY(-50%); white-space: nowrap; line-height: 1.25; }
-#v-tips .mv-band b { display: block; font-family: var(--serif); font-size: 14px; color: var(--accent); }
-#v-tips .mv-band b em { font-style: normal; font-size: 19px; }
-#v-tips .mv-band span { display: block; font-size: 10px; color: var(--text); }
-#v-tips .mv.out .mv-band { left: calc(var(--cx) + 50px); width: 0; border: 0; border-right: 3px solid var(--accent); }
-#v-tips .mv.out .mv-band div { left: var(--lx); }
-#v-tips .mv-line { position: absolute; z-index: 3; left: -2px; width: calc(var(--cx) + 54px); height: 4px; background: #101010; box-shadow: 0 0 0 1px #f2efe9; pointer-events: none; }
-#v-tips .mv-mark { position: absolute; z-index: 3; left: var(--cx); width: 50px; height: 25px; pointer-events: none;
-  box-shadow: inset 3px 0 0 var(--accent), inset -3px 0 0 var(--accent); transition: box-shadow 0.12s, background 0.12s; }
-#v-tips .mv.hit .mv-mark { background: rgba(255, 42, 109, 0.16); box-shadow: inset 3px 0 0 var(--accent), inset -3px 0 0 var(--accent), 0 0 0 2px var(--accent), 0 0 16px 2px rgba(255, 42, 109, 0.75); }
-#v-tips .mv-verdict { min-height: 24px; margin-top: 8px; text-align: left; font-size: 13px; line-height: 1.7; }
-#v-tips .mv-verdict .ng { color: var(--muted); }
-#v-tips .hs-col.tgt { background: #fff; outline: 2px solid var(--accent); }
-#v-tips .hs-col.tgt.plain { outline: 1px solid #2a2a2a; }
-#v-tips .hs-col.tgt .no { height: 25px; background: #1c1c1c; }
-#v-tips .pc { margin-top: 34px; padding-top: 24px; border-top: 1px solid var(--border); }
-#v-tips .pc-title { font-family: var(--serif); font-size: 17px; font-weight: 700; letter-spacing: 1px; }
-#v-tips .pc-row { display: flex; align-items: baseline; gap: 10px; margin-top: 12px; font-size: 13px; line-height: 1.8; }
-#v-tips .pc-tag { flex: 0 0 72px; box-sizing: border-box; text-align: center; padding: 1px 0; border: 1px solid #444; border-radius: 999px; font-size: 11px; color: var(--muted); }
-#v-tips .pc-tag.good { border-color: var(--accent); color: var(--accent); }
-#v-tips .st-cap { margin-top: 14px; font-size: 11px; color: var(--muted); letter-spacing: 0.06em; }
-#v-tips .st { position: relative; width: 270px; height: calc(25px * 9); margin-top: 8px; user-select: none; -webkit-user-select: none;
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 30px, #000 calc(100% - 30px), transparent 100%);
-          mask-image: linear-gradient(to bottom, transparent 0, #000 30px, #000 calc(100% - 30px), transparent 100%); }
-#v-tips .st-reel { position: absolute; top: 0; height: 100%; width: 90px; overflow: hidden; touch-action: none; cursor: grab; -webkit-tap-highlight-color: transparent; }
-#v-tips .st-track { position: absolute; left: 0; top: 0; width: 100%; }
-#v-tips .st-cell { height: 25px; width: 50px; }
-#v-tips .st-cell img { display: block; width: 100%; height: 100%; pointer-events: none; -webkit-user-drag: none; }
-#v-tips .st-cell.ng img { filter: grayscale(1) brightness(0.3); }
-#v-tips .st-band { position: absolute; left: 56px; width: 7px; border: 2px solid var(--accent); border-left: 0; pointer-events: none; }
-#v-tips .st-band b { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); font-family: var(--serif); font-size: 16px; color: var(--accent); background: #0d0d0d; padding: 0 2px; line-height: 1.2; z-index: 4; }
-#v-tips .st-line { position: absolute; z-index: 3; left: -2px; width: 234px; height: 4px; background: #101010; box-shadow: 0 0 0 1px #f2efe9; pointer-events: none; }
-#v-tips .st-verdict { min-height: 24px; margin-top: 8px; font-size: 13px; line-height: 1.7; }
-#v-tips .st-verdict .ng { color: var(--muted); }
-#v-tips .hs-col .below { opacity: 0.35; }
-#v-tips .hs-col .key { outline: 2px solid var(--accent); outline-offset: -2px; }
-#v-tips .hs-machine { margin: 44px 0 0; padding-bottom: 10px; border-bottom: 1px solid var(--border); font-family: var(--serif); font-size: 16px; font-weight: 700; letter-spacing: 0; }
-#v-tips .hs-machine:first-child { margin-top: 24px; }
-#v-tips .hs-win { align-items: flex-start; }
-#v-tips .hs-lead { margin: 18px 0 0; font-size: 13px; line-height: 1.8; }
-#v-tips .hs-note { margin-top: 12px; font-size: 12px; line-height: 1.8; color: var(--text); }
-#v-tips .hs-note.muted { color: var(--muted); }
-#v-tips .hs-link { display: inline-block; margin-top: 12px; padding: 8px 16px; border: 1px solid #333; border-radius: 999px; color: var(--text); text-decoration: none; font-size: 12px; }
-#v-tips .hs-table { width: 100%; margin-top: 14px; border-collapse: collapse; font-size: 12px; line-height: 1.6; }
-#v-tips .hs-table th, #v-tips .hs-table td { border-top: 1px solid var(--border); padding: 9px 6px; text-align: left; vertical-align: top; }
-#v-tips .hs-table th { color: var(--muted); font-weight: 400; white-space: nowrap; }
-#v-tips .method-diff span { margin-left: 10px; white-space: nowrap; }
-#v-tips .hs-col.xlow { position: relative; }
-#v-tips .hs-col.xlow::before, #v-tips .hs-col.xlow::after { content: ''; position: absolute; left: 50%; bottom: 12px; width: 30px; height: 3px; background: var(--accent); border-radius: 2px; }
-#v-tips .hs-col.xlow::before { transform: translateX(-50%) rotate(40deg); }
-#v-tips .hs-col.xlow::after { transform: translateX(-50%) rotate(-40deg); }
-#v-tips .hs-machine { margin: 56px 0 0 !important; padding: 10px 12px !important; border: 0 !important; border-left: 4px solid var(--accent) !important; background: #171717; font-size: 19px !important; }
-#v-tips .hs-machine:first-child { margin-top: 28px !important; }
-#v-tips .cond { margin: 14px 0 0; font-size: 12px; line-height: 1.7; }
-#v-tips .cond dt { margin-top: 10px; color: var(--text); }
-#v-tips .cond dt::before { content: ''; display: inline-block; width: 5px; height: 5px; margin: 0 8px 2px 0; border-radius: 50%; background: var(--accent); vertical-align: middle; }
-#v-tips .cond dd { margin: 0 0 0 13px; color: var(--muted); }
 /* ─── big-right ─── */
 #v-big-right {
   --accent: #ff2a6d;
@@ -2620,7 +2432,7 @@ footer { border-top: 1px solid var(--border); padding: 26px 24px; text-align: ce
       <a class="item" href="#video"><span class="item-name">チェリーだけ狙いDDT</span><span class="item-diff"><b>12</b></span><span class="item-freq"><b>1</b></span><span class="item-go"></span></a>
     </section>
     <section class="scene">
-      <a class="item" href="#tips"><span class="item-name">小ネタ・雑学</span><span class="item-diff"></span><span class="item-freq"></span><span class="item-go"></span></a>
+      <a class="item" href="tips.html"><span class="item-name">小ネタ・雑学</span><span class="item-diff"></span><span class="item-freq"></span><span class="item-go"></span></a>
     </section>
   </main>
 </div>
@@ -3033,41 +2845,6 @@ footer { border-top: 1px solid var(--border); padding: 26px 24px; text-align: ce
     </div>
     <p class="diff-note">押す順に左から並べています。余裕21コマ＝適当打ち（0点）</p>
   </section>
-</main>
-</section>
-<section class="view" id="v-tips" hidden>
-<header class="head">
-  <p class="method-title">小ネタ・雑学</p>
-  <p class="method-diff"></p>
-</header>
-<main>
-<style>
-.tip { margin-top: 36px; }
-.tip:first-child { margin-top: 20px; }
-.tip h2 { margin: 0; padding: 10px 12px; border-left: 4px solid var(--accent); background: #171717; font-family: var(--serif); font-size: 19px; font-weight: 700; letter-spacing: 0; }
-.tip ul { margin: 10px 0 0; padding: 0; list-style: none; }
-.tip-more { margin-top: 10px; font-size: 13px; }
-.tip-more summary { cursor: pointer; color: var(--muted); }
-.tip-more pre { margin: 8px 0 0; padding: 12px; background: #171717; border-radius: 6px; font-size: 11.5px; line-height: 1.7; white-space: pre-wrap; overflow-x: auto; }
-.tip li { position: relative; margin-top: 6px; padding-left: 1em; font-size: 13px; line-height: 1.8; }
-.tip li::before { content: '・'; position: absolute; left: 0; top: 0; }
-</style>
-  <div class="tips">
-    <section class="tip"><h2>設定変更後の1G目</h2><ul><li>リールがガックンと動く</li><li>個体差や出目によっては、分かりにくいこともある</li></ul></section>
-    <section class="tip"><h2>重複ボーナスの演出</h2><ul><li>スイカ・ベル・リプレイとの重複BIG → 必ず何かしらの特別な演出がある</li><li>チェリー重複ボーナス → REGもあるので、重複が確定していても特別な演出がないことがある。演出があればBIG</li></ul></section>
-    <section class="tip"><h2>中段チェリー</h2><ul><li>チェリー重複のとき、4コマ滑って中段にチェリーが止まる位置をビタ押ししたときだけ出る（チェリー重複ボーナス確定）</li><li>払い出しは1ライン分少なくなる</li></ul></section>
-    <section class="tip"><h2>REG後のフェザーランプ</h2><ul><li>色が付く確率は、ゲーム数に応じて段階的に上がる</li><li>電源を切るとリセットされる</li></ul></section>
-    <section class="tip"><h2>設定変更後1回目のBIGの<br>フェザーランプ</h2><ul><li>白・青・黄・緑・赤が均等の確率で選ばれる</li></ul></section>
-    <section class="tip"><h2>BIG後の連チャンサウンド</h2><ul><li>連チャンサウンドになる権利・状態は、電源を切っても引き継がれる</li><li>設定変更でリセットされる</li></ul></section>
-    <section class="tip"><h2>ストップボタン<br>受付開始のタイミング</h2><ul><li>実機で確かめた結果から導いた法則</li><li>各リールには10番と21番の2か所に基準点がある（ほぼ半周間隔）</li><li>3リールすべてが基準点を通過した3コマ後に、3リール同時に受付が始まる</li><li>一番遅れて基準点に届くリールで、受付のタイミングが決まる</li><li>例：出目 左4・中5・右10 → 一番遅いのは左（10番まで6コマ）。6＋3＝9コマ進んだ左13・中14・右19で受付開始</li><li>例：右だけ11にすると、右が21番まで10コマかかる。10＋3＝13コマ進んだ左17・中18・右3で受付開始</li><li>11番は基準点を通過した直後なので、どのリールでも受付が一番遅くなる位置</li></ul><details class="tip-more"><summary>式</summary><pre>d = min((10 − S) mod 21, (21 − S) mod 21)
-D = max(d左, d中, d右) + 3
-X = ((S − 1 + D) mod 21) + 1
-
-S … レバーを叩く前の中段の番号
-d … S から次の基準点までのコマ数
-D … 始動から受付開始までに進むコマ数（3リール共通）
-X … 受付が始まった瞬間の中段の番号</pre></details></section>
-  </div>
 </main>
 </section>
 <section class="view" id="v-big-right" hidden>
@@ -5161,103 +4938,6 @@ document.fonts ? document.fonts.ready.then(drawStatic) : drawStatic();
 })();
 
 })(document.getElementById("v-big-white"));
-/* ─── tips ─── */
-(function (ROOT) {
-
-
-const N = 21;
-const wrap = n => ((n - 1) % N + N) % N + 1;
-const sym = (reel, n) => REELS[reel][wrap(n) - 1];
-const col = (reel, X, cls = '') => `<div class="hs-col ${cls}">${[1, 0, -1].map(o => `<img src="${IMG[sym(reel, X + o)]}" alt="">`).join('')}</div>`;
-const spin = reel => { let h = ''; for (let k = 0; k < 2; k++) for (let n = N; n >= 1; n--) h += `<img src="${IMG[sym(reel, n)]}" alt="">`; return `<div class="hs-col spin"><div class="spin-track">${h}</div></div>`; };
-const item = (cols, cap) => `<div class="hs-item"><div class="hs-win">${cols}</div><div class="hs-cap">${cap}</div></div>`;
-const SL = spin('left'), SM = spin('middle'), SR = spin('right');
-const put = (key, html) => { ROOT.querySelector(`[data-fig="${key}"]`).innerHTML = html; };
-const OFF = { up: 1, mid: 0, low: -1 };
-function reach(reel, P, name, rows) {
-  const out = [];
-  for (let s = 0; s <= 4; s++) { const X = wrap(P + s); for (const r of rows) if (sym(reel, X + OFF[r]) === name) out.push({ s, r, X }); }
-  return out;
-}
-const mv = (key, o) => makeViewer(ROOT.querySelector(`[data-mv="${key}"]`), o);
-/* 狙う段だけに図柄を描いた窓（ほかの段は空欄） */
-const tgt = (name, rows, aim = true) => `<div class="hs-col tgt${aim ? '' : ' plain'}">${['up', 'mid', 'low'].map(r => rows.includes(r) ? `<img src="${IMG[name]}" alt="">` : '<div class="no"></div>').join('')}</div>`;
-
-/* ─── 回せるリール1本 ─── */
-function makeViewer(host, o) {
-  const H = 25, MID = 4, NN = 21;
-  const COL = { left: 0, middle: 1, right: 2 }[o.reel];
-  const wr = n => ((n - 1) % NN + NN) % NN + 1;
-  { const fresh = host.cloneNode(false); host.replaceWith(fresh); host = fresh; }
-  host.classList.add('mv'); host.innerHTML = '';
-  // すでに止まっているリール（窓の3段だけ）
-  for (const r in (o.fixed || {})) {
-    const X = o.fixed[r], c = { left: 0, middle: 1, right: 2 }[r];
-    host.insertAdjacentHTML('beforeend', `<div class="mv-fix" style="left:${c * 54}px;top:${(MID - 1) * H}px">${[1, 0, -1].map(d => `<img src="${IMG[sym(r, X + d)]}" alt="">`).join('')}</div>`);
-  }
-  host.style.setProperty('--cx', (COL * 54) + 'px');   // 上の窓（50px＋すき間4px）と同じ列
-  // 右側にリールが止まって見えているときは、余裕の囲みを線1本にして、文字は右端のリールの外へ（窓の線や図柄に重ねない）
-  const fx = Object.keys(o.fixed || {}).map(r => ({ left: 0, middle: 1, right: 2 }[r]));
-  if (fx.some(c => c > COL)) { host.classList.add('out'); host.style.setProperty('--lx', (Math.max(...fx) * 54 + 50 + 8 - (COL * 54 + 50)) + 'px'); }
-  const track = document.createElement('div'); track.className = 'mv-track'; host.appendChild(track);
-  for (let i = 0; i < NN * 3; i++) {
-    const n = wr(NN - (i % NN));
-    track.insertAdjacentHTML('beforeend', `<div class="mv-cell${o.ok(n) ? '' : ' ng'}"><img src="${IMG[sym(o.reel, n)]}" alt=""></div>`);
-  }
-  // 連続する区間ごとに、余裕の囲み
-  const ok = []; for (let p = 1; p <= NN; p++) ok[p] = !!o.ok(p);
-  let s0 = 1; while (ok[s0] && s0 < NN) s0++;
-  const runs = []; let a = null, len = 0;
-  for (let k = 1; k <= NN; k++) { const p = wr(s0 + k); if (ok[p]) { if (a === null) { a = p; len = 1; } else len++; } else if (a !== null) { runs.push([a, len]); a = null; } }
-  if (a !== null) runs.push([a, len]);
-  for (const [ra, rl] of runs) {
-    let name = ''; for (const k in (o.labels || {})) if (((+k - ra + NN) % NN) < rl) name = o.labels[k];
-    for (let copy = 0; copy < 3; copy++) {
-      const top = copy * NN + (NN - wr(ra + rl - 1));
-      track.insertAdjacentHTML('beforeend', `<div class="mv-band" style="top:${top * H + 2}px;height:${rl * H - 4}px"><div><b>余裕<em>${rl}</em>コマ</b>${name ? `<span>${name}</span>` : ''}</div></div>`);
-    }
-  }
-  const lw = (Math.max(COL, ...Object.keys(o.fixed || {}).map(r => ({ left: 0, middle: 1, right: 2 }[r]))) + 1) * 54;
-  for (const r of [MID - 1, MID + 2]) host.insertAdjacentHTML('beforeend', `<div class="mv-line" style="top:${r * H - 2}px;width:${lw}px"></div>`);
-  for (const off of o.marks) host.insertAdjacentHTML('beforeend', `<div class="mv-mark" style="top:${(MID - off) * H}px"></div>`);
-  let vd = host.nextElementSibling;
-  if (!vd || !vd.classList.contains('mv-verdict')) { vd = document.createElement('div'); vd.className = 'mv-verdict'; host.after(vd); }
-  let m = o.start, last = null;
-  const P = () => wr(Math.round(m));
-  const place = () => {
-    const mm = ((m - 1) % NN + NN) % NN + 1;
-    track.style.transform = `translateY(${(MID - (2 * NN - mm)) * H}px)`;
-    const p = P(); if (p === last) return; last = p;
-    host.classList.toggle('hit', !!o.ok(p));
-    vd.innerHTML = o.verdict(p);
-    if (o.onPos) o.onPos(p);
-  };
-  const anim = (to, dur) => {
-    const from = m, t0 = performance.now();
-    let d = ((to - from) % NN + NN) % NN; if (d > NN / 2) d -= NN;
-    const step = t => { const q = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - q, 3); m = from + d * e; place(); if (q < 1) requestAnimationFrame(step); else { m = Math.round(m); place(); } };
-    requestAnimationFrame(step);
-  };
-  let y0 = null, base = 0, moved = false;
-  host.addEventListener('pointerdown', e => { y0 = e.clientY; base = m; moved = false; host.setPointerCapture(e.pointerId); });
-  host.addEventListener('pointermove', e => { if (y0 === null) return; if (Math.abs(e.clientY - y0) > 4) moved = true; if (moved) { m = base + (e.clientY - y0) / H; place(); } });
-  const end = e => {
-    if (y0 === null) return;
-    if (!moved) { const r = host.getBoundingClientRect(); anim(Math.round(m) + (MID - Math.floor((e.clientY - r.top) / H)), 320); }
-    else anim(Math.round(m), 140);
-    y0 = null;
-  };
-  host.addEventListener('pointerup', end); host.addEventListener('pointercancel', end);
-  place();
-}
-const OKV = t => `<span>○ ${t}</span>`, NGV = t => `<span class="ng">× ${t}</span>`;
-
-function drawStatic() {
-
-}
-document.fonts ? document.fonts.ready.then(drawStatic) : drawStatic();
-
-})(document.getElementById("v-tips"));
 /* ─── big-right ─── */
 (function (ROOT) {
 
@@ -6154,12 +5834,14 @@ ROOT.querySelector('[data-vbody]').textContent = VIDEO.thoughts;
 <script>
 /* ─── 一覧 ⇔ 打ち方の切り替え（URLの末尾 #ddt などで直接開ける） ─── */
 (function () {
-  const SCENE = { ddt: '通常時', slide: '通常時', hasami: '通常時', lmslide: '通常時', 'big-left': 'BIG中', 'big-slide': 'BIG中', 'big-center': 'BIG中', 'big-white': 'BIG中', 'big-right': 'BIG中', 'big-junbi': 'BIG中', reg: 'REG中', bt: 'BT機 BIG後半', 'big-last': 'BIG最終ゲーム', video: '初心者向け', tips: '小ネタ・雑学' };
+  const SCENE = { ddt: '通常時', slide: '通常時', hasami: '通常時', lmslide: '通常時', 'big-left': 'BIG中', 'big-slide': 'BIG中', 'big-center': 'BIG中', 'big-white': 'BIG中', 'big-right': 'BIG中', 'big-junbi': 'BIG中', reg: 'REG中', bt: 'BT機 BIG後半', 'big-last': 'BIG最終ゲーム', video: '初心者向け' };
   const ALIAS = { 'big-slide': 'slide' };   // BIG中の左からのスライドは、通常時のスライド打ちDDTと同じ計算
   const list = document.getElementById('listView'), bar = document.getElementById('topbar');
   let fromList = false, listY = 0;
   function route() {
     const id = location.hash.slice(1);
+    // 小ネタ・雑学は独立したページへ移した（以前の #tips のリンクはそちらへ）
+    if (id === 'tips') { location.replace('tips.html'); return; }
     const view = id && document.getElementById('v-' + (ALIAS[id] || id));
     document.querySelectorAll('.view').forEach(v => { v.hidden = v !== view; });
     // 画面を離れたら、再生中の動画を止める（サムネイルに戻す）

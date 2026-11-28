@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ハナハナの小ネタ・雑学 | グレイト・プレ・善太</title>
+<meta name="description" content="パチスロ「ハナハナ」シリーズの仕様・法則などの小ネタと、だちょうとろぴさんによるリール制御・出目の研究記事を紹介しています。">
+<link rel="canonical" href="https://gureslot.github.io/hanahana/hanahana/tips.html">
+<meta property="og:title" content="ハナハナの小ネタ・雑学 | グレイト・プレ・善太">
+<meta property="og:description" content="パチスロ「ハナハナ」シリーズの仕様・法則などの小ネタと、だちょうとろぴさんによるリール制御・出目の研究記事を紹介しています。">
+<meta property="og:image" content="https://gureslot.github.io/hanahana/header.jpg">
+<meta property="og:url" content="https://gureslot.github.io/hanahana/hanahana/tips.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="グレイト・プレ・善太">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/png" sizes="32x32" href="../icon_32x32.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --accent: #ff2a6d;
+  --bg:     #0d0d0d;
+  --border: #1e1e1e;
+  --text:   #e0dbd5;
+  --muted:  #5e5e5e;
+  --serif:  'Noto Serif JP', 'YuMincho', '游明朝', serif;
+  --sans:   'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--text); font-family: var(--sans); -webkit-text-size-adjust: 100%; }
+
+.head { max-width: 560px; margin: 34px auto 0; padding: 0 22px; text-align: center; }
+.page-title { font-family: var(--serif); font-size: clamp(24px, 6vw, 30px); font-weight: 700; letter-spacing: 4px; }
+main { max-width: 560px; margin: 0 auto; padding: 0 18px; }
+
+/* ─── 分類へのジャンプ ─── */
+.toc { margin-top: 22px; }
+.toc-group { margin-top: 12px; text-align: center; }
+.toc-label { display: block; font-size: 11px; color: var(--muted); letter-spacing: 0.08em; margin-bottom: 8px; }
+.toc-chips { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
+.toc a {
+  font-size: 12px; letter-spacing: 0.05em; color: var(--text); text-decoration: none;
+  background: #161616; border: 1px solid #333; border-radius: 999px; padding: 7px 14px;
+  -webkit-tap-highlight-color: transparent;
+}
+.toc a:active { background: #222; }
+
+/* ─── 大きな区分と分類 ─── */
+.group { margin-top: 44px; scroll-margin-top: 16px; }
+.group-title { font-family: var(--serif); font-size: 17px; font-weight: 700; letter-spacing: 2px; text-align: center; }
+.group-lead { margin-top: 8px; font-size: 12px; line-height: 1.8; color: var(--muted); text-align: center; }
+.group-lead a { color: var(--muted); }
+.nw { white-space: nowrap; }
+.cat { margin-top: 30px; scroll-margin-top: 16px; }
+.cat-name { font-family: var(--serif); font-size: 13px; font-weight: 400; color: var(--accent); letter-spacing: 3px; padding: 0 4px; }
+
+/* ─── 1つの小ネタ ─── */
+.tip { margin-top: 26px; }
+.cat-name + .tip, .group-lead + .tip, .group-title + .tip { margin-top: 14px; }
+.tip h2, .tip h3 { margin: 0; padding: 10px 12px; border-left: 4px solid var(--accent); background: #171717; font-family: var(--serif); font-size: 19px; font-weight: 700; letter-spacing: 0; line-height: 1.5; }
+.tip ul { margin: 10px 0 0; padding: 0; list-style: none; }
+.tip li { position: relative; margin-top: 6px; padding-left: 1em; font-size: 13px; line-height: 1.8; }
+.tip li::before { content: '・'; position: absolute; left: 0; top: 0; }
+.tip-more { margin-top: 10px; font-size: 13px; }
+.tip-more summary { cursor: pointer; color: var(--muted); }
+.tip-more pre { margin: 8px 0 0; padding: 12px; background: #171717; border-radius: 6px; font-size: 11.5px; line-height: 1.7; white-space: pre-wrap; overflow-x: auto; }
+
+/* 研究の紹介：短い紹介文＋出典 */
+.tip > p { margin-top: 10px; font-size: 13px; line-height: 1.8; }
+.tip .src { margin-top: 6px; font-size: 11.5px; line-height: 1.7; color: var(--muted); }
+.tip .src a { color: var(--text); text-underline-offset: 3px; text-decoration-color: #555; }
+.tip .src span { display: block; }
+
+.site-nav { border-top: 1px solid var(--border); margin-top: 50px; padding: 30px 24px 34px; display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+.site-nav a { display: inline-block; padding: 12px 30px; border: 2px solid var(--accent); color: var(--text); text-decoration: none; border-radius: 8px; font-size: 15px; font-weight: 700; letter-spacing: 1px; }
+footer { border-top: 1px solid var(--border); padding: 26px 24px; text-align: center; font-size: 12px; color: var(--muted); letter-spacing: 0.1em; font-family: var(--serif); }
+</style>
+</head>
+<body>
+
+<header class="head">
+  <h1 class="page-title">ハナハナの小ネタ・雑学</h1>
+</header>
+
+<main>
+
+<nav class="toc">
+  <div class="toc-group">
+    <div class="toc-chips"><a href="#shiyou">仕様・法則</a></div>
+  </div>
+  <div class="toc-group">
+    <span class="toc-label">だちょうとろぴさんの研究</span>
+    <div class="toc-chips">
+      <a href="#suberi">スベリと成立契機</a>
+      <a href="#br">BIG・REGの判別</a>
+      <a href="#cherry">チェリー</a>
+      <a href="#oshijun">押し順・打ち方</a>
+      <a href="#hanahaname">ハナハナ目</a>
+      <a href="#tanoshimi">出目の楽しみ方</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ━━━ 仕様・法則 ━━━ -->
+<section class="group" id="shiyou">
+  <h2 class="group-title">仕様・法則</h2>
+
+  <section class="tip"><h3>設定変更後の1G目</h3><ul><li>リールがガックンと動く</li><li>個体差や出目によっては、分かりにくいこともある</li></ul></section>
+  <section class="tip"><h3>重複ボーナスの演出</h3><ul><li>スイカ・ベル・リプレイとの重複BIG → 必ず何かしらの特別な演出がある</li><li>チェリー重複ボーナス → REGもあるので、重複が確定していても特別な演出がないことがある。演出があればBIG</li></ul></section>
+  <section class="tip"><h3>中段チェリー</h3><ul><li>チェリー重複のとき、4コマ滑って中段にチェリーが止まる位置をビタ押ししたときだけ出る（チェリー重複ボーナス確定）</li><li>払い出しは1ライン分少なくなる</li></ul></section>
+  <section class="tip"><h3>REG後のフェザーランプ</h3><ul><li>色が付く確率は、ゲーム数に応じて段階的に上がる</li><li>電源を切るとリセットされる</li></ul></section>
+  <section class="tip"><h3>設定変更後1回目のBIGの<br>フェザーランプ</h3><ul><li>白・青・黄・緑・赤が均等の確率で選ばれる</li></ul></section>
+  <section class="tip"><h3>BIG後の連チャンサウンド</h3><ul><li>連チャンサウンドになる権利・状態は、電源を切っても引き継がれる</li><li>設定変更でリセットされる</li></ul></section>
+  <section class="tip"><h3>ストップボタン<br>受付開始のタイミング</h3><ul><li>実機で確かめた結果から導いた法則</li><li>各リールには10番と21番の2か所に基準点がある（ほぼ半周間隔）</li><li>3リールすべてが基準点を通過した3コマ後に、3リール同時に受付が始まる</li><li>一番遅れて基準点に届くリールで、受付のタイミングが決まる</li><li>例：出目 左4・中5・右10 → 一番遅いのは左（10番まで6コマ）。6＋3＝9コマ進んだ左13・中14・右19で受付開始</li><li>例：右だけ11にすると、右が21番まで10コマかかる。10＋3＝13コマ進んだ左17・中18・右3で受付開始</li><li>11番は基準点を通過した直後なので、どのリールでも受付が一番遅くなる位置</li></ul><details class="tip-more"><summary>式</summary><pre>d = min((10 − S) mod 21, (21 − S) mod 21)
+D = max(d左, d中, d右) + 3
+X = ((S − 1 + D) mod 21) + 1
+
+S … レバーを叩く前の中段の番号
+d … S から次の基準点までのコマ数
+D … 始動から受付開始までに進むコマ数（3リール共通）
+X … 受付が始まった瞬間の中段の番号</pre></details></section>
+</section>
+
+<!-- ━━━ だちょうとろぴさんの研究（紹介文＋出典リンク） ━━━ -->
+<section class="group" id="datyo">
+  <h2 class="group-title">だちょうとろぴさんの研究</h2>
+  <p class="group-lead">ブログ「<a href="https://ameblo.jp/datyo1062/" target="_blank" rel="noopener">ひぐらしの華が咲く頃に～引き弱だちょうのハナハナ街道記～</a>」から、リール制御・出目の研究を紹介。詳しくは各記事で。<br>記事中の赤7・赤BARは、<span class="nw">このサイトのピンク7・ピンクBAR。</span></p>
+
+  <section class="cat" id="suberi">
+    <h3 class="cat-name">スベリと成立契機</h3>
+    <section class="tip">
+      <h3>同じ1確目でも成立契機が違う？</h3>
+      <p>スイカ・白7・スイカのBIG確定目は、左が何コマ滑って止まったかで、単独成立・チェリー重複・スイカ重複に分かれる。出目だけでは単独かチェリー重複か見分けられず、演出でしか分からない1確目も紹介されている。</p>
+      <p class="src">出典：だちょうとろぴさんのブログ「<a href="https://ameblo.jp/datyo1062/entry-12878802751.html" target="_blank" rel="noopener">ハナハナ雑学(ボーナス確率の簡単な覚え方)など</a>」<span>対象：ハナハナシリーズ</span></p>
+    </section>
+    <section class="tip">
+      <h3>同じ2確目でも出し方が変わる？</h3>
+      <p>左のスベリコマ数によって中・右の制御が変わるので、同じ2確目でも出すための条件が変わる。小役狙いのときの代表的な2確目ごとに、出現条件をまとめた研究。</p>
+      <p class="src">出典：だちょうとろぴさんのブログ「<a href="https://ameblo.jp/datyo1062/entry-12643552100.html" target="_blank" rel="noopener">【再編集】2確目の条件とは？【ハナハナシリーズ】</a>」<span>対象：ハナハナシリーズ</span></p>
+    </section>
+  </section>
+
+  <section class="cat" id="br">
+    <h3 class="cat-name">BIG・REGの判別</h3>
+    <section class="tip">
+      <h3>ハサミ打ちでピンク7が<br>単独テンパイしないのにBIG？</h3>
+      <p>ハサミ打ちでピンク7を揃えにいくとき、右でピンク7が単独テンパイするかどうかは、左が何コマ滑ったかで変わる。左の止まり方ごとに、BIG確定・REG確定になる形と、最後まで分からない形を整理した研究。</p>
+      <p class="src">出典：だちょうとろぴさんのブログ「<a href="https://ameblo.jp/datyo1062/entry-12929977755.html" target="_blank" rel="noopener">意外と知らない人が多い？ハサミ赤7テンパイのヒミツ</a>」<span>対象：ハナハナシリーズ</span></p>
+    </section>
+    <section class="tip">
+      <h3>ボーナス図柄のテンパイで<br>BIG・REGが分かる形</h3>
+      <p>告知されたゲームで小役が成立していないとき、ボーナス図柄のテンパイの仕方でBIG・REGが分かる形を、ハサミ打ち・右から・左最終停止などの押し順ごとに紹介。</p>
+      <p class="src">出典：だちょうとろぴさんのブログ「<a href="https://ameblo.jp/datyo1062/entry-11925598263.html" target="_blank" rel="noopener">マニアックハナハナ(告知プレイで分かるBIG＆REG確定目)</a>」<span>対象：クイーンハナハナ以降（中リールが絡む目は使えない機種もある）</span></p>
+    </section>
+  </section>
+
+  <section class="cat" id="cherry">
+    <h3 class="cat-name">チェリー</h3>
+    <section class="tip">
+      <h3>チェリー重複のハナハナ目は<br>押す位置で決まる？</h3>
+      <p>チェリー重複のときに出る3連チェリー・ズレ目・中段チェリーを、どこを押せば出せるかとともに紹介。当たっていても、押した位置によってはハナハナ目にならない制御があることが分かる。</p>
+      <p class="src">出典：だちょうとろぴさんのブログ「<a href="https://ameblo.jp/datyo1062/entry-11646903607.html" target="_blank" rel="noopener">ハナハナ目特集その5【チェリー重複の形】</a>」<span>対象：ハナハナシリーズ</span></p>
+    </section>
+    <section class="tip">
+      <h3>当たっていても<br>3連チェリーにならない？</h3>
+      <p>チェリーが止まったときのスベリコマ数で種無しが分かる形や、手前で押しすぎると重複でも3連チェリーを引き込まない制御など、スベリコマ数まで見て初めて分かるチェリーの法則をまとめた研究。</p>
+      <p class="src">出典：だちょうとろぴさんのブログ「<a href="https://ameblo.jp/datyo1062/entry-12860194189.html" target="_blank" rel="noopener">実はまだ公に出していなかったハナハナのチェリーの秘密</a>」<span>対象：クイーンハナハナ以降</span></p>
+    </section>
+    <section class="tip">
+      <h3>チェリーのフラグは1つだけ？</h3>
+      <p>ハナハナのチェリーはフラグが1つで、単独か重複かはリール制御だけで出し分けられている、という解説。ほかの機種のチェリーと比べながら、変則押しで3連チェリーがガセになる形にも触れている。</p>
+      <p class="src">出典：だちょうとろぴさんのブログ「<a href="https://ameblo.jp/datyo1062/entry-12423500472.html" target="_blank" rel="noopener">分かると面白さ倍増？チェリーの特徴あれこれ</a>」<span>対象：ハナハナシリーズ（スペシャルハナハナ以前を除く）</span></p>
+    </section>
+    <section class="tip">
+      <h3>重複したチェリーを取りこぼすと<br>ハナハナ目が出る？</h3>
+      <p>ボーナスと重複したチェリー・スイカを取りこぼしたときは専用のスベリコマ数が選ばれ、残りのリールはハナハナ目を作る制御になる。小役→ボーナス→ハナハナ目という制御の優先順位も解説している。</p>
+      <p class="src">出典：だちょうとろぴさんのブログ「<a href="https://ameblo.jp/datyo1062/entry-12878802751.html" target="_blank" rel="noopener">ハナハナ雑学(ボーナス確率の簡単な覚え方)など</a>」<span>対象：ハナハナシリーズ</span></p>
+    </section>
+  </section>
+
+  <section class="cat" id="oshijun">
+    <h3 class="cat-name">押し順・打ち方</h3>
+    <section class="tip">
+      <h3>中押しだと<br>チェリー重複の出目が変わる？</h3>
+      <p>中押しのときのチェリー重複の制御を解説。中押しでボーナスの2確目になる形の一部が、チェリー重複のときは出ない。</p>
+      <p class="src">出典：だちょうとろぴさんのブログ「<a href="https://ameblo.jp/datyo1062/entry-12860194189.html" target="_blank" rel="noopener">実はまだ公に出していなかったハナハナのチェリーの秘密</a>」<span>対象：クイーンハナハナ以降</span></p>
+    </section>
+    <section class="tip">
+      <h3>スライド打ちの取りこぼしは<br>出目で分かる？</h3>
+      <p>ピンクBAR狙いのスライド打ちで、スイカやチェリーを取りこぼしたときの形を紹介。出目で取りこぼしと分かる形と、スベリコマ数を見ないと分からない形がある。</p>
+      <p class="src">出典：だちょうとろぴさんのブログ「<a href="https://ameblo.jp/datyo1062/entry-12619199523.html" target="_blank" rel="noopener">【華シリーズ】スライド打ちはここに注意！</a>」<span>対象：ハナハナシリーズ</span></p>
+    </section>
+  </section>
+
+  <section class="cat" id="hanahaname">
+    <h3 class="cat-name">ハナハナ目</h3>
+    <section class="tip">
+      <h3>左下BARから出るハナハナ目</h3>
+      <p>小役狙いの基本、左BAR枠内から出るハナハナ目を、一直線型・小役ハズレ型などの法則ごとに整理。法則ごとにあるNGの形もまとめられている。</p>
+      <p class="src">出典：だちょうとろぴさんのブログ「<a href="https://ameblo.jp/datyo1062/entry-11807913159.html" target="_blank" rel="noopener">ハナハナ目特集その1【左下BARからの形】</a>」<span>対象：クイーンハナハナ以降</span></p>
+    </section>
+    <section class="tip">
+      <h3>左上段にスイカが<br>滑ってきたときのハナハナ目</h3>
+      <p>左上段までスイカが滑ってきてハズレたときの形を集めた特集。BIG確定になる形や、スベリコマ数で意味が変わる形が分かる。</p>
+      <p class="src">出典：だちょうとろぴさんのブログ「<a href="https://ameblo.jp/datyo1062/entry-11808599181.html" target="_blank" rel="noopener">ハナハナ目特集その2【スベリ左上段スイカハズレの形】</a>」<span>対象：クイーンハナハナ以降</span></p>
+    </section>
+    <section class="tip">
+      <h3>左上段に白7が<br>滑ってきたときのハナハナ目</h3>
+      <p>左上段まで白7が滑ってきてハズレたときのハナハナ目の特集。右の止まり方でBIG・REGが分かる形や、左のスベリコマ数が限られる2確目も紹介。</p>
+      <p class="src">出典：だちょうとろぴさんのブログ「<a href="https://ameblo.jp/datyo1062/entry-11810842535.html" target="_blank" rel="noopener">ハナハナ目特集その3【左上段白7スベリハズレの形】</a>」<span>対象：クイーンハナハナ以降</span></p>
+    </section>
+    <section class="tip">
+      <h3>小役の並びで見るハナハナ目</h3>
+      <p>スイカの小V型や、7・BAR・チェリーの一直線型など、スベリを気にせず見た目の並びで分かるハナハナ目の特集。</p>
+      <p class="src">出典：だちょうとろぴさんのブログ「<a href="https://ameblo.jp/datyo1062/entry-11816438917.html" target="_blank" rel="noopener">ハナハナ目特集その4【その他諸々】</a>」<span>対象：ハナハナシリーズ</span></p>
+    </section>
+    <section class="tip">
+      <h3>止まっただけで<br>小役以上が確定する図柄</h3>
+      <p>左・中・右のリールごとにある強力図柄と、その役割を紹介。後告知のときにハナハナ目に気付くための基本になる。</p>
+      <p class="src">出典：だちょうとろぴさんのブログ「<a href="https://ameblo.jp/datyo1062/entry-11796591652.html" target="_blank" rel="noopener">ハナハナの出目法則【強力図柄編】</a>」<span>対象：ハナハナシリーズ</span></p>
+    </section>
+    <section class="tip">
+      <h3>スターハナハナで<br>見たいハナハナ目50</h3>
+      <p>スターハナハナはボーナス後101G以降に単独後告知の割合が上がるので、ハナハナ目を知る価値が大きい。選び抜いた50の出目を、難易度付きのミッション形式で紹介。</p>
+      <p class="src">出典：だちょうとろぴさんのブログ「<a href="https://ameblo.jp/datyo1062/entry-12858414906.html" target="_blank" rel="noopener">スターハナハナの特性を考え、ハナハナ目をミッション形式でおさらいしてみよう</a>」<span>対象：スターハナハナ</span></p>
+    </section>
+  </section>
+
+  <section class="cat" id="tanoshimi">
+    <h3 class="cat-name">出目の楽しみ方</h3>
+    <section class="tip">
+      <h3>高速スライドで<br>7を揃えられる出目</h3>
+      <p>前のゲームの出目から、高速スライドで7を揃えられる形を作る方法を紹介。押す速さで生じるずれを、左を早めに押して調整する考え方も載っている。</p>
+      <p class="src">出典：だちょうとろぴさんのブログ「<a href="https://ameblo.jp/datyo1062/entry-12425746630.html" target="_blank" rel="noopener">高速スライド揃えがしたいという方のために【ハナハナ自己満足ネタ】</a>」<span>対象：ドリームハナハナ・グレートキングハナハナ・ツインドラゴンハナハナ</span></p>
+    </section>
+  </section>
+</section>
+
+</main>
+
+<nav class="site-nav">
+  <a href="../index.html">index</a>
+  <a href="../hanahana.html">ハナハナ関連</a>
+</nav>
+<footer>© グレイト・プレ・善太</footer>
+
+</body>
+</html>
